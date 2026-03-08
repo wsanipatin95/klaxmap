@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiBaseUrl: '/klaxapi',
+  apiBaseUrl: 'http://localhost:8081/klaxapi',
   company: 'inno',
   tenant: 'public',
 };
