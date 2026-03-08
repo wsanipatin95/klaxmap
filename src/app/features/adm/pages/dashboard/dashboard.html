@@ -1,0 +1,242 @@
+<div class="p-6 bg-gray-50">
+  <!-- Header -->
+  <div class="mb-4">
+    <h2 class="text-3xl font-bold text-primary-900">Dashboard</h2>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Card 1: Total Users -->
+    <div
+      class="bg-gradient-to-br from-primary-900 to-primary-700 shadow-lg rounded-xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
+    >
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-primary-100 text-sm font-medium mb-1">
+            Total Usuarios
+          </p>
+          <p class="text-4xl font-bold">1,234</p>
+          <p class="text-primary-200 text-xs mt-2">
+            <i class="pi pi-arrow-up text-xs"></i> 12% vs mes anterior
+          </p>
+        </div>
+        <div class="bg-white/20 rounded-full p-4">
+          <i class="pi pi-users text-3xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Active Sessions -->
+    <div
+      class="bg-gradient-to-br from-primary-800 to-primary-600 shadow-lg rounded-xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
+    >
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-primary-100 text-sm font-medium mb-1">
+            Sesiones Activas
+          </p>
+          <p class="text-4xl font-bold">567</p>
+          <p class="text-primary-200 text-xs mt-2">
+            <i class="pi pi-arrow-up text-xs"></i> 8% más que ayer
+          </p>
+        </div>
+        <div class="bg-white/20 rounded-full p-4">
+          <i class="pi pi-chart-line text-3xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Server Uptime -->
+    <div
+      class="bg-gradient-to-br from-primary-700 to-primary-500 shadow-lg rounded-xl p-6 text-white transform hover:scale-105 transition-transform duration-200"
+    >
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-primary-100 text-sm font-medium mb-1">
+            Disponibilidad
+          </p>
+          <p class="text-4xl font-bold">99.9%</p>
+          <p class="text-primary-200 text-xs mt-2">
+            <i class="pi pi-check text-xs"></i> Sistema operativo
+          </p>
+        </div>
+        <div class="bg-white/20 rounded-full p-4">
+          <i class="pi pi-server text-3xl"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <!-- Companies Section (80% width on large screens) -->
+    <div class="lg:col-span-4">
+      <div class="bg-white shadow-lg rounded-xl p-6">
+        <!-- Header with Actions -->
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4"
+        >
+          <div>
+            <h3 class="text-xl font-bold text-primary-900">Empresas</h3>
+            <p class="text-gray-500 text-sm mt-1">
+              Gestiona las empresas registradas
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <p-button
+              label="Nuevo Usuario"
+              icon="pi pi-user-plus"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+            />
+            <p-button label="Nueva Empresa" icon="pi pi-plus" size="small" />
+          </div>
+        </div>
+
+        <!-- Companies Table -->
+        <p-table
+          [value]="companies"
+          [tableStyle]="{ 'min-width': '100%' }"
+          size="small"
+          stripedRows
+          [paginator]="false"
+          [rows]="5"
+          [rowsPerPageOptions]="[5, 10, 15]"
+          [showCurrentPageReport]="false"
+          currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} empresas"
+        >
+          <ng-template #header>
+            <tr class="bg-primary-900 text-white">
+              <th class="text-left">Empresa</th>
+              <th class="text-left">Contacto</th>
+              <th class="text-left">Estado</th>
+              <th class="text-left">Usuarios</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-company>
+            <tr class="hover:bg-gray-50">
+              <td>
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"
+                  >
+                    <i class="pi pi-building text-primary-900"></i>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-primary-900">
+                      {{ company.name }}
+                    </p>
+                    <p class="text-xs text-gray-500">{{ company.code }}</p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>
+                  <p class="text-sm">{{ company.contact }}</p>
+                  <p class="text-xs text-gray-500">{{ company.email }}</p>
+                </div>
+              </td>
+              <td>
+                <span
+                  class="px-2 py-1 rounded-full text-xs font-semibold"
+                  [ngClass]="{
+                    'bg-green-100 text-green-800': company.status === 'active',
+                    'bg-red-100 text-red-800': company.status === 'inactive',
+                    'bg-yellow-100 text-yellow-800': company.status === 'pending'
+                  }"
+                >
+                  {{ company.status === 'active' ? 'Activa' : company.status ===
+                  'inactive' ? 'Inactiva' : 'Pendiente' }}
+                </span>
+              </td>
+              <td>
+                <span class="font-semibold text-primary-900"
+                  >{{ company.users }}</span
+                >
+              </td>
+              <td class="text-center">
+                <div class="flex justify-center gap-2">
+                  <p-button
+                    icon="pi pi-list"
+                    size="small"
+                    [text]="true"
+                    severity="info"
+                  />
+                  <!-- <p-button icon="pi pi-pencil" size="small" [text]="true" /> -->
+                  <!-- <p-button
+                    icon="pi pi-trash"
+                    size="small"
+                    [text]="true"
+                    severity="danger"
+                  /> -->
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Notifications Section (20% width on large screens) -->
+    <div class="lg:col-span-1">
+      <div class="bg-white shadow-lg rounded-xl p-6 h-full">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-primary-900">Notificaciones</h3>
+          <span
+            class="bg-primary-900 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold"
+          >
+            {{ notifications.length }}
+          </span>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="space-y-4 max-h-[600px] overflow-y-auto">
+          @for (notification of notifications; track notification.id) {
+          <div
+            class="border-l-4 pl-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
+            [ngClass]="{
+                'border-primary-900': notification.type === 'info',
+                'border-yellow-500': notification.type === 'warning',
+                'border-green-500': notification.type === 'success',
+                'border-red-500': notification.type === 'error'
+              }"
+          >
+            <div class="flex items-start gap-2">
+              <i
+                class="text-sm mt-1"
+                [ngClass]="{
+                    'pi pi-info-circle text-primary-900': notification.type === 'info',
+                    'pi pi-exclamation-triangle text-yellow-500': notification.type === 'warning',
+                    'pi pi-check-circle text-green-500': notification.type === 'success',
+                    'pi pi-times-circle text-red-500': notification.type === 'error'
+                  }"
+              ></i>
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-gray-800">
+                  {{ notification.title }}
+                </p>
+                <p class="text-xs text-gray-600 mt-1">
+                  {{ notification.message }}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ notification.time }}
+                </p>
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+
+        <div class="mt-4 pt-4 border-t">
+          <button
+            class="w-full text-center text-sm text-primary-900 font-semibold hover:underline"
+          >
+            Ver todas las notificaciones
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

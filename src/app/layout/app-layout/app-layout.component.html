@@ -1,0 +1,21 @@
+<div class="layout-wrapper">
+  <app-navbar />
+
+  <!-- Overlay para móviles -->
+  @if (isMobileVisible()) {
+  <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
+  }
+
+  <div
+    class="layout-sidebar"
+    [class.sidebar-collapsed]="isCollapsed()"
+    [class.sidebar-visible]="isMobileVisible()"
+  >
+    <app-sidebar />
+  </div>
+  <div class="layout-main-container" [class.sidebar-collapsed]="isCollapsed()">
+    <div class="main-content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

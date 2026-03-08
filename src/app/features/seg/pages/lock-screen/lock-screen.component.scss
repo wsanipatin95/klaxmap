@@ -1,0 +1,57 @@
+.lock-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(15, 15, 15, 0.45);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.lock-card {
+    width: 100%;
+    max-width: 420px;
+}
+
+.header {
+    text-align: center;
+    padding: 18px 12px 6px;
+}
+
+.avatar {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 10px;
+    border-radius: 999px;
+    background: #7a1f5c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sub {
+    margin-top: 6px;
+    opacity: 0.8;
+}
+
+.user {
+    display: block;
+    margin-top: 8px;
+    opacity: 0.75;
+}
+
+.body {
+    padding: 10px 10px 14px;
+}
+
+.label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}

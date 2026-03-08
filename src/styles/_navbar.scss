@@ -1,0 +1,378 @@
+/* ===================================
+   Navbar Styles
+   =================================== */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: var(--z-index-topbar);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.navbar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 1rem;
+  max-width: 100%;
+  margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 0 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 0 2rem;
+  }
+}
+
+/* ===================================
+   Left Section - Logo & Hamburger
+   =================================== */
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.hamburger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  background-color: transparent;
+  color: #374151;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+
+  i {
+    font-size: 1.25rem;
+  }
+
+  &:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+  }
+
+  &:active {
+    background-color: #e5e7eb;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+
+  .logo-image {
+    height: 2rem;
+    width: auto;
+    object-fit: contain;
+
+    @media (min-width: 768px) {
+      height: 2.25rem;
+    }
+  }
+
+  .logo-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.025em;
+
+    @media (max-width: 480px) {
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+/* ===================================
+   Right Section - Notifications & User
+   =================================== */
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+
+  @media (min-width: 768px) {
+    gap: 1rem;
+  }
+}
+
+.navbar-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  background-color: transparent;
+  color: #374151;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+
+  i {
+    font-size: 1.25rem;
+  }
+
+  &:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+  }
+
+  &:active {
+    background-color: #e5e7eb;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  /* Badge positioning */
+  ::ng-deep .p-badge {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 0 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.navbar-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  // padding: 0 0.75rem;
+  // border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #374151;
+  // border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  @media (min-width: 768px) {
+    gap: 0.75rem;
+    padding: 0 1rem;
+  }
+
+  &:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  &:active {
+    background-color: #f3f4f6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  .user-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: linear-gradient(135deg, #7b0061 0%, #b8006f 100%);
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .user-name {
+    color: #111827;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+
+    @media (max-width: 640px) {
+      display: none;
+    }
+  }
+
+  .pi-angle-down {
+    font-size: 0.875rem;
+    color: #6b7280;
+    flex-shrink: 0;
+
+    @media (max-width: 640px) {
+      display: none;
+    }
+  }
+}
+
+/* ===================================
+   PrimeNG Menu Customization
+   =================================== */
+
+::ng-deep {
+  // Asegurar que el overlay del menú esté por encima del navbar
+  .p-menu-overlay {
+    z-index: 1200 !important;
+  }
+
+  .p-menu {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    min-width: 200px;
+    z-index: 1200 !important;
+
+    @media (min-width: 768px) {
+      min-width: 240px;
+    }
+
+    .p-menuitem-link {
+      padding: 0.75rem 1rem;
+      color: #374151;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+      }
+
+      .p-menuitem-icon {
+        color: #6b7280;
+        margin-right: 0.75rem;
+        font-size: 1rem;
+      }
+
+      .p-menuitem-text {
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .p-menuitem-badge {
+        margin-left: auto;
+        padding: 0.125rem 0.5rem;
+        font-size: 0.75rem;
+        background-color: #ef4444;
+        color: white;
+        border-radius: 1rem;
+      }
+    }
+
+    .p-menuitem-separator {
+      margin: 0.5rem 0;
+      border-top: 1px solid #e5e7eb;
+    }
+  }
+
+  /* Logout item styling */
+  .p-menu .p-menuitem-link:has(.pi-sign-out) {
+    color: #dc2626;
+
+    &:hover {
+      background-color: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .p-menuitem-icon {
+      color: #dc2626;
+    }
+  }
+}
+
+/* ===================================
+   Responsive Adjustments
+   =================================== */
+
+@media (max-width: 480px) {
+  .navbar-container {
+    padding: 0 0.75rem;
+  }
+
+  .navbar-left,
+  .navbar-right {
+    gap: 0.2rem;
+  }
+
+  .hamburger-btn,
+  .navbar-icon-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+
+    i {
+      font-size: 1.125rem;
+    }
+  }
+
+  .navbar-user-btn {
+    padding: 0 0.5rem;
+    gap: 0.5rem;
+
+    .user-avatar {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 0.75rem;
+    }
+  }
+}
+
+/* ===================================
+   Accessibility
+   =================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .hamburger-btn,
+  .navbar-icon-btn,
+  .navbar-user-btn {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .navbar {
+    border-bottom-width: 2px;
+  }
+
+  .navbar-user-btn {
+    border-width: 2px;
+  }
+}

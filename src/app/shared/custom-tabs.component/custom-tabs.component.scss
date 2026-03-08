@@ -1,0 +1,20 @@
+:host {
+  display: block;
+}
+
+// Custom scrollbar hiding for better UX
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Smooth scroll behavior
+:host ::ng-deep {
+  .overflow-x-auto {
+    scroll-behavior: smooth;
+  }
+}

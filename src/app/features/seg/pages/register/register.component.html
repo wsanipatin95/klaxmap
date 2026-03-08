@@ -1,0 +1,200 @@
+<!-- FULLSCREEN BLOCKER -->
+<div
+  *ngIf="loading"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px]"
+  aria-live="polite"
+  aria-busy="true"
+>
+  <div class="bg-white rounded-2xl shadow-2xl px-6 py-5 w-[320px]">
+    <div class="flex items-center gap-3">
+      <i class="pi pi-spin pi-spinner text-xl"></i>
+      <div class="leading-tight">
+        <div class="font-semibold">Registrando…</div>
+        <div class="text-xs text-gray-500">Por favor espera.</div>
+      </div>
+    </div>
+    <div class="mt-4 h-1 w-full bg-gray-100 rounded">
+      <div class="h-1 w-1/2 bg-gray-900/50 rounded animate-pulse"></div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 p-4 py-6"
+>
+  <div class="w-full max-w-4xl">
+    <p-card styleClass="shadow-2xl">
+      <ng-template pTemplate="header">
+        <div class="flex flex-col items-center pt-6 pb-3">
+          <div class="bg-primary-500 rounded-full p-3 mb-3 shadow-lg">
+            <i class="pi pi-user-plus text-3xl text-white"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-gray-800 mb-1">Registro Global</h1>
+          <p class="text-gray-600 text-center text-sm">
+            Completa el formulario para registrar tu empresa y usuario
+          </p>
+        </div>
+      </ng-template>
+
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-4 px-4 pb-4">
+
+        <!-- ERROR GLOBAL -->
+        <div
+          *ngIf="registerError"
+          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {{ registerError }}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="firstName" class="text-sm font-semibold text-gray-700">Nombres</label>
+            <input
+              id="firstName"
+              pInputText
+              formControlName="firstName"
+              autocomplete="given-name"
+              class="w-full mt-2"
+            />
+            <small *ngIf="firstName?.invalid && firstName?.touched" class="text-red-500 text-xs">
+              Nombres requeridos
+            </small>
+          </div>
+
+          <div>
+            <label for="lastName" class="text-sm font-semibold text-gray-700">Apellidos</label>
+            <input
+              id="lastName"
+              pInputText
+              formControlName="lastName"
+              autocomplete="family-name"
+              class="w-full mt-2"
+            />
+            <small *ngIf="lastName?.invalid && lastName?.touched" class="text-red-500 text-xs">
+              Apellidos requeridos
+            </small>
+          </div>
+
+          <div>
+            <label for="organization" class="text-sm font-semibold text-gray-700">Organización</label>
+            <input
+              id="organization"
+              pInputText
+              formControlName="organization"
+              placeholder="Ej: KLAX"
+              class="w-full mt-2"
+            />
+            <small *ngIf="organization?.invalid && organization?.touched" class="text-red-500 text-xs">
+              Organización requerida
+            </small>
+          </div>
+
+          <div>
+            <label for="phone" class="text-sm font-semibold text-gray-700">Teléfono</label>
+            <input
+              id="phone"
+              pInputText
+              formControlName="phone"
+              autocomplete="tel"
+              placeholder="Ej: 0960025142"
+              class="w-full mt-2"
+            />
+            <small *ngIf="phone?.invalid && phone?.touched" class="text-red-500 text-xs">
+              Teléfono inválido (7 a 15 dígitos)
+            </small>
+          </div>
+
+          <div>
+            <label for="email" class="text-sm font-semibold text-gray-700">Email</label>
+            <input
+              id="email"
+              type="email"
+              pInputText
+              formControlName="email"
+              autocomplete="email"
+              class="w-full mt-2"
+            />
+            <small *ngIf="email?.invalid && email?.touched" class="text-red-500 text-xs">
+              Email inválido
+            </small>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-gray-700">Contraseña</label>
+            <p-password
+              formControlName="password"
+              [toggleMask]="true"
+              [feedback]="true"
+              styleClass="w-full mt-2"
+              inputStyleClass="w-full"
+            ></p-password>
+            <small *ngIf="password?.invalid && password?.touched" class="text-red-500 text-xs">
+              Mínimo 6 caracteres
+            </small>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-gray-700">Confirmar contraseña</label>
+            <p-password
+              formControlName="confirmPassword"
+              [toggleMask]="true"
+              [feedback]="false"
+              styleClass="w-full mt-2"
+              inputStyleClass="w-full"
+            ></p-password>
+
+            <small
+              *ngIf="registerForm.errors?.['passwordMismatch'] && confirmPassword?.touched"
+              class="text-red-500 text-xs"
+            >
+              Las contraseñas no coinciden
+            </small>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <div class="flex items-start gap-3">
+            <p-checkbox formControlName="acceptTerms" [binary]="true"></p-checkbox>
+            <span class="text-sm text-gray-700">
+              Acepto términos y condiciones <span class="text-red-500">*</span>
+            </span>
+          </div>
+          <small *ngIf="acceptTerms?.invalid && acceptTerms?.touched" class="text-red-500 text-xs block">
+            Debes aceptar los términos
+          </small>
+
+          <div class="flex items-start gap-3">
+            <p-checkbox formControlName="receiveUpdates" [binary]="true"></p-checkbox>
+            <span class="text-sm text-gray-700">Deseo recibir actualizaciones</span>
+          </div>
+        </div>
+
+        <button
+          pButton
+          type="submit"
+          label="Registrar"
+          icon="pi pi-user-plus"
+          [loading]="loading"
+          [disabled]="loading"
+          class="w-full"
+        ></button>
+
+        <div class="text-center pt-3 border-t border-gray-200">
+          <p class="text-gray-600 text-sm">
+            ¿Ya tienes una cuenta?
+            <a
+              routerLink="/login"
+              [class.pointer-events-none]="loading"
+              [class.opacity-60]="loading"
+              class="text-primary-600 font-semibold hover:underline ml-1"
+            >
+              Inicia sesión aquí
+            </a>
+          </p>
+        </div>
+
+      </form>
+    </p-card>
+  </div>
+</div>

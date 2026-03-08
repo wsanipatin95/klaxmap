@@ -1,0 +1,46 @@
+:host {
+  display: block;
+
+  // Estilos personalizados para el notification sidebar
+  ::ng-deep {
+    .p-drawer {
+      .p-drawer-header {
+        padding: 0;
+      }
+    }
+  }
+}
+
+// Animación suave para el scroll
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 92, 246, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background-color: rgba(139, 92, 246, 0.5);
+    }
+  }
+}
+
+// Animación del indicador de no leído
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

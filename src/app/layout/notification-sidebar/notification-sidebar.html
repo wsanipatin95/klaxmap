@@ -1,0 +1,149 @@
+<p-drawer
+  [(visible)]="visible"
+  styleClass="!w-full md:!w-[20rem] lg:!w-[30rem]"
+  position="right"
+  showCloseIcon="true"
+>
+  <ng-template #header>
+    <div class="flex items-center justify-between w-full">
+      <h2 class="text-base font-bold text-gray-800">Notificaciones</h2>
+    </div>
+  </ng-template>
+  <div class="h-full flex flex-col bg-gray-50">
+    <!-- Header -->
+    <div class="px-4 py-2 bg-white border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs text-gray-500" *ngIf="unreadCount > 0">
+            {{ unreadCount }} sin leer
+          </p>
+        </div>
+        <button
+          *ngIf="unreadCount > 0"
+          (click)="markAllAsRead()"
+          class="text-xs text-primary-900 hover:text-primary-950 font-medium transition-colors"
+        >
+          Marcar todas
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="flex-1 overflow-y-auto p-3">
+      <!-- Cards Mode - Grid 4 columnas en desktop, 3 en mobile -->
+      <div *ngIf="!showAllMode()" class="grid grid-cols-3 md:grid-cols-4 gap-2">
+        <div
+          *ngFor="let notification of notifications"
+          (click)="markAsRead(notification)"
+          class="relative bg-gradient-to-br from-primary-900 to-primary-950 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer aspect-square flex flex-col items-center justify-center p-3"
+        >
+          <!-- Badge contador en esquina superior izquierda -->
+          <div class="absolute top-1.5 left-1.5 z-10">
+            <span
+              class="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded shadow-sm"
+            >
+              {{ notification.count }}
+            </span>
+          </div>
+
+          <!-- Indicador no leído en esquina superior derecha -->
+          <div
+            *ngIf="!notification.read"
+            class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse z-10"
+          ></div>
+
+          <!-- Card Content -->
+          <i
+            [class]="notification.primeIcon"
+            class="text-white text-3xl mb-2"
+          ></i>
+          <h3 class="font-bold text-xs text-center text-white">
+            {{ notification.title }}
+          </h3>
+        </div>
+
+        <!-- Empty state -->
+        <div
+          *ngIf="notifications.length === 0"
+          class="col-span-3 text-center py-12"
+        >
+          <i class="pi pi-bell text-6xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500 font-medium">No hay notificaciones</p>
+        </div>
+      </div>
+
+      <!-- List Mode - Compacto -->
+      <div *ngIf="showAllMode()" class="space-y-1.5">
+        <div
+          *ngFor="let notification of notifications"
+          (click)="markAsRead(notification)"
+          class="bg-white rounded-md hover:bg-primary-50 transition-all duration-150 cursor-pointer group border-l-3"
+          [class.border-primary-900]="!notification.read"
+          [class.border-gray-300]="notification.read"
+          [class.shadow-sm]="!notification.read"
+        >
+          <div class="px-3 py-2 flex items-center gap-2.5">
+            <!-- Icon -->
+            <div
+              class="flex-shrink-0 w-8 h-8 bg-primary-900 rounded-md flex items-center justify-center"
+            >
+              <i
+                [class]="notification.primeIcon"
+                class="text-white text-sm"
+              ></i>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <h4 class="font-semibold text-xs text-gray-800">
+                  {{ notification.title }}
+                </h4>
+                <span
+                  class="px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded"
+                >
+                  {{ notification.count }}
+                </span>
+                <div
+                  *ngIf="!notification.read"
+                  class="w-1.5 h-1.5 bg-red-500 rounded-full ml-auto flex-shrink-0"
+                ></div>
+              </div>
+              <p class="text-xs text-gray-600 truncate leading-tight">
+                {{ notification.message }}
+              </p>
+            </div>
+
+            <!-- Time -->
+            <div class="flex-shrink-0 text-right">
+              <span class="text-xs text-gray-400 block"
+                >{{ notification.time }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="notifications.length === 0" class="text-center py-12">
+          <i class="pi pi-inbox text-6xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500 font-medium">No hay notificaciones</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer con botón toggle -->
+    <div class="px-4 py-3 bg-white border-t border-gray-200">
+      <button
+        (click)="toggleViewMode()"
+        class="w-full py-2.5 px-4 bg-primary-900 hover:bg-primary-950 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center justify-center gap-2"
+      >
+        <i
+          [class]="showAllMode() ? 'pi pi-th-large' : 'pi pi-list'"
+          class="text-sm"
+        ></i>
+        <span *ngIf="!showAllMode()">Ver todas las notificaciones</span>
+        <span *ngIf="showAllMode()">Ver vista de cards</span>
+      </button>
+    </div>
+  </div>
+</p-drawer>

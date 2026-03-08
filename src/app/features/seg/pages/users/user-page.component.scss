@@ -1,0 +1,93 @@
+:host ::ng-deep {
+  .p-tabpanels,
+  .p-tabpanel {
+    overflow: visible !important;
+  }
+
+  .p-tieredmenu-overlay {
+    z-index: 1100 !important;
+  }
+
+  .p-tieredmenu {
+    .p-badge-rounded {
+      border-radius: 12px;
+      font-size: 0.6rem;
+      padding: 0 0.5rem;
+    }
+
+    .p-badge-info,
+    .p-badge-warning,
+    .p-badge-danger,
+    .p-badge-success {
+      background: #7c0061;
+      color: white;
+      box-shadow: 0 2px 6px rgba(124, 0, 97, 0.4);
+    }
+
+    .p-menuitem-text {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .p-menuitem-icon {
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .p-menuitem-link {
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #f3f4f6;
+
+        .p-menuitem-icon {
+          color: #3b82f6;
+        }
+
+        .p-badge {
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    // Estilos para items seleccionables
+    .selected-permission {
+      .p-menuitem-icon {
+        color: #7c0061;
+        font-size: 1.1rem;
+      }
+
+      .p-menuitem-text {
+        color: #7c0061;
+        font-weight: 600;
+      }
+    }
+
+    .unselected-permission {
+      .p-menuitem-icon {
+        color: #9ca3af;
+        font-size: 1.1rem;
+      }
+
+      .p-menuitem-text {
+        color: #6b7280;
+      }
+    }
+  }
+
+  // Estilos para el tree
+  .p-tree {
+    .p-tree-container {
+      .p-treenode {
+        .p-treenode-content {
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: #f3f4f6;
+          }
+        }
+      }
+    }
+  }
+}

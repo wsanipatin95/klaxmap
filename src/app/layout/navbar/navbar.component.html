@@ -1,0 +1,45 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-left">
+      <button
+        class="hamburger-btn"
+        (click)="toggleSidebar()"
+        aria-label="Toggle menu"
+      >
+        <i class="pi pi-bars"></i>
+      </button>
+
+      <div class="navbar-logo">
+        <span class="logo-text">KLAX</span>
+      </div>
+    </div>
+
+    <div class="navbar-right">
+      <button
+        class="navbar-icon-btn"
+        (click)="openNotifications()"
+        severity="danger"
+        aria-label="Notifications"
+      >
+        <i class="pi pi-bell"></i>
+      </button>
+
+      <button class="navbar-user-btn" (click)="userMenu.toggle($event)">
+        <div class="user-avatar">
+          <i class="pi pi-user"></i>
+        </div>
+        <span class="user-name">{{ userName() }}</span>
+        <i class="pi pi-angle-down"></i>
+      </button>
+
+      <p-menu
+        #userMenu
+        [model]="userMenuItems()"
+        [popup]="true"
+        [appendTo]="'body'"
+      />
+    </div>
+  </div>
+</nav>
+
+<app-notification-sidebar #notificationSidebar />

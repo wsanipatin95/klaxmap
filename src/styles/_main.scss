@@ -1,0 +1,398 @@
+/* ===================================
+   Layout System - Professional Responsive Design
+   =================================== */
+
+/* CSS Variables for Layout */
+:root {
+  --topbar-height: 4rem;
+  --sidebar-width: 13rem;
+  --sidebar-collapsed-width: 3.75rem;
+  --layout-padding: 1.5rem;
+  --layout-gap: 1.5rem;
+  --transition-speed: 0.3s;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --z-index-sidebar: 1000;
+  --z-index-topbar: 1100;
+  --z-index-overlay: 999;
+
+  /* Responsive breakpoints (aligned with Tailwind) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Layout Wrapper - Main Container */
+.layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  background-color: #f9fafb;
+  overflow-x: hidden;
+}
+
+/* Topbar Styles */
+.layout-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: var(--z-index-topbar);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--layout-padding);
+  transition: transform var(--transition-speed) var(--transition-timing);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+
+  /* Support for sticky behavior on scroll */
+  &.topbar-hidden {
+    transform: translateY(-100%);
+  }
+}
+
+/* Sidebar Styles */
+.layout-sidebar {
+  position: fixed;
+  top: var(--topbar-height);
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  z-index: var(--z-index-sidebar);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: transform var(--transition-speed) var(--transition-timing),
+    width var(--transition-speed) var(--transition-timing);
+  box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.05);
+
+  /* Smooth scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+
+  /* Collapsed state */
+  &.sidebar-collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  /* Mobile - Hidden by default */
+  @media (max-width: 1023px) {
+    transform: translateX(-100%);
+    box-shadow: none;
+    z-index: 1050;
+
+    &.sidebar-visible {
+      transform: translateX(0);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+/* Main Container */
+.layout-main-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-top: var(--topbar-height);
+  margin-left: var(--sidebar-width);
+  min-height: calc(100vh - var(--topbar-height));
+  transition: margin-left var(--transition-speed) var(--transition-timing);
+
+  /* When sidebar is collapsed */
+  &.sidebar-collapsed {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  /* Mobile - No sidebar offset */
+  @media (max-width: 1023px) {
+    margin-left: 0;
+  }
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  // padding: var(--layout-padding);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  /* Container variants */
+  &.content-fluid {
+    max-width: 100%;
+  }
+
+  &.content-boxed {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  &.content-narrow {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
+/* Mobile Overlay - For sidebar backdrop */
+.layout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-index-overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-speed) var(--transition-timing),
+    visibility var(--transition-speed) var(--transition-timing);
+
+  &.overlay-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Only shown on mobile when sidebar is open */
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+/* ===================================
+   Responsive Breakpoints
+   =================================== */
+
+/* Tablet Portrait (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --layout-padding: 2rem;
+    --layout-gap: 2rem;
+  }
+
+  .main-content {
+    padding: var(--layout-padding);
+  }
+}
+
+/* Tablet Landscape & Desktop (1024px+) */
+@media (min-width: 1024px) {
+  :root {
+    --layout-padding: 2rem;
+  }
+
+  .layout-sidebar {
+    transform: translateX(0);
+  }
+}
+
+/* Large Desktop (1280px+) */
+@media (min-width: 1280px) {
+  :root {
+    --layout-padding: 2.5rem;
+    --sidebar-width: 14rem;
+  }
+}
+
+/* Extra Large Desktop (1536px+) */
+@media (min-width: 1536px) {
+  :root {
+    --layout-padding: 3rem;
+    --sidebar-width: 15rem;
+  }
+
+  .main-content {
+    &.content-boxed {
+      max-width: 1600px;
+    }
+  }
+}
+
+/* Mobile Small (320px - 479px) */
+@media (max-width: 479px) {
+  :root {
+    --topbar-height: 3.5rem;
+    --layout-padding: 1rem;
+    --sidebar-width: 85vw;
+    --layout-gap: 1rem;
+  }
+
+  .main-content {
+    padding: var(--layout-padding);
+  }
+}
+
+/* Mobile Medium (480px - 639px) */
+@media (min-width: 480px) and (max-width: 639px) {
+  :root {
+    --layout-padding: 1.25rem;
+    --sidebar-width: 75vw;
+  }
+}
+
+/* ===================================
+   Utility Classes for Layout
+   =================================== */
+
+/* Sidebar toggle utilities */
+.sidebar-toggle-btn {
+  display: none;
+
+  @media (max-width: 1023px) {
+    display: inline-flex;
+  }
+}
+
+/* Hide elements on mobile */
+.hidden-mobile {
+  @media (max-width: 767px) {
+    display: none !important;
+  }
+}
+
+/* Hide elements on tablet */
+.hidden-tablet {
+  @media (min-width: 768px) and (max-width: 1023px) {
+    display: none !important;
+  }
+}
+
+/* Hide elements on desktop */
+.hidden-desktop {
+  @media (min-width: 1024px) {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+.visible-mobile {
+  display: none !important;
+
+  @media (max-width: 767px) {
+    display: block !important;
+  }
+}
+
+/* Prevent body scroll when sidebar is open on mobile */
+body.sidebar-open {
+  @media (max-width: 1023px) {
+    overflow: hidden;
+  }
+}
+
+/* ===================================
+   Animation & Transitions
+   =================================== */
+
+/* Smooth page transitions */
+.main-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading state for main content */
+.main-content.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ===================================
+   Print Styles
+   =================================== */
+
+@media print {
+  .layout-topbar,
+  .layout-sidebar,
+  .layout-overlay {
+    display: none !important;
+  }
+
+  .layout-main-container {
+    margin: 0 !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+  }
+}
+
+/* ===================================
+   Dark Mode Support (Optional - Disabled by default)
+   =================================== */
+
+/* Uncomment to enable dark mode
+@media (prefers-color-scheme: dark) {
+  .layout-wrapper {
+    background-color: #1f2937;
+  }
+  
+  .layout-topbar,
+  .layout-sidebar {
+    background-color: #111827;
+    border-color: #374151;
+  }
+  
+  .layout-sidebar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    
+    &:hover {
+      background: #6b7280;
+    }
+  }
+}
+*/
+
+/* ===================================
+   Accessibility Improvements
+   =================================== */
+
+/* Focus visible for keyboard navigation */
+.layout-sidebar:focus-visible,
+.layout-topbar:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .layout-sidebar,
+  .layout-main-container,
+  .layout-overlay {
+    transition: none !important;
+  }
+}

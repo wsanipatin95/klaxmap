@@ -1,0 +1,62 @@
+<!-- FULLSCREEN BLOCKER -->
+<div *ngIf="state === 'loading'"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px]" aria-live="polite"
+    aria-busy="true">
+    <div class="bg-white rounded-2xl shadow-2xl px-6 py-5 w-[320px]">
+        <div class="flex items-center gap-3">
+            <i class="pi pi-spin pi-spinner text-xl"></i>
+            <div class="leading-tight">
+                <div class="font-semibold">Activando cuenta…</div>
+                <div class="text-xs text-gray-500">Por favor espera.</div>
+            </div>
+        </div>
+        <div class="mt-4 h-1 w-full bg-gray-100 rounded">
+            <div class="h-1 w-1/2 bg-gray-900/50 rounded animate-pulse"></div>
+        </div>
+    </div>
+</div>
+
+<div
+    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 p-4">
+    <div class="w-full max-w-md">
+        <p-card styleClass="shadow-2xl">
+            <ng-template pTemplate="header">
+                <div class="flex flex-col items-center pt-8 pb-4">
+                    <div class="rounded-full p-4 mb-4 shadow-lg" [ngClass]="{
+              'bg-primary-500': state === 'loading',
+              'bg-green-500': state === 'success',
+              'bg-red-500': state === 'error'
+            }">
+                        <i class="pi text-4xl text-white" [ngClass]="{
+                'pi-spinner pi-spin': state === 'loading',
+                'pi-check': state === 'success',
+                'pi-times': state === 'error'
+              }"></i>
+                    </div>
+
+                    <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                        Activación de cuenta
+                    </h1>
+                    <p class="text-gray-600 text-center px-4 text-sm">
+                        {{ message }}
+                    </p>
+
+                    <p *ngIf="email && state === 'success'" class="text-xs text-gray-500 mt-2">
+                        Cuenta: {{ email }}
+                    </p>
+                </div>
+            </ng-template>
+
+            <div class="px-4 pb-6 space-y-3">
+                <button *ngIf="state === 'success'" pButton type="button" label="Ir a Iniciar Sesión"
+                    icon="pi pi-sign-in" class="w-full" (click)="goLogin()"></button>
+
+                <button *ngIf="state === 'error'" pButton type="button" label="Volver a Registro" icon="pi pi-user-plus"
+                    class="w-full" styleClass="p-button-outlined" (click)="goRegister()"></button>
+
+                <button *ngIf="state === 'error'" pButton type="button" label="Ir a Iniciar Sesión" icon="pi pi-sign-in"
+                    class="w-full" (click)="goLogin()"></button>
+            </div>
+        </p-card>
+    </div>
+</div>

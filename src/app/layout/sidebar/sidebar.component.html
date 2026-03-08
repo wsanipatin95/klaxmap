@@ -1,0 +1,82 @@
+<!-- Sidebar Container -->
+<aside class="sidebar" [class.sidebar-collapsed]="isCollapsed()" [class.sidebar-mobile-visible]="isMobileVisible()">
+  <!-- Sidebar Content -->
+  <div class="sidebar-content">
+    <!-- Menu Items -->
+    <nav class="sidebar-nav">
+      <ul class="sidebar-menu">
+        @for (item of menuItems(); track item.label) {
+        <li class="sidebar-menu-item">
+          <!-- Divider -->
+          @if (item.isDivider && !isCollapsed()) {
+          <div class="sidebar-divider">
+            <span class="sidebar-divider-label">{{ item.label }}</span>
+          </div>
+          }
+
+          <!-- Item sin subitems -->
+          @if (!item.items && !item.isDivider) {
+          @if (item.route) {
+          <a class="sidebar-link" [routerLink]="item.route" routerLinkActive="active"
+            (click)="onMenuClick(item, $event)" [title]="isCollapsed() ? item.label : ''">
+            <i [class]="item.icon" class="sidebar-icon"></i>
+            @if (!isCollapsed()) {
+            <span class="sidebar-label">{{ item.label }}</span>
+            } @if (item.badge && !isCollapsed()) {
+            <span class="sidebar-badge" [class]="item.badgeClass">
+              {{ item.badge }}
+            </span>
+            }
+          </a>
+          } @else {
+          <button type="button" class="sidebar-link" (click)="onMenuClick(item, $event)"
+            [title]="isCollapsed() ? item.label : ''">
+            <i [class]="item.icon" class="sidebar-icon"></i>
+            @if (!isCollapsed()) {
+            <span class="sidebar-label">{{ item.label }}</span>
+            } @if (item.badge && !isCollapsed()) {
+            <span class="sidebar-badge" [class]="item.badgeClass">
+              {{ item.badge }}
+            </span>
+            }
+          </button>
+          }
+
+          }
+
+          <!-- Item con subitems -->
+          @if (item.items && !item.isDivider) {
+          <button class="sidebar-link sidebar-link-parent" [class.active]="item.expanded" (click)="toggleSubmenu(item)"
+            [title]="isCollapsed() ? item.label : ''">
+            <i [class]="item.icon" class="sidebar-icon"></i>
+            @if (!isCollapsed()) {
+            <span class="sidebar-label">{{ item.label }}</span>
+            <i class="pi pi-chevron-down sidebar-arrow" [class.sidebar-arrow-expanded]="item.expanded"></i>
+            }
+          </button>
+
+          <!-- Submenu -->
+          @if (item.expanded && !isCollapsed()) {
+          <ul class="sidebar-submenu">
+            @for (subItem of item.items; track subItem.label) {
+            <li class="sidebar-submenu-item">
+              <a class="sidebar-sublink" [routerLink]="subItem.route" routerLinkActive="active"
+                (click)="navigateToRoute(subItem.route)">
+                <i [class]="subItem.icon" class="sidebar-subicon"></i>
+                <span class="sidebar-sublabel">{{ subItem.label }}</span>
+                @if (subItem.badge) {
+                <span class="sidebar-badge" [class]="subItem.badgeClass">
+                  {{ subItem.badge }}
+                </span>
+                }
+              </a>
+            </li>
+            }
+          </ul>
+          } }
+        </li>
+        }
+      </ul>
+    </nav>
+  </div>
+</aside>

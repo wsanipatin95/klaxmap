@@ -1,0 +1,32 @@
+<div [class]="getDefaultConfig().containerClass">
+  <!-- Tab List -->
+  <div
+    [class]="getDefaultConfig().tabListClass"
+    [class.overflow-x-auto]="getDefaultConfig().scrollable"
+    [class.scrollbar-hide]="getDefaultConfig().scrollable"
+  >
+    <button
+      *ngFor="let tab of tabs"
+      type="button"
+      [class]="getTabClasses(tab)"
+      [disabled]="tab.disabled"
+      (click)="selectTab(tab.id)"
+      [attr.aria-selected]="isActive(tab.id)"
+      [attr.aria-disabled]="tab.disabled"
+      role="tab"
+    >
+      <span class="flex items-center">
+        <i
+          *ngIf="tab.icon"
+          [class]="tab.icon + ' ' + getDefaultConfig().iconClass"
+        ></i>
+        <span [class]="getDefaultConfig().labelClass">{{ tab.label }}</span>
+      </span>
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div [class]="getDefaultConfig().contentClass" role="tabpanel">
+    <ng-content></ng-content>
+  </div>
+</div>

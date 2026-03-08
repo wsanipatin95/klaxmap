@@ -1,0 +1,71 @@
+/* Importar Tailwind CSS v4 */
+@use "tailwindcss";
+@use "styles/layout.scss";
+@plugin "tailwindcss-primeui";
+
+/* Estilos globales opcionales */
+@layer base {
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.875rem; // Tamaño base más pequeño
+    background-color: #f9fafb !important;
+  }
+
+  html,
+  body {
+    height: 100%;
+    background-color: #f9fafb !important;
+  }
+}
+
+@import "primeicons/primeicons.css";
+
+/* Fix z-index para menús de PrimeNG que se agregan al body */
+.p-menu-overlay,
+.p-menu {
+  z-index: 1200 !important;
+}
+
+/* Base: neutraliza el width default de PrimeNG para drawers nuestros */
+.p-drawer.p-drawer-right.appDrawer {
+  width: min(720px, 96vw) !important;
+  /* tamaño default */
+  max-width: 96vw !important;
+}
+
+/* Variantes por módulo/tamaño */
+.p-drawer.p-drawer-right.appDrawer--sm {
+  width: min(420px, 96vw) !important;
+}
+
+.p-drawer.p-drawer-right.appDrawer--md {
+  width: min(720px, 96vw) !important;
+}
+
+.p-drawer.p-drawer-right.appDrawer--lg {
+  width: min(900px, 96vw) !important;
+}
+
+/* Variantes por feature (si prefieres por nombre) */
+.p-drawer.p-drawer-right.appDrawer--empresa {
+  width: min(820px, 96vw) !important;
+}
+
+.p-drawer.p-drawer-right.appDrawer--usuario {
+  width: min(760px, 96vw) !important;
+}
+
+@media (max-width: 520px) {
+
+  .p-drawer.p-drawer-right.appDrawer,
+  .p-drawer.p-drawer-right.appDrawer--sm,
+  .p-drawer.p-drawer-right.appDrawer--md,
+  .p-drawer.p-drawer-right.appDrawer--lg,
+  .p-drawer.p-drawer-right.appDrawer--empresa,
+  .p-drawer.p-drawer-right.appDrawer--usuario {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+}

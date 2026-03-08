@@ -1,0 +1,76 @@
+.compact-tabs {
+  // Reducir el espaciado del tablist
+  .p-tablist {
+    border-bottom: 1px solid var(--p-primary-color, #e5e7eb);
+    // border-bottom: none;
+    background: transparent;
+    gap: 0.25rem;
+  }
+
+  // Estilo compacto para los tabs individuales
+  .p-tab {
+    padding: 0.25rem 0.625rem; // Padding más reducido
+    margin: 0;
+    font-size: 0.75rem; // Texto más pequeño (12px)
+    font-weight: 500;
+    border: 1px solid transparent;
+    // Bordes redondeados solo superiores
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
+    background: transparent;
+    color: #6b7280;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f3f4f6;
+      color: #374151;
+      border-color: #e5e7eb;
+    }
+
+    &.p-tab-active {
+      color: #ffffff;
+      background: var(--p-primary-color, #7b0061);
+      border-color: var(--p-primary-color, #7b0061);
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+        0 1px 2px 0 rgba(0, 0, 0, 0.06);
+
+      &:hover {
+        background: var(--p-primary-color, #7b0061);
+        color: #ffffff;
+      }
+    }
+  }
+
+  // Ajustar el contenido del tablist
+  .p-tablist-content {
+    gap: 0.25rem;
+  }
+
+  // Ocultar la barra activa porque usamos el estilo de botón completo
+  .p-tablist-active-bar {
+    display: none;
+  }
+
+  // Contenedor de los paneles - evitar acumulación de espacio
+  .p-tabpanels {
+    margin: 0;
+    padding: 0;
+  }
+
+  // Estilo compacto para los paneles de contenido
+  .p-tabpanel {
+    padding: 1rem 0; // Padding vertical reducido
+    margin: 0; // Sin margin para evitar acumulación
+    background: transparent;
+  }
+
+  // Botones de navegación más pequeños (si existen)
+  .p-tablist-nav-button {
+    width: 2rem;
+    background: transparent;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+  }
+}

@@ -1,0 +1,37 @@
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <div class="head">
+        <div class="title">{{ title }}</div>
+
+        <div class="actions">
+            <button pButton icon="pi pi-refresh" class="p-button-text" (click)="refresh()"
+                [disabled]="loading() || uploading()"></button>
+
+            <button pButton icon="pi pi-download" class="p-button-text" (click)="download()"
+                [disabled]="!hasFile() || loading() || uploading()"></button>
+
+            <button pButton icon="pi pi-trash" class="p-button-text p-button-danger" (click)="remove()"
+                [disabled]="!hasFile() || readonly || loading() || uploading()"></button>
+        </div>
+    </div>
+
+    <div class="body">
+        <div class="drop" (click)="fileInput.click()" [class.disabled]="readonly || uploading()">
+            <ng-container *ngIf="previewUrl(); else empty">
+                <img [src]="previewUrl()!" alt="preview" />
+            </ng-container>
+
+            <ng-template #empty>
+                <div class="empty">
+                    <i class="pi pi-upload"></i>
+                    <div>{{ hasFile() ? (item()?.nombreRegistro || 'Archivo cargado') : 'Seleccionar archivo' }}</div>
+                    <small *ngIf="uploading()">Subiendo...</small>
+                </div>
+            </ng-template>
+        </div>
+
+        <input #fileInput type="file" class="hidden" [accept]="accept"
+            (change)="onPick($any($event.target).files?.[0] ?? null)" [disabled]="readonly || uploading()" />
+    </div>
+</div>

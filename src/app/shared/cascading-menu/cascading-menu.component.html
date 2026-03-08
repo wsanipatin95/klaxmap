@@ -1,0 +1,65 @@
+<div class="cascading-menu">
+  <ul class="menu-list">
+    <li *ngFor="let item of items" class="menu-item">
+      <!-- Item Container -->
+      <div class="menu-item-content group">
+        <!-- Checkbox Area (if selectable) -->
+        <div class="flex items-center flex-1 min-w-0">
+          <div
+            *ngIf="item.selectable !== false && item.value"
+            class="checkbox-wrapper"
+            (click)="onCheckboxChange(item, $event)"
+          >
+            <input
+              type="checkbox"
+              [checked]="isSelected(item) || isParentFullySelected(item)"
+              [indeterminate]="isIndeterminate(item)"
+              class="checkbox-input"
+              (click)="$event.stopPropagation()"
+            />
+          </div>
+
+          <!-- Icon & Label -->
+          <div
+            class="item-label-wrapper"
+            (click)="
+              hasChildren(item)
+                ? toggleExpand(item, $event)
+                : onCheckboxChange(item, $event)
+            "
+          >
+            <i *ngIf="item.icon" [class]="item.icon + ' item-icon'"></i>
+            <span class="item-label">{{ item.label }}</span>
+          </div>
+        </div>
+
+        <!-- Expand/Collapse Icon -->
+        <button
+          *ngIf="hasChildren(item)"
+          (click)="toggleExpand(item, $event)"
+          class="expand-button"
+          type="button"
+        >
+          <i
+            [class]="
+              isExpanded(item) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'
+            "
+            class="expand-icon"
+          ></i>
+        </button>
+      </div>
+
+      <!-- Children (Recursive) -->
+      <div
+        *ngIf="hasChildren(item) && isExpanded(item)"
+        class="submenu-container"
+      >
+        <app-cascading-menu
+          [items]="item.children!"
+          [selectedValues]="selectedValues"
+          (selectionChange)="selectionChange.emit($event)"
+        ></app-cascading-menu>
+      </div>
+    </li>
+  </ul>
+</div>

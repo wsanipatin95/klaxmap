@@ -1,0 +1,78 @@
+<div class="wrap">
+    <div class="top">
+        <div class="left">
+            <div class="title">Mis empresas</div>
+            <div class="subtitle">
+                Selecciona la empresa con la que vas a trabajar. El menú se ajusta según tus privilegios.
+            </div>
+
+            @if (activeCompanyId()) {
+            <div class="current">
+                <span class="chip ok">Empresa actual:</span>
+                <span class="name">{{ activeCompanyName() || activeCompanyId() }}</span>
+
+                <button pButton type="button" class="p-button-text" icon="pi pi-sign-out" label="Salir de empresa"
+                    (click)="salirDeEmpresa()"></button>
+            </div>
+            }
+        </div>
+
+        <div class="right">
+            <div class="toggleWrap">
+                <div class="label">Ver todas</div>
+                <p-toggleswitch [(ngModel)]="verTodos" (onChange)="onToggleVerTodos()"></p-toggleswitch>
+            </div>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="search">
+            <i class="pi pi-search"></i>
+            <input pInputText [(ngModel)]="q" placeholder="Buscar empresa..." [disabled]="loading() || entering()" />
+        </div>
+    </div>
+
+    <div class="table">
+        <p-table [value]="filteredItems" [loading]="loading()" [paginator]="true" [rows]="size"
+            [totalRecords]="totalElements" [lazy]="true" (onLazyLoad)="onLazyLoad($event)" responsiveLayout="scroll">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Empresa</th>
+                    <th style="width: 120px;">Estado</th>
+                    <th style="width: 180px; text-align: right;">Acción</th>
+                </tr>
+            </ng-template>
+s
+            <ng-template pTemplate="body" let-row>
+                <tr>
+                    <td>
+                        <div class="empCell">
+                            <div class="name">{{ empresaLabel(row) }}</div>
+                            <div class="meta">UUID: {{ empresaUuid(row) }}</div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="chip" [class.ok]="isRowActive(row) && isRowActiveEmpresa(row)" [class.bad]="!isRowActive(row) && !isRowActiveEmpresa(row)">
+                            {{ estadoLabel(row) }}
+                        </span>
+                    </td>
+
+                    <td style="text-align: right;">
+                        <button pButton type="button" class="btnEnter"
+                            [label]="isAlreadyIn(row) ? 'Ya seleccionado' : 'Entrar'"
+                            [icon]="isAlreadyIn(row) ? 'pi pi-lock' : 'pi pi-sign-in'"
+                            [disabled]="entering() || !isRowActive(row) || !isRowActiveEmpresa(row) || isAlreadyIn(row)"
+                            [loading]="entering() && !isAlreadyIn(row)" (click)="entrar(row)"></button>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="3">No tienes empresas asignadas.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

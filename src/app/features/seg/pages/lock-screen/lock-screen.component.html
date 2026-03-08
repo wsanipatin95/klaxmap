@@ -1,0 +1,29 @@
+<div class="lock-overlay" aria-live="polite" aria-busy="true">
+    <div class="lock-card">
+        <p-card styleClass="shadow-2xl">
+            <ng-template pTemplate="header">
+                <div class="header">
+                    <div class="avatar">
+                        <i class="pi pi-user"></i>
+                    </div>
+                    <h2>Sesión bloqueada</h2>
+                    <p class="sub">{{ reason || 'Vuelve a ingresar tu contraseña para continuar.' }}</p>
+                    <small class="user">Usuario: {{ username }}</small>
+                </div>
+            </ng-template>
+
+            <form [formGroup]="form" (ngSubmit)="unlock()" class="body">
+                <label class="label">Contraseña</label>
+
+                <p-password formControlName="password" [toggleMask]="true" [feedback]="false" styleClass="w-full"
+                    inputStyleClass="w-full"></p-password>
+
+                <button pButton type="submit" label="Desbloquear" icon="pi pi-lock-open" class="w-full mt-4"
+                    [loading]="loading" [disabled]="loading"></button>
+
+                <button pButton type="button" label="Cerrar sesión" icon="pi pi-sign-out" class="w-full mt-2"
+                    styleClass="p-button-outlined" (click)="logout()" [disabled]="loading"></button>
+            </form>
+        </p-card>
+    </div>
+</div>

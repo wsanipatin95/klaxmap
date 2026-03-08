@@ -1,0 +1,14 @@
+.login-container {
+  padding: 2rem;
+}
+
+/* UX: deshabilitados con “feel” correcto */
+:host ::ng-deep input:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+:host ::ng-deep .p-password input:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}

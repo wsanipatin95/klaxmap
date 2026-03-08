@@ -1,0 +1,62 @@
+<div class="pt-4 md:px-8">
+  <p-tabs
+    [(value)]="activeTab"
+    class="compact-tabs"
+    scrollable="true"
+    (onChange)="onTabChange($event)"
+  >
+    <p-tablist>
+      <p-tab value="Usuarios" class="flex items-center !gap-2 text-inherit">
+        <i class="pi pi-users"></i>
+        <span>Usuarios</span>
+      </p-tab>
+      <p-tab value="Privilegios" class="flex items-center !gap-2 text-inherit">
+        <i class="pi pi-shield"></i>
+        <span>Perfiles</span>
+      </p-tab>
+    </p-tablist>
+  </p-tabs>
+
+  <!-- Contenido del Tab Usuarios -->
+  <div *ngIf="activeTab === 'Usuarios'" class="mt-4">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- Menu Principal con Badges -->
+      <div class="bg-white p-4 rounded-lg shadow-md">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="pi pi-sitemap mr-2 text-blue-600"></i>
+          Módulos del Sistema
+        </h3>
+        <p-tieredmenu [model]="items" />
+      </div>
+
+      <!-- Menu con Checkboxes - Componente Personalizado -->
+      <div class="bg-white p-4 rounded-lg shadow-md">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="pi pi-check-square mr-2 text-green-600"></i>
+          Permisos Seleccionables
+        </h3>
+        <app-cascading-menu
+          [items]="cascadingMenuItems"
+          [selectedValues]="selectedPermissions"
+          (selectionChange)="onCascadingSelectionChange($event)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido del Tab Privilegios -->
+  <div *ngIf="activeTab === 'Privilegios'" class="mt-4">
+    <div class="bg-white p-4 rounded-lg shadow-md">
+      <h3 class="text-lg font-semibold text-gray-800 mb-3">
+        <i class="pi pi-list mr-2 text-purple-600"></i>
+        Estructura de Privilegios
+      </h3>
+      <p-tree
+        [value]="files"
+        selectionMode="checkbox"
+        styleClass="w-full"
+        [(selection)]="selectedFiles"
+      />
+    </div>
+  </div>
+</div>

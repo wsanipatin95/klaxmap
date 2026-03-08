@@ -1,0 +1,739 @@
+<div class="container pt-4 px-8 max-w-6xl">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold text-primary-500 mb-2">Components Guide</h1>
+    <p class="text-gray-600">Referencia visual de componentes</p>
+  </div>
+
+  <!-- InputText Section -->
+  <section class="mb-8">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Input Text
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Input Básico -->
+      <div class="space-y-3">
+        <h3 class="text-lg font-medium text-gray-700">Input Básico</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2"
+              >Small Size</label
+            >
+            <input
+              pInputText
+              type="text"
+              pSize="small"
+              placeholder="Small Input"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2"
+              >Normal Size</label
+            >
+            <input
+              type="text"
+              pInputText
+              placeholder="Normal Input"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2"
+              >Large Size</label
+            >
+            <input
+              type="text"
+              pInputText
+              placeholder="Large Input"
+              pSize="large"
+              class="w-full"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Float Label -->
+      <div class="space-y-3">
+        <h3 class="text-lg font-medium text-gray-700">Float Label</h3>
+        <div class="space-y-4">
+          <p-floatlabel>
+            <input
+              pInputText
+              id="float_label_1"
+              autocomplete="off"
+              class="w-full"
+            />
+            <label for="float_label_1">Username</label>
+          </p-floatlabel>
+          <p-floatlabel>
+            <input
+              pInputText
+              id="float_label_2"
+              autocomplete="off"
+              pSize="small"
+              class="w-full"
+            />
+            <label for="float_label_2">Email (Small)</label>
+          </p-floatlabel>
+          <p-floatlabel>
+            <input
+              pInputText
+              id="float_label_3"
+              autocomplete="off"
+              type="password"
+              class="w-full"
+            />
+            <label for="float_label_3">Password</label>
+          </p-floatlabel>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Input Group Section -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Input Group
+    </h2>
+
+    <div class="grid grid-cols-1 gap-6 max-w-2xl">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Con Addon de Texto</label
+        >
+        <p-inputgroup>
+          <p-inputgroup-addon
+            class="bg-primary-500 text-white border-primary-500 px-2 py-0"
+          >
+            <small>Username: </small>
+          </p-inputgroup-addon>
+          <input pInputText placeholder="Ingrese su usuario" pSize="small" />
+        </p-inputgroup>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Con Icono</label
+        >
+        <p-inputgroup>
+          <p-inputgroup-addon>
+            <i class="pi pi-user"></i>
+          </p-inputgroup-addon>
+          <input pInputText placeholder="Usuario" />
+        </p-inputgroup>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Con Addon al Final</label
+        >
+        <p-inputgroup>
+          <input pInputText placeholder="Dominio" />
+          <p-inputgroup-addon class="bg-gray-100">
+            <small>.com</small>
+          </p-inputgroup-addon>
+        </p-inputgroup>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alerts/Toast Section -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Alerts / Toast Notifications
+    </h2>
+
+    <div class="space-y-6">
+      <div>
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Toast Variants</h3>
+        <p class="text-sm text-gray-600 mb-4">
+          Click en los botones para ver los diferentes tipos de notificaciones
+          toast
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <p-button
+            label="Success"
+            icon="pi pi-check"
+            severity="success"
+            size="small"
+            (onClick)="showSuccessToast()"
+          />
+          <p-button
+            label="Info"
+            icon="pi pi-info-circle"
+            severity="info"
+            size="small"
+            (onClick)="showInfoToast()"
+          />
+          <p-button
+            label="Warning"
+            icon="pi pi-exclamation-triangle"
+            severity="warn"
+            size="small"
+            (onClick)="showWarningToast()"
+          />
+          <p-button
+            label="Error"
+            icon="pi pi-times"
+            severity="danger"
+            size="small"
+            (onClick)="showErrorToast()"
+          />
+          <p-button
+            label="Loading"
+            icon="pi pi-spinner"
+            severity="secondary"
+            size="small"
+            (onClick)="showLoadingToast()"
+          />
+          <p-button
+            label="Custom"
+            icon="pi pi-star"
+            size="small"
+            [outlined]="true"
+            (onClick)="showCustomToast()"
+          />
+        </div>
+      </div>
+
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4
+          class="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2"
+        >
+          <i class="pi pi-info-circle"></i>
+          Información
+        </h4>
+        <p class="text-sm text-blue-700">
+          Las notificaciones toast aparecerán en la esquina de la pantalla con
+          diferentes colores según su tipo. Cada toast tiene una duración
+          configurable y puede incluir título y descripción.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Buttons Section -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Buttons
+    </h2>
+
+    <div class="space-y-8">
+      <!-- Tamaños -->
+      <div>
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Tamaños</h3>
+        <div class="flex flex-wrap gap-4 items-center">
+          <p-button
+            label="Small"
+            icon="pi pi-check"
+            size="small"
+            (onClick)="showSuccessToast()"
+          />
+          <p-button label="Normal" icon="pi pi-check" />
+          <p-button label="Large" icon="pi pi-check" size="large" />
+        </div>
+      </div>
+
+      <!-- Variantes -->
+      <div>
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Variantes</h3>
+        <div class="flex flex-wrap gap-4 items-center">
+          <p-button label="Primary" icon="pi pi-star" size="small" />
+          <p-button
+            label="Secondary"
+            icon="pi pi-bookmark"
+            severity="secondary"
+            size="small"
+          />
+          <p-button
+            label="Success"
+            icon="pi pi-check"
+            severity="success"
+            size="small"
+          />
+          <p-button
+            label="Info"
+            icon="pi pi-info-circle"
+            severity="info"
+            size="small"
+          />
+          <p-button
+            label="Warn"
+            icon="pi pi-exclamation-triangle"
+            severity="warn"
+            size="small"
+          />
+          <p-button
+            label="Danger"
+            icon="pi pi-times"
+            severity="danger"
+            size="small"
+          />
+        </div>
+      </div>
+
+      <!-- Estilos -->
+      <div>
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Estilos</h3>
+        <div class="flex flex-wrap gap-4 items-center">
+          <p-button label="Solid" size="small" />
+          <p-button label="Outlined" [outlined]="true" size="small" />
+          <p-button label="Text" [text]="true" size="small" />
+          <p-button label="Raised" [raised]="true" size="small" />
+        </div>
+      </div>
+
+      <!-- Solo Iconos -->
+      <!-- <div>
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Solo Iconos</h3>
+        <div class="flex flex-wrap gap-4 items-center">
+          <p-button icon="pi pi-search" [rounded]="true" />
+          <p-button
+            icon="pi pi-bookmark"
+            [rounded]="true"
+            severity="secondary"
+          />
+          <p-button icon="pi pi-trash" [rounded]="true" severity="danger" />
+          <p-button icon="pi pi-check" [rounded]="true" [outlined]="true" />
+        </div>
+      </div> -->
+    </div>
+  </section>
+  <!-- Date picker -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Date Picker
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-md">
+      <div>
+        <label
+          for="basicDate"
+          class="block text-sm font-medium text-gray-600 mb-2"
+          >Basic Date Picker</label
+        >
+        <p-datepicker
+          size="small"
+          placeholder="Small"
+          showIcon
+          iconDisplay="input"
+        />
+      </div>
+      <div>
+        <label
+          for="rangeDate"
+          class="block text-sm font-medium text-gray-600 mb-2"
+          >Date Range Picker</label
+        >
+        <p-datepicker
+          selectionMode="range"
+          [readonlyInput]="true"
+          size="small"
+        />
+      </div>
+    </div>
+  </section>
+  <!-- Dropdowns -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Dropdowns
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Small Size</label
+        >
+        <p-select
+          [options]="cities()"
+          [(ngModel)]="selectedCity"
+          optionLabel="name"
+          placeholder="Select a City"
+          size="small"
+          class="w-full"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Normal Size</label
+        >
+        <p-select
+          [options]="countries()"
+          [(ngModel)]="selectedCountry"
+          optionLabel="name"
+          placeholder="Select a Country"
+          class="w-full"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Large Size</label
+        >
+        <p-select
+          [options]="categories()"
+          [(ngModel)]="selectedCategory"
+          optionLabel="name"
+          placeholder="Select a Category"
+          size="large"
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mt-8">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >With Filter</label
+        >
+        <p-select
+          [options]="cities()"
+          [(ngModel)]="selectedCity"
+          optionLabel="name"
+          placeholder="Search and Select"
+          [filter]="true"
+          filterPlaceholder="Search city..."
+          size="small"
+          class="w-full"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Disabled</label
+        >
+        <p-select
+          [options]="countries()"
+          optionLabel="name"
+          placeholder="Disabled Dropdown"
+          [disabled]="true"
+          size="small"
+          class="w-full"
+        />
+      </div>
+    </div>
+  </section>
+  <!-- Tabs -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Tabs
+    </h2>
+
+    <div class="space-y-8">
+      <!-- Tabs básicos -->
+      <div>
+        <p-tabs value="dashboard" class="compact-tabs">
+          <p-tablist>
+            @for(tab of tabs(); track tab.route){
+            <p-tab
+              [value]="tab.route"
+              class="flex items-center !gap-2 text-inherit"
+            >
+              <i [class]="tab.icon"></i>
+              <span>{{ tab.label }}</span>
+            </p-tab>
+            }
+          </p-tablist>
+          <p-tabpanels>
+            @for(tab of tabs(); track tab.route){
+            <p-tabpanel [value]="tab.route">
+              <div class="p-4">
+                <h4 class="text-xl font-semibold text-gray-800 mb-2">
+                  Content for {{ tab.label }} Tab
+                </h4>
+                <p class="text-gray-600">
+                  This is the content area for the {{ tab.label }} tab.
+                </p>
+              </div>
+            </p-tabpanel>
+            }
+          </p-tabpanels>
+        </p-tabs>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dialogs -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Dialogs
+    </h2>
+
+    <div class="space-y-8">
+      <!-- Botones para abrir diálogos -->
+      <div class="flex flex-wrap gap-4">
+        <p-button
+          label="Diálogo Básico"
+          icon="pi pi-external-link"
+          size="small"
+          (onClick)="showBasicDialog()"
+        />
+        <p-button
+          label="Diálogo con Formulario"
+          icon="pi pi-pencil"
+          severity="secondary"
+          size="small"
+          (onClick)="showFormDialog()"
+        />
+      </div>
+
+      <!-- Diálogo básico con texto estático -->
+      <p-dialog
+        header="Información"
+        [(visible)]="displayBasicDialog"
+        [modal]="true"
+        [style]="{ width: '30rem' }"
+      >
+        <div class="space-y-4">
+          <p class="text-gray-700 leading-relaxed">
+            Este es un diálogo básico con contenido estático. Los diálogos son
+            útiles para mostrar información importante o solicitar confirmación
+            del usuario.
+          </p>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p class="text-sm text-blue-700">
+              <i class="pi pi-info-circle mr-2"></i>
+              Puedes personalizar el tamaño, el estilo y el comportamiento del
+              diálogo.
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-end mt-6">
+          <p-button
+            label="Cerrar"
+            severity="secondary"
+            size="small"
+            (onClick)="displayBasicDialog = false"
+          />
+        </div>
+      </p-dialog>
+
+      <!-- Diálogo con formulario -->
+      <p-dialog
+        header="Formulario de Contacto"
+        [(visible)]="displayFormDialog"
+        [modal]="true"
+        [style]="{ width: '30rem' }"
+      >
+        <div class="space-y-4">
+          <div>
+            <label
+              for="dialog_name"
+              class="block text-sm font-medium text-gray-600 mb-2"
+            >
+              Nombre
+            </label>
+            <input
+              id="dialog_name"
+              type="text"
+              pInputText
+              [(ngModel)]="dialogFormData.name"
+              placeholder="Ingrese su nombre"
+              pSize="small"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label
+              for="dialog_email"
+              class="block text-sm font-medium text-gray-600 mb-2"
+            >
+              Email
+            </label>
+            <input
+              id="dialog_email"
+              type="email"
+              pInputText
+              [(ngModel)]="dialogFormData.email"
+              placeholder="Ingrese su email"
+              pSize="small"
+              class="w-full"
+            />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <p-button
+            label="Cancelar"
+            severity="secondary"
+            size="small"
+            [outlined]="true"
+            (onClick)="cancelDialogForm()"
+          />
+          <p-button
+            label="Enviar"
+            icon="pi pi-check"
+            size="small"
+            (onClick)="submitDialogForm()"
+          />
+        </div>
+      </p-dialog>
+
+      <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4
+          class="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2"
+        >
+          <i class="pi pi-lightbulb"></i>
+          Características
+        </h4>
+        <ul class="text-sm text-gray-700 space-y-1 ml-6">
+          <li>• Modales con backdrop oscuro</li>
+          <li>• Personalización de ancho y alto</li>
+          <li>• Botón de cerrar incluido</li>
+          <li>• Soporte para formularios interactivos</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Autocomplete -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Autocomplete
+    </h2>
+
+    <div class="max-w-md space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-2"
+          >Buscar País
+        </label>
+        <p-autocomplete
+          [(ngModel)]="value1"
+          [suggestions]="items"
+          (completeMethod)="search($event)"
+          size="small"
+          placeholder="Escribe para buscar..."
+          field="name"
+          dropdown
+          class="w-full"
+          [showClear]="true"
+        />
+      </div>
+
+      @if(value1) {
+      <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+        <p class="text-sm text-green-700">
+          <i class="pi pi-check-circle mr-2"></i>
+          Seleccionado: <strong>{{ value1.name }}</strong> ({{ value1.code }})
+        </p>
+      </div>
+      }
+    </div>
+  </section>
+
+  <!-- Accordion -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Accordion
+    </h2>
+
+    <p-accordion value="0">
+      <p-accordion-panel value="0">
+        <p-accordion-header>Header I</p-accordion-header>
+        <p-accordion-content>
+          <p class="m-0">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="1">
+        <p-accordion-header>Header II</p-accordion-header>
+        <p-accordion-content>
+          <p class="m-0">
+            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
+            quae ab illo inventore veritatis et quasi architecto beatae vitae
+            dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
+            aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
+            eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci
+            velit, sed quia non numquam eius modi.
+          </p>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <p-accordion-panel value="2">
+        <p-accordion-header>Header III</p-accordion-header>
+        <p-accordion-content>
+          <p class="m-0">
+            At vero eos et accusamus et iusto odio dignissimos ducimus qui
+            blanditiis praesentium voluptatum deleniti atque corrupti quos
+            dolores et quas molestias excepturi sint occaecati cupiditate non
+            provident, similique sunt in culpa qui officia deserunt mollitia
+            animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis
+            est et expedita distinctio. Nam libero tempore, cum soluta nobis est
+            eligendi optio cumque nihil impedit quo minus.
+          </p>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  </section>
+
+  <!-- Tables -->
+  <section class="mb-12">
+    <h2
+      class="text-2xl font-semibold text-gray-800 mb-6 pb-2 border-b-2 border-primary-200"
+    >
+      Tables
+    </h2>
+
+    <p-table
+      [value]="products()"
+      [tableStyle]="{ 'min-width': '50rem' }"
+      size="small"
+      class="custom-table-sm"
+      stripedRows
+      [paginator]="true"
+      [rows]="5"
+      [rowsPerPageOptions]="[5, 10, 15]"
+      [showCurrentPageReport]="false"
+      currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
+    >
+      <ng-template #header>
+        <tr class="bg-primary-500 text-white">
+          <th>Code</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Quantity</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-product>
+        <tr>
+          <td class="font-bold">{{ product.code }}</td>
+          <td>{{ product.name }}</td>
+          <td>{{ product.category }}</td>
+          <td>{{ product.quantity }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+</div>
+<ngx-sonner-toaster richColors />
