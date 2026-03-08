@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 export type OrgRole = 'administrador' | 'miembro';
 
@@ -49,15 +50,11 @@ export interface Session {
   menusEmpresa: DynamicMenuItem[];
 
   // ===== Contexto de trabajo (UI/menú) =====
-  // UUID empresa (id_seg_organizacion_empresa)
   activeCompanyId?: string | null;
-
-  // Nombre para UI
   activeCompanyName?: string | null;
-
-  // esquema_base (ej: "public")
   activeCompanySchemaBase?: string | null;
 
+  // ===== Tenant/Requests =====
   tenantCompanyId?: string | null;
   tenantCompanyName?: string | null;
   tenantCompanySchemaBase?: string | null;
@@ -71,6 +68,9 @@ function stripDashes(uuid: string) {
 
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
+
   private _session = signal<Session | null>(null);
 
   readonly session = computed(() => this._session());
@@ -91,6 +91,11 @@ export class SessionStore {
 
   readonly inCompanyMode = computed(() => !!this.activeCompanyId());
 
+  /**
+   * X-Tenant esperado por backend:
+   *   `${schemaBase}_${uuidSinGuiones}`
+   * Ej: "public_4f3a...."
+   */
   readonly xTenant = computed(() => {
     const id = this.tenantCompanyId();
     const base = this.tenantCompanySchemaBase();
@@ -118,7 +123,13 @@ export class SessionStore {
 
   setSession(session: Session) {
     this._session.set(session);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (!this.isBrowser) return;
+
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // Si storage está bloqueado o lleno, no reventar la app
+    }
   }
 
   patchSession(patch: Partial<Session>) {
@@ -129,7 +140,13 @@ export class SessionStore {
 
   clearSession() {
     this._session.set(null);
-    localStorage.removeItem(SESSION_KEY);
+    if (!this.isBrowser) return;
+
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // ignore
+    }
   }
 
   /** Organización: Admin entra sin necesitar privilegios finos. Miembro depende de privilegiosOrg */
@@ -160,7 +177,6 @@ export class SessionStore {
       tenantCompanyName: params.companyName ?? null,
     });
   }
-
 
   setTenantCompany(params: { companyId: string; schemaBase: string; companyName?: string }) {
     this.patchSession({
@@ -195,13 +211,19 @@ export class SessionStore {
   }
 
   private hydrateFromStorage() {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return;
+    if (!this.isBrowser) return;
+
     try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return;
       const session = JSON.parse(raw) as Session;
       this._session.set(session);
     } catch {
-      localStorage.removeItem(SESSION_KEY);
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch {
+        // ignore
+      }
     }
   }
 }

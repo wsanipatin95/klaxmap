@@ -1,4 +1,6 @@
 export const environment = {
-    production: false,
-    apiBaseUrl: '/klaxerp'
+  production: true,
+  apiBaseUrl: '/klaxapi',
+  company: 'kety',
+  tenant: 'public',
 };
