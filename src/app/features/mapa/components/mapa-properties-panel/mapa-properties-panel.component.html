@@ -1,0 +1,22 @@
+<div class="properties-wrap">
+  <ng-container *ngIf="elemento; else emptyState">
+    <h3>Propiedades</h3>
+
+    <app-mapa-element-form
+      [elemento]="elemento"
+      [tipos]="tipos"
+      [nodos]="nodos"
+      (submitted)="guardar($event)"
+    />
+
+    <div class="actions">
+      <button pButton type="button" label="Eliminar" severity="danger" (click)="eliminar()"></button>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyState>
+    <div class="empty-state">
+      Selecciona un elemento del mapa para ver sus propiedades.
+    </div>
+  </ng-template>
+</div>

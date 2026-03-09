@@ -1,0 +1,33 @@
+.tree-actions {
+  margin-bottom: 0.5rem;
+
+  button {
+    background: transparent;
+    color: #93c5fd;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+  }
+}
+
+.tree-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tree-list li {
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  color: #e5e7eb;
+}
+
+.tree-list li:hover {
+  background: #1e293b;
+}
+
+.tree-list li.active {
+  background: #1d4ed8;
+  color: #fff;
+}

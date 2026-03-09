@@ -1,0 +1,5 @@
+<div class="context-wrap" *ngIf="elemento as e">
+  <button pButton type="button" label="Editar" (click)="editRequested.emit(e)"></button>
+  <button pButton type="button" label="Centrar" severity="secondary" (click)="centerRequested.emit(e)"></button>
+  <button pButton type="button" label="Eliminar" severity="danger" (click)="deleteRequested.emit(e)"></button>
+</div>

@@ -1,0 +1,28 @@
+<div class="sidebar-wrap">
+  <app-mapa-search
+    [value]="searchValue"
+    (valueChange)="searchChange.emit($event)"
+  />
+
+  <section class="sidebar-section">
+    <h4>Tipos</h4>
+    <select
+      [ngModel]="selectedTipoId"
+      (ngModelChange)="tipoSelected.emit($event ? +$event : null)"
+    >
+      <option [ngValue]="null">Todos</option>
+      <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+        {{ t.nombre }}
+      </option>
+    </select>
+  </section>
+
+  <section class="sidebar-section">
+    <h4>Árbol</h4>
+    <app-mapa-tree
+      [nodos]="nodos"
+      [selectedNodoId]="selectedNodoId"
+      (selected)="nodoSelected.emit($event)"
+    />
+  </section>
+</div>

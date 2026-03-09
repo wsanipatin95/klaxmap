@@ -2,6 +2,8 @@
 @use "tailwindcss";
 @use "styles/layout.scss";
 @plugin "tailwindcss-primeui";
+@import 'leaflet/dist/leaflet.css';
+@import 'leaflet-draw/dist/leaflet.draw.css';
 
 /* Estilos globales opcionales */
 @layer base {

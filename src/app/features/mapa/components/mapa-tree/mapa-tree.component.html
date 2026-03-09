@@ -1,0 +1,14 @@
+<div class="tree-actions">
+  <button type="button" (click)="selected.emit(null)">Todos</button>
+</div>
+
+<ul class="tree-list">
+  <li
+    *ngFor="let n of ordered"
+    [class.active]="n.idRedNodo === selectedNodoId"
+    [style.paddingLeft.px]="12 + (n.nivel * 16)"
+    (click)="selected.emit(n)"
+  >
+    {{ n.nodo }}
+  </li>
+</ul>

@@ -1,0 +1,42 @@
+.form-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.check-line input {
+  width: auto;
+}
+
+.save-btn {
+  margin-top: 0.3rem;
+  padding: 0.65rem 0.9rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}

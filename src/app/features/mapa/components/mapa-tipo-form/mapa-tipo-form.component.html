@@ -1,0 +1,47 @@
+<div class="form-wrap">
+  <label>Código</label>
+  <input [(ngModel)]="form.codigo" />
+
+  <label>Nombre</label>
+  <input [(ngModel)]="form.nombre" />
+
+  <label>Descripción</label>
+  <textarea [(ngModel)]="form.descripcion"></textarea>
+
+  <label>Geometría permitida</label>
+  <select [(ngModel)]="form.geometriaPermitida">
+    <option value="point">Point</option>
+    <option value="linestring">LineString</option>
+    <option value="polygon">Polygon</option>
+    <option value="mixed">Mixed</option>
+  </select>
+
+  <label>Color stroke</label>
+  <input [(ngModel)]="form.colorStroke" placeholder="#000000" />
+
+  <label>Color fill</label>
+  <input [(ngModel)]="form.colorFill" placeholder="#ffffff" />
+
+  <label>Icono fuente</label>
+  <input [(ngModel)]="form.iconoFuente" />
+
+  <label>Shape base</label>
+  <input [(ngModel)]="form.shapeBase" />
+
+  <label>Prioridad clasificación</label>
+  <input type="number" [(ngModel)]="form.prioridadClasificacion" />
+
+  <label class="check-line">
+    <input type="checkbox" [(ngModel)]="form.activo" />
+    Activo
+  </label>
+
+  <label class="check-line">
+    <input type="checkbox" [(ngModel)]="form.permiteImportAuto" />
+    Permite importación automática
+  </label>
+
+  <button type="button" class="save-btn" (click)="submit()">
+    {{ modo === 'crear' ? 'Crear' : 'Guardar' }}
+  </button>
+</div>

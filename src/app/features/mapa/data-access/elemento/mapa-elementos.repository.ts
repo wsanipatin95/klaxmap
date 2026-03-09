@@ -1,0 +1,41 @@
+import { Injectable, inject } from '@angular/core';
+import { map } from 'rxjs/operators';
+import { unwrapOrThrow, unwrapWithMsg } from 'src/app/core/api/api-envelope';
+import { MapaElementosApi } from './mapa-elementos.api';
+import type {
+  MapaElemento,
+  MapaElementoSaveRequest,
+  MapaPatchRequest,
+  PagedResponse,
+} from '../mapa.models';
+
+@Injectable({ providedIn: 'root' })
+export class MapaElementosRepository {
+  private api = inject(MapaElementosApi);
+
+  listar(params: {
+    q?: string;
+    idRedNodoFk?: number | null;
+    idGeoTipoElementoFk?: number | null;
+    visible?: boolean | null;
+    page?: number;
+    size?: number;
+    all?: boolean;
+  } = {}) {
+    return this.api.listar(params).pipe(
+      map((r) => unwrapOrThrow<PagedResponse<MapaElemento> | MapaElemento[]>(r))
+    );
+  }
+
+  crear(payload: MapaElementoSaveRequest) {
+    return this.api.crear(payload).pipe(map((r) => unwrapWithMsg<MapaElemento>(r)));
+  }
+
+  editar(payload: MapaPatchRequest) {
+    return this.api.editar(payload).pipe(map((r) => unwrapWithMsg<MapaElemento>(r)));
+  }
+
+  eliminar(id: number) {
+    return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<{ id: number }>(r)));
+  }
+}

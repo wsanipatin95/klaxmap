@@ -82,7 +82,12 @@ export const routes: Routes = [
         path: 'adm',
         loadChildren: () =>
           import('src/app/features/adm/adm.routes').then((m) => m.ADM_ROUTES),
-      }
+      },
+      {
+        path: 'mapa',
+        loadChildren: () =>
+          import('src/app/features/mapa/mapa.routes').then((m) => m.MAPA_ROUTES),
+      },
     ],
   },
 

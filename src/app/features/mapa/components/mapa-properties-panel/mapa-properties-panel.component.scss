@@ -1,0 +1,52 @@
+.properties-wrap {
+  padding: 1rem;
+  color: #e5e7eb;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-line input {
+  width: auto;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.empty-state {
+  color: #94a3b8;
+}

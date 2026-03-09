@@ -1,0 +1,37 @@
+<div class="form-wrap" *ngIf="elemento">
+  <label>Nombre</label>
+  <input [(ngModel)]="form.nombre" />
+
+  <label>Descripción</label>
+  <textarea [(ngModel)]="form.descripcion"></textarea>
+
+  <label>Estado</label>
+  <select [(ngModel)]="form.estado">
+    <option value="activo">Activo</option>
+    <option value="baja">Baja</option>
+    <option value="planificado">Planificado</option>
+    <option value="danado">Dañado</option>
+    <option value="pendiente_clasificar">Pendiente clasificar</option>
+  </select>
+
+  <label>Nodo</label>
+  <select [(ngModel)]="form.idRedNodoFk">
+    <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+      {{ n.nodo }}
+    </option>
+  </select>
+
+  <label>Tipo</label>
+  <select [(ngModel)]="form.idGeoTipoElementoFk">
+    <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+      {{ t.nombre }}
+    </option>
+  </select>
+
+  <label class="check-line">
+    <input type="checkbox" [(ngModel)]="form.visible" />
+    Visible
+  </label>
+
+  <button type="button" class="save-btn" (click)="guardar()">Guardar</button>
+</div>

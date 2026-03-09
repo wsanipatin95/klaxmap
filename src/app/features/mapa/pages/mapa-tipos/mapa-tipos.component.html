@@ -1,0 +1,39 @@
+<div class="page-grid">
+  <section class="panel">
+    <h2>Tipos de elemento</h2>
+
+    <div class="list">
+      <button
+        type="button"
+        class="row"
+        *ngFor="let t of tipos()"
+        (click)="seleccionar(t)"
+      >
+        <strong>{{ t.nombre }}</strong>
+        <span>{{ t.codigo }} · {{ t.geometriaPermitida }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Crear tipo</h3>
+    <app-mapa-tipo-form
+      [modo]="'crear'"
+      (createSubmitted)="crear($event)"
+    />
+  </section>
+
+  <section class="panel" *ngIf="selected() as sel">
+    <h3>Editar tipo</h3>
+    <app-mapa-tipo-form
+      [modo]="'editar'"
+      [tipo]="sel"
+      (updateSubmitted)="editar($event)"
+    />
+    <button type="button" class="delete-btn" (click)="eliminar(sel.idGeoTipoElemento)">
+      Eliminar
+    </button>
+  </section>
+</div>
+
+<p class="error" *ngIf="error() as err">{{ err }}</p>

@@ -1,0 +1,8 @@
+<div class="mapa-search">
+  <input
+    type="text"
+    [ngModel]="value"
+    (ngModelChange)="valueChange.emit($event)"
+    placeholder="Buscar en mapa..."
+  />
+</div>

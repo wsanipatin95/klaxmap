@@ -1,0 +1,38 @@
+<div class="form-wrap">
+  <label>Padre</label>
+  <select [(ngModel)]="form.idRedNodoPadreFk">
+    <option [ngValue]="null">Sin padre</option>
+    <option *ngFor="let n of nodosPadre" [ngValue]="n.idRedNodo">
+      {{ n.nodo }}
+    </option>
+  </select>
+
+  <label>Código</label>
+  <input [(ngModel)]="form.codigo" />
+
+  <label>Nombre nodo</label>
+  <input [(ngModel)]="form.nodo" />
+
+  <label>Descripción</label>
+  <textarea [(ngModel)]="form.descripcion"></textarea>
+
+  <label>Tipo nodo</label>
+  <select [(ngModel)]="form.tipoNodo">
+    <option value="carpeta">Carpeta</option>
+    <option value="zona">Zona</option>
+    <option value="sitio">Sitio</option>
+    <option value="nodo_fisico">Nodo físico</option>
+  </select>
+
+  <label>Orden</label>
+  <input type="number" [(ngModel)]="form.orden" />
+
+  <label class="check-line">
+    <input type="checkbox" [(ngModel)]="form.visible" />
+    Visible
+  </label>
+
+  <button type="button" class="save-btn" (click)="submit()">
+    {{ modo === 'crear' ? 'Crear' : 'Guardar' }}
+  </button>
+</div>

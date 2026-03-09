@@ -1,0 +1,12 @@
+<div class="mapa-import-page">
+  <h2>Importar KML</h2>
+
+  <input type="file" accept=".kml,.kmz" (change)="onFileSelected($event)" />
+
+  <button pButton type="button" label="Importar" (click)="importar()" [disabled]="loading()"></button>
+
+  <p *ngIf="loading()">Importando...</p>
+  <p *ngIf="error() as err" class="error">{{ err }}</p>
+
+  <pre *ngIf="result() as r">{{ r | json }}</pre>
+</div>

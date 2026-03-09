@@ -1,0 +1,14 @@
+.toolbar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 0 0.75rem;
+}
+
+.separator {
+  width: 1px;
+  height: 24px;
+  background: #334155;
+  margin: 0 0.25rem;
+}

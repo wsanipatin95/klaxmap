@@ -1,0 +1,58 @@
+<app-mapa-layout>
+  <app-mapa-toolbar
+    slot="toolbar"
+    (refreshRequested)="onRefresh()"
+    (exportRequested)="abrirExportacion()"
+    (importRequested)="abrirImportacion()"
+  />
+
+  <app-mapa-sidebar
+    slot="sidebar"
+    [nodos]="nodos()"
+    [tipos]="tipos()"
+    [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
+    [selectedTipoId]="filtros.idGeoTipoElementoFk()"
+    [searchValue]="filtros.q()"
+    (searchChange)="onSearchChange($event)"
+    (nodoSelected)="onNodoSelect($event)"
+    (tipoSelected)="onTipoSelect($event)"
+  />
+
+  <app-mapa-canvas
+    slot="canvas"
+    [elementos]="elementos()"
+    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
+    (elementoSelected)="onElementoSelect($event)"
+  />
+
+  <app-mapa-properties-panel
+    slot="properties"
+    [elemento]="selectedElemento()"
+    [tipos]="tipos()"
+    [nodos]="nodos()"
+    (saved)="onElementoUpdated($event)"
+    (deleted)="onElementoDeleted($event)"
+  />
+
+  <app-mapa-statusbar
+    slot="status"
+    [totalElementos]="totalElementos()"
+    [modo]="ui.toolMode()"
+    [loading]="ui.loading()"
+  />
+</app-mapa-layout>
+
+<app-mapa-import-dialog
+  #importDialog
+  (imported)="onImported()"
+/>
+
+<app-mapa-export-dialog
+  #exportDialog
+  [nodos]="nodos()"
+  [tipos]="tipos()"
+/>
+
+<div class="mapa-error" *ngIf="error() as err">
+  {{ err }}
+</div>

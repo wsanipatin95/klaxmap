@@ -1,0 +1,21 @@
+<div class="mapa-layout">
+  <header class="toolbar">
+    <ng-content select="[slot=toolbar]"></ng-content>
+  </header>
+
+  <aside class="sidebar">
+    <ng-content select="[slot=sidebar]"></ng-content>
+  </aside>
+
+  <main class="canvas">
+    <ng-content select="[slot=canvas]"></ng-content>
+  </main>
+
+  <aside class="properties">
+    <ng-content select="[slot=properties]"></ng-content>
+  </aside>
+
+  <footer class="status">
+    <ng-content select="[slot=status]"></ng-content>
+  </footer>
+</div>

@@ -1,0 +1,28 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '38rem' }"
+  header="Importar KML"
+>
+  <div class="dialog-body">
+    <input type="file" accept=".kml,.kmz" (change)="onFileSelected($event)" />
+
+    <p class="error" *ngIf="error() as err">{{ err }}</p>
+
+    <div class="result" *ngIf="result() as r">
+      <p><strong>Lote:</strong> {{ r.idGeoImportLote }}</p>
+      <p><strong>Estado:</strong> {{ r.estado }}</p>
+      <p><strong>Nodos:</strong> {{ r.totalNodos }}</p>
+      <p><strong>Elementos:</strong> {{ r.totalElementos }}</p>
+      <p><strong>OK:</strong> {{ r.totalOk }}</p>
+      <p><strong>Error:</strong> {{ r.totalError }}</p>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cerrar" severity="secondary" (click)="close()"></button>
+    <button pButton type="button" label="Importar" [disabled]="loading()" (click)="importar()"></button>
+  </ng-template>
+</p-dialog>

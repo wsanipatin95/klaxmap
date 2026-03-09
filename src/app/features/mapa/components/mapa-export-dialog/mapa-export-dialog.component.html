@@ -1,0 +1,46 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '40rem' }"
+  header="Exportar KML"
+>
+  <div class="dialog-body">
+    <label>Nombre documento</label>
+    <input type="text" [(ngModel)]="form.nombreDocumento" />
+
+    <label>Búsqueda</label>
+    <input type="text" [(ngModel)]="form.q" />
+
+    <label>Nodo</label>
+    <select [(ngModel)]="form.idRedNodoFk">
+      <option [ngValue]="null">Todos</option>
+      <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+        {{ n.nodo }}
+      </option>
+    </select>
+
+    <label>Tipo</label>
+    <select [(ngModel)]="form.idGeoTipoElementoFk">
+      <option [ngValue]="null">Todos</option>
+      <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+        {{ t.nombre }}
+      </option>
+    </select>
+
+    <label>Visible</label>
+    <select [(ngModel)]="form.visible">
+      <option [ngValue]="true">Sí</option>
+      <option [ngValue]="false">No</option>
+      <option [ngValue]="null">Todos</option>
+    </select>
+
+    <p class="error" *ngIf="error() as err">{{ err }}</p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cerrar" severity="secondary" (click)="close()"></button>
+    <button pButton type="button" label="Exportar" [disabled]="loading()" (click)="exportar()"></button>
+  </ng-template>
+</p-dialog>

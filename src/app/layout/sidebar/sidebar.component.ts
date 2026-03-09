@@ -63,9 +63,9 @@ export class SidebarComponent {
       },
 
       {
-        label: 'Mis empresas',
+        label: 'MAPAS',
         icon: 'pi pi-building',
-        route: '/app/adm/mis-empresas',
+        route: '/app/mapa/home',
       },
     ];
 

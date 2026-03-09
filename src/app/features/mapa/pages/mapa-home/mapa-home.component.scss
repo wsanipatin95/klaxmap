@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.mapa-error {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  background: #7f1d1d;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  z-index: 9999;
+}
