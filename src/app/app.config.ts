@@ -15,7 +15,7 @@ import { environment } from 'src/app/environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideAnimations(), 
+    provideAnimations(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
@@ -24,7 +24,10 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ENVIRONMENT,
       useValue: <AppEnvironment>{
+        production: environment.production,
         apiBaseUrl: environment.apiBaseUrl,
+        company: environment.company,
+        tenant: environment.tenant,
       },
     },
     providePrimeNG({
