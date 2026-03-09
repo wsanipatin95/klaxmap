@@ -6,6 +6,7 @@ import type {
   MapaElemento,
   MapaElementoSaveRequest,
   MapaPatchRequest,
+  MapaElementoGeometriaRequest,
   PagedResponse,
 } from '../mapa.models';
 
@@ -46,6 +47,13 @@ export class MapaElementosApi {
 
   editar(payload: MapaPatchRequest) {
     return this.http.patch<ApiEnvelope<MapaElemento>>(`${this.baseUrl}/editar`, payload);
+  }
+
+  editarGeometria(payload: MapaElementoGeometriaRequest) {
+    return this.http.patch<ApiEnvelope<MapaElemento>>(
+      `${this.baseUrl}/editar-geometria`,
+      payload
+    );
   }
 
   eliminar(id: number) {

@@ -17,7 +17,22 @@ export class MapaTreeComponent {
   get ordered(): MapaNodo[] {
     return [...this.nodos].sort((a, b) => {
       if (a.nivel !== b.nivel) return a.nivel - b.nivel;
-      return (a.orden ?? 0) - (b.orden ?? 0);
+      return (a.pathCache || '').localeCompare(b.pathCache || '');
     });
+  }
+
+  iconFor(tipoNodo: MapaNodo['tipoNodo']): string {
+    switch (tipoNodo) {
+      case 'carpeta':
+        return '📁';
+      case 'zona':
+        return '🗺️';
+      case 'sitio':
+        return '📍';
+      case 'nodo_fisico':
+        return '📡';
+      default:
+        return '•';
+    }
   }
 }

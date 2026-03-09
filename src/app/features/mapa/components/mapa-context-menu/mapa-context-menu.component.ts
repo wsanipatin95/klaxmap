@@ -11,8 +11,12 @@ import type { MapaElemento } from '../../data-access/mapa.models';
   styleUrl: './mapa-context-menu.component.scss',
 })
 export class MapaContextMenuComponent {
+  @Input() visible = false;
+  @Input() x = 0;
+  @Input() y = 0;
   @Input() elemento: MapaElemento | null = null;
 
+  @Output() closeRequested = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<MapaElemento>();
   @Output() deleteRequested = new EventEmitter<MapaElemento>();
   @Output() centerRequested = new EventEmitter<MapaElemento>();

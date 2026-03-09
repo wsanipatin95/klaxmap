@@ -1,14 +1,16 @@
 <div class="tree-actions">
-  <button type="button" (click)="selected.emit(null)">Todos</button>
+  <button type="button" (click)="selected.emit(null)">Ver todo</button>
 </div>
 
 <ul class="tree-list">
   <li
     *ngFor="let n of ordered"
     [class.active]="n.idRedNodo === selectedNodoId"
-    [style.paddingLeft.px]="12 + (n.nivel * 16)"
+    [style.paddingLeft.px]="12 + (n.nivel * 18)"
     (click)="selected.emit(n)"
   >
-    {{ n.nodo }}
+    <span class="node-icon">{{ iconFor(n.tipoNodo) }}</span>
+    <span class="node-name">{{ n.nodo }}</span>
+    <small class="node-type">{{ n.tipoNodo }}</small>
   </li>
 </ul>

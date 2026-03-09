@@ -1,5 +1,6 @@
 <div class="status-wrap">
   <span>Modo: {{ modo }}</span>
   <span>Total elementos: {{ totalElementos }}</span>
+  <span *ngIf="selectedName">Seleccionado: {{ selectedName }}</span>
   <span *ngIf="loading">Cargando...</span>
 </div>

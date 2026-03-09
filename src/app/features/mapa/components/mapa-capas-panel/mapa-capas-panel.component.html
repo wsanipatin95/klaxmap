@@ -1,0 +1,14 @@
+mapa-capas-panel.component.html<div class="capas-wrap">
+  <h4>Capas</h4>
+
+  <div class="capa-row" *ngFor="let t of tipos">
+    <label>
+      <input
+        type="checkbox"
+        [checked]="visible(t.idGeoTipoElemento)"
+        (change)="toggle(t.idGeoTipoElemento)"
+      />
+      <span>{{ t.nombre }}</span>
+    </label>
+  </div>
+</div>

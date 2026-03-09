@@ -1,0 +1,29 @@
+<div class="lotes-wrap">
+  <div class="header">
+    <h4>Lotes de importación</h4>
+    <button type="button" (click)="cargar()">Recargar</button>
+  </div>
+
+  <p class="state" *ngIf="loading()">Cargando lotes...</p>
+  <p class="error" *ngIf="error() as err">{{ err }}</p>
+
+  <div class="lote-card" *ngFor="let item of items()">
+    <div class="top">
+      <strong>{{ item.nombreArchivo }}</strong>
+      <span class="estado" [ngClass]="estadoClass(item.estado)">
+        {{ item.estado }}
+      </span>
+    </div>
+
+    <div class="meta">
+      <span>Nodos: {{ item.totalNodos }}</span>
+      <span>Elementos: {{ item.totalElementos }}</span>
+      <span>OK: {{ item.totalOk }}</span>
+      <span>Error: {{ item.totalError }}</span>
+    </div>
+
+    <small class="date" *ngIf="item.fechaImportacion">
+      {{ item.fechaImportacion }}
+    </small>
+  </div>
+</div>

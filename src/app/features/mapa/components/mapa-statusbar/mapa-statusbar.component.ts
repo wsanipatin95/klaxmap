@@ -1,4 +1,4 @@
- import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
 
@@ -13,4 +13,5 @@ export class MapaStatusbarComponent {
   @Input() totalElementos = 0;
   @Input() modo: MapaToolMode = 'select';
   @Input() loading = false;
+  @Input() selectedName: string | null = null;
 }

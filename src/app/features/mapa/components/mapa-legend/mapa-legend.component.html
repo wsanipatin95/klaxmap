@@ -1,0 +1,45 @@
+<div class="legend-wrap">
+  <h4>Leyenda</h4>
+
+  <div class="legend-row" *ngFor="let item of items">
+    <div class="legend-symbol">
+      <ng-container [ngSwitch]="item.geometriaPermitida">
+        <div
+          *ngSwitchCase="'point'"
+          class="symbol-point"
+          [style.background]="item.colorFill || item.colorStroke || '#38bdf8'"
+          [style.borderColor]="item.colorStroke || '#0f172a'"
+        ></div>
+
+        <div
+          *ngSwitchCase="'linestring'"
+          class="symbol-line"
+          [style.background]="item.colorStroke || '#38bdf8'"
+        ></div>
+
+        <div
+          *ngSwitchCase="'polygon'"
+          class="symbol-polygon"
+          [style.background]="item.colorFill || '#38bdf8'"
+          [style.borderColor]="item.colorStroke || '#0f172a'"
+        ></div>
+
+        <div
+          *ngSwitchDefault
+          class="symbol-point"
+          [style.background]="item.colorFill || item.colorStroke || '#38bdf8'"
+          [style.borderColor]="item.colorStroke || '#0f172a'"
+        ></div>
+      </ng-container>
+    </div>
+
+    <div class="legend-label">
+      <span>{{ item.nombre }}</span>
+      <small>{{ item.geometriaPermitida }}</small>
+    </div>
+
+    <div class="legend-state" [class.off]="!item.visible">
+      {{ item.visible ? 'Visible' : 'Oculta' }}
+    </div>
+  </div>
+</div>

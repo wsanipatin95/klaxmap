@@ -1,0 +1,65 @@
+.legend-wrap {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #334155;
+}
+
+h4 {
+  margin: 0 0 0.75rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.35rem 0;
+}
+
+.legend-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.symbol-point {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid #0f172a;
+}
+
+.symbol-line {
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.symbol-polygon {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #0f172a;
+  border-radius: 3px;
+}
+
+.legend-label {
+  display: flex;
+  flex-direction: column;
+  color: #e5e7eb;
+}
+
+.legend-label small {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.legend-state {
+  font-size: 0.72rem;
+  color: #86efac;
+}
+
+.legend-state.off {
+  color: #fca5a5;
+}

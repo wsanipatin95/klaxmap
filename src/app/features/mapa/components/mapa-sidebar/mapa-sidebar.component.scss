@@ -1,6 +1,20 @@
 .sidebar-wrap {
-  padding: 0.75rem;
+  padding: 0.85rem;
   color: #e5e7eb;
+}
+
+.sidebar-header {
+  margin-bottom: 0.85rem;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.sidebar-header small {
+  color: #94a3b8;
 }
 
 .sidebar-section {

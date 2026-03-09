@@ -1,0 +1,49 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '42rem' }"
+  header="Crear elemento"
+>
+  <div class="dialog-body">
+    <label>Nodo</label>
+    <select [(ngModel)]="form.idRedNodoFk">
+      <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+        {{ n.nodo }}
+      </option>
+    </select>
+
+    <label>Tipo</label>
+    <select [(ngModel)]="form.idGeoTipoElementoFk">
+      <option *ngFor="let t of tiposFiltrados()" [ngValue]="t.idGeoTipoElemento">
+        {{ t.nombre }}
+      </option>
+    </select>
+
+    <label>Nombre</label>
+    <input type="text" [(ngModel)]="form.nombre" />
+
+    <label>Descripción</label>
+    <textarea [(ngModel)]="form.descripcion"></textarea>
+
+    <label>Estado</label>
+    <select [(ngModel)]="form.estado">
+      <option value="activo">Activo</option>
+      <option value="planificado">Planificado</option>
+      <option value="pendiente_clasificar">Pendiente clasificar</option>
+    </select>
+
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="form.visible" />
+      Visible
+    </label>
+
+    <p class="error" *ngIf="error() as err">{{ err }}</p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancelar" severity="secondary" (click)="close()"></button>
+    <button pButton type="button" label="Guardar" (click)="guardar()"></button>
+  </ng-template>
+</p-dialog>

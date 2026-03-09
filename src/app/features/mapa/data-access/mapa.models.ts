@@ -174,3 +174,22 @@ export interface ListOrPageOptions {
   size?: number;
   all?: boolean;
 }
+export interface MapaElementoGeometriaRequest {
+  id: number;
+  wkt: string;
+}
+
+export interface MapaGeometryEditedEvent {
+  idGeoElemento: number;
+  wkt: string;
+  geomTipo: MapaGeomTipo;
+}
+export interface MapaLegendItem {
+  idGeoTipoElemento: number;
+  nombre: string;
+  colorStroke?: string | null;
+  colorFill?: string | null;
+  iconoFuente?: string | null;
+  geometriaPermitida: 'point' | 'linestring' | 'polygon' | 'mixed';
+  visible: boolean;
+}

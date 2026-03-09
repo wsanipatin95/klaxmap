@@ -1,13 +1,13 @@
 .mapa-layout {
   display: grid;
-  grid-template-columns: 300px 1fr 360px;
+  grid-template-columns: 320px 1fr 380px;
   grid-template-rows: 56px 1fr 36px;
   grid-template-areas:
     'toolbar toolbar toolbar'
     'sidebar canvas properties'
     'status status status';
   height: calc(100vh - 56px);
-  background: #0f172a;
+  background: #020617;
 }
 
 .toolbar {
@@ -19,7 +19,7 @@
 .sidebar {
   grid-area: sidebar;
   border-right: 1px solid #1e293b;
-  background: #0b1220;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
   overflow: auto;
 }
 
@@ -27,12 +27,13 @@
   grid-area: canvas;
   position: relative;
   overflow: hidden;
+  background: #0f172a;
 }
 
 .properties {
   grid-area: properties;
   border-left: 1px solid #1e293b;
-  background: #0b1220;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
   overflow: auto;
 }
 

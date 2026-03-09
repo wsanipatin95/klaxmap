@@ -2,14 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 
-import type { MapaElemento, MapaNodo, MapaTipoElemento, MapaPatchRequest } from '../../data-access/mapa.models';
+import type { MapaElemento, MapaNodo, MapaPatchRequest, MapaTipoElemento } from '../../data-access/mapa.models';
 import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
-import { MapaElementFormComponent } from '../mapa-element-form/mapa-element-form.component';
+import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
 
 @Component({
   selector: 'app-mapa-properties-panel',
   standalone: true,
-  imports: [CommonModule, ButtonModule, MapaElementFormComponent],
+  imports: [CommonModule, ButtonModule, MapaPropertiesTabsComponent],
   templateUrl: './mapa-properties-panel.component.html',
   styleUrl: './mapa-properties-panel.component.scss',
 })

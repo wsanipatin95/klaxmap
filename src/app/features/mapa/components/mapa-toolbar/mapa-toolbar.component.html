@@ -1,6 +1,7 @@
 <div class="toolbar-wrap">
   <button pButton type="button" label="Seleccionar" (click)="ui.setToolMode('select')"></button>
-  <button pButton type="button" label="Mover" (click)="ui.setToolMode('move')"></button>
+  <button pButton type="button" label="Mover mapa" (click)="ui.setToolMode('move')"></button>
+  <button pButton type="button" label="Editar geometría" (click)="ui.setToolMode('edit-geometry')"></button>
   <button pButton type="button" label="Punto" (click)="ui.setToolMode('draw-point')"></button>
   <button pButton type="button" label="Línea" (click)="ui.setToolMode('draw-line')"></button>
   <button pButton type="button" label="Polígono" (click)="ui.setToolMode('draw-polygon')"></button>
@@ -10,4 +11,6 @@
   <button pButton type="button" label="Importar KML" (click)="importRequested.emit()"></button>
   <button pButton type="button" label="Exportar KML" (click)="exportRequested.emit()"></button>
   <button pButton type="button" label="Refrescar" severity="secondary" (click)="refreshRequested.emit()"></button>
+
+  <span class="mode-info">Modo: {{ ui.toolMode() }}</span>
 </div>

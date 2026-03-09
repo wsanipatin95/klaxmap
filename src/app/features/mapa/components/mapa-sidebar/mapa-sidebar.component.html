@@ -1,4 +1,9 @@
 <div class="sidebar-wrap">
+  <div class="sidebar-header">
+    <h3>Mapa ISP</h3>
+    <small>Filtros, navegación y control visual</small>
+  </div>
+
   <app-mapa-search
     [value]="searchValue"
     (valueChange)="searchChange.emit($event)"
@@ -17,12 +22,18 @@
     </select>
   </section>
 
+  <app-mapa-capas-panel [tipos]="tipos" />
+
   <section class="sidebar-section">
-    <h4>Árbol</h4>
+    <h4>Árbol jerárquico</h4>
     <app-mapa-tree
       [nodos]="nodos"
       [selectedNodoId]="selectedNodoId"
       (selected)="nodoSelected.emit($event)"
     />
   </section>
+
+  <app-mapa-legend [items]="legendItems()" />
+
+  <app-mapa-import-lotes-panel />
 </div>

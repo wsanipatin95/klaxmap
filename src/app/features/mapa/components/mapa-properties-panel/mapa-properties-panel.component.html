@@ -1,17 +1,26 @@
 <div class="properties-wrap">
   <ng-container *ngIf="elemento; else emptyState">
-    <h3>Propiedades</h3>
+    <div class="panel-header">
+      <div>
+        <h3>{{ elemento.nombre }}</h3>
+        <small>{{ elemento.geomTipo }} · {{ elemento.estado }}</small>
+      </div>
 
-    <app-mapa-element-form
+      <button
+        pButton
+        type="button"
+        label="Eliminar"
+        severity="danger"
+        (click)="eliminar()"
+      ></button>
+    </div>
+
+    <app-mapa-properties-tabs
       [elemento]="elemento"
       [tipos]="tipos"
       [nodos]="nodos"
       (submitted)="guardar($event)"
     />
-
-    <div class="actions">
-      <button pButton type="button" label="Eliminar" severity="danger" (click)="eliminar()"></button>
-    </div>
   </ng-container>
 
   <ng-template #emptyState>

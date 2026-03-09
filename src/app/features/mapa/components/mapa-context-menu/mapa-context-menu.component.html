@@ -1,5 +1,17 @@
-<div class="context-wrap" *ngIf="elemento as e">
-  <button pButton type="button" label="Editar" (click)="editRequested.emit(e)"></button>
-  <button pButton type="button" label="Centrar" severity="secondary" (click)="centerRequested.emit(e)"></button>
-  <button pButton type="button" label="Eliminar" severity="danger" (click)="deleteRequested.emit(e)"></button>
+<div
+  class="overlay"
+  *ngIf="visible"
+  (click)="closeRequested.emit()"
+>
+  <div
+    class="context-wrap"
+    *ngIf="elemento as e"
+    [style.left.px]="x"
+    [style.top.px]="y"
+    (click)="$event.stopPropagation()"
+  >
+    <button pButton type="button" label="Editar" (click)="editRequested.emit(e)"></button>
+    <button pButton type="button" label="Centrar" severity="secondary" (click)="centerRequested.emit(e)"></button>
+    <button pButton type="button" label="Eliminar" severity="danger" (click)="deleteRequested.emit(e)"></button>
+  </div>
 </div>

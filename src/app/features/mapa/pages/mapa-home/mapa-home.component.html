@@ -19,10 +19,17 @@
   />
 
   <app-mapa-canvas
+    #mapCanvas
     slot="canvas"
     [elementos]="elementos()"
+    [tipos]="tipos()"
+    [toolMode]="ui.toolMode()"
     [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
+    [hiddenTipoIds]="capas.hiddenTipoIds()"
     (elementoSelected)="onElementoSelect($event)"
+    (geometryCreated)="onGeometryCreated($event)"
+    (geometryEdited)="onGeometryEdited($event)"
+    (elementoContext)="openContextMenu($event)"
   />
 
   <app-mapa-properties-panel
@@ -35,11 +42,12 @@
   />
 
   <app-mapa-statusbar
-    slot="status"
-    [totalElementos]="totalElementos()"
-    [modo]="ui.toolMode()"
-    [loading]="ui.loading()"
-  />
+  slot="status"
+  [totalElementos]="totalElementos()"
+  [modo]="ui.toolMode()"
+  [loading]="ui.loading()"
+  [selectedName]="selectedElemento()?.nombre ?? null"
+/>
 </app-mapa-layout>
 
 <app-mapa-import-dialog
@@ -51,6 +59,24 @@
   #exportDialog
   [nodos]="nodos()"
   [tipos]="tipos()"
+/>
+
+<app-mapa-create-element-dialog
+  #createDialog
+  [nodos]="nodos()"
+  [tipos]="tipos()"
+  (submitted)="crearElemento($event)"
+/>
+
+<app-mapa-context-menu
+  [visible]="contextVisible()"
+  [x]="contextX()"
+  [y]="contextY()"
+  [elemento]="contextElemento()"
+  (closeRequested)="closeContextMenu()"
+  (centerRequested)="centerContextElemento($event)"
+  (editRequested)="editContextElemento($event)"
+  (deleteRequested)="deleteContextElemento($event)"
 />
 
 <div class="mapa-error" *ngIf="error() as err">
