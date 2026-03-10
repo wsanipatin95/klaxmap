@@ -1,10 +1,29 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.toolbar-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem 0.7rem;
+  color: #e5e7eb;
+}
+
 .toolbar-wrap {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  min-height: 3rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  height: 100%;
-  padding: 0 0.75rem;
-  color: #e5e7eb;
+  flex-wrap: wrap;
 }
 
 .separator {
@@ -14,8 +33,72 @@
   margin: 0 0.25rem;
 }
 
-.mode-info {
+.toolbar-side-info {
   margin-left: auto;
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-mode,
+.toolbar-total {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.toolbar-mode-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.toolbar-help {
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: rgba(15, 23, 42, 0.65);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.toolbar-help-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.25rem;
+}
+
+.toolbar-help-text {
+  font-size: 0.88rem;
   color: #cbd5e1;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .p-button {
+  background: #7a0c74;
+  border-color: #7a0c74;
+  box-shadow: none;
+}
+
+:host ::ng-deep .p-button:hover {
+  background: #93128b;
+  border-color: #93128b;
+}
+
+:host ::ng-deep .p-button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+:host ::ng-deep .p-button.p-button-secondary {
+  background: #e5e7eb;
+  border-color: #e5e7eb;
+  color: #0f172a;
+}
+
+@media (max-width: 1200px) {
+  .toolbar-side-info {
+    margin-left: 0;
+  }
 }

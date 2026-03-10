@@ -83,6 +83,26 @@ export class MapaHomeComponent {
 
   readonly totalElementos = computed(() => this.elementos().length);
 
+  readonly quickInfo = computed(() => {
+    const q = (this.filtros.q() || '').trim();
+    const nodo = this.selectedNodo();
+    const elemento = this.selectedElemento();
+
+    if (q) {
+      return `Búsqueda actual: "${q}" · ${this.totalElementos()} resultado(s) visibles.`;
+    }
+
+    if (elemento) {
+      return `Elemento activo: "${elemento.nombre}". Puedes editar sus datos en el panel derecho.`;
+    }
+
+    if (nodo) {
+      return `Nodo activo: "${nodo.nodo}". Los nuevos elementos se crearán en este nodo si dibujas uno.`;
+    }
+
+    return 'Arrastra el mapa libremente, selecciona un elemento o crea una nueva geometría.';
+  });
+
   constructor() {
     this.cargarNodos();
     this.cargarTipos();
@@ -138,23 +158,29 @@ export class MapaHomeComponent {
 
   onSearchChange(q: string) {
     this.filtros.setQ(q);
+    this.closeContextMenu();
     this.cargarElementos();
   }
 
   onNodoSelect(nodo: MapaNodo | null) {
     this.selection.setNodo(nodo);
     this.filtros.setNodo(nodo?.idRedNodo ?? null);
+    this.closeContextMenu();
     this.cargarElementos();
   }
 
   onTipoSelect(tipoId: number | null) {
     this.filtros.setTipo(tipoId);
+    this.closeContextMenu();
     this.cargarElementos();
   }
 
   onElementoSelect(item: MapaElemento | null) {
     this.selection.setElemento(item);
     this.closeContextMenu();
+    if (item) {
+      this.ui.setSelectMode();
+    }
   }
 
   onElementoUpdated(item: MapaElemento) {
@@ -203,7 +229,7 @@ export class MapaHomeComponent {
       geomTipo: payload.geomTipo,
       nodoId: this.selectedNodo()?.idRedNodo ?? null,
     });
-    this.ui.setToolMode('select');
+    this.ui.setSelectMode();
   }
 
   crearElemento(payload: MapaElementoSaveRequest) {
@@ -253,9 +279,15 @@ export class MapaHomeComponent {
     this.closeContextMenu();
   }
 
-  editContextElemento(item: MapaElemento) {
+  editDataContextElemento(item: MapaElemento) {
     this.selection.setElemento(item);
-    this.ui.setToolMode('edit-geometry');
+    this.ui.setSelectMode();
+    this.closeContextMenu();
+  }
+
+  editGeometryContextElemento(item: MapaElemento) {
+    this.selection.setElemento(item);
+    this.ui.setEditGeometryMode();
     this.closeContextMenu();
   }
 
@@ -270,5 +302,9 @@ export class MapaHomeComponent {
         this.error.set(err?.message || 'No se pudo eliminar');
       },
     });
+  }
+
+  clearError() {
+    this.error.set(null);
   }
 }

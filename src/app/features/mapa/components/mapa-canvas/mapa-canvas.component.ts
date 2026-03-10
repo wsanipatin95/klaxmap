@@ -12,6 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet-draw';
+
 import type {
   MapaElemento,
   MapaGeomTipo,
@@ -44,7 +45,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private map!: L.Map;
   private drawnItems = new L.FeatureGroup();
   private renderedLayers = new Map<number, L.Layer>();
-  private drawControl: any = null;
+
+  private activeDrawHandler: any = null;
+  private activeEditedLayer: L.Layer | null = null;
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -55,17 +58,24 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.map) return;
 
-    if (changes['elementos'] || changes['selectedElementoId'] || changes['tipos'] || changes['hiddenTipoIds']) {
+    const dataChanged =
+      changes['elementos'] ||
+      changes['selectedElementoId'] ||
+      changes['tipos'] ||
+      changes['hiddenTipoIds'];
+
+    if (dataChanged) {
       this.renderElementos();
     }
 
-    if (changes['toolMode']) {
+    if (changes['toolMode'] || changes['selectedElementoId']) {
       this.syncToolMode();
     }
   }
 
   centerOnElemento(id: number | null) {
     if (id == null) return;
+
     const selected = this.renderedLayers.get(id);
     if (!selected) return;
 
@@ -96,79 +106,170 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.drawnItems.addTo(this.map);
 
-    this.drawControl = new (L.Control as any).Draw({
-      edit: {
-        featureGroup: this.drawnItems,
-      },
-      draw: {
-        marker: true,
-        circle: false,
-        circlemarker: false,
-        rectangle: false,
-        polyline: true,
-        polygon: true,
-      },
-    });
-
-    this.map.addControl(this.drawControl);
-
     this.map.on((L as any).Draw.Event.CREATED, (e: any) => {
       const layer = e.layer as L.Layer;
       const geomTipo = this.geomTipoFromLayerType(e.layerType);
       const wkt = this.layerToWkt(layer, geomTipo);
+
+      this.stopActiveDraw();
+
       if (!wkt) return;
 
       this.geometryCreated.emit({ wkt, geomTipo });
     });
-
-    this.map.on((L as any).Draw.Event.EDITED, (e: any) => {
-      const layers = e.layers;
-      layers.eachLayer((layer: any) => {
-        const idGeoElemento = layer.__idGeoElemento as number | undefined;
-        const geomTipo = layer.__geomTipo as MapaGeomTipo | undefined;
-        if (!idGeoElemento || !geomTipo) return;
-
-        const wkt = this.layerToWkt(layer, geomTipo);
-        if (!wkt) return;
-
-        this.geometryEdited.emit({
-          idGeoElemento,
-          geomTipo,
-          wkt,
-        });
-      });
-    });
   }
 
   private syncToolMode() {
+    if (!this.map) return;
+
     const container = this.map.getContainer();
+
+    this.stopActiveDraw();
+    this.stopActiveEdition();
 
     this.map.dragging.enable();
     container.style.cursor = '';
 
-    if (this.toolMode === 'move') {
-      this.map.dragging.enable();
-      container.style.cursor = 'grab';
+    if (this.toolMode === 'select' || this.toolMode === 'move') {
+      container.style.cursor = this.toolMode === 'move' ? 'grab' : '';
       return;
     }
 
-    if (this.toolMode === 'select') {
-      this.map.dragging.enable();
-      container.style.cursor = '';
+    if (this.toolMode === 'draw-point') {
+      this.map.dragging.disable();
+      container.style.cursor = 'crosshair';
+      this.startDrawHandler('point');
+      return;
+    }
+
+    if (this.toolMode === 'draw-line') {
+      this.map.dragging.disable();
+      container.style.cursor = 'crosshair';
+      this.startDrawHandler('line');
+      return;
+    }
+
+    if (this.toolMode === 'draw-polygon') {
+      this.map.dragging.disable();
+      container.style.cursor = 'crosshair';
+      this.startDrawHandler('polygon');
       return;
     }
 
     if (this.toolMode === 'edit-geometry') {
-      this.map.dragging.disable();
       container.style.cursor = 'crosshair';
-      return;
+      this.enableEditionForSelectedLayer();
     }
-
-    this.map.dragging.disable();
-    container.style.cursor = 'crosshair';
   }
 
+  private startDrawHandler(type: 'point' | 'line' | 'polygon') {
+    if (!this.map) return;
+
+    const DrawRef: any = (L as any).Draw;
+    if (!DrawRef) return;
+
+    if (type === 'point') {
+      this.activeDrawHandler = new DrawRef.Marker(this.map, {
+        repeatMode: false,
+      });
+    }
+
+    if (type === 'line') {
+      this.activeDrawHandler = new DrawRef.Polyline(this.map, {
+        repeatMode: false,
+        shapeOptions: {
+          color: '#2563eb',
+          weight: 4,
+        },
+      });
+    }
+
+    if (type === 'polygon') {
+      this.activeDrawHandler = new DrawRef.Polygon(this.map, {
+        repeatMode: false,
+        shapeOptions: {
+          color: '#2563eb',
+          weight: 3,
+          fillColor: '#60a5fa',
+          fillOpacity: 0.2,
+        },
+      });
+    }
+
+    if (this.activeDrawHandler?.enable) {
+      this.activeDrawHandler.enable();
+    }
+  }
+
+  private stopActiveDraw() {
+    if (this.activeDrawHandler?.disable) {
+      this.activeDrawHandler.disable();
+    }
+    this.activeDrawHandler = null;
+  }
+
+  private enableEditionForSelectedLayer() {
+    if (this.selectedElementoId == null) return;
+
+    const layer = this.renderedLayers.get(this.selectedElementoId);
+    if (!layer) return;
+
+    this.activeEditedLayer = layer;
+
+    const anyLayer = layer as any;
+
+    if (typeof anyLayer.dragging?.enable === 'function') {
+      anyLayer.dragging.enable();
+      layer.on('dragend', this.onLayerEdited);
+    }
+
+    if (typeof anyLayer.editing?.enable === 'function') {
+      anyLayer.editing.enable();
+      layer.on('edit', this.onLayerEdited);
+    }
+  }
+
+  private stopActiveEdition() {
+    if (!this.activeEditedLayer) return;
+
+    const layer = this.activeEditedLayer as any;
+
+    this.activeEditedLayer.off?.('edit', this.onLayerEdited);
+    this.activeEditedLayer.off?.('dragend', this.onLayerEdited);
+
+    if (typeof layer.editing?.disable === 'function') {
+      layer.editing.disable();
+    }
+
+    if (typeof layer.dragging?.disable === 'function') {
+      layer.dragging.disable();
+    }
+
+    this.activeEditedLayer = null;
+  }
+
+  private onLayerEdited = () => {
+    if (!this.activeEditedLayer) return;
+
+    const layer = this.activeEditedLayer as any;
+    const idGeoElemento = layer.__idGeoElemento as number | undefined;
+    const geomTipo = layer.__geomTipo as MapaGeomTipo | undefined;
+
+    if (!idGeoElemento || !geomTipo) return;
+
+    const wkt = this.layerToWkt(layer, geomTipo);
+    if (!wkt) return;
+
+    this.geometryEdited.emit({
+      idGeoElemento,
+      geomTipo,
+      wkt,
+    });
+  };
+
   private renderElementos() {
+    this.stopActiveEdition();
+
     this.drawnItems.clearLayers();
     this.renderedLayers.clear();
 
@@ -203,37 +304,50 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.centerOnElemento(this.selectedElementoId);
     } else if (this.drawnItems.getLayers().length > 0) {
       const bounds = this.drawnItems.getBounds();
-      if (bounds.isValid()) this.map.fitBounds(bounds.pad(0.2));
+      if (bounds.isValid()) {
+        this.map.fitBounds(bounds.pad(0.2));
+      }
     }
   }
+
   private applySelectionStyle() {
     for (const [id, layer] of this.renderedLayers.entries()) {
       const isSelected = id === this.selectedElementoId;
+      const anyLayer = layer as any;
 
-      if ('setStyle' in layer && typeof (layer as any).setStyle === 'function') {
-        (layer as any).setStyle({
+      if (typeof anyLayer.setStyle === 'function') {
+        anyLayer.setStyle({
           weight: isSelected ? 5 : 3,
           opacity: isSelected ? 1 : 0.9,
           fillOpacity: isSelected ? 0.28 : 0.15,
         });
       }
 
-      if ('setRadius' in layer && typeof (layer as any).setRadius === 'function') {
-        (layer as any).setRadius(isSelected ? 8 : 6);
+      if (typeof anyLayer.setRadius === 'function') {
+        anyLayer.setRadius(isSelected ? 8 : 6);
+      }
+
+      if (typeof anyLayer.setZIndexOffset === 'function') {
+        anyLayer.setZIndexOffset(isSelected ? 1000 : 0);
       }
     }
   }
+
   private layerFromElemento(el: MapaElemento, tipo: MapaTipoElemento | null): L.Layer | null {
     const geom = el.geometria;
     const stroke = tipo?.colorStroke || '#38bdf8';
     const fill = tipo?.colorFill || stroke;
 
-    if (geom) {
-      const geojsonLayer = this.tryGeoJsonLayer(geom, stroke, fill, tipo);
-      if (geojsonLayer) return geojsonLayer;
+    if (geom && typeof geom === 'object' && geom.type && geom.coordinates) {
+      const fromGeoJson = this.layerFromGeoJsonGeometry(geom, stroke, fill, tipo);
+      if (fromGeoJson) return fromGeoJson;
+    }
 
+    if (geom) {
       const embeddedWkt = this.tryExtractWkt(geom);
-      if (embeddedWkt) return this.layerFromWkt(embeddedWkt, stroke, fill, tipo);
+      if (embeddedWkt) {
+        return this.layerFromWkt(embeddedWkt, stroke, fill, tipo);
+      }
     }
 
     if ((el as any).wkt) {
@@ -243,23 +357,57 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     return null;
   }
 
-  private tryGeoJsonLayer(
+  private layerFromGeoJsonGeometry(
     geom: any,
     stroke: string,
     fill: string,
     tipo: MapaTipoElemento | null
   ): L.Layer | null {
-    if (geom && typeof geom === 'object' && geom.type && geom.coordinates) {
-      return L.geoJSON(geom as any, {
-        pointToLayer: (_f, latlng) => this.createPointLayer(latlng, stroke, fill, tipo),
-        style: {
+    const type = String(geom.type || '').toLowerCase();
+    const coords = geom.coordinates;
+
+    if (type === 'point' && Array.isArray(coords) && coords.length >= 2) {
+      return this.createPointLayer(L.latLng(Number(coords[1]), Number(coords[0])), stroke, fill, tipo);
+    }
+
+    if (type === 'linestring' && Array.isArray(coords)) {
+      return L.polyline(
+        coords.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        { color: stroke, weight: 3 }
+      );
+    }
+
+    if (type === 'polygon' && Array.isArray(coords) && Array.isArray(coords[0])) {
+      return L.polygon(
+        coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        {
           color: stroke,
           weight: 3,
           fillColor: fill,
           fillOpacity: 0.15,
-        },
-      });
+        }
+      );
     }
+
+    if (type === 'multilinestring' && Array.isArray(coords) && Array.isArray(coords[0])) {
+      return L.polyline(
+        coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        { color: stroke, weight: 3 }
+      );
+    }
+
+    if (type === 'multipolygon' && Array.isArray(coords) && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+      return L.polygon(
+        coords[0][0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        {
+          color: stroke,
+          weight: 3,
+          fillColor: fill,
+          fillOpacity: 0.15,
+        }
+      );
+    }
+
     return null;
   }
 
@@ -280,28 +428,34 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (raw.startsWith('POINT')) {
       const match = raw.match(/POINT\s*\(([-\d.]+)\s+([-\d.]+)\)/i);
       if (!match) return null;
+
       const lng = Number(match[1]);
       const lat = Number(match[2]);
+
       return this.createPointLayer(L.latLng(lat, lng), stroke, fill, tipo);
     }
 
     if (raw.startsWith('LINESTRING')) {
       const match = raw.match(/LINESTRING\s*\((.+)\)/i);
       if (!match) return null;
+
       const coords = match[1].split(',').map((pair) => {
         const [lng, lat] = pair.trim().split(/\s+/).map(Number);
         return [lat, lng] as [number, number];
       });
+
       return L.polyline(coords, { color: stroke, weight: 3 });
     }
 
     if (raw.startsWith('POLYGON')) {
       const match = raw.match(/POLYGON\s*\(\((.+)\)\)/i);
       if (!match) return null;
+
       const coords = match[1].split(',').map((pair) => {
         const [lng, lat] = pair.trim().split(/\s+/).map(Number);
         return [lat, lng] as [number, number];
       });
+
       return L.polygon(coords, {
         color: stroke,
         weight: 3,
@@ -320,21 +474,25 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   private layerToWkt(layer: L.Layer, geomTipo: MapaGeomTipo): string | null {
-    if (geomTipo === 'point' && 'getLatLng' in layer) {
-      const ll = (layer as any).getLatLng();
+    const anyLayer = layer as any;
+
+    if (geomTipo === 'point' && typeof anyLayer.getLatLng === 'function') {
+      const ll = anyLayer.getLatLng();
       return `POINT(${ll.lng} ${ll.lat})`;
     }
 
-    if (geomTipo === 'linestring' && 'getLatLngs' in layer) {
-      const latlngs = (layer as any).getLatLngs() as L.LatLng[];
+    if (geomTipo === 'linestring' && typeof anyLayer.getLatLngs === 'function') {
+      const latlngs = anyLayer.getLatLngs() as L.LatLng[];
       const coords = latlngs.map((p) => `${p.lng} ${p.lat}`).join(', ');
       return `LINESTRING(${coords})`;
     }
 
-    if (geomTipo === 'polygon' && 'getLatLngs' in layer) {
-      const groups = (layer as any).getLatLngs() as L.LatLng[][];
+    if (geomTipo === 'polygon' && typeof anyLayer.getLatLngs === 'function') {
+      const groups = anyLayer.getLatLngs() as L.LatLng[][];
       const ring = Array.isArray(groups[0]) ? groups[0] : (groups as any);
-      const coords = [...ring, ring[0]].map((p: L.LatLng) => `${p.lng} ${p.lat}`).join(', ');
+      const coords = [...ring, ring[0]]
+        .map((p: L.LatLng) => `${p.lng} ${p.lat}`)
+        .join(', ');
       return `POLYGON((${coords}))`;
     }
 
@@ -353,58 +511,69 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `<div style="
-        width:0;
-        height:0;
-        border-left:8px solid transparent;
-        border-right:8px solid transparent;
-        border-bottom:16px solid ${fill};
-        filter: drop-shadow(0 0 1px ${stroke});
-      "></div>`,
+          width:0;
+          height:0;
+          border-left:8px solid transparent;
+          border-right:8px solid transparent;
+          border-bottom:16px solid ${fill};
+          filter: drop-shadow(0 0 1px ${stroke});
+        "></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 14],
       });
-      return L.marker(latlng, { icon, draggable: true });
+
+      return L.marker(latlng, { icon, draggable: false });
     }
 
     if (iconoFuente.includes('target')) {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `<div style="
-        width:16px;
-        height:16px;
-        border:2px solid ${stroke};
-        border-radius:999px;
-        background:${fill};
-        box-shadow: inset 0 0 0 3px white;
-      "></div>`,
+          width:16px;
+          height:16px;
+          border:2px solid ${stroke};
+          border-radius:999px;
+          background:${fill};
+          box-shadow: inset 0 0 0 3px white;
+        "></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       });
-      return L.marker(latlng, { icon, draggable: true });
+
+      return L.marker(latlng, { icon, draggable: false });
     }
 
     if (iconoFuente.includes('donut')) {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `<div style="
-        width:16px;
-        height:16px;
-        border:4px solid ${stroke};
-        border-radius:999px;
-        background:transparent;
-      "></div>`,
+          width:16px;
+          height:16px;
+          border:4px solid ${stroke};
+          border-radius:999px;
+          background:transparent;
+        "></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       });
-      return L.marker(latlng, { icon, draggable: true });
+
+      return L.marker(latlng, { icon, draggable: false });
     }
 
-    return L.circleMarker(latlng, {
-      radius: 6,
-      color: stroke,
-      weight: 2,
-      fillColor: fill,
-      fillOpacity: 0.85,
+    const icon = L.divIcon({
+      className: 'mapa-div-icon',
+      html: `<div style="
+        width:14px;
+        height:14px;
+        border-radius:999px;
+        background:${fill};
+        border:2px solid ${stroke};
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.8);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
     });
+
+    return L.marker(latlng, { icon, draggable: false });
   }
 }

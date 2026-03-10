@@ -17,7 +17,8 @@ export class MapaContextMenuComponent {
   @Input() elemento: MapaElemento | null = null;
 
   @Output() closeRequested = new EventEmitter<void>();
-  @Output() editRequested = new EventEmitter<MapaElemento>();
+  @Output() editDataRequested = new EventEmitter<MapaElemento>();
+  @Output() editGeometryRequested = new EventEmitter<MapaElemento>();
   @Output() deleteRequested = new EventEmitter<MapaElemento>();
   @Output() centerRequested = new EventEmitter<MapaElemento>();
 }

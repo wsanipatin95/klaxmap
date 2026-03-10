@@ -13,3 +13,8 @@
   background: transparent;
   border: 0;
 }
+
+:host ::ng-deep .leaflet-draw,
+:host ::ng-deep .leaflet-control-container .leaflet-draw {
+  display: none !important;
+}

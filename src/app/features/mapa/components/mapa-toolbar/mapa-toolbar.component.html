@@ -1,16 +1,72 @@
-<div class="toolbar-wrap">
-  <button pButton type="button" label="Seleccionar" (click)="ui.setToolMode('select')"></button>
-  <button pButton type="button" label="Mover mapa" (click)="ui.setToolMode('move')"></button>
-  <button pButton type="button" label="Editar geometría" (click)="ui.setToolMode('edit-geometry')"></button>
-  <button pButton type="button" label="Punto" (click)="ui.setToolMode('draw-point')"></button>
-  <button pButton type="button" label="Línea" (click)="ui.setToolMode('draw-line')"></button>
-  <button pButton type="button" label="Polígono" (click)="ui.setToolMode('draw-polygon')"></button>
+<div class="toolbar-shell">
+  <div class="toolbar-wrap">
+    <div class="toolbar-group">
+      <button
+        pButton
+        type="button"
+        label="Seleccionar elementos"
+        [class.active]="isActive('select')"
+        (click)="ui.setSelectMode()"
+      ></button>
 
-  <span class="separator"></span>
+      <button
+        pButton
+        type="button"
+        label="Editar forma"
+        [class.active]="isActive('edit-geometry')"
+        (click)="ui.setEditGeometryMode()"
+      ></button>
+    </div>
 
-  <button pButton type="button" label="Importar KML" (click)="importRequested.emit()"></button>
-  <button pButton type="button" label="Exportar KML" (click)="exportRequested.emit()"></button>
-  <button pButton type="button" label="Refrescar" severity="secondary" (click)="refreshRequested.emit()"></button>
+    <div class="toolbar-group">
+      <button
+        pButton
+        type="button"
+        label="Crear punto"
+        [class.active]="isActive('draw-point')"
+        (click)="ui.setDrawPointMode()"
+      ></button>
 
-  <span class="mode-info">Modo: {{ ui.toolMode() }}</span>
+      <button
+        pButton
+        type="button"
+        label="Crear línea"
+        [class.active]="isActive('draw-line')"
+        (click)="ui.setDrawLineMode()"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Crear polígono"
+        [class.active]="isActive('draw-polygon')"
+        (click)="ui.setDrawPolygonMode()"
+      ></button>
+    </div>
+
+    <span class="separator"></span>
+
+    <div class="toolbar-group">
+      <button pButton type="button" label="Importar KML" (click)="importRequested.emit()"></button>
+      <button pButton type="button" label="Exportar KML" (click)="exportRequested.emit()"></button>
+      <button pButton type="button" label="Refrescar" severity="secondary" (click)="refreshRequested.emit()"></button>
+    </div>
+
+    <div class="toolbar-side-info">
+      <div class="toolbar-mode">
+        <span class="toolbar-mode-label">Modo actual</span>
+        <strong>{{ modeName(ui.toolMode()) }}</strong>
+      </div>
+
+      <div class="toolbar-total">
+        <span class="toolbar-mode-label">Elementos visibles</span>
+        <strong>{{ totalElementos }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar-help">
+    <div class="toolbar-help-title">{{ help().title }}</div>
+    <div class="toolbar-help-text">{{ help().text }}</div>
+  </div>
 </div>

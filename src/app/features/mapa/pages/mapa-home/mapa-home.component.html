@@ -1,6 +1,8 @@
 <app-mapa-layout>
   <app-mapa-toolbar
     slot="toolbar"
+    [selectedName]="selectedElemento()?.nombre ?? null"
+    [totalElementos]="totalElementos()"
     (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()"
     (importRequested)="abrirImportacion()"
@@ -42,31 +44,35 @@
   />
 
   <app-mapa-statusbar
-  slot="status"
-  [totalElementos]="totalElementos()"
-  [modo]="ui.toolMode()"
-  [loading]="ui.loading()"
-  [selectedName]="selectedElemento()?.nombre ?? null"
-/>
+    slot="status"
+    [totalElementos]="totalElementos()"
+    [modo]="ui.toolMode()"
+    [loading]="ui.loading()"
+    [selectedName]="selectedElemento()?.nombre ?? null"
+  />
 </app-mapa-layout>
+
+<div class="mapa-quick-info">
+  {{ quickInfo() }}
+</div>
 
 <app-mapa-import-dialog
   #importDialog
   (imported)="onImported()"
-/>
+></app-mapa-import-dialog>
 
 <app-mapa-export-dialog
   #exportDialog
   [nodos]="nodos()"
   [tipos]="tipos()"
-/>
+></app-mapa-export-dialog>
 
 <app-mapa-create-element-dialog
   #createDialog
   [nodos]="nodos()"
   [tipos]="tipos()"
   (submitted)="crearElemento($event)"
-/>
+></app-mapa-create-element-dialog>
 
 <app-mapa-context-menu
   [visible]="contextVisible()"
@@ -75,10 +81,13 @@
   [elemento]="contextElemento()"
   (closeRequested)="closeContextMenu()"
   (centerRequested)="centerContextElemento($event)"
-  (editRequested)="editContextElemento($event)"
+  (editDataRequested)="editDataContextElemento($event)"
+  (editGeometryRequested)="editGeometryContextElemento($event)"
   (deleteRequested)="deleteContextElemento($event)"
-/>
+></app-mapa-context-menu>
 
 <div class="mapa-error" *ngIf="error() as err">
-  {{ err }}
+  <div class="mapa-error-title">Ocurrió un problema</div>
+  <div class="mapa-error-text">{{ err }}</div>
+  <button type="button" class="mapa-error-close" (click)="clearError()">Cerrar</button>
 </div>

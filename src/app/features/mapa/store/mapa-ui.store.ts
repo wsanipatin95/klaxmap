@@ -19,6 +19,26 @@ export class MapaUiStore {
     this.toolMode.set(mode);
   }
 
+  setSelectMode() {
+    this.toolMode.set('select');
+  }
+
+  setEditGeometryMode() {
+    this.toolMode.set('edit-geometry');
+  }
+
+  setDrawPointMode() {
+    this.toolMode.set('draw-point');
+  }
+
+  setDrawLineMode() {
+    this.toolMode.set('draw-line');
+  }
+
+  setDrawPolygonMode() {
+    this.toolMode.set('draw-polygon');
+  }
+
   toggleSidebar() {
     this.sidebarOpen.update((v) => !v);
   }
