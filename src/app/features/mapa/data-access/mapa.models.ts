@@ -58,7 +58,8 @@ export interface MapaElemento {
   kmlExtendedData?: Record<string, any> | null;
   atributos?: Record<string, any> | null;
   geomTipo: MapaGeomTipo;
-  geometria: any;
+  geometria?: any;
+  wkt?: string | null;
   latLon?: string | null;
   bbox?: string | null;
   longitudM?: number;

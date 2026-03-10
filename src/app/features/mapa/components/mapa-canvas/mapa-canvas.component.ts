@@ -228,13 +228,17 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const stroke = tipo?.colorStroke || '#38bdf8';
     const fill = tipo?.colorFill || stroke;
 
-    if (!geom) return null;
+    if (geom) {
+      const geojsonLayer = this.tryGeoJsonLayer(geom, stroke, fill, tipo);
+      if (geojsonLayer) return geojsonLayer;
 
-    const geojsonLayer = this.tryGeoJsonLayer(geom, stroke, fill, tipo);
-    if (geojsonLayer) return geojsonLayer;
+      const embeddedWkt = this.tryExtractWkt(geom);
+      if (embeddedWkt) return this.layerFromWkt(embeddedWkt, stroke, fill, tipo);
+    }
 
-    const wkt = this.tryExtractWkt(geom);
-    if (wkt) return this.layerFromWkt(wkt, stroke, fill, tipo);
+    if ((el as any).wkt) {
+      return this.layerFromWkt((el as any).wkt, stroke, fill, tipo);
+    }
 
     return null;
   }
