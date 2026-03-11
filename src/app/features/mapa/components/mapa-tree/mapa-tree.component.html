@@ -1,10 +1,36 @@
 <div class="tree-actions">
-  <button type="button" (click)="selectAll()">Ver todo</button>
-  <span class="tree-hint" *ngIf="searchValue">Mostrando ramas con coincidencias</span>
+  <div class="tree-actions-left">
+    <button type="button" (click)="selectAll()">Ver todo</button>
+    <span class="tree-hint" *ngIf="searchValue">Mostrando ramas con coincidencias</span>
+  </div>
+
+  <div class="tree-actions-right">
+    <button type="button" (click)="createRootNode('carpeta')">+ Carpeta raíz</button>
+    <button type="button" (click)="createRootNode('zona')">+ Zona raíz</button>
+  </div>
 </div>
 
-<ul class="tree-root">
-  <ng-container *ngFor="let item of tree()">
+<div class="tree-empty" *ngIf="!hasAnyTreeData()">
+  <strong>No hay nodos cargados.</strong>
+  <p>
+    Crea una carpeta raíz o revisa que el backend esté devolviendo nodos.
+  </p>
+
+  <div class="tree-empty-actions">
+    <button type="button" (click)="createRootNode('carpeta')">Crear carpeta raíz</button>
+    <button type="button" (click)="createRootNode('zona')">Crear zona raíz</button>
+  </div>
+</div>
+
+<div class="tree-empty" *ngIf="hasAnyTreeData() && !hasVisibleTreeData()">
+  <strong>No hay coincidencias en el árbol.</strong>
+  <p>
+    Prueba borrando la búsqueda o usa “Ver todo”.
+  </p>
+</div>
+
+<ul class="tree-root" *ngIf="hasVisibleTreeData()">
+  <ng-container *ngFor="let item of tree(); trackBy: trackByNode">
     <ng-container
       *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
     ></ng-container>
@@ -17,8 +43,9 @@
       class="node-row"
       [class.active]="item.node.idRedNodo === selectedNodoId"
       [style.paddingLeft.px]="10 + (level * 18)"
-      (click)="nodoSelected.emit(item.node)"
+      (click)="onNodeClick(item.node, $event)"
       (contextmenu)="openNodeContext(item.node, $event)"
+      [title]="item.node.nodo"
     >
       <button
         type="button"
@@ -29,7 +56,10 @@
         {{ isExpanded(item.node) ? '▾' : '▸' }}
       </button>
 
-      <span class="expand-placeholder" *ngIf="item.children.length === 0 && item.elementos.length === 0"></span>
+      <span
+        class="expand-placeholder"
+        *ngIf="item.children.length === 0 && item.elementos.length === 0"
+      ></span>
 
       <input
         type="checkbox"
@@ -40,13 +70,13 @@
 
       <span class="node-icon">{{ iconFor(item.node.tipoNodo) }}</span>
 
-      <span class="node-name" [title]="item.node.nodo">{{ item.node.nodo }}</span>
+      <span class="node-name">{{ item.node.nodo }}</span>
 
       <small class="node-type">{{ item.node.tipoNodo }}</small>
     </div>
 
     <ul class="tree-children" *ngIf="isExpanded(item.node)">
-      <ng-container *ngFor="let child of item.children">
+      <ng-container *ngFor="let child of item.children; trackBy: trackByNode">
         <ng-container
           *ngTemplateOutlet="nodeTpl; context: { $implicit: child, level: level + 1 }"
         ></ng-container>
@@ -54,11 +84,12 @@
 
       <li
         class="element-row"
-        *ngFor="let el of item.elementos"
+        *ngFor="let el of item.elementos; trackBy: trackByElemento"
         [class.active]="el.idGeoElemento === selectedElementoId"
         [style.paddingLeft.px]="48 + ((level + 1) * 18)"
-        (click)="elementoSelected.emit(el)"
+        (click)="onElementoClick(el, $event)"
         (contextmenu)="openElementoContext(el, $event)"
+        [title]="el.nombre"
       >
         <input
           type="checkbox"
@@ -68,7 +99,7 @@
         />
 
         <span class="element-bullet">•</span>
-        <span class="element-name" [title]="el.nombre">{{ el.nombre }}</span>
+        <span class="element-name">{{ el.nombre }}</span>
         <small class="element-type">{{ el.geomTipo }}</small>
       </li>
     </ul>

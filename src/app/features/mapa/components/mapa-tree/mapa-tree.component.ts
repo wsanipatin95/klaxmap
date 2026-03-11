@@ -71,12 +71,21 @@ export class MapaTreeComponent {
   readonly contextNode = signal<MapaNodo | null>(null);
   readonly contextElemento = signal<MapaElemento | null>(null);
 
+  readonly hasAnyTreeData = computed(() => this.nodos.length > 0 || this.elementos.length > 0);
+  readonly hasVisibleTreeData = computed(() => this.tree().length > 0);
+
   selectAll() {
     this.nodoSelected.emit(null);
+    this.ensureRootNodesExpanded();
+  }
+
+  createRootNode(tipo: MapaNodo['tipoNodo']) {
+    this.createNodeRequested.emit({ parent: null, tipo });
   }
 
   toggleExpanded(nodeId: number, event?: Event) {
     event?.stopPropagation();
+
     const current = new Set(this.expandedIds());
     if (current.has(nodeId)) {
       current.delete(nodeId);
@@ -90,6 +99,19 @@ export class MapaTreeComponent {
     if (this.searchValue.trim()) {
       return true;
     }
+
+    if (this.isRootNode(node.idRedNodo)) {
+      return true;
+    }
+
+    if (this.isAncestorOfSelectedNodo(node.idRedNodo)) {
+      return true;
+    }
+
+    if (this.isAncestorOfSelectedElemento(node.idRedNodo)) {
+      return true;
+    }
+
     return this.expandedIds().includes(node.idRedNodo);
   }
 
@@ -114,6 +136,17 @@ export class MapaTreeComponent {
 
   isElementoVisible(elemento: MapaElemento): boolean {
     return !this.hiddenElementoIds.includes(elemento.idGeoElemento) && !this.isNodeHidden(elemento.idRedNodoFk);
+  }
+
+  onNodeClick(node: MapaNodo, event?: MouseEvent) {
+    event?.stopPropagation();
+    this.nodoSelected.emit(node);
+  }
+
+  onElementoClick(elemento: MapaElemento, event?: MouseEvent) {
+    event?.stopPropagation();
+    this.elementoSelected.emit(elemento);
+    this.centerElementoRequested.emit(elemento);
   }
 
   onToggleNode(node: MapaNodo, event: Event) {
@@ -154,9 +187,13 @@ export class MapaTreeComponent {
     this.contextVisible.set(false);
   }
 
+  trackByNode = (_: number, item: TreeNodeVm) => item.node.idRedNodo;
+  trackByElemento = (_: number, item: MapaElemento) => item.idGeoElemento;
+
   private buildTree(): TreeNodeVm[] {
     const byParent = new Map<number | null, MapaNodo[]>();
     const allNodeIds = new Set(this.nodos.map((n) => n.idRedNodo));
+    const q = this.searchValue.trim().toLowerCase();
 
     for (const n of this.nodos) {
       const rawParent = n.idRedNodoPadreFk ?? null;
@@ -166,25 +203,119 @@ export class MapaTreeComponent {
       byParent.set(parentId, arr);
     }
 
-    const roots = (byParent.get(null) ?? []).sort(this.sortNodes);
+    let roots = (byParent.get(null) ?? []).sort(this.sortNodes);
+
+    if (!roots.length && this.nodos.length > 0) {
+      const minNivel = Math.min(...this.nodos.map((n) => n.nivel ?? 0));
+      roots = this.nodos
+        .filter((n) => (n.nivel ?? 0) === minNivel)
+        .sort(this.sortNodes);
+    }
 
     const build = (node: MapaNodo): TreeNodeVm => {
-      const children = (byParent.get(node.idRedNodo) ?? []).sort(this.sortNodes).map(build);
-      const elementos = this.elementos
+      const rawChildren = (byParent.get(node.idRedNodo) ?? []).sort(this.sortNodes);
+      const children = rawChildren.map(build);
+
+      const rawElementos = this.elementos
         .filter((e) => e.idRedNodoFk === node.idRedNodo)
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-      const visible = this.matchesNode(node) || elementos.length > 0 || children.some((c) => c.visible);
+      const elementos = q
+        ? rawElementos.filter((e) => this.matchesElemento(e))
+        : rawElementos;
+
+      const childVisible = children.some((c) => c.visible);
+      const nodeVisible = this.matchesNode(node);
+      const visible = !q || nodeVisible || elementos.length > 0 || childVisible;
 
       return {
         node,
-        children,
+        children: q ? children.filter((c) => c.visible) : children,
         elementos,
-        visible: this.searchValue.trim() ? visible : true,
+        visible,
       };
     };
 
-    return roots.map(build).filter((n) => n.visible);
+    const result = roots.map(build).filter((n) => n.visible);
+
+    this.ensureRootNodesExpanded(result.map((r) => r.node.idRedNodo));
+
+    return result;
+  }
+
+  private ensureRootNodesExpanded(rootIds?: number[]) {
+    const ids = rootIds ?? this.getRootNodeIds();
+    if (!ids.length) return;
+
+    const current = new Set(this.expandedIds());
+    let changed = false;
+
+    for (const id of ids) {
+      if (!current.has(id)) {
+        current.add(id);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.expandedIds.set([...current]);
+    }
+  }
+
+  private getRootNodeIds(): number[] {
+    const allNodeIds = new Set(this.nodos.map((n) => n.idRedNodo));
+    const roots = this.nodos
+      .filter((n) => {
+        const parent = n.idRedNodoPadreFk ?? null;
+        return parent == null || !allNodeIds.has(parent);
+      })
+      .sort(this.sortNodes)
+      .map((n) => n.idRedNodo);
+
+    if (roots.length > 0) {
+      return roots;
+    }
+
+    if (!this.nodos.length) {
+      return [];
+    }
+
+    const minNivel = Math.min(...this.nodos.map((n) => n.nivel ?? 0));
+    return this.nodos
+      .filter((n) => (n.nivel ?? 0) === minNivel)
+      .sort(this.sortNodes)
+      .map((n) => n.idRedNodo);
+  }
+
+  private isRootNode(nodeId: number): boolean {
+    return this.getRootNodeIds().includes(nodeId);
+  }
+
+  private isAncestorOfSelectedNodo(nodeId: number): boolean {
+    if (this.selectedNodoId == null) return false;
+    return this.getAncestorIds(this.selectedNodoId).includes(nodeId);
+  }
+
+  private isAncestorOfSelectedElemento(nodeId: number): boolean {
+    if (this.selectedElementoId == null) return false;
+    const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
+    if (!el) return false;
+    return this.getAncestorIds(el.idRedNodoFk).includes(nodeId);
+  }
+
+  private getAncestorIds(nodeId: number): number[] {
+    const byId = new Map(this.nodos.map((n) => [n.idRedNodo, n] as const));
+    const ids: number[] = [];
+    let current = byId.get(nodeId) ?? null;
+
+    while (current) {
+      ids.push(current.idRedNodo);
+      const parentId = current.idRedNodoPadreFk ?? null;
+      if (parentId == null) break;
+      current = byId.get(parentId) ?? null;
+    }
+
+    return ids;
   }
 
   private matchesNode(node: MapaNodo): boolean {
@@ -197,6 +328,20 @@ export class MapaTreeComponent {
       node.codigo ?? '',
       node.pathCache ?? '',
       node.tipoNodo,
+    ].some((v) => (v || '').toLowerCase().includes(q));
+  }
+
+  private matchesElemento(elemento: MapaElemento): boolean {
+    const q = this.searchValue.trim().toLowerCase();
+    if (!q) return true;
+
+    return [
+      elemento.nombre,
+      elemento.descripcion ?? '',
+      elemento.codigo ?? '',
+      elemento.etiqueta ?? '',
+      elemento.observacion ?? '',
+      elemento.geomTipo ?? '',
     ].some((v) => (v || '').toLowerCase().includes(q));
   }
 
