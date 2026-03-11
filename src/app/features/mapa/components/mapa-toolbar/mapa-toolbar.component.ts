@@ -15,60 +15,25 @@ export class MapaToolbarComponent {
 
   @Input() selectedName: string | null = null;
   @Input() totalElementos = 0;
+  @Input() editSessionActive = false;
+  @Input() editSessionDirty = false;
+  @Input() editSessionElementName: string | null = null;
 
   @Output() refreshRequested = new EventEmitter<void>();
   @Output() exportRequested = new EventEmitter<void>();
   @Output() importRequested = new EventEmitter<void>();
+  @Output() saveEditRequested = new EventEmitter<void>();
+  @Output() cancelEditRequested = new EventEmitter<void>();
+  @Output() selectModeRequested = new EventEmitter<void>();
+  @Output() editGeometryModeRequested = new EventEmitter<void>();
+  @Output() drawPointModeRequested = new EventEmitter<void>();
+  @Output() drawLineModeRequested = new EventEmitter<void>();
+  @Output() drawPolygonModeRequested = new EventEmitter<void>();
 
   readonly help = computed(() => {
     const mode = this.ui.toolMode();
-    return this.buildHelp(mode, this.selectedName);
+    return this.buildHelp(mode);
   });
-
-  private buildHelp(mode: MapaToolMode, selectedName: string | null) {
-    switch (mode) {
-      case 'draw-point':
-        return {
-          title: 'Crear punto',
-          text: 'Haz clic una vez sobre el mapa para colocar el punto. Luego se abrirá el formulario para completar los datos.',
-        };
-
-      case 'draw-line':
-        return {
-          title: 'Crear línea',
-          text: 'Haz clic para iniciar la línea, sigue marcando el recorrido y termina el dibujo para abrir el formulario del elemento.',
-        };
-
-      case 'draw-polygon':
-        return {
-          title: 'Crear polígono',
-          text: 'Haz clic en varios puntos para formar el área. Al cerrar la figura se abrirá el formulario del elemento.',
-        };
-
-      case 'edit-geometry':
-        return {
-          title: 'Editar forma',
-          text: selectedName
-            ? `Estás listo para editar la forma de "${selectedName}". Arrastra sus puntos en el mapa y guarda el cambio.`
-            : 'Primero selecciona un elemento y luego modifica su forma en el mapa.',
-        };
-
-      case 'move':
-        return {
-          title: 'Mover mapa',
-          text: 'Puedes arrastrar el mapa libremente. Este modo ya no se mostrará al usuario final.',
-        };
-
-      case 'select':
-      default:
-        return {
-          title: 'Seleccionar elementos',
-          text: selectedName
-            ? `Elemento seleccionado: "${selectedName}". Puedes editar sus datos en el panel derecho o usar clic derecho para más acciones.`
-            : 'Haz clic sobre un elemento para ver sus datos. También puedes mover el mapa arrastrando normalmente.',
-        };
-    }
-  }
 
   isActive(mode: MapaToolMode): boolean {
     return this.ui.toolMode() === mode;
@@ -89,6 +54,54 @@ export class MapaToolbarComponent {
       case 'select':
       default:
         return 'Seleccionar elementos';
+    }
+  }
+
+  private buildHelp(mode: MapaToolMode) {
+    if (this.editSessionActive) {
+      return {
+        title: 'Edición de forma activa',
+        text: this.editSessionDirty
+          ? `Estás editando "${this.editSessionElementName || 'elemento'}". Guarda para aplicar o cancela para descartar.`
+          : `Estás editando "${this.editSessionElementName || 'elemento'}". Haz cambios en la geometría y luego guarda o cancela.`,
+      };
+    }
+
+    switch (mode) {
+      case 'draw-point':
+        return {
+          title: 'Crear punto',
+          text: 'Haz clic una vez sobre el mapa para colocar el punto. Luego se abrirá el formulario.',
+        };
+
+      case 'draw-line':
+        return {
+          title: 'Crear línea',
+          text: 'Haz clic para iniciar, sigue marcando puntos y termina con doble clic.',
+        };
+
+      case 'draw-polygon':
+        return {
+          title: 'Crear polígono',
+          text: 'Haz clic en varios puntos para formar el área y cierra la figura para terminar.',
+        };
+
+      case 'edit-geometry':
+        return {
+          title: 'Editar forma',
+          text: this.selectedName
+            ? `Elemento listo para edición: "${this.selectedName}".`
+            : 'Primero selecciona un elemento para editar su forma.',
+        };
+
+      case 'select':
+      default:
+        return {
+          title: 'Seleccionar elementos',
+          text: this.selectedName
+            ? `Elemento seleccionado: "${this.selectedName}".`
+            : 'Haz clic sobre un elemento para verlo o editarlo.',
+        };
     }
   }
 }

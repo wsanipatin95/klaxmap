@@ -3,9 +3,19 @@
     slot="toolbar"
     [selectedName]="selectedElemento()?.nombre ?? null"
     [totalElementos]="totalElementos()"
+    [editSessionActive]="editSessionActive()"
+    [editSessionDirty]="editSessionDirty()"
+    [editSessionElementName]="editSessionElementName()"
     (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()"
     (importRequested)="abrirImportacion()"
+    (saveEditRequested)="saveGeometryEdition()"
+    (cancelEditRequested)="cancelGeometryEdition()"
+    (selectModeRequested)="onToolbarSelectMode()"
+    (editGeometryModeRequested)="onToolbarEditGeometryMode()"
+    (drawPointModeRequested)="onToolbarDrawPointMode()"
+    (drawLineModeRequested)="onToolbarDrawLineMode()"
+    (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
   />
 
   <app-mapa-sidebar
@@ -30,7 +40,7 @@
     [hiddenTipoIds]="capas.hiddenTipoIds()"
     (elementoSelected)="onElementoSelect($event)"
     (geometryCreated)="onGeometryCreated($event)"
-    (geometryEdited)="onGeometryEdited($event)"
+    (editSessionStateChanged)="onEditSessionStateChanged($event)"
     (elementoContext)="openContextMenu($event)"
   />
 

@@ -6,15 +6,15 @@
         type="button"
         label="Seleccionar elementos"
         [class.active]="isActive('select')"
-        (click)="ui.setSelectMode()"
+        (click)="selectModeRequested.emit()"
       ></button>
 
       <button
         pButton
         type="button"
         label="Editar forma"
-        [class.active]="isActive('edit-geometry')"
-        (click)="ui.setEditGeometryMode()"
+        [class.active]="isActive('edit-geometry') || editSessionActive"
+        (click)="editGeometryModeRequested.emit()"
       ></button>
     </div>
 
@@ -24,7 +24,7 @@
         type="button"
         label="Crear punto"
         [class.active]="isActive('draw-point')"
-        (click)="ui.setDrawPointMode()"
+        (click)="drawPointModeRequested.emit()"
       ></button>
 
       <button
@@ -32,7 +32,7 @@
         type="button"
         label="Crear línea"
         [class.active]="isActive('draw-line')"
-        (click)="ui.setDrawLineMode()"
+        (click)="drawLineModeRequested.emit()"
       ></button>
 
       <button
@@ -40,7 +40,7 @@
         type="button"
         label="Crear polígono"
         [class.active]="isActive('draw-polygon')"
-        (click)="ui.setDrawPolygonMode()"
+        (click)="drawPolygonModeRequested.emit()"
       ></button>
     </div>
 
@@ -68,5 +68,39 @@
   <div class="toolbar-help">
     <div class="toolbar-help-title">{{ help().title }}</div>
     <div class="toolbar-help-text">{{ help().text }}</div>
+  </div>
+
+  <div class="edit-session-bar" *ngIf="editSessionActive">
+    <div class="edit-session-info">
+      <div class="edit-session-title">
+        Editando: {{ editSessionElementName || 'elemento' }}
+      </div>
+      <div class="edit-session-text" *ngIf="editSessionDirty; else pendingNoChanges">
+        Hay cambios pendientes. Guarda para aplicar o cancela para volver al estado anterior.
+      </div>
+      <ng-template #pendingNoChanges>
+        <div class="edit-session-text">
+          Aún no has hecho cambios. Puedes mover, agregar o quitar vértices y luego guardar.
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="edit-session-actions">
+      <button
+        pButton
+        type="button"
+        label="Cancelar"
+        severity="secondary"
+        (click)="cancelEditRequested.emit()"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Guardar cambios"
+        [disabled]="!editSessionDirty"
+        (click)="saveEditRequested.emit()"
+      ></button>
+    </div>
   </div>
 </div>
