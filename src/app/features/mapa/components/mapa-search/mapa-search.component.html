@@ -1,8 +1,25 @@
 <div class="mapa-search">
-  <input
-    type="text"
-    [ngModel]="value"
-    (ngModelChange)="valueChange.emit($event)"
-    placeholder="Buscar en mapa..."
-  />
+  <div class="search-input-wrap">
+    <input
+      type="text"
+      [ngModel]="value"
+      (ngModelChange)="valueChange.emit($event)"
+      [placeholder]="placeholder"
+    />
+
+    <button
+      type="button"
+      class="clear-btn"
+      *ngIf="value"
+      (click)="clearRequested.emit()"
+      aria-label="Limpiar búsqueda"
+    >
+      ✕
+    </button>
+  </div>
+
+  <div class="search-status" *ngIf="value || loading">
+    <span *ngIf="loading">Buscando...</span>
+    <span *ngIf="!loading && value">Resultados visibles: {{ resultCount }}</span>
+  </div>
 </div>

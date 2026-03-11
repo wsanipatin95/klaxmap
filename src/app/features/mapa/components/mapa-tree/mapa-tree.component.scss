@@ -1,5 +1,8 @@
 .tree-actions {
-  margin-bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.7rem;
 
   button {
     background: transparent;
@@ -11,48 +14,132 @@
   }
 }
 
-.tree-list {
+.tree-hint {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.tree-root,
+.tree-children {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.tree-list li {
+.tree-node {
+  margin: 0;
+}
+
+.node-row,
+.element-row {
   display: grid;
-  grid-template-columns: 20px 1fr auto;
-  gap: 0.5rem;
+  grid-template-columns: 16px 18px 20px 1fr auto;
+  gap: 0.45rem;
   align-items: center;
-  padding: 0.5rem 0.55rem;
+  padding: 0.45rem 0.55rem;
   border-radius: 0.45rem;
   cursor: pointer;
   color: #e5e7eb;
   transition: background 0.15s ease;
 }
 
-.tree-list li:hover {
+.node-row:hover,
+.element-row:hover {
   background: #1e293b;
 }
 
-.tree-list li.active {
+.node-row.active,
+.element-row.active {
   background: #1d4ed8;
   color: #fff;
+}
+
+.expand-btn,
+.expand-placeholder {
+  width: 16px;
+  text-align: center;
+}
+
+.expand-btn {
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 0;
 }
 
 .node-icon {
   font-size: 0.9rem;
 }
 
-.node-name {
+.node-name,
+.element-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.node-type {
+.node-type,
+.element-type {
   font-size: 0.7rem;
   color: #94a3b8;
 }
 
-.tree-list li.active .node-type {
+.node-row.active .node-type,
+.element-row.active .element-type {
   color: #dbeafe;
+}
+
+.element-bullet {
+  color: #93c5fd;
+}
+
+.context-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 220px;
+  background: #081224;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.8rem;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.context-title {
+  font-weight: 700;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.context-menu button {
+  border: 0;
+  background: transparent;
+  color: #e5e7eb;
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.context-menu button:hover {
+  background: #13233e;
+}
+
+.context-menu button.danger {
+  color: #fda4af;
+}
+
+.context-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.14);
+  margin: 0.25rem 0;
 }

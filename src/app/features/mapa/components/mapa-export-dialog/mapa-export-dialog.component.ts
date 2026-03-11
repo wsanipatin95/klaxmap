@@ -25,6 +25,8 @@ export class MapaExportDialogComponent {
   visible = signal(false);
   loading = signal(false);
   error = signal<string | null>(null);
+  resultCount = signal(0);
+  filterSummary = signal('Sin filtros activos');
 
   form: MapaExportRequest = {
     q: '',
@@ -34,9 +36,15 @@ export class MapaExportDialogComponent {
     nombreDocumento: 'mapa_red_isp',
   };
 
-  open(prefill?: Partial<MapaExportRequest>) {
+  open(
+    prefill?: Partial<MapaExportRequest>,
+    meta?: { resultCount?: number; filterSummary?: string }
+  ) {
     this.visible.set(true);
     this.error.set(null);
+    this.resultCount.set(meta?.resultCount ?? 0);
+    this.filterSummary.set(meta?.filterSummary ?? 'Sin filtros activos');
+
     this.form = {
       q: prefill?.q ?? '',
       idRedNodoFk: prefill?.idRedNodoFk ?? null,

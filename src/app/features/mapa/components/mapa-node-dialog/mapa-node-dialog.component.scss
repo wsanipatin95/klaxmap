@@ -1,0 +1,49 @@
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.callout {
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.7rem;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 500;
+}
+
+.check-row input {
+  width: auto;
+}
+
+.error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.92rem;
+}

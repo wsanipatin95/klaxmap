@@ -6,11 +6,14 @@
 
   <app-mapa-search
     [value]="searchValue"
+    [loading]="searchLoading"
+    [resultCount]="searchResultCount"
     (valueChange)="searchChange.emit($event)"
+    (clearRequested)="searchClear.emit()"
   />
 
   <section class="sidebar-section">
-    <h4>Tipos</h4>
+    <h4>Filtrar por tipo</h4>
     <select
       [ngModel]="selectedTipoId"
       (ngModelChange)="tipoSelected.emit($event ? +$event : null)"
@@ -20,16 +23,39 @@
         {{ t.nombre }}
       </option>
     </select>
+    <small class="section-help">
+      Este filtro cambia los resultados consultados. Las capas debajo sólo controlan visibilidad visual.
+    </small>
   </section>
 
   <app-mapa-capas-panel [tipos]="tipos" />
 
   <section class="sidebar-section">
-    <h4>Árbol jerárquico</h4>
+    <h4>Árbol del mapa</h4>
+    <small class="section-help">
+      Clic para filtrar por nodo. Clic derecho para crear carpeta, dibujar o editar.
+    </small>
+
     <app-mapa-tree
       [nodos]="nodos"
+      [elementos]="elementos"
       [selectedNodoId]="selectedNodoId"
-      (selected)="nodoSelected.emit($event)"
+      [selectedElementoId]="selectedElementoId"
+      [searchValue]="searchValue"
+      [hiddenNodeIds]="hiddenNodeIds"
+      [hiddenElementoIds]="hiddenElementoIds"
+      (nodoSelected)="nodoSelected.emit($event)"
+      (elementoSelected)="treeElementoSelected.emit($event)"
+      (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
+      (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
+      (createNodeRequested)="treeCreateNodeRequested.emit($event)"
+      (editNodeRequested)="treeEditNodeRequested.emit($event)"
+      (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
+      (drawElementRequested)="treeDrawElementRequested.emit($event)"
+      (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
+      (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
+      (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
+      (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
     />
   </section>
 

@@ -11,5 +11,10 @@ import { FormsModule } from '@angular/forms';
 })
 export class MapaSearchComponent {
   @Input() value = '';
+  @Input() loading = false;
+  @Input() resultCount = 0;
+  @Input() placeholder = 'Buscar en mapa...';
+
   @Output() valueChange = new EventEmitter<string>();
+  @Output() clearRequested = new EventEmitter<void>();
 }

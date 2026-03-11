@@ -1,16 +1,147 @@
 <div class="tree-actions">
-  <button type="button" (click)="selected.emit(null)">Ver todo</button>
+  <button type="button" (click)="selectAll()">Ver todo</button>
+  <span class="tree-hint" *ngIf="searchValue">Mostrando ramas con coincidencias</span>
 </div>
 
-<ul class="tree-list">
-  <li
-    *ngFor="let n of ordered"
-    [class.active]="n.idRedNodo === selectedNodoId"
-    [style.paddingLeft.px]="12 + (n.nivel * 18)"
-    (click)="selected.emit(n)"
-  >
-    <span class="node-icon">{{ iconFor(n.tipoNodo) }}</span>
-    <span class="node-name">{{ n.nodo }}</span>
-    <small class="node-type">{{ n.tipoNodo }}</small>
-  </li>
+<ul class="tree-root">
+  <ng-container *ngFor="let item of tree()">
+    <ng-container
+      *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
+    ></ng-container>
+  </ng-container>
 </ul>
+
+<ng-template #nodeTpl let-item let-level="level">
+  <li class="tree-node" *ngIf="item.visible">
+    <div
+      class="node-row"
+      [class.active]="item.node.idRedNodo === selectedNodoId"
+      [style.paddingLeft.px]="10 + (level * 18)"
+      (click)="nodoSelected.emit(item.node)"
+      (contextmenu)="openNodeContext(item.node, $event)"
+    >
+      <button
+        type="button"
+        class="expand-btn"
+        *ngIf="item.children.length > 0 || item.elementos.length > 0"
+        (click)="toggleExpanded(item.node.idRedNodo, $event)"
+      >
+        {{ isExpanded(item.node) ? '▾' : '▸' }}
+      </button>
+
+      <span class="expand-placeholder" *ngIf="item.children.length === 0 && item.elementos.length === 0"></span>
+
+      <input
+        type="checkbox"
+        [checked]="isNodeVisible(item.node)"
+        (click)="$event.stopPropagation()"
+        (change)="onToggleNode(item.node, $event)"
+      />
+
+      <span class="node-icon">{{ iconFor(item.node.tipoNodo) }}</span>
+
+      <span class="node-name" [title]="item.node.nodo">{{ item.node.nodo }}</span>
+
+      <small class="node-type">{{ item.node.tipoNodo }}</small>
+    </div>
+
+    <ul class="tree-children" *ngIf="isExpanded(item.node)">
+      <ng-container *ngFor="let child of item.children">
+        <ng-container
+          *ngTemplateOutlet="nodeTpl; context: { $implicit: child, level: level + 1 }"
+        ></ng-container>
+      </ng-container>
+
+      <li
+        class="element-row"
+        *ngFor="let el of item.elementos"
+        [class.active]="el.idGeoElemento === selectedElementoId"
+        [style.paddingLeft.px]="48 + ((level + 1) * 18)"
+        (click)="elementoSelected.emit(el)"
+        (contextmenu)="openElementoContext(el, $event)"
+      >
+        <input
+          type="checkbox"
+          [checked]="isElementoVisible(el)"
+          (click)="$event.stopPropagation()"
+          (change)="onToggleElemento(el, $event)"
+        />
+
+        <span class="element-bullet">•</span>
+        <span class="element-name" [title]="el.nombre">{{ el.nombre }}</span>
+        <small class="element-type">{{ el.geomTipo }}</small>
+      </li>
+    </ul>
+  </li>
+</ng-template>
+
+<div
+  class="context-overlay"
+  *ngIf="contextVisible()"
+  (click)="closeContext()"
+>
+  <div
+    class="context-menu"
+    [style.left.px]="contextX()"
+    [style.top.px]="contextY()"
+    (click)="$event.stopPropagation()"
+  >
+    <ng-container *ngIf="contextKind() === 'node' && contextNode() as node">
+      <div class="context-title">{{ node.nodo }}</div>
+
+      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'carpeta' }); closeContext()">
+        Crear carpeta
+      </button>
+      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'zona' }); closeContext()">
+        Crear zona
+      </button>
+      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'sitio' }); closeContext()">
+        Crear sitio
+      </button>
+      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'nodo_fisico' }); closeContext()">
+        Crear nodo físico
+      </button>
+
+      <div class="context-divider"></div>
+
+      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'point' }); closeContext()">
+        Dibujar punto aquí
+      </button>
+      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'linestring' }); closeContext()">
+        Dibujar línea aquí
+      </button>
+      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'polygon' }); closeContext()">
+        Dibujar polígono aquí
+      </button>
+
+      <div class="context-divider"></div>
+
+      <button type="button" (click)="editNodeRequested.emit(node); closeContext()">
+        Editar nodo
+      </button>
+      <button type="button" class="danger" (click)="deleteNodeRequested.emit(node); closeContext()">
+        Eliminar nodo
+      </button>
+    </ng-container>
+
+    <ng-container *ngIf="contextKind() === 'element' && contextElemento() as el">
+      <div class="context-title">{{ el.nombre }}</div>
+
+      <button type="button" (click)="elementoSelected.emit(el); closeContext()">
+        Seleccionar
+      </button>
+      <button type="button" (click)="centerElementoRequested.emit(el); closeContext()">
+        Centrar en mapa
+      </button>
+      <button type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
+        Editar datos
+      </button>
+      <button type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
+        Editar forma
+      </button>
+      <button type="button" class="danger" (click)="deleteElementoRequested.emit(el); closeContext()">
+        Eliminar
+      </button>
+    </ng-container>
+  </div>
+</div>

@@ -2,7 +2,7 @@
   <app-mapa-toolbar
     slot="toolbar"
     [selectedName]="selectedElemento()?.nombre ?? null"
-    [totalElementos]="totalElementos()"
+    [totalElementos]="elementosCanvas().length"
     [editSessionActive]="editSessionActive()"
     [editSessionDirty]="editSessionDirty()"
     [editSessionElementName]="editSessionElementName()"
@@ -21,19 +21,37 @@
   <app-mapa-sidebar
     slot="sidebar"
     [nodos]="nodos()"
+    [elementos]="elementos()"
     [tipos]="tipos()"
     [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
     [selectedTipoId]="filtros.idGeoTipoElementoFk()"
+    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
     [searchValue]="filtros.q()"
+    [searchLoading]="ui.loading()"
+    [searchResultCount]="elementosCanvas().length"
+    [hiddenNodeIds]="hiddenNodeIds()"
+    [hiddenElementoIds]="hiddenElementoIds()"
     (searchChange)="onSearchChange($event)"
+    (searchClear)="clearSearch()"
     (nodoSelected)="onNodoSelect($event)"
     (tipoSelected)="onTipoSelect($event)"
+    (treeElementoSelected)="onTreeElementoSelected($event)"
+    (treeNodeVisibilityChange)="onTreeNodeVisibilityChange($event)"
+    (treeElementoVisibilityChange)="onTreeElementoVisibilityChange($event)"
+    (treeCreateNodeRequested)="onTreeCreateNodeRequested($event)"
+    (treeEditNodeRequested)="onTreeEditNodeRequested($event)"
+    (treeDeleteNodeRequested)="onTreeDeleteNodeRequested($event)"
+    (treeDrawElementRequested)="onTreeDrawElementRequested($event)"
+    (treeCenterElementoRequested)="onTreeCenterElementoRequested($event)"
+    (treeEditDataElementoRequested)="onTreeEditDataElementoRequested($event)"
+    (treeEditGeometryElementoRequested)="onTreeEditGeometryElementoRequested($event)"
+    (treeDeleteElementoRequested)="onTreeDeleteElementoRequested($event)"
   />
 
   <app-mapa-canvas
     #mapCanvas
     slot="canvas"
-    [elementos]="elementos()"
+    [elementos]="elementosCanvas()"
     [tipos]="tipos()"
     [toolMode]="ui.toolMode()"
     [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
@@ -55,7 +73,7 @@
 
   <app-mapa-statusbar
     slot="status"
-    [totalElementos]="totalElementos()"
+    [totalElementos]="elementosCanvas().length"
     [modo]="ui.toolMode()"
     [loading]="ui.loading()"
     [selectedName]="selectedElemento()?.nombre ?? null"
@@ -83,6 +101,12 @@
   [tipos]="tipos()"
   (submitted)="crearElemento($event)"
 ></app-mapa-create-element-dialog>
+
+<app-mapa-node-dialog
+  #nodeDialog
+  (createSubmitted)="onCreateNodeSubmitted($event)"
+  (editSubmitted)="onEditNodeSubmitted($event)"
+></app-mapa-node-dialog>
 
 <app-mapa-context-menu
   [visible]="contextVisible()"

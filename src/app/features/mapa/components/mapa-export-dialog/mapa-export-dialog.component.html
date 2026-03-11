@@ -3,11 +3,21 @@
   (visibleChange)="visible.set($event)"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '40rem' }"
+  [style]="{ width: '42rem' }"
   header="Exportar KML"
 >
   <div class="dialog-body">
-    <label>Nombre documento</label>
+    <div class="callout">
+      <strong>Qué se exporta</strong>
+      <p>
+        Se exportan los elementos según los filtros actuales del mapa. No depende del
+        elemento seleccionado.
+      </p>
+      <p class="summary">{{ filterSummary() }}</p>
+      <p class="summary">Resultados visibles con esos filtros: <strong>{{ resultCount() }}</strong></p>
+    </div>
+
+    <label>Nombre del documento</label>
     <input type="text" [(ngModel)]="form.nombreDocumento" />
 
     <label>Búsqueda</label>
@@ -29,18 +39,22 @@
       </option>
     </select>
 
-    <label>Visible</label>
+    <label>Visibilidad</label>
     <select [(ngModel)]="form.visible">
-      <option [ngValue]="true">Sí</option>
-      <option [ngValue]="false">No</option>
+      <option [ngValue]="true">Sólo visibles</option>
+      <option [ngValue]="false">Sólo no visibles</option>
       <option [ngValue]="null">Todos</option>
     </select>
+
+    <small class="help-text">
+      Las ocultaciones locales del árbol y de capas sólo afectan la vista del usuario. La exportación usa los filtros de la API mostrados arriba.
+    </small>
 
     <p class="error" *ngIf="error() as err">{{ err }}</p>
   </div>
 
   <ng-template pTemplate="footer">
     <button pButton type="button" label="Cerrar" severity="secondary" (click)="close()"></button>
-    <button pButton type="button" label="Exportar" [disabled]="loading()" (click)="exportar()"></button>
+    <button pButton type="button" label="Exportar KML" [disabled]="loading()" (click)="exportar()"></button>
   </ng-template>
 </p-dialog>

@@ -16,6 +16,27 @@ select {
   border-radius: 0.5rem;
 }
 
+.callout {
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.8rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.callout p {
+  margin: 0.35rem 0 0;
+}
+
+.summary {
+  font-size: 0.92rem;
+}
+
+.help-text {
+  color: #64748b;
+  line-height: 1.35;
+}
+
 .error {
   color: #dc2626;
   margin: 0;
