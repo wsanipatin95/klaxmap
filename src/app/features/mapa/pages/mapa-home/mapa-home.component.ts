@@ -169,10 +169,18 @@ export class MapaHomeComponent {
   cargarNodos() {
     this.nodosRepo.listar({ all: true }).subscribe({
       next: (data) => {
-        this.nodos.set(Array.isArray(data) ? data : (data as PagedResponse<MapaNodo>).content ?? []);
+        const items = Array.isArray(data)
+          ? data
+          : (data as PagedResponse<MapaNodo>).content ?? [];
+
+        console.log('[MAPA][NODOS] respuesta cruda:', data);
+        console.log('[MAPA][NODOS] total nodos parseados:', items.length);
+        console.log('[MAPA][NODOS] primeros 10 nodos:', items.slice(0, 10));
+
+        this.nodos.set(items);
       },
       error: (err) => {
-        console.error(err);
+        console.error('[MAPA][NODOS] error:', err);
         this.error.set(err?.message || 'No se pudo cargar nodos');
       },
     });

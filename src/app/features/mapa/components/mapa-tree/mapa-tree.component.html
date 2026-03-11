@@ -10,7 +10,7 @@
   </div>
 </div>
 
-<div class="tree-empty" *ngIf="!hasAnyTreeData()">
+<div class="tree-empty" *ngIf="!hasAnyTreeData">
   <strong>No hay nodos cargados.</strong>
   <p>
     Crea una carpeta raíz o revisa que el backend esté devolviendo nodos.
@@ -22,15 +22,15 @@
   </div>
 </div>
 
-<div class="tree-empty" *ngIf="hasAnyTreeData() && !hasVisibleTreeData()">
+<div class="tree-empty" *ngIf="hasAnyTreeData && !hasVisibleTreeData">
   <strong>No hay coincidencias en el árbol.</strong>
   <p>
     Prueba borrando la búsqueda o usa “Ver todo”.
   </p>
 </div>
 
-<ul class="tree-root" *ngIf="hasVisibleTreeData()">
-  <ng-container *ngFor="let item of tree(); trackBy: trackByNode">
+<ul class="tree-root" *ngIf="hasVisibleTreeData">
+  <ng-container *ngFor="let item of tree; trackBy: trackByNode">
     <ng-container
       *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
     ></ng-container>
@@ -69,9 +69,7 @@
       />
 
       <span class="node-icon">{{ iconFor(item.node.tipoNodo) }}</span>
-
       <span class="node-name">{{ item.node.nodo }}</span>
-
       <small class="node-type">{{ item.node.tipoNodo }}</small>
     </div>
 

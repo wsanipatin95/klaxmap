@@ -32,13 +32,6 @@
   <app-mapa-capas-panel [tipos]="tipos" />
 
   <section class="sidebar-section">
-    <h4>Árbol del mapa</h4>
-    <small class="section-help">
-      Clic en un elemento para seleccionarlo y centrarlo.
-      Clic en un nodo para filtrar.
-      Clic derecho para crear carpeta, crear nodo o dibujar dentro del nodo actual.
-    </small>
-
     <app-mapa-tree
       [nodos]="nodos"
       [elementos]="elementos"
@@ -62,7 +55,7 @@
     />
   </section>
 
-  <app-mapa-legend [items]="legendItems()" />
+  <app-mapa-legend [items]="legendItems" />
 
   <app-mapa-import-lotes-panel />
 </div>

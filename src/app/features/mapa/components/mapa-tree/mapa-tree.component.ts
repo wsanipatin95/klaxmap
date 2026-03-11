@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import type { MapaElemento, MapaGeomTipo, MapaNodo } from '../../data-access/mapa.models';
 
 interface TreeNodeVm {
@@ -62,8 +62,6 @@ export class MapaTreeComponent {
 
   readonly expandedIds = signal<number[]>([]);
 
-  readonly tree = computed<TreeNodeVm[]>(() => this.buildTree());
-
   readonly contextVisible = signal(false);
   readonly contextX = signal(0);
   readonly contextY = signal(0);
@@ -71,8 +69,17 @@ export class MapaTreeComponent {
   readonly contextNode = signal<MapaNodo | null>(null);
   readonly contextElemento = signal<MapaElemento | null>(null);
 
-  readonly hasAnyTreeData = computed(() => this.nodos.length > 0 || this.elementos.length > 0);
-  readonly hasVisibleTreeData = computed(() => this.tree().length > 0);
+  get hasAnyTreeData(): boolean {
+    return this.nodos.length > 0 || this.elementos.length > 0;
+  }
+
+  get tree(): TreeNodeVm[] {
+    return this.buildTree();
+  }
+
+  get hasVisibleTreeData(): boolean {
+    return this.tree.length > 0;
+  }
 
   selectAll() {
     this.nodoSelected.emit(null);

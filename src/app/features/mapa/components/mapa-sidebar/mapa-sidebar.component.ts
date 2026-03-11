@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type {
   MapaElemento,
@@ -66,8 +66,8 @@ export class MapaSidebarComponent {
   @Output() treeEditGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeDeleteElementoRequested = new EventEmitter<MapaElemento>();
 
-  readonly legendItems = computed<MapaLegendItem[]>(() =>
-    this.tipos.map((t) => ({
+  get legendItems(): MapaLegendItem[] {
+    return this.tipos.map((t) => ({
       idGeoTipoElemento: t.idGeoTipoElemento,
       nombre: t.nombre,
       colorStroke: t.colorStroke,
@@ -75,6 +75,6 @@ export class MapaSidebarComponent {
       iconoFuente: t.iconoFuente,
       geometriaPermitida: t.geometriaPermitida,
       visible: this.capas.isVisible(t.idGeoTipoElemento),
-    }))
-  );
+    }));
+  }
 }
