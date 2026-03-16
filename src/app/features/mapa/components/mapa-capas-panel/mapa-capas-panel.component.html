@@ -1,14 +1,40 @@
 <div class="capas-wrap">
-  <h4>Capas</h4>
+  <div class="capas-toolbar">
+    <small class="capas-help">
+      Activa o desactiva capas. Aquí mismo ves color, símbolo y tipo geométrico.
+    </small>
 
-  <div class="capa-row" *ngFor="let t of tipos">
-    <label>
-      <input
-        type="checkbox"
-        [checked]="visible(t.idGeoTipoElemento)"
-        (change)="toggle(t.idGeoTipoElemento)"
-      />
-      <span>{{ t.nombre }}</span>
-    </label>
+    <div class="capas-actions">
+      <button type="button" (click)="showAll()">Mostrar todo</button>
+      <button type="button" class="secondary" (click)="hideAll()">Ocultar todo</button>
+    </div>
+  </div>
+
+  <div class="capas-list">
+    <div class="capa-row" *ngFor="let t of tipos; trackBy: trackByTipo">
+      <label class="capa-label">
+        <input
+          type="checkbox"
+          [checked]="visible(t.idGeoTipoElemento)"
+          (change)="toggle(t.idGeoTipoElemento)"
+        />
+
+        <span
+          class="capa-preview"
+          [ngClass]="previewShapeClass(t)"
+          [ngStyle]="previewStyle(t)"
+          aria-hidden="true"
+        ></span>
+
+        <span class="capa-copy">
+          <span class="capa-name">{{ t.nombre }}</span>
+          <small class="capa-meta">{{ geomLabel(t) }}</small>
+        </span>
+
+        <span class="capa-state">
+          {{ visible(t.idGeoTipoElemento) ? 'Visible' : 'Oculta' }}
+        </span>
+      </label>
+    </div>
   </div>
 </div>

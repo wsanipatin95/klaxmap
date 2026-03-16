@@ -6,6 +6,7 @@ import { MapaUiStore } from '../../store/mapa-ui.store';
 import { MapaSelectionStore } from '../../store/mapa-selection.store';
 import { MapaFiltrosStore } from '../../store/mapa-filtros.store';
 import { MapaCapasStore } from '../../store/mapa-capas.store';
+import { MapaVisibilityStore } from '../../store/mapa-visibility.store';
 
 import { MapaNodosRepository } from '../../data-access/nodo/mapa-nodos.repository';
 import { MapaTiposRepository } from '../../data-access/tipo-elemento/mapa-tipos.repository';
@@ -69,6 +70,7 @@ export class MapaHomeComponent {
   readonly selection = inject(MapaSelectionStore);
   readonly filtros = inject(MapaFiltrosStore);
   readonly capas = inject(MapaCapasStore);
+  readonly visibility = inject(MapaVisibilityStore);
 
   private nodosRepo = inject(MapaNodosRepository);
   private tiposRepo = inject(MapaTiposRepository);
@@ -90,8 +92,8 @@ export class MapaHomeComponent {
   readonly contextY = signal(0);
   readonly contextElemento = signal<MapaElemento | null>(null);
 
-  readonly hiddenNodeIds = signal<number[]>([]);
-  readonly hiddenElementoIds = signal<number[]>([]);
+  readonly hiddenNodeIds = this.visibility.hiddenNodeIds;
+  readonly hiddenElementoIds = this.visibility.hiddenElementoIds;
 
   readonly editSessionActive = signal(false);
   readonly editSessionDirty = signal(false);
@@ -106,25 +108,27 @@ export class MapaHomeComponent {
   readonly totalElementos = computed(() => this.elementos().length);
 
   readonly elementosCanvas = computed(() => {
-    const hiddenElements = new Set(this.hiddenElementoIds());
-    const hiddenNodes = new Set(this.hiddenNodeIds());
+    const hiddenNodeIds = new Set(this.hiddenNodeIds());
+    const hiddenElementoIds = new Set(this.hiddenElementoIds());
+    const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
     const byId = new Map(this.nodos().map((n) => [n.idRedNodo, n] as const));
 
     const isNodeHidden = (nodeId: number): boolean => {
-      if (hiddenNodes.has(nodeId)) return true;
+      if (hiddenNodeIds.has(nodeId)) return true;
 
       let current = byId.get(nodeId) ?? null;
       while (current?.idRedNodoPadreFk != null) {
         const parent = byId.get(current.idRedNodoPadreFk) ?? null;
         if (!parent) break;
-        if (hiddenNodes.has(parent.idRedNodo)) return true;
+        if (hiddenNodeIds.has(parent.idRedNodo)) return true;
         current = parent;
       }
       return false;
     };
 
     return this.elementos().filter((el) => {
-      if (hiddenElements.has(el.idGeoElemento)) return false;
+      if (hiddenElementoIds.has(el.idGeoElemento)) return false;
+      if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) return false;
       if (isNodeHidden(el.idRedNodoFk)) return false;
       return true;
     });
@@ -173,11 +177,8 @@ export class MapaHomeComponent {
           ? data
           : (data as PagedResponse<MapaNodo>).content ?? [];
 
-        console.log('[MAPA][NODOS] respuesta cruda:', data);
-        console.log('[MAPA][NODOS] total nodos parseados:', items.length);
-        console.log('[MAPA][NODOS] primeros 10 nodos:', items.slice(0, 10));
-
         this.nodos.set(items);
+        this.visibility.prune(items, this.elementos());
       },
       error: (err) => {
         console.error('[MAPA][NODOS] error:', err);
@@ -189,7 +190,11 @@ export class MapaHomeComponent {
   cargarTipos() {
     this.tiposRepo.listar({ all: true }).subscribe({
       next: (data) => {
-        this.tipos.set(Array.isArray(data) ? data : (data as PagedResponse<MapaTipoElemento>).content ?? []);
+        this.tipos.set(
+          Array.isArray(data)
+            ? data
+            : (data as PagedResponse<MapaTipoElemento>).content ?? []
+        );
       },
       error: (err) => {
         console.error(err);
@@ -212,8 +217,12 @@ export class MapaHomeComponent {
       .pipe(finalize(() => this.ui.setLoading(false)))
       .subscribe({
         next: (data) => {
-          const items = Array.isArray(data) ? data : (data as PagedResponse<MapaElemento>).content ?? [];
+          const items = Array.isArray(data)
+            ? data
+            : (data as PagedResponse<MapaElemento>).content ?? [];
+
           this.elementos.set(items);
+          this.visibility.prune(this.nodos(), items);
 
           if ((this.filtros.q() || '').trim() && items.length > 0) {
             const first = items[0];
@@ -315,7 +324,7 @@ export class MapaHomeComponent {
       this.ui.setSelectMode();
     }
 
-    this.hiddenElementoIds.update((ids) => ids.filter((x) => x !== id));
+    this.visibility.clearElemento(id);
     this.cargarElementos();
   }
 
@@ -424,21 +433,23 @@ export class MapaHomeComponent {
     const payload = this.mapCanvas?.saveEditSession();
     if (!payload) return;
 
-    this.elementosRepo.editarGeometria({
-      id: payload.idGeoElemento,
-      wkt: payload.wkt,
-    }).subscribe({
-      next: (resp) => {
-        this.selection.setElemento(resp.data);
-        this.resetEditSessionState();
-        this.ui.setSelectMode();
-        this.cargarElementos();
-      },
-      error: (err) => {
-        console.error(err);
-        this.error.set(err?.message || 'No se pudo guardar la geometría');
-      },
-    });
+    this.elementosRepo
+      .editarGeometria({
+        id: payload.idGeoElemento,
+        wkt: payload.wkt,
+      })
+      .subscribe({
+        next: (resp) => {
+          this.selection.setElemento(resp.data);
+          this.resetEditSessionState();
+          this.ui.setSelectMode();
+          this.cargarElementos();
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo guardar la geometría');
+        },
+      });
   }
 
   cancelGeometryEdition() {
@@ -505,29 +516,16 @@ export class MapaHomeComponent {
   }
 
   onTreeNodeVisibilityChange(event: TreeNodeVisibilityChange) {
-    const nodeId = event.node.idRedNodo;
-    this.hiddenNodeIds.update((ids) => {
-      const set = new Set(ids);
-      if (event.visible) {
-        set.delete(nodeId);
-      } else {
-        set.add(nodeId);
-      }
-      return [...set];
-    });
+    this.visibility.setNodeVisibleCascade(
+      event.node.idRedNodo,
+      event.visible,
+      this.nodos(),
+      this.elementos()
+    );
   }
 
   onTreeElementoVisibilityChange(event: TreeElementoVisibilityChange) {
-    const elementId = event.elemento.idGeoElemento;
-    this.hiddenElementoIds.update((ids) => {
-      const set = new Set(ids);
-      if (event.visible) {
-        set.delete(elementId);
-      } else {
-        set.add(elementId);
-      }
-      return [...set];
-    });
+    this.visibility.setElementoVisible(event.elemento.idGeoElemento, event.visible);
   }
 
   onTreeCreateNodeRequested(event: TreeCreateNodeRequest) {

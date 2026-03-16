@@ -103,21 +103,10 @@ export class MapaTreeComponent {
   }
 
   isExpanded(node: MapaNodo): boolean {
-    if (this.searchValue.trim()) {
-      return true;
-    }
-
-    if (this.isRootNode(node.idRedNodo)) {
-      return true;
-    }
-
-    if (this.isAncestorOfSelectedNodo(node.idRedNodo)) {
-      return true;
-    }
-
-    if (this.isAncestorOfSelectedElemento(node.idRedNodo)) {
-      return true;
-    }
+    if (this.searchValue.trim()) return true;
+    if (this.isRootNode(node.idRedNodo)) return true;
+    if (this.isAncestorOfSelectedNodo(node.idRedNodo)) return true;
+    if (this.isAncestorOfSelectedElemento(node.idRedNodo)) return true;
 
     return this.expandedIds().includes(node.idRedNodo);
   }
@@ -142,7 +131,29 @@ export class MapaTreeComponent {
   }
 
   isElementoVisible(elemento: MapaElemento): boolean {
-    return !this.hiddenElementoIds.includes(elemento.idGeoElemento) && !this.isNodeHidden(elemento.idRedNodoFk);
+    return (
+      !this.hiddenElementoIds.includes(elemento.idGeoElemento) &&
+      !this.isNodeHidden(elemento.idRedNodoFk)
+    );
+  }
+
+  isNodeIndeterminate(node: MapaNodo): boolean {
+    if (!this.isNodeVisible(node)) return false;
+
+    const branchNodeIds = this.getDescendantNodeIds(node.idRedNodo);
+    const branchElementos = this.elementos.filter((e) =>
+      branchNodeIds.includes(e.idRedNodoFk)
+    );
+
+    const hasHiddenDescendantNode = branchNodeIds.some(
+      (id) => id !== node.idRedNodo && this.hiddenNodeIds.includes(id)
+    );
+
+    const hasHiddenDescendantElemento = branchElementos.some((e) =>
+      this.hiddenElementoIds.includes(e.idGeoElemento)
+    );
+
+    return hasHiddenDescendantNode || hasHiddenDescendantElemento;
   }
 
   onNodeClick(node: MapaNodo, event?: MouseEvent) {
@@ -199,6 +210,7 @@ export class MapaTreeComponent {
 
   private buildTree(): TreeNodeVm[] {
     const byParent = new Map<number | null, MapaNodo[]>();
+    const elementosByNodo = new Map<number, MapaElemento[]>();
     const allNodeIds = new Set(this.nodos.map((n) => n.idRedNodo));
     const q = this.searchValue.trim().toLowerCase();
 
@@ -208,6 +220,12 @@ export class MapaTreeComponent {
       const arr = byParent.get(parentId) ?? [];
       arr.push(n);
       byParent.set(parentId, arr);
+    }
+
+    for (const el of this.elementos) {
+      const arr = elementosByNodo.get(el.idRedNodoFk) ?? [];
+      arr.push(el);
+      elementosByNodo.set(el.idRedNodoFk, arr);
     }
 
     let roots = (byParent.get(null) ?? []).sort(this.sortNodes);
@@ -223,8 +241,8 @@ export class MapaTreeComponent {
       const rawChildren = (byParent.get(node.idRedNodo) ?? []).sort(this.sortNodes);
       const children = rawChildren.map(build);
 
-      const rawElementos = this.elementos
-        .filter((e) => e.idRedNodoFk === node.idRedNodo)
+      const rawElementos = (elementosByNodo.get(node.idRedNodo) ?? [])
+        .slice()
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
       const elementos = q
@@ -244,9 +262,7 @@ export class MapaTreeComponent {
     };
 
     const result = roots.map(build).filter((n) => n.visible);
-
     this.ensureRootNodesExpanded(result.map((r) => r.node.idRedNodo));
-
     return result;
   }
 
@@ -279,13 +295,8 @@ export class MapaTreeComponent {
       .sort(this.sortNodes)
       .map((n) => n.idRedNodo);
 
-    if (roots.length > 0) {
-      return roots;
-    }
-
-    if (!this.nodos.length) {
-      return [];
-    }
+    if (roots.length > 0) return roots;
+    if (!this.nodos.length) return [];
 
     const minNivel = Math.min(...this.nodos.map((n) => n.nivel ?? 0));
     return this.nodos
@@ -325,6 +336,32 @@ export class MapaTreeComponent {
     return ids;
   }
 
+  private getDescendantNodeIds(rootId: number): number[] {
+    const byParent = new Map<number | null, MapaNodo[]>();
+
+    for (const n of this.nodos) {
+      const parentId = n.idRedNodoPadreFk ?? null;
+      const arr = byParent.get(parentId) ?? [];
+      arr.push(n);
+      byParent.set(parentId, arr);
+    }
+
+    const result: number[] = [];
+    const stack = [rootId];
+
+    while (stack.length > 0) {
+      const currentId = stack.pop()!;
+      result.push(currentId);
+
+      const children = byParent.get(currentId) ?? [];
+      for (const child of children) {
+        stack.push(child.idRedNodo);
+      }
+    }
+
+    return result;
+  }
+
   private matchesNode(node: MapaNodo): boolean {
     const q = this.searchValue.trim().toLowerCase();
     if (!q) return true;
@@ -349,6 +386,7 @@ export class MapaTreeComponent {
       elemento.etiqueta ?? '',
       elemento.observacion ?? '',
       elemento.geomTipo ?? '',
+      elemento.estado ?? '',
     ].some((v) => (v || '').toLowerCase().includes(q));
   }
 

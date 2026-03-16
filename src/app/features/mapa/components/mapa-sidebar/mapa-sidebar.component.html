@@ -12,50 +12,102 @@
     (clearRequested)="searchClear.emit()"
   />
 
-  <section class="sidebar-section">
-    <h4>Filtrar por tipo</h4>
-    <select
-      [ngModel]="selectedTipoId"
-      (ngModelChange)="tipoSelected.emit($event ? +$event : null)"
+  <div class="sidebar-summary">
+    {{ hiddenSummary }}
+  </div>
+
+  <section class="sidebar-card" [class.collapsed]="!isExpanded('filtros')">
+    <button
+      type="button"
+      class="section-toggle"
+      (click)="toggleSection('filtros')"
     >
-      <option [ngValue]="null">Todos</option>
-      <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
-        {{ t.nombre }}
-      </option>
-    </select>
-    <small class="section-help">
-      Este filtro cambia los resultados consultados al backend.
-      Las capas y el árbol controlan visibilidad y navegación dentro del mapa.
-    </small>
+      <span>Filtro backend</span>
+      <span class="toggle-icon">{{ isExpanded('filtros') ? '−' : '+' }}</span>
+    </button>
+
+    <div class="section-body compact-body" *ngIf="isExpanded('filtros')">
+      <h4>Filtrar por tipo</h4>
+
+      <select
+        [ngModel]="selectedTipoId"
+        (ngModelChange)="tipoSelected.emit($event ? +$event : null)"
+      >
+        <option [ngValue]="null">Todos</option>
+        <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+          {{ t.nombre }}
+        </option>
+      </select>
+
+      <small class="section-help">
+        Este filtro cambia los resultados consultados al backend.
+        Capas y árbol controlan visibilidad y navegación dentro del mapa.
+      </small>
+    </div>
   </section>
 
-  <app-mapa-capas-panel [tipos]="tipos" />
+  <section class="sidebar-card grow-card" [class.collapsed]="!isExpanded('capas')">
+    <button
+      type="button"
+      class="section-toggle"
+      (click)="toggleSection('capas')"
+    >
+      <span>Capas y leyenda ({{ tipos.length }})</span>
+      <span class="toggle-icon">{{ isExpanded('capas') ? '−' : '+' }}</span>
+    </button>
 
-  <section class="sidebar-section">
-    <app-mapa-tree
-      [nodos]="nodos"
-      [elementos]="elementos"
-      [selectedNodoId]="selectedNodoId"
-      [selectedElementoId]="selectedElementoId"
-      [searchValue]="searchValue"
-      [hiddenNodeIds]="hiddenNodeIds"
-      [hiddenElementoIds]="hiddenElementoIds"
-      (nodoSelected)="nodoSelected.emit($event)"
-      (elementoSelected)="treeElementoSelected.emit($event)"
-      (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
-      (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
-      (createNodeRequested)="treeCreateNodeRequested.emit($event)"
-      (editNodeRequested)="treeEditNodeRequested.emit($event)"
-      (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
-      (drawElementRequested)="treeDrawElementRequested.emit($event)"
-      (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
-      (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
-      (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
-      (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
-    />
+    <div class="section-body capas-body" *ngIf="isExpanded('capas')">
+      <app-mapa-capas-panel [tipos]="tipos" />
+    </div>
   </section>
 
-  <app-mapa-legend [items]="legendItems" />
+  <section class="sidebar-card grow-card tree-card" [class.collapsed]="!isExpanded('tree')">
+    <button
+      type="button"
+      class="section-toggle"
+      (click)="toggleSection('tree')"
+    >
+      <span>Árbol y elementos</span>
+      <span class="toggle-icon">{{ isExpanded('tree') ? '−' : '+' }}</span>
+    </button>
 
-  <app-mapa-import-lotes-panel />
+    <div class="section-body tree-body" *ngIf="isExpanded('tree')">
+      <app-mapa-tree
+        [nodos]="nodos"
+        [elementos]="elementos"
+        [selectedNodoId]="selectedNodoId"
+        [selectedElementoId]="selectedElementoId"
+        [searchValue]="searchValue"
+        [hiddenNodeIds]="hiddenNodeIds"
+        [hiddenElementoIds]="hiddenElementoIds"
+        (nodoSelected)="nodoSelected.emit($event)"
+        (elementoSelected)="treeElementoSelected.emit($event)"
+        (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
+        (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
+        (createNodeRequested)="treeCreateNodeRequested.emit($event)"
+        (editNodeRequested)="treeEditNodeRequested.emit($event)"
+        (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
+        (drawElementRequested)="treeDrawElementRequested.emit($event)"
+        (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
+        (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
+        (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
+        (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
+      />
+    </div>
+  </section>
+
+  <section class="sidebar-card" [class.collapsed]="!isExpanded('lotes')">
+    <button
+      type="button"
+      class="section-toggle"
+      (click)="toggleSection('lotes')"
+    >
+      <span>Lotes de importación</span>
+      <span class="toggle-icon">{{ isExpanded('lotes') ? '−' : '+' }}</span>
+    </button>
+
+    <div class="section-body lotes-body" *ngIf="isExpanded('lotes')">
+      <app-mapa-import-lotes-panel />
+    </div>
+  </section>
 </div>

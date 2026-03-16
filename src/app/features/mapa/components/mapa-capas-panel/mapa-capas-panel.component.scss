@@ -1,21 +1,145 @@
-.capas-wrap {
-  margin-top: 1rem;
+:host {
+  display: block;
+  height: 100%;
 }
 
-h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  color: #cbd5e1;
+.capas-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.capas-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.capas-help {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.capas-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.capas-actions button {
+  border: 0;
+  border-radius: 0.55rem;
+  background: #2563eb;
+  color: #fff;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.capas-actions button.secondary {
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+.capas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
 }
 
 .capa-row {
-  padding: 0.25rem 0;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.7rem;
+  background: rgba(8, 18, 36, 0.55);
 }
 
-label {
-  display: flex;
+.capa-label {
+  display: grid;
+  grid-template-columns: auto 20px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
-  color: #e5e7eb;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
   cursor: pointer;
+  color: #e5e7eb;
+}
+
+.capa-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.capa-name {
+  font-size: 0.92rem;
+  color: #f8fafc;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.capa-meta {
+  color: #93c5fd;
+  font-size: 0.72rem;
+}
+
+.capa-state {
+  font-size: 0.74rem;
+  color: #86efac;
+  white-space: nowrap;
+}
+
+.capa-preview {
+  position: relative;
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.capa-preview.is-point {
+  border-radius: 999px;
+  border: 2px solid var(--preview-stroke);
+  background: var(--preview-fill);
+}
+
+.capa-preview.is-target {
+  border-radius: 999px;
+  border: 2px solid var(--preview-stroke);
+  background: var(--preview-fill);
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.capa-preview.is-donut {
+  border-radius: 999px;
+  border: 4px solid var(--preview-stroke);
+  background: transparent;
+}
+
+.capa-preview.is-triangle {
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 18px solid var(--preview-fill);
+  filter: drop-shadow(0 0 1px var(--preview-stroke));
+}
+
+.capa-preview.is-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--preview-stroke);
+}
+
+.capa-preview.is-polygon {
+  border-radius: 0.35rem;
+  border: 2px solid var(--preview-stroke);
+  background: color-mix(in srgb, var(--preview-fill) 35%, transparent);
 }

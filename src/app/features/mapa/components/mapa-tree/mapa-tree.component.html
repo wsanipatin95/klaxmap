@@ -42,10 +42,11 @@
     <div
       class="node-row"
       [class.active]="item.node.idRedNodo === selectedNodoId"
-      [style.paddingLeft.px]="10 + (level * 18)"
+      [class.is-hidden]="!isNodeVisible(item.node)"
+      [style.paddingLeft.px]="10 + (level * 14)"
       (click)="onNodeClick(item.node, $event)"
       (contextmenu)="openNodeContext(item.node, $event)"
-      [title]="item.node.nodo"
+      [attr.title]="item.node.pathCache || item.node.nodo"
     >
       <button
         type="button"
@@ -64,13 +65,22 @@
       <input
         type="checkbox"
         [checked]="isNodeVisible(item.node)"
+        [indeterminate]="isNodeIndeterminate(item.node)"
         (click)="$event.stopPropagation()"
         (change)="onToggleNode(item.node, $event)"
       />
 
       <span class="node-icon">{{ iconFor(item.node.tipoNodo) }}</span>
-      <span class="node-name">{{ item.node.nodo }}</span>
-      <small class="node-type">{{ item.node.tipoNodo }}</small>
+
+      <div class="node-copy">
+        <span class="node-name">{{ item.node.nodo }}</span>
+        <small class="node-meta">
+          {{ item.node.tipoNodo }}
+          <ng-container *ngIf="item.node.pathCache">
+            · {{ item.node.pathCache }}
+          </ng-container>
+        </small>
+      </div>
     </div>
 
     <ul class="tree-children" *ngIf="isExpanded(item.node)">
@@ -84,10 +94,11 @@
         class="element-row"
         *ngFor="let el of item.elementos; trackBy: trackByElemento"
         [class.active]="el.idGeoElemento === selectedElementoId"
-        [style.paddingLeft.px]="48 + ((level + 1) * 18)"
+        [class.is-hidden]="!isElementoVisible(el)"
+        [style.paddingLeft.px]="42 + ((level + 1) * 14)"
         (click)="onElementoClick(el, $event)"
         (contextmenu)="openElementoContext(el, $event)"
-        [title]="el.nombre"
+        [attr.title]="el.nombre"
       >
         <input
           type="checkbox"
@@ -97,8 +108,16 @@
         />
 
         <span class="element-bullet">•</span>
-        <span class="element-name">{{ el.nombre }}</span>
-        <small class="element-type">{{ el.geomTipo }}</small>
+
+        <div class="element-copy">
+          <span class="element-name">{{ el.nombre }}</span>
+          <small class="element-meta">
+            {{ el.geomTipo }}
+            <ng-container *ngIf="el.estado">
+              · {{ el.estado }}
+            </ng-container>
+          </small>
+        </div>
       </li>
     </ul>
   </li>
