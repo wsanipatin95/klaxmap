@@ -3,48 +3,90 @@
   (visibleChange)="visible.set($event)"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '34rem' }"
+  [style]="{ width: '36rem' }"
   [header]="title()"
+  (onHide)="close()"
 >
-  <div class="dialog-body">
+  <form class="dialog-body" [formGroup]="form" (ngSubmit)="submit()">
     <div class="callout" *ngIf="mode() === 'create' && parentNode() as parent">
       El nuevo nodo se creará dentro de <strong>{{ parent.nodo }}</strong>.
     </div>
 
-    <label>Nombre</label>
-    <input type="text" [(ngModel)]="form.nodo" placeholder="Ej. GUACHALA / SAN JOSE MORAN" />
+    <div class="field">
+      <label for="node-nodo">Nombre</label>
+      <input
+        id="node-nodo"
+        type="text"
+        formControlName="nodo"
+        placeholder="Ej. GUACHALA / SAN JOSE MORAN"
+      />
+      <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
+    </div>
 
-    <label>Descripción</label>
-    <textarea rows="4" [(ngModel)]="form.descripcion" placeholder="Descripción opcional"></textarea>
+    <div class="field">
+      <label for="node-descripcion">Descripción</label>
+      <textarea
+        id="node-descripcion"
+        rows="4"
+        formControlName="descripcion"
+        placeholder="Descripción opcional"
+      ></textarea>
+      <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+    </div>
 
-    <label>Tipo de nodo</label>
-    <select [(ngModel)]="form.tipoNodo">
-      <option value="carpeta">Carpeta</option>
-      <option value="zona">Zona</option>
-      <option value="sitio">Sitio</option>
-      <option value="nodo_fisico">Nodo físico</option>
-    </select>
+    <div class="grid two-cols">
+      <div class="field">
+        <label for="node-tipo">Tipo de nodo</label>
+        <select id="node-tipo" formControlName="tipoNodo">
+          <option value="carpeta">Carpeta</option>
+          <option value="zona">Zona</option>
+          <option value="sitio">Sitio</option>
+          <option value="nodo_fisico">Nodo físico</option>
+        </select>
+        <p class="field-error" *ngIf="controlError('tipoNodo') as err">{{ err }}</p>
+      </div>
 
-    <label>Código</label>
-    <input type="text" [(ngModel)]="form.codigo" placeholder="Código opcional" />
+      <div class="field">
+        <label for="node-codigo">Código</label>
+        <input
+          id="node-codigo"
+          type="text"
+          formControlName="codigo"
+          placeholder="Código opcional"
+        />
+      </div>
+    </div>
 
-    <label>Orden</label>
-    <input type="number" [(ngModel)]="form.orden" />
+    <div class="grid two-cols align-end">
+      <div class="field">
+        <label for="node-orden">Orden</label>
+        <input id="node-orden" type="number" formControlName="orden" />
+        <p class="field-error" *ngIf="controlError('orden') as err">{{ err }}</p>
+      </div>
 
-    <label class="check-row">
-      <input type="checkbox" [(ngModel)]="form.visible" />
-      <span>Visible</span>
-    </label>
+      <label class="check-row">
+        <input type="checkbox" formControlName="visible" />
+        <span>Visible</span>
+      </label>
+    </div>
 
     <p class="error" *ngIf="error() as err">{{ err }}</p>
-  </div>
+  </form>
 
   <ng-template pTemplate="footer">
-    <button pButton type="button" label="Cancelar" severity="secondary" (click)="close()"></button>
+    <button
+      pButton
+      type="button"
+      label="Cancelar"
+      severity="secondary"
+      (click)="close()"
+    ></button>
+
     <button
       pButton
       type="button"
       [label]="mode() === 'create' ? 'Crear nodo' : 'Guardar cambios'"
+      [disabled]="form.invalid"
       (click)="submit()"
     ></button>
   </ng-template>

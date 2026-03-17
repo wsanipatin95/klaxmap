@@ -3,47 +3,109 @@
   (visibleChange)="visible.set($event)"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '42rem' }"
+  [style]="{ width: '44rem' }"
   header="Crear elemento"
+  (onHide)="close()"
 >
-  <div class="dialog-body">
-    <label>Nodo</label>
-    <select [(ngModel)]="form.idRedNodoFk">
-      <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-        {{ n.nodo }}
-      </option>
-    </select>
+  <form class="dialog-body" [formGroup]="form" (ngSubmit)="guardar()">
+    <div class="callout">
+      <div>
+        <strong>Geometría detectada:</strong>
+        {{ currentGeomTipo() || 'sin definir' }}
+      </div>
+      <div *ngIf="selectedNodo() as nodo">
+        <strong>Nodo actual:</strong> {{ nodo.nodo }}
+      </div>
+      <div *ngIf="selectedTipo() as tipo">
+        <strong>Tipo seleccionado:</strong> {{ tipo.nombre }}
+      </div>
+    </div>
 
-    <label>Tipo</label>
-    <select [(ngModel)]="form.idGeoTipoElementoFk">
-      <option *ngFor="let t of tiposFiltrados()" [ngValue]="t.idGeoTipoElemento">
-        {{ t.nombre }}
-      </option>
-    </select>
+    <div class="grid two-cols">
+      <div class="field">
+        <label for="elemento-nodo">Nodo</label>
+        <select id="elemento-nodo" formControlName="idRedNodoFk">
+          <option [ngValue]="null">Seleccione un nodo</option>
+          <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+            {{ n.nodo }}
+          </option>
+        </select>
+        <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
+      </div>
 
-    <label>Nombre</label>
-    <input type="text" [(ngModel)]="form.nombre" />
+      <div class="field">
+        <label for="elemento-tipo">Tipo</label>
+        <select
+          id="elemento-tipo"
+          formControlName="idGeoTipoElementoFk"
+          (change)="onTipoChange()"
+        >
+          <option [ngValue]="null">Seleccione un tipo</option>
+          <option *ngFor="let t of tiposCompatibles()" [ngValue]="t.idGeoTipoElemento">
+            {{ t.nombre }}
+          </option>
+        </select>
+        <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
+      </div>
+    </div>
 
-    <label>Descripción</label>
-    <textarea [(ngModel)]="form.descripcion"></textarea>
+    <div class="field">
+      <label for="elemento-nombre">Nombre</label>
+      <input id="elemento-nombre" type="text" formControlName="nombre" />
+      <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
+    </div>
 
-    <label>Estado</label>
-    <select [(ngModel)]="form.estado">
-      <option value="activo">Activo</option>
-      <option value="planificado">Planificado</option>
-      <option value="pendiente_clasificar">Pendiente clasificar</option>
-    </select>
+    <div class="field">
+      <label for="elemento-descripcion">Descripción</label>
+      <textarea id="elemento-descripcion" formControlName="descripcion"></textarea>
+      <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+    </div>
+
+    <div class="grid two-cols align-end">
+      <div class="field">
+        <label for="elemento-estado">Estado</label>
+        <select id="elemento-estado" formControlName="estado">
+          <option value="activo">Activo</option>
+          <option value="planificado">Planificado</option>
+          <option value="pendiente_clasificar">Pendiente clasificar</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="elemento-orden">Orden de dibujo</label>
+        <input id="elemento-orden" type="number" formControlName="ordenDibujo" />
+        <p class="field-error" *ngIf="controlError('ordenDibujo') as err">{{ err }}</p>
+      </div>
+    </div>
 
     <label class="check-line">
-      <input type="checkbox" [(ngModel)]="form.visible" />
+      <input type="checkbox" formControlName="visible" />
       Visible
     </label>
 
+    <div class="geometry-box">
+      <label>WKT generado</label>
+      <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
+    </div>
+
     <p class="error" *ngIf="error() as err">{{ err }}</p>
-  </div>
+  </form>
 
   <ng-template pTemplate="footer">
-    <button pButton type="button" label="Cancelar" severity="secondary" (click)="close()"></button>
-    <button pButton type="button" label="Guardar" (click)="guardar()"></button>
+    <button
+      pButton
+      type="button"
+      label="Cancelar"
+      severity="secondary"
+      (click)="close()"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      label="Guardar"
+      [disabled]="form.invalid || !currentWkt()"
+      (click)="guardar()"
+    ></button>
   </ng-template>
 </p-dialog>

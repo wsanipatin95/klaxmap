@@ -1,6 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+  type FormControl,
+  type FormGroup,
+} from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import type {
@@ -10,10 +24,22 @@ import type {
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
 
+type EstadoElemento = 'activo' | 'planificado' | 'pendiente_clasificar';
+
+interface CreateElementoFormValue {
+  idRedNodoFk: FormControl<number | null>;
+  idGeoTipoElementoFk: FormControl<number | null>;
+  nombre: FormControl<string>;
+  descripcion: FormControl<string>;
+  estado: FormControl<EstadoElemento>;
+  visible: FormControl<boolean>;
+  ordenDibujo: FormControl<number>;
+}
+
 @Component({
   selector: 'app-mapa-create-element-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, ButtonModule],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule, ButtonModule],
   templateUrl: './mapa-create-element-dialog.component.html',
   styleUrl: './mapa-create-element-dialog.component.scss',
 })
@@ -23,84 +49,177 @@ export class MapaCreateElementDialogComponent {
 
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
 
-  visible = signal(false);
-  error = signal<string | null>(null);
+  private readonly fb = inject(FormBuilder);
 
-  private currentWkt: string | null = null;
-  private currentGeomTipo: MapaGeomTipo | null = null;
+  readonly visible = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly currentWkt = signal<string | null>(null);
+  readonly currentGeomTipo = signal<MapaGeomTipo | null>(null);
+  readonly submittedAttempt = signal(false);
 
-  form: MapaElementoSaveRequest = {
-    idRedNodoFk: 0,
-    idGeoTipoElementoFk: 0,
-    nombre: '',
-    descripcion: '',
-    estado: 'activo',
-    visible: true,
-    origen: 'manual',
-    wkt: '',
-    ordenDibujo: 0,
-  };
+  readonly form: FormGroup<CreateElementoFormValue> = this.fb.group({
+    idRedNodoFk: this.fb.control<number | null>(null, Validators.required),
+    idGeoTipoElementoFk: this.fb.control<number | null>(null, Validators.required),
+    nombre: this.fb.nonNullable.control('', [
+      Validators.required,
+      Validators.maxLength(180),
+    ]),
+    descripcion: this.fb.nonNullable.control('', [Validators.maxLength(500)]),
+    estado: this.fb.nonNullable.control<EstadoElemento>('activo', Validators.required),
+    visible: this.fb.nonNullable.control(true),
+    ordenDibujo: this.fb.nonNullable.control(0, [Validators.min(0)]),
+  });
+
+  readonly tiposCompatibles = computed(() => {
+    const geomTipo = this.currentGeomTipo();
+    if (!geomTipo) return this.tipos;
+
+    return this.tipos.filter(
+      (t) => t.geometriaPermitida === geomTipo || t.geometriaPermitida === 'mixed'
+    );
+  });
+
+  readonly selectedNodo = computed(() => {
+    const nodeId = this.form.controls.idRedNodoFk.value;
+    if (nodeId == null) return null;
+    return this.nodos.find((n) => n.idRedNodo === nodeId) ?? null;
+  });
+
+  readonly selectedTipo = computed(() => {
+    const tipoId = this.form.controls.idGeoTipoElementoFk.value;
+    if (tipoId == null) return null;
+    return this.tipos.find((t) => t.idGeoTipoElemento === tipoId) ?? null;
+  });
 
   open(params: { wkt: string; geomTipo: MapaGeomTipo; nodoId?: number | null }) {
     this.visible.set(true);
     this.error.set(null);
+    this.submittedAttempt.set(false);
+    this.currentWkt.set(params.wkt);
+    this.currentGeomTipo.set(params.geomTipo);
 
-    this.currentWkt = params.wkt;
-    this.currentGeomTipo = params.geomTipo;
+    const tiposCompatibles = this.resolveTiposCompatibles(params.geomTipo);
+    const firstTipo = tiposCompatibles[0]?.idGeoTipoElemento ?? null;
+    const firstNodo = params.nodoId ?? this.nodos[0]?.idRedNodo ?? null;
 
-    const tiposCompatibles = this.tiposFiltrados(params.geomTipo);
-    const firstTipo = tiposCompatibles[0]?.idGeoTipoElemento ?? 0;
-    const firstNodo = params.nodoId ?? this.nodos[0]?.idRedNodo ?? 0;
+    this.form.reset(
+      {
+        idRedNodoFk: firstNodo,
+        idGeoTipoElementoFk: firstTipo,
+        nombre: '',
+        descripcion: '',
+        estado: 'activo',
+        visible: true,
+        ordenDibujo: 0,
+      },
+      { emitEvent: false }
+    );
 
-    this.form = {
-      idRedNodoFk: firstNodo,
-      idGeoTipoElementoFk: firstTipo,
-      nombre: '',
-      descripcion: '',
-      estado: 'activo',
-      visible: true,
-      origen: 'manual',
-      wkt: params.wkt,
-      ordenDibujo: 0,
-    };
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
   }
 
   close() {
     this.visible.set(false);
+    this.error.set(null);
+    this.submittedAttempt.set(false);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
   }
 
-  tiposFiltrados(geomTipo: MapaGeomTipo | null = this.currentGeomTipo): MapaTipoElemento[] {
-    if (!geomTipo) return this.tipos;
+  onTipoChange() {
+    const tipoId = this.form.controls.idGeoTipoElementoFk.value;
+    if (tipoId == null) return;
+
+    const allowed = this.tiposCompatibles().some((t) => t.idGeoTipoElemento === tipoId);
+    if (!allowed) {
+      this.form.controls.idGeoTipoElementoFk.setValue(
+        this.tiposCompatibles()[0]?.idGeoTipoElemento ?? null
+      );
+    }
+  }
+
+  guardar() {
+    this.error.set(null);
+    this.submittedAttempt.set(true);
+
+    if (!this.currentWkt()) {
+      this.error.set('No hay geometría a guardar.');
+      return;
+    }
+
+    if (!this.currentGeomTipo()) {
+      this.error.set('No se pudo determinar el tipo de geometría.');
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.error.set('Revisa los campos obligatorios antes de continuar.');
+      return;
+    }
+
+    const raw = this.form.getRawValue();
+    const payload: MapaElementoSaveRequest = {
+      idRedNodoFk: raw.idRedNodoFk as number,
+      idGeoTipoElementoFk: raw.idGeoTipoElementoFk as number,
+      nombre: raw.nombre.trim(),
+      descripcion: this.emptyToNull(raw.descripcion) ?? '',
+      estado: raw.estado,
+      visible: raw.visible ?? true,
+      origen: 'manual',
+      wkt: this.currentWkt() as string,
+      ordenDibujo: Number.isFinite(raw.ordenDibujo) ? raw.ordenDibujo : 0,
+    };
+
+    this.submitted.emit(payload);
+    this.close();
+  }
+
+  controlInvalid(name: keyof CreateElementoFormValue): boolean {
+    const control = this.form.controls[name];
+    return control.invalid && (control.touched || this.submittedAttempt());
+  }
+
+  controlError(name: keyof CreateElementoFormValue): string | null {
+    const control = this.form.controls[name];
+
+    if (!this.controlInvalid(name)) return null;
+
+    if (control.errors?.['required']) {
+      switch (name) {
+        case 'idRedNodoFk':
+          return 'Debe seleccionar un nodo.';
+        case 'idGeoTipoElementoFk':
+          return 'Debe seleccionar un tipo.';
+        case 'nombre':
+          return 'Debe ingresar un nombre.';
+        default:
+          return 'Este campo es obligatorio.';
+      }
+    }
+
+    if (control.errors?.['maxlength']) {
+      if (name === 'nombre') return 'El nombre no puede superar 180 caracteres.';
+      if (name === 'descripcion') return 'La descripción no puede superar 500 caracteres.';
+      return 'El valor supera la longitud permitida.';
+    }
+
+    if (control.errors?.['min']) {
+      return 'El orden de dibujo no puede ser negativo.';
+    }
+
+    return 'Valor inválido.';
+  }
+
+  private resolveTiposCompatibles(geomTipo: MapaGeomTipo): MapaTipoElemento[] {
     return this.tipos.filter(
       (t) => t.geometriaPermitida === geomTipo || t.geometriaPermitida === 'mixed'
     );
   }
 
-  guardar() {
-    if (!this.form.idRedNodoFk) {
-      this.error.set('Debe seleccionar un nodo');
-      return;
-    }
-    if (!this.form.idGeoTipoElementoFk) {
-      this.error.set('Debe seleccionar un tipo');
-      return;
-    }
-    if (!this.form.nombre?.trim()) {
-      this.error.set('Debe ingresar un nombre');
-      return;
-    }
-    if (!this.currentWkt) {
-      this.error.set('No hay geometría a guardar');
-      return;
-    }
-
-    this.submitted.emit({
-      ...this.form,
-      nombre: this.form.nombre.trim(),
-      descripcion: this.form.descripcion?.trim() || '',
-      wkt: this.currentWkt,
-    });
-
-    this.close();
+  private emptyToNull(value: string | null | undefined): string | null {
+    const trimmed = (value ?? '').trim();
+    return trimmed ? trimmed : null;
   }
 }
