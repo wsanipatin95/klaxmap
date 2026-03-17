@@ -98,6 +98,7 @@ export class MapaHomeComponent {
   readonly editSessionElementId = this.interaction.editSessionElementId;
   readonly editSessionElementName = this.interaction.editSessionElementName;
   readonly editSessionGeomTipo = this.interaction.editSessionGeomTipo;
+  readonly infoPanelDirty = this.interaction.infoPanelDirty;
 
   readonly selectedElemento = this.selection.selectedElemento;
   readonly selectedNodo = this.selection.selectedNodo;
@@ -128,6 +129,12 @@ export class MapaHomeComponent {
         : `Editando forma de "${this.editSessionElementName() || 'elemento'}".`;
     }
 
+    if (this.ui.propertiesOpen()) {
+      return this.infoPanelDirty()
+        ? `Editando información de "${elemento?.nombre || 'elemento'}". Tienes cambios pendientes.`
+        : `Editando información de "${elemento?.nombre || 'elemento'}".`;
+    }
+
     if (this.ui.loading()) {
       return 'Buscando y actualizando resultados del mapa...';
     }
@@ -137,7 +144,7 @@ export class MapaHomeComponent {
     }
 
     if (elemento) {
-      return `Elemento activo: "${elemento.nombre}". Puedes editar sus datos en el panel derecho o desde el árbol.`;
+      return `Elemento activo: "${elemento.nombre}". Puedes editar sus datos desde el menú o el árbol.`;
     }
 
     if (nodo) {
@@ -152,46 +159,50 @@ export class MapaHomeComponent {
   }
 
   onSearchChange(q: string) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.filtros.setQ(q);
         this.interaction.closeContextMenu();
         this.reloadElementosAndCenterFirstIfSearching();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   clearSearch() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.filtros.setQ('');
         this.crud.loadElementos();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onNodoSelect(nodo: MapaNodo | null) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.selection.setNodo(nodo);
         this.filtros.setNodo(nodo?.idRedNodo ?? null);
         this.interaction.closeContextMenu();
         this.crud.loadElementos();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onTipoSelect(tipoId: number | null) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.filtros.setTipo(tipoId);
         this.interaction.closeContextMenu();
         this.crud.loadElementos();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -199,9 +210,9 @@ export class MapaHomeComponent {
     this.interaction.selectElementoWithPendingGuard({
       item,
       nodos: this.nodos(),
-      onDiscardRequested: (onConfirm) => this.confirmDiscardChanges(onConfirm),
-      centerOnElemento: (id) =>
-        setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
     });
   }
 
@@ -209,9 +220,9 @@ export class MapaHomeComponent {
     this.interaction.selectElementoWithPendingGuard({
       item,
       nodos: this.nodos(),
-      onDiscardRequested: (onConfirm) => this.confirmDiscardChanges(onConfirm),
-      centerOnElemento: (id) =>
-        setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
       afterSelect: () => {
         setTimeout(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento), 0);
       },
@@ -220,6 +231,7 @@ export class MapaHomeComponent {
 
   onElementoUpdated(item: MapaElemento) {
     this.selection.setElemento(item);
+    this.interaction.setInfoPanelDirty(false);
     this.crud.loadElementos();
   }
 
@@ -230,27 +242,29 @@ export class MapaHomeComponent {
   }
 
   onRefresh() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.crud.refreshAll((items) => {
           this.centerFirstSearchResultIfNeeded(items);
         });
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   abrirImportacion() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.importDialog?.open();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   abrirExportacion() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         const prefill: Partial<MapaExportRequest> = {
           q: this.filtros.q(),
@@ -265,7 +279,8 @@ export class MapaHomeComponent {
           filterSummary: this.buildExportSummary(),
         });
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -291,12 +306,30 @@ export class MapaHomeComponent {
     this.interaction.onEditSessionStateChanged(state);
   }
 
+  onPropertiesDirtyChange(dirty: boolean) {
+    this.interaction.setInfoPanelDirty(dirty);
+  }
+
+  onPropertiesCloseRequested() {
+    if (!this.ui.propertiesOpen()) return;
+
+    if (!this.infoPanelDirty()) {
+      this.interaction.closeInfoPanel();
+      return;
+    }
+
+    this.confirmDiscardInfoChanges(() => {
+      this.interaction.closeInfoPanel();
+    });
+  }
+
   onToolbarSelectMode() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.ui.setSelectMode();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -309,44 +342,58 @@ export class MapaHomeComponent {
     }
 
     if (this.editSessionActive() && this.editSessionElementId() !== elemento.idGeoElemento) {
-      this.interaction.runWithPendingEditGuard(
+      this.interaction.runWithPendingGuards(
         () => {
+          this.ui.closeProperties();
+          this.interaction.setInfoPanelDirty(false);
           this.ui.setEditGeometryMode();
           setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
         },
-        (onConfirm) => this.confirmDiscardChanges(onConfirm)
+        (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+        (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
       );
       return;
     }
 
+    this.ui.closeProperties();
+    this.interaction.setInfoPanelDirty(false);
     this.ui.setEditGeometryMode();
     setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
   }
 
   onToolbarDrawPointMode() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
         this.ui.setDrawPointMode();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onToolbarDrawLineMode() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
         this.ui.setDrawLineMode();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onToolbarDrawPolygonMode() {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
         this.ui.setDrawPolygonMode();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -367,7 +414,7 @@ export class MapaHomeComponent {
   }
 
   cancelGeometryEdition() {
-    this.confirmDiscardChanges();
+    this.confirmDiscardGeometryChanges();
   }
 
   openContextMenu(event: { elemento: MapaElemento; x: number; y: number }) {
@@ -379,59 +426,54 @@ export class MapaHomeComponent {
   }
 
   centerContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.selection.setElemento(item);
         this.mapCanvas?.centerOnElemento(item.idGeoElemento);
         this.interaction.closeContextMenu();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   editDataContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
-        this.selection.setElemento(item);
+        this.interaction.openInfoPanelForElemento(item, this.nodos());
         this.ui.setSelectMode();
         this.interaction.closeContextMenu();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   editGeometryContextElemento(item: MapaElemento) {
-    if (this.editSessionActive() && this.editSessionElementId() !== item.idGeoElemento) {
-      this.interaction.runWithPendingEditGuard(
-        () => {
-          this.selection.setElemento(item);
-          this.ui.setEditGeometryMode();
-          this.interaction.closeContextMenu();
+    this.interaction.runWithPendingGuards(
+      () => {
+        this.selection.setElemento(item);
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
+        this.ui.setEditGeometryMode();
+        this.interaction.closeContextMenu();
 
-          setTimeout(() => {
-            this.mapCanvas?.centerOnElemento(item.idGeoElemento);
-          }, 0);
-        },
-        (onConfirm) => this.confirmDiscardChanges(onConfirm)
-      );
-      return;
-    }
-
-    this.selection.setElemento(item);
-    this.ui.setEditGeometryMode();
-    this.interaction.closeContextMenu();
-
-    setTimeout(() => {
-      this.mapCanvas?.centerOnElemento(item.idGeoElemento);
-    }, 0);
+        setTimeout(() => {
+          this.mapCanvas?.centerOnElemento(item.idGeoElemento);
+        }, 0);
+      },
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
+    );
   }
 
   deleteContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.confirmDeleteElemento(item);
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -449,35 +491,40 @@ export class MapaHomeComponent {
   }
 
   onTreeCreateNodeRequested(event: TreeCreateNodeRequest) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.nodeDialog?.openCreate(event.parent, event.tipo);
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onTreeEditNodeRequested(node: MapaNodo) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.nodeDialog?.openEdit(node);
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onTreeDeleteNodeRequested(node: MapaNodo) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
         this.confirmDeleteNode(node);
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
   onTreeDrawElementRequested(event: TreeDrawElementRequest) {
-    this.interaction.runWithPendingEditGuard(
+    this.interaction.runWithPendingGuards(
       () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
         this.selection.setNodo(event.node);
         this.selection.setElemento(null);
 
@@ -493,7 +540,8 @@ export class MapaHomeComponent {
 
         this.ui.setDrawPolygonMode();
       },
-      (onConfirm) => this.confirmDiscardChanges(onConfirm)
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
   }
 
@@ -501,9 +549,9 @@ export class MapaHomeComponent {
     this.interaction.selectElementoWithPendingGuard({
       item: elemento,
       nodos: this.nodos(),
-      onDiscardRequested: (onConfirm) => this.confirmDiscardChanges(onConfirm),
-      centerOnElemento: (id) =>
-        setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
       afterSelect: () => {
         setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
       },
@@ -514,10 +562,11 @@ export class MapaHomeComponent {
     this.interaction.selectElementoWithPendingGuard({
       item: elemento,
       nodos: this.nodos(),
-      onDiscardRequested: (onConfirm) => this.confirmDiscardChanges(onConfirm),
-      centerOnElemento: (id) =>
-        setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
       afterSelect: () => {
+        this.interaction.openInfoPanelForElemento(elemento, this.nodos());
         this.ui.setSelectMode();
       },
     });
@@ -527,10 +576,12 @@ export class MapaHomeComponent {
     this.interaction.selectElementoWithPendingGuard({
       item: elemento,
       nodos: this.nodos(),
-      onDiscardRequested: (onConfirm) => this.confirmDiscardChanges(onConfirm),
-      centerOnElemento: (id) =>
-        setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
       afterSelect: () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
         this.ui.setEditGeometryMode();
         setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
       },
@@ -604,7 +655,7 @@ export class MapaHomeComponent {
     return parts.join(' · ');
   }
 
-  private confirmDiscardChanges(onConfirm?: () => void) {
+  private confirmDiscardGeometryChanges(onConfirm?: () => void) {
     this.confirmDialog?.open(
       {
         title: 'Descartar cambios pendientes',
@@ -618,6 +669,23 @@ export class MapaHomeComponent {
         this.mapCanvas?.cancelEditSession();
         this.interaction.resetEditSessionState();
         this.ui.setSelectMode();
+        onConfirm?.();
+      }
+    );
+  }
+
+  private confirmDiscardInfoChanges(onConfirm?: () => void) {
+    this.confirmDialog?.open(
+      {
+        title: 'Descartar cambios de información',
+        message:
+          'Tienes cambios de información sin guardar.\n\nSi continúas, esos cambios se perderán.',
+        confirmLabel: 'Descartar cambios',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.interaction.closeInfoPanel();
         onConfirm?.();
       }
     );
@@ -654,6 +722,10 @@ export class MapaHomeComponent {
           if (this.editSessionElementId() === item.idGeoElemento) {
             this.interaction.resetEditSessionState();
             this.ui.setSelectMode();
+          }
+
+          if (this.selectedElemento()?.idGeoElemento === item.idGeoElemento) {
+            this.interaction.closeInfoPanel();
           }
         });
       }

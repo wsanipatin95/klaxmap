@@ -12,7 +12,7 @@ export type MapaToolMode =
 export class MapaUiStore {
   readonly toolMode = signal<MapaToolMode>('select');
   readonly sidebarOpen = signal(true);
-  readonly propertiesOpen = signal(true);
+  readonly propertiesOpen = signal(false);
   readonly loading = signal(false);
 
   setToolMode(mode: MapaToolMode) {
@@ -45,6 +45,14 @@ export class MapaUiStore {
 
   toggleProperties() {
     this.propertiesOpen.update((v) => !v);
+  }
+
+  openProperties() {
+    this.propertiesOpen.set(true);
+  }
+
+  closeProperties() {
+    this.propertiesOpen.set(false);
   }
 
   setLoading(v: boolean) {

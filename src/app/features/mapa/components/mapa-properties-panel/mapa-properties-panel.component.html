@@ -1,31 +1,47 @@
-<div class="properties-wrap">
-  <ng-container *ngIf="elemento; else emptyState">
-    <div class="panel-header">
-      <div>
-        <h3>{{ elemento.nombre }}</h3>
-        <small>{{ elemento.geomTipo }} · {{ elemento.estado }}</small>
+<div class="properties-shell" [class.open]="open">
+  <div class="properties-overlay" *ngIf="open" (click)="onOverlayClick()"></div>
+
+  <aside class="properties-drawer" [class.open]="open" (click)="onPanelClick($event)">
+    <ng-container *ngIf="elemento; else emptyState">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <h3>{{ elemento.nombre }}</h3>
+          <small>{{ elemento.geomTipo }} · {{ elemento.estado }}</small>
+        </div>
+
+        <div class="panel-actions">
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Cerrar panel"
+            (click)="requestClose()"
+          >
+            ×
+          </button>
+
+          <button
+            pButton
+            type="button"
+            label="Eliminar"
+            severity="danger"
+            (click)="eliminar()"
+          ></button>
+        </div>
       </div>
 
-      <button
-        pButton
-        type="button"
-        label="Eliminar"
-        severity="danger"
-        (click)="eliminar()"
-      ></button>
-    </div>
+      <app-mapa-properties-tabs
+        [elemento]="elemento"
+        [tipos]="tipos"
+        [nodos]="nodos"
+        (submitted)="guardar($event)"
+        (dirtyChange)="onDirtyStateChanged($event)"
+      />
+    </ng-container>
 
-    <app-mapa-properties-tabs
-      [elemento]="elemento"
-      [tipos]="tipos"
-      [nodos]="nodos"
-      (submitted)="guardar($event)"
-    />
-  </ng-container>
-
-  <ng-template #emptyState>
-    <div class="empty-state">
-      Selecciona un elemento del mapa para ver sus propiedades.
-    </div>
-  </ng-template>
+    <ng-template #emptyState>
+      <div class="empty-state">
+        Selecciona un elemento del mapa para ver sus propiedades.
+      </div>
+    </ng-template>
+  </aside>
 </div>

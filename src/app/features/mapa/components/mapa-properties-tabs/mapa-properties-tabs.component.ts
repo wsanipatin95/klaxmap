@@ -16,11 +16,16 @@ export class MapaPropertiesTabsComponent {
   @Input() nodos: MapaNodo[] = [];
 
   @Output() submitted = new EventEmitter<MapaPatchRequest>();
+  @Output() dirtyChange = new EventEmitter<boolean>();
 
   readonly tab = signal<'propiedades' | 'metadatos' | 'kml'>('propiedades');
 
   setTab(tab: 'propiedades' | 'metadatos' | 'kml') {
     this.tab.set(tab);
+  }
+
+  onDirtyChange(dirty: boolean) {
+    this.dirtyChange.emit(dirty);
   }
 
   jsonPretty(value: unknown): string {

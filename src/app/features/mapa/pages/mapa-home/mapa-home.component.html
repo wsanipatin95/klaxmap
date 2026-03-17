@@ -17,6 +17,7 @@
     (drawLineModeRequested)="onToolbarDrawLineMode()"
     (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
   />
+
   <app-mapa-sidebar
     slot="sidebar"
     [nodos]="nodos()"
@@ -63,11 +64,14 @@
 
   <app-mapa-properties-panel
     slot="properties"
+    [open]="ui.propertiesOpen()"
     [elemento]="selectedElemento()"
     [tipos]="tipos()"
     [nodos]="nodos()"
     (saved)="onElementoUpdated($event)"
     (deleted)="onElementoDeleted($event)"
+    (dirtyChange)="onPropertiesDirtyChange($event)"
+    (closeRequested)="onPropertiesCloseRequested()"
   />
 
   <app-mapa-statusbar

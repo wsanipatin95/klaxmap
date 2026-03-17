@@ -20,12 +20,32 @@ export class MapaInteractionFacade {
   readonly editSessionElementName = signal<string | null>(null);
   readonly editSessionGeomTipo = signal<MapaGeomTipo | null>(null);
 
+  readonly infoPanelDirty = signal(false);
+
   onEditSessionStateChanged(state: MapaEditSessionState) {
     this.editSessionActive.set(state.active && !!state.elementId);
     this.editSessionDirty.set(state.active && !!state.elementId ? state.dirty : false);
     this.editSessionElementId.set(state.active ? state.elementId : null);
     this.editSessionElementName.set(state.active ? state.elementName : null);
     this.editSessionGeomTipo.set(state.active ? state.geomTipo : null);
+  }
+
+  setInfoPanelDirty(dirty: boolean) {
+    this.infoPanelDirty.set(dirty);
+  }
+
+  openInfoPanelForElemento(item: MapaElemento | null, nodos: MapaNodo[]) {
+    this.applyElementoSelection(item, nodos);
+    this.ui.openProperties();
+  }
+
+  closeInfoPanel() {
+    this.ui.closeProperties();
+    this.infoPanelDirty.set(false);
+  }
+
+  hasPendingInfoChanges(): boolean {
+    return this.ui.propertiesOpen() && this.infoPanelDirty();
   }
 
   openContextMenu(event: { elemento: MapaElemento; x: number; y: number }) {
@@ -48,16 +68,22 @@ export class MapaInteractionFacade {
     this.editSessionGeomTipo.set(null);
   }
 
-  runWithPendingEditGuard(
+  runWithPendingGuards(
     action: () => void,
-    requestDiscardConfirmation: (onConfirm: () => void) => void
+    requestGeometryDiscardConfirmation: (onConfirm: () => void) => void,
+    requestInfoDiscardConfirmation: (onConfirm: () => void) => void
   ) {
-    if (!this.editSessionActive() || !this.editSessionDirty()) {
-      action();
+    if (this.hasPendingGeometryChanges()) {
+      requestGeometryDiscardConfirmation(action);
       return;
     }
 
-    requestDiscardConfirmation(action);
+    if (this.hasPendingInfoChanges()) {
+      requestInfoDiscardConfirmation(action);
+      return;
+    }
+
+    action();
   }
 
   selectElementoWithPendingGuard(
@@ -65,17 +91,34 @@ export class MapaInteractionFacade {
       item: MapaElemento | null;
       nodos: MapaNodo[];
       afterSelect?: () => void;
-      onDiscardRequested: (onConfirm: () => void) => void;
+      onGeometryDiscardRequested: (onConfirm: () => void) => void;
+      onInfoDiscardRequested: (onConfirm: () => void) => void;
       centerOnElemento?: (id: number | null) => void;
     }
   ) {
-    const { item, nodos, afterSelect, onDiscardRequested, centerOnElemento } = params;
+    const {
+      item,
+      nodos,
+      afterSelect,
+      onGeometryDiscardRequested,
+      onInfoDiscardRequested,
+      centerOnElemento,
+    } = params;
 
     const currentEditId = this.editSessionElementId();
     const sameElement = item?.idGeoElemento === currentEditId;
+    const sameInfoElement = item?.idGeoElemento === this.selection.selectedElemento()?.idGeoElemento;
 
     if (this.editSessionActive() && this.editSessionDirty() && !sameElement) {
-      onDiscardRequested(() => {
+      onGeometryDiscardRequested(() => {
+        this.applyElementoSelection(item, nodos, centerOnElemento);
+        afterSelect?.();
+      });
+      return;
+    }
+
+    if (this.hasPendingInfoChanges() && !sameInfoElement) {
+      onInfoDiscardRequested(() => {
         this.applyElementoSelection(item, nodos, centerOnElemento);
         afterSelect?.();
       });
@@ -89,6 +132,8 @@ export class MapaInteractionFacade {
   onElementoDeleted(id: number) {
     if (this.selection.selectedElemento()?.idGeoElemento === id) {
       this.selection.setElemento(null);
+      this.ui.closeProperties();
+      this.infoPanelDirty.set(false);
     }
 
     if (this.contextElemento()?.idGeoElemento === id) {
@@ -99,6 +144,10 @@ export class MapaInteractionFacade {
       this.resetEditSessionState();
       this.ui.setSelectMode();
     }
+  }
+
+  private hasPendingGeometryChanges(): boolean {
+    return this.editSessionActive() && this.editSessionDirty();
   }
 
   private applyElementoSelection(

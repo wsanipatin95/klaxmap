@@ -1,21 +1,26 @@
-<div class="tabs-wrap" *ngIf="elemento as e">
+<div class="tabs-wrap" *ngIf="elemento as el">
   <div class="tabs-header">
     <button
       type="button"
+      class="tab-btn"
       [class.active]="tab() === 'propiedades'"
       (click)="setTab('propiedades')"
     >
       Propiedades
     </button>
+
     <button
       type="button"
+      class="tab-btn"
       [class.active]="tab() === 'metadatos'"
       (click)="setTab('metadatos')"
     >
       Metadatos
     </button>
+
     <button
       type="button"
+      class="tab-btn"
       [class.active]="tab() === 'kml'"
       (click)="setTab('kml')"
     >
@@ -25,29 +30,19 @@
 
   <div class="tabs-content" *ngIf="tab() === 'propiedades'">
     <app-mapa-element-form
-      [elemento]="elemento"
+      [elemento]="el"
       [tipos]="tipos"
       [nodos]="nodos"
       (submitted)="submitted.emit($event)"
+      (dirtyChange)="onDirtyChange($event)"
     />
   </div>
 
   <div class="tabs-content" *ngIf="tab() === 'metadatos'">
-    <div class="meta-grid">
-      <div><strong>ID:</strong> {{ e.idGeoElemento }}</div>
-      <div><strong>Geom tipo:</strong> {{ e.geomTipo }}</div>
-      <div><strong>Origen:</strong> {{ e.origen }}</div>
-      <div><strong>Style URL:</strong> {{ e.styleUrl || '—' }}</div>
-      <div><strong>Longitud:</strong> {{ e.longitudM ?? 0 }}</div>
-      <div><strong>Área:</strong> {{ e.areaM2 ?? 0 }}</div>
-    </div>
-
-    <h5>Atributos</h5>
-    <pre>{{ jsonPretty(e.atributos) }}</pre>
+    <pre>{{ jsonPretty(el.atributos) }}</pre>
   </div>
 
   <div class="tabs-content" *ngIf="tab() === 'kml'">
-    <h5>ExtendedData</h5>
-    <pre>{{ jsonPretty(e.kmlExtendedData) }}</pre>
+    <pre>{{ jsonPretty(el.kmlExtendedData) }}</pre>
   </div>
 </div>

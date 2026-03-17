@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type {
   MapaElemento,
@@ -8,6 +8,15 @@ import type {
   MapaPatchRequest,
 } from '../../data-access/mapa.models';
 
+interface ElementFormState {
+  nombre: string;
+  descripcion: string;
+  estado: string;
+  visible: boolean;
+  idRedNodoFk: number | null;
+  idGeoTipoElementoFk: number | null;
+}
+
 @Component({
   selector: 'app-mapa-element-form',
   standalone: true,
@@ -15,34 +24,25 @@ import type {
   templateUrl: './mapa-element-form.component.html',
   styleUrl: './mapa-element-form.component.scss',
 })
-export class MapaElementFormComponent {
+export class MapaElementFormComponent implements OnChanges {
   @Input() elemento: MapaElemento | null = null;
   @Input() nodos: MapaNodo[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
 
   @Output() submitted = new EventEmitter<MapaPatchRequest>();
+  @Output() dirtyChange = new EventEmitter<boolean>();
 
-  form = {
-    nombre: '',
-    descripcion: '',
-    estado: 'activo',
-    visible: true,
-    idRedNodoFk: null as number | null,
-    idGeoTipoElementoFk: null as number | null,
-  };
+  form: ElementFormState = this.buildFormState(null);
+  private initialForm: ElementFormState = this.buildFormState(null);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['elemento']) {
-      const e = this.elemento;
-      this.form = {
-        nombre: e?.nombre ?? '',
-        descripcion: e?.descripcion ?? '',
-        estado: e?.estado ?? 'activo',
-        visible: e?.visible ?? true,
-        idRedNodoFk: e?.idRedNodoFk ?? null,
-        idGeoTipoElementoFk: e?.idGeoTipoElementoFk ?? null,
-      };
+      this.resetFromElemento(this.elemento);
     }
+  }
+
+  onFieldChanged() {
+    this.emitDirtyState();
   }
 
   guardar() {
@@ -51,13 +51,64 @@ export class MapaElementFormComponent {
     this.submitted.emit({
       id: this.elemento.idGeoElemento,
       cambios: {
-        nombre: this.form.nombre,
-        descripcion: this.form.descripcion,
+        nombre: this.form.nombre.trim(),
+        descripcion: this.form.descripcion.trim(),
         estado: this.form.estado,
         visible: this.form.visible,
         idRedNodoFk: this.form.idRedNodoFk,
         idGeoTipoElementoFk: this.form.idGeoTipoElementoFk,
       },
     });
+
+    this.initialForm = this.cloneState(this.form);
+    this.emitDirtyState();
+  }
+
+  hasUnsavedChanges(): boolean {
+    return !this.statesEqual(this.form, this.initialForm);
+  }
+
+  resetFromElemento(elemento: MapaElemento | null) {
+    const state = this.buildFormState(elemento);
+    this.form = this.cloneState(state);
+    this.initialForm = this.cloneState(state);
+    this.emitDirtyState();
+  }
+
+  private emitDirtyState() {
+    this.dirtyChange.emit(this.hasUnsavedChanges());
+  }
+
+  private buildFormState(elemento: MapaElemento | null): ElementFormState {
+    return {
+      nombre: elemento?.nombre ?? '',
+      descripcion: elemento?.descripcion ?? '',
+      estado: elemento?.estado ?? 'activo',
+      visible: elemento?.visible ?? true,
+      idRedNodoFk: elemento?.idRedNodoFk ?? null,
+      idGeoTipoElementoFk: elemento?.idGeoTipoElementoFk ?? null,
+    };
+  }
+
+  private cloneState(state: ElementFormState): ElementFormState {
+    return {
+      nombre: state.nombre,
+      descripcion: state.descripcion,
+      estado: state.estado,
+      visible: state.visible,
+      idRedNodoFk: state.idRedNodoFk,
+      idGeoTipoElementoFk: state.idGeoTipoElementoFk,
+    };
+  }
+
+  private statesEqual(a: ElementFormState, b: ElementFormState): boolean {
+    return (
+      a.nombre === b.nombre &&
+      a.descripcion === b.descripcion &&
+      a.estado === b.estado &&
+      a.visible === b.visible &&
+      a.idRedNodoFk === b.idRedNodoFk &&
+      a.idGeoTipoElementoFk === b.idGeoTipoElementoFk
+    );
   }
 }
