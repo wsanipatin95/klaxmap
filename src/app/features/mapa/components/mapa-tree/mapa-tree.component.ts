@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
   EventEmitter,
   Input,
@@ -8,7 +9,12 @@ import {
   SimpleChanges,
   signal,
 } from '@angular/core';
-import type { MapaElemento, MapaGeomTipo, MapaNodo } from '../../data-access/mapa.models';
+import type {
+  MapaElemento,
+  MapaGeomTipo,
+  MapaNodo,
+  MapaTipoElemento,
+} from '../../data-access/mapa.models';
 import {
   getAncestorNodeIds,
   getBranchNodeIds,
@@ -52,10 +58,12 @@ type ContextKind = 'node' | 'element' | null;
   imports: [CommonModule],
   templateUrl: './mapa-tree.component.html',
   styleUrl: './mapa-tree.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapaTreeComponent implements OnChanges {
   @Input() nodos: MapaNodo[] = [];
   @Input() elementos: MapaElemento[] = [];
+  @Input() tipos: MapaTipoElemento[] = [];
   @Input() selectedNodoId: number | null = null;
   @Input() selectedElementoId: number | null = null;
   @Input() searchValue = '';
@@ -86,8 +94,29 @@ export class MapaTreeComponent implements OnChanges {
 
   tree: TreeNodeVm[] = [];
 
-  ngOnChanges(_: SimpleChanges): void {
+  ngOnChanges(changes: SimpleChanges): void {
+    const nodosChanged = !!changes['nodos'];
+    const searchChanged = !!changes['searchValue'];
+    const selectedNodoChanged = !!changes['selectedNodoId'];
+    const selectedElementoChanged = !!changes['selectedElementoId'];
+
+    if (nodosChanged) {
+      this.pruneExpandedIds();
+    }
+
     this.rebuildTree();
+
+    if (nodosChanged) {
+      this.ensureRootNodesExpanded();
+    }
+
+    if (searchChanged && this.searchValue.trim()) {
+      this.expandVisibleBranches();
+    }
+
+    if (selectedNodoChanged || selectedElementoChanged) {
+      this.ensureSelectionPathExpanded();
+    }
   }
 
   get hasAnyTreeData(): boolean {
@@ -100,7 +129,38 @@ export class MapaTreeComponent implements OnChanges {
 
   selectAll() {
     this.nodoSelected.emit(null);
-    this.ensureRootNodesExpanded();
+    this.expandVisibleBranches();
+  }
+
+  expandAll() {
+    this.expandVisibleBranches();
+  }
+
+  collapseAll() {
+    const keepExpanded = new Set<number>();
+
+    for (const rootId of getRootNodeIds(this.nodos)) {
+      keepExpanded.add(rootId);
+    }
+
+    if (this.selectedNodoId != null) {
+      for (const id of getAncestorNodeIds(this.selectedNodoId, this.nodos)) {
+        keepExpanded.add(id);
+      }
+      keepExpanded.add(this.selectedNodoId);
+    }
+
+    if (this.selectedElementoId != null) {
+      const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
+      if (el) {
+        for (const id of getAncestorNodeIds(el.idRedNodoFk, this.nodos)) {
+          keepExpanded.add(id);
+        }
+        keepExpanded.add(el.idRedNodoFk);
+      }
+    }
+
+    this.expandedIds.set([...keepExpanded]);
   }
 
   createRootNode(tipo: MapaNodo['tipoNodo']) {
@@ -129,19 +189,52 @@ export class MapaTreeComponent implements OnChanges {
     return this.expandedIds().includes(node.idRedNodo);
   }
 
-  iconFor(tipoNodo: MapaNodo['tipoNodo']): string {
+  iconForNode(tipoNodo: MapaNodo['tipoNodo']): string {
     switch (tipoNodo) {
       case 'carpeta':
-        return '📁';
+        return 'folder';
       case 'zona':
-        return '🗺️';
+        return 'map';
       case 'sitio':
-        return '📍';
+        return 'pin_drop';
       case 'nodo_fisico':
-        return '📡';
+        return 'lan';
       default:
-        return '•';
+        return 'folder';
     }
+  }
+
+  iconForElement(elemento: MapaElemento): string {
+    const tipo = this.tipos.find(
+      (t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk
+    );
+
+    if (tipo?.iconoClase && tipo.iconoClase.trim()) {
+      return tipo.iconoClase.trim();
+    }
+
+    if (tipo?.icono && tipo.icono.trim()) {
+      return tipo.icono.trim();
+    }
+
+    switch (elemento.geomTipo) {
+      case 'point':
+        return 'place';
+      case 'linestring':
+        return 'timeline';
+      case 'polygon':
+        return 'crop_square';
+      default:
+        return 'location_on';
+    }
+  }
+
+  isMaterialSymbolIcon(icon: string): boolean {
+    return !icon.includes(' ') && !icon.startsWith('pi ');
+  }
+
+  isPrimeIcon(icon: string): boolean {
+    return icon.startsWith('pi ');
   }
 
   isNodeVisible(node: MapaNodo): boolean {
@@ -281,11 +374,19 @@ export class MapaTreeComponent implements OnChanges {
     };
 
     this.tree = roots.map(build).filter((n) => n.visible);
-    this.ensureRootNodesExpanded(this.tree.map((r) => r.node.idRedNodo));
   }
 
-  private ensureRootNodesExpanded(rootIds?: number[]) {
-    const ids = rootIds ?? getRootNodeIds(this.nodos);
+  private pruneExpandedIds() {
+    const validIds = new Set(this.nodos.map((n) => n.idRedNodo));
+    const next = this.expandedIds().filter((id) => validIds.has(id));
+
+    if (next.length !== this.expandedIds().length) {
+      this.expandedIds.set(next);
+    }
+  }
+
+  private ensureRootNodesExpanded() {
+    const ids = getRootNodeIds(this.nodos);
     if (!ids.length) return;
 
     const current = new Set(this.expandedIds());
@@ -301,6 +402,60 @@ export class MapaTreeComponent implements OnChanges {
     if (changed) {
       this.expandedIds.set([...current]);
     }
+  }
+
+  private ensureSelectionPathExpanded() {
+    const current = new Set(this.expandedIds());
+    let changed = false;
+
+    if (this.selectedNodoId != null) {
+      for (const id of getAncestorNodeIds(this.selectedNodoId, this.nodos)) {
+        if (!current.has(id)) {
+          current.add(id);
+          changed = true;
+        }
+      }
+      if (!current.has(this.selectedNodoId)) {
+        current.add(this.selectedNodoId);
+        changed = true;
+      }
+    }
+
+    if (this.selectedElementoId != null) {
+      const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
+      if (el) {
+        for (const id of getAncestorNodeIds(el.idRedNodoFk, this.nodos)) {
+          if (!current.has(id)) {
+            current.add(id);
+            changed = true;
+          }
+        }
+        if (!current.has(el.idRedNodoFk)) {
+          current.add(el.idRedNodoFk);
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      this.expandedIds.set([...current]);
+    }
+  }
+
+  private expandVisibleBranches() {
+    const visibleIds = new Set<number>();
+
+    const walk = (items: TreeNodeVm[]) => {
+      for (const item of items) {
+        visibleIds.add(item.node.idRedNodo);
+        if (item.children.length) {
+          walk(item.children);
+        }
+      }
+    };
+
+    walk(this.tree);
+    this.expandedIds.set([...visibleIds]);
   }
 
   private isRootNode(nodeId: number): boolean {
@@ -329,7 +484,6 @@ export class MapaTreeComponent implements OnChanges {
       node.nodo,
       node.descripcion ?? '',
       node.codigo ?? '',
-      node.pathCache ?? '',
       node.tipoNodo,
     ].some((v) => (v || '').toLowerCase().includes(q));
   }
@@ -344,7 +498,6 @@ export class MapaTreeComponent implements OnChanges {
       elemento.codigo ?? '',
       elemento.etiqueta ?? '',
       elemento.observacion ?? '',
-      elemento.geomTipo ?? '',
       elemento.estado ?? '',
     ].some((v) => (v || '').toLowerCase().includes(q));
   }

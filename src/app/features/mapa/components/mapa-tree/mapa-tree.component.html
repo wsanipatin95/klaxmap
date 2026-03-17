@@ -1,13 +1,21 @@
-<div class="tree-actions">
-  <div class="tree-actions-left">
-    <button type="button" (click)="selectAll()">Ver todo</button>
-    <span class="tree-hint" *ngIf="searchValue">Mostrando ramas con coincidencias</span>
+<div class="tree-toolbar">
+  <div class="tree-toolbar-left">
+    <button type="button" class="toolbar-btn" (click)="selectAll()">
+      Ver todo
+    </button>
+
+    <button type="button" class="toolbar-btn ghost" (click)="expandAll()">
+      Expandir
+    </button>
+
+    <button type="button" class="toolbar-btn ghost" (click)="collapseAll()">
+      Contraer
+    </button>
   </div>
 
-  <div class="tree-actions-right">
-    <button type="button" (click)="createRootNode('carpeta')">+ Carpeta raíz</button>
-    <button type="button" (click)="createRootNode('zona')">+ Zona raíz</button>
-  </div>
+  <span class="tree-hint" *ngIf="searchValue">
+    Coincidencias visibles
+  </span>
 </div>
 
 <div class="tree-empty" *ngIf="!hasAnyTreeData">
@@ -23,19 +31,21 @@
 </div>
 
 <div class="tree-empty" *ngIf="hasAnyTreeData && !hasVisibleTreeData">
-  <strong>No hay coincidencias en el árbol.</strong>
+  <strong>No hay coincidencias.</strong>
   <p>
-    Prueba borrando la búsqueda o usa “Ver todo”.
+    Borra la búsqueda o usa “Ver todo”.
   </p>
 </div>
 
-<ul class="tree-root" *ngIf="hasVisibleTreeData">
-  <ng-container *ngFor="let item of tree; trackBy: trackByNode">
-    <ng-container
-      *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
-    ></ng-container>
-  </ng-container>
-</ul>
+<div class="tree-scroll" *ngIf="hasVisibleTreeData">
+  <ul class="tree-root">
+    <ng-container *ngFor="let item of tree; trackBy: trackByNode">
+      <ng-container
+        *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
+      ></ng-container>
+    </ng-container>
+  </ul>
+</div>
 
 <ng-template #nodeTpl let-item let-level="level">
   <li class="tree-node" *ngIf="item.visible">
@@ -43,18 +53,19 @@
       class="node-row"
       [class.active]="item.node.idRedNodo === selectedNodoId"
       [class.is-hidden]="!isNodeVisible(item.node)"
-      [style.paddingLeft.px]="10 + (level * 14)"
+      [style.paddingLeft.px]="6 + (level * 10)"
       (click)="onNodeClick(item.node, $event)"
       (contextmenu)="openNodeContext(item.node, $event)"
-      [attr.title]="item.node.pathCache || item.node.nodo"
+      [attr.title]="item.node.nodo"
     >
       <button
         type="button"
         class="expand-btn"
         *ngIf="item.children.length > 0 || item.elementos.length > 0"
         (click)="toggleExpanded(item.node.idRedNodo, $event)"
+        aria-label="Expandir o contraer nodo"
       >
-        {{ isExpanded(item.node) ? '▾' : '▸' }}
+        <span class="expand-chevron" [class.expanded]="isExpanded(item.node)">▸</span>
       </button>
 
       <span
@@ -64,23 +75,20 @@
 
       <input
         type="checkbox"
+        class="tree-check"
         [checked]="isNodeVisible(item.node)"
         [indeterminate]="isNodeIndeterminate(item.node)"
         (click)="$event.stopPropagation()"
         (change)="onToggleNode(item.node, $event)"
       />
 
-      <span class="node-icon">{{ iconFor(item.node.tipoNodo) }}</span>
+      <span class="node-icon-wrap">
+        <span class="material-symbols-outlined node-icon">
+          {{ iconForNode(item.node.tipoNodo) }}
+        </span>
+      </span>
 
-      <div class="node-copy">
-        <span class="node-name">{{ item.node.nodo }}</span>
-        <small class="node-meta">
-          {{ item.node.tipoNodo }}
-          <ng-container *ngIf="item.node.pathCache">
-            · {{ item.node.pathCache }}
-          </ng-container>
-        </small>
-      </div>
+      <span class="node-name">{{ item.node.nodo }}</span>
     </div>
 
     <ul class="tree-children" *ngIf="isExpanded(item.node)">
@@ -95,28 +103,33 @@
         *ngFor="let el of item.elementos; trackBy: trackByElemento"
         [class.active]="el.idGeoElemento === selectedElementoId"
         [class.is-hidden]="!isElementoVisible(el)"
-        [style.paddingLeft.px]="42 + ((level + 1) * 14)"
+        [style.paddingLeft.px]="30 + ((level + 1) * 10)"
         (click)="onElementoClick(el, $event)"
         (contextmenu)="openElementoContext(el, $event)"
         [attr.title]="el.nombre"
       >
-        <input
-          type="checkbox"
-          [checked]="isElementoVisible(el)"
-          (click)="$event.stopPropagation()"
-          (change)="onToggleElemento(el, $event)"
-        />
+        <div class="element-row-grid">
+          <input
+            type="checkbox"
+            class="tree-check"
+            [checked]="isElementoVisible(el)"
+            (click)="$event.stopPropagation()"
+            (change)="onToggleElemento(el, $event)"
+          />
 
-        <span class="element-bullet">•</span>
-
-        <div class="element-copy">
-          <span class="element-name">{{ el.nombre }}</span>
-          <small class="element-meta">
-            {{ el.geomTipo }}
-            <ng-container *ngIf="el.estado">
-              · {{ el.estado }}
+          <span class="element-icon-wrap">
+            <ng-container *ngIf="isPrimeIcon(iconForElement(el)); else materialIconTpl">
+              <i [class]="iconForElement(el) + ' element-icon prime-icon'"></i>
             </ng-container>
-          </small>
+
+            <ng-template #materialIconTpl>
+              <span class="material-symbols-outlined element-icon">
+                {{ iconForElement(el) }}
+              </span>
+            </ng-template>
+          </span>
+
+          <span class="element-name">{{ el.nombre }}</span>
         </div>
       </li>
     </ul>

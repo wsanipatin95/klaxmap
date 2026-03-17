@@ -1,13 +1,11 @@
 import { Injectable, signal } from '@angular/core';
 
-export type MapaSidebarSectionKey = 'filtros' | 'capas' | 'tree' | 'lotes';
+export type MapaSidebarSectionKey = 'capas' | 'lotes';
 
 @Injectable({ providedIn: 'root' })
 export class MapaSidebarSectionsStore {
   readonly state = signal<Record<MapaSidebarSectionKey, boolean>>({
-    filtros: false,
-    capas: true,
-    tree: true,
+    capas: false,
     lotes: false,
   });
 

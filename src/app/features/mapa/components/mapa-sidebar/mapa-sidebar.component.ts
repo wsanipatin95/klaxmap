@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import type {
   MapaElemento,
   MapaNodo,
@@ -26,7 +25,6 @@ import {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     MapaTreeComponent,
     MapaSearchComponent,
     MapaCapasPanelComponent,
@@ -42,7 +40,6 @@ export class MapaSidebarComponent {
   @Input() elementos: MapaElemento[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() selectedNodoId: number | null = null;
-  @Input() selectedTipoId: number | null = null;
   @Input() selectedElementoId: number | null = null;
   @Input() searchValue = '';
   @Input() searchLoading = false;
@@ -53,7 +50,6 @@ export class MapaSidebarComponent {
   @Output() searchChange = new EventEmitter<string>();
   @Output() searchClear = new EventEmitter<void>();
   @Output() nodoSelected = new EventEmitter<MapaNodo | null>();
-  @Output() tipoSelected = new EventEmitter<number | null>();
   @Output() treeElementoSelected = new EventEmitter<MapaElemento>();
   @Output() treeNodeVisibilityChange = new EventEmitter<TreeNodeVisibilityChange>();
   @Output() treeElementoVisibilityChange = new EventEmitter<TreeElementoVisibilityChange>();

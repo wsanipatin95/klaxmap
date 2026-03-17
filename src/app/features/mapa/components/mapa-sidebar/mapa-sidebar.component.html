@@ -1,7 +1,7 @@
 <div class="sidebar-wrap">
   <div class="sidebar-header">
     <h3>Mapa ISP</h3>
-    <small>Filtros, navegación y control visual</small>
+    <small>Navegación, visibilidad y control visual</small>
   </div>
 
   <app-mapa-search
@@ -16,65 +16,21 @@
     {{ hiddenSummary }}
   </div>
 
-  <section class="sidebar-card" [class.collapsed]="!isExpanded('filtros')">
-    <button
-      type="button"
-      class="section-toggle"
-      (click)="toggleSection('filtros')"
-    >
-      <span>Filtro backend</span>
-      <span class="toggle-icon">{{ isExpanded('filtros') ? '−' : '+' }}</span>
-    </button>
-
-    <div class="section-body compact-body" *ngIf="isExpanded('filtros')">
-      <h4>Filtrar por tipo</h4>
-
-      <select
-        [ngModel]="selectedTipoId"
-        (ngModelChange)="tipoSelected.emit($event ? +$event : null)"
-      >
-        <option [ngValue]="null">Todos</option>
-        <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
-          {{ t.nombre }}
-        </option>
-      </select>
-
-      <small class="section-help">
-        Este filtro cambia los resultados consultados al backend.
-        Capas y árbol controlan visibilidad y navegación dentro del mapa.
-      </small>
+  <section class="sidebar-card tree-card">
+    <div class="section-title section-title-fixed">
+      <div class="section-title-copy">
+        <span class="section-title-main">Árbol de elementos</span>
+        <span class="section-title-sub">
+          Siempre visible · navegación principal
+        </span>
+      </div>
     </div>
-  </section>
 
-  <section class="sidebar-card grow-card" [class.collapsed]="!isExpanded('capas')">
-    <button
-      type="button"
-      class="section-toggle"
-      (click)="toggleSection('capas')"
-    >
-      <span>Capas y leyenda ({{ tipos.length }})</span>
-      <span class="toggle-icon">{{ isExpanded('capas') ? '−' : '+' }}</span>
-    </button>
-
-    <div class="section-body capas-body" *ngIf="isExpanded('capas')">
-      <app-mapa-capas-panel [tipos]="tipos" />
-    </div>
-  </section>
-
-  <section class="sidebar-card grow-card tree-card" [class.collapsed]="!isExpanded('tree')">
-    <button
-      type="button"
-      class="section-toggle"
-      (click)="toggleSection('tree')"
-    >
-      <span>Árbol y elementos</span>
-      <span class="toggle-icon">{{ isExpanded('tree') ? '−' : '+' }}</span>
-    </button>
-
-    <div class="section-body tree-body" *ngIf="isExpanded('tree')">
+    <div class="section-body tree-body tree-body-fixed">
       <app-mapa-tree
         [nodos]="nodos"
         [elementos]="elementos"
+        [tipos]="tipos"
         [selectedNodoId]="selectedNodoId"
         [selectedElementoId]="selectedElementoId"
         [searchValue]="searchValue"
@@ -96,14 +52,41 @@
     </div>
   </section>
 
-  <section class="sidebar-card" [class.collapsed]="!isExpanded('lotes')">
+  <section class="sidebar-card accordion-card" [class.collapsed]="!isExpanded('capas')">
+    <button
+      type="button"
+      class="section-toggle"
+      (click)="toggleSection('capas')"
+    >
+      <span class="section-toggle-copy">
+        <span class="section-toggle-title">Capas y leyenda</span>
+        <span class="section-toggle-sub">Control visual de tipos y capas</span>
+      </span>
+
+      <span class="toggle-icon" [class.expanded]="isExpanded('capas')">
+        ▾
+      </span>
+    </button>
+
+    <div class="section-body capas-body" *ngIf="isExpanded('capas')">
+      <app-mapa-capas-panel [tipos]="tipos" />
+    </div>
+  </section>
+
+  <section class="sidebar-card accordion-card" [class.collapsed]="!isExpanded('lotes')">
     <button
       type="button"
       class="section-toggle"
       (click)="toggleSection('lotes')"
     >
-      <span>Lotes de importación</span>
-      <span class="toggle-icon">{{ isExpanded('lotes') ? '−' : '+' }}</span>
+      <span class="section-toggle-copy">
+        <span class="section-toggle-title">Lotes e importaciones</span>
+        <span class="section-toggle-sub">Historial y estado de importación</span>
+      </span>
+
+      <span class="toggle-icon" [class.expanded]="isExpanded('lotes')">
+        ▾
+      </span>
     </button>
 
     <div class="section-body lotes-body" *ngIf="isExpanded('lotes')">
