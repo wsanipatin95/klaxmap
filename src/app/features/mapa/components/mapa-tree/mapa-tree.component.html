@@ -82,11 +82,11 @@
         (change)="onToggleNode(item.node, $event)"
       />
 
-      <span class="node-icon-wrap">
-        <span class="material-symbols-outlined node-icon">
-          {{ iconForNode(item.node.tipoNodo) }}
-        </span>
-      </span>
+      <span
+        class="node-preview"
+        [ngClass]="previewShapeClassForNode(item.node)"
+        aria-hidden="true"
+      ></span>
 
       <span class="node-name">{{ item.node.nodo }}</span>
     </div>
@@ -117,17 +117,12 @@
             (change)="onToggleElemento(el, $event)"
           />
 
-          <span class="element-icon-wrap">
-            <ng-container *ngIf="isPrimeIcon(iconForElement(el)); else materialIconTpl">
-              <i [class]="iconForElement(el) + ' element-icon prime-icon'"></i>
-            </ng-container>
-
-            <ng-template #materialIconTpl>
-              <span class="material-symbols-outlined element-icon">
-                {{ iconForElement(el) }}
-              </span>
-            </ng-template>
-          </span>
+          <span
+            class="element-preview"
+            [ngClass]="previewShapeClassForElemento(el)"
+            [ngStyle]="previewStyleForElemento(el)"
+            aria-hidden="true"
+          ></span>
 
           <span class="element-name">{{ el.nombre }}</span>
         </div>

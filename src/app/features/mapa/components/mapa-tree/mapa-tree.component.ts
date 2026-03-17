@@ -84,7 +84,6 @@ export class MapaTreeComponent implements OnChanges {
   @Output() deleteElementoRequested = new EventEmitter<MapaElemento>();
 
   readonly expandedIds = signal<number[]>([]);
-
   readonly contextVisible = signal(false);
   readonly contextX = signal(0);
   readonly contextY = signal(0);
@@ -189,52 +188,50 @@ export class MapaTreeComponent implements OnChanges {
     return this.expandedIds().includes(node.idRedNodo);
   }
 
-  iconForNode(tipoNodo: MapaNodo['tipoNodo']): string {
-    switch (tipoNodo) {
+  previewShapeClassForNode(node: MapaNodo): string {
+    switch (node.tipoNodo) {
       case 'carpeta':
-        return 'folder';
+        return 'is-folder';
       case 'zona':
-        return 'map';
+        return 'is-zone';
       case 'sitio':
-        return 'pin_drop';
+        return 'is-site';
       case 'nodo_fisico':
-        return 'lan';
+        return 'is-physical-node';
       default:
-        return 'folder';
+        return 'is-folder';
     }
   }
 
-  iconForElement(elemento: MapaElemento): string {
-    const tipo = this.tipos.find(
-      (t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk
+  tipoDeElemento(elemento: MapaElemento): MapaTipoElemento | null {
+    return (
+      this.tipos.find((t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk) ??
+      null
     );
-
-    if (tipo?.iconoClase && tipo.iconoClase.trim()) {
-      return tipo.iconoClase.trim();
-    }
-
-    if (tipo?.icono && tipo.icono.trim()) {
-      return tipo.icono.trim();
-    }
-
-    switch (elemento.geomTipo) {
-      case 'point':
-        return 'place';
-      case 'linestring':
-        return 'timeline';
-      case 'polygon':
-        return 'crop_square';
-      default:
-        return 'location_on';
-    }
   }
 
-  isMaterialSymbolIcon(icon: string): boolean {
-    return !icon.includes(' ') && !icon.startsWith('pi ');
+  previewShapeClassForElemento(elemento: MapaElemento): string {
+    const tipo = this.tipoDeElemento(elemento);
+    const iconoFuente = String(tipo?.iconoFuente || '').toLowerCase();
+
+    if (elemento.geomTipo === 'linestring') return 'is-line';
+    if (elemento.geomTipo === 'polygon') return 'is-polygon';
+    if (iconoFuente.includes('triangle')) return 'is-triangle';
+    if (iconoFuente.includes('target')) return 'is-target';
+    if (iconoFuente.includes('donut')) return 'is-donut';
+
+    return 'is-point';
   }
 
-  isPrimeIcon(icon: string): boolean {
-    return icon.startsWith('pi ');
+  previewStyleForElemento(elemento: MapaElemento): Record<string, string> {
+    const tipo = this.tipoDeElemento(elemento);
+    const stroke = tipo?.colorStroke || '#93c5fd';
+    const fill = tipo?.colorFill || stroke;
+
+    return {
+      '--preview-stroke': stroke,
+      '--preview-fill': fill,
+    } as Record<string, string>;
   }
 
   isNodeVisible(node: MapaNodo): boolean {

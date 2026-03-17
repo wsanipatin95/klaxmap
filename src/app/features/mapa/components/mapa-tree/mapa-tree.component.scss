@@ -188,34 +188,6 @@
   cursor: pointer;
 }
 
-.node-icon-wrap,
-.element-icon-wrap {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.node-icon,
-.element-icon {
-  font-size: 0.92rem;
-  line-height: 1;
-  color: #93c5fd;
-  user-select: none;
-}
-
-.prime-icon.element-icon {
-  font-size: 0.82rem;
-}
-
-.node-row.active .node-icon,
-.element-row.active .element-icon {
-  color: #dbeafe;
-}
-
 .node-name,
 .element-name {
   display: block;
@@ -235,6 +207,175 @@
 .element-name {
   font-weight: 500;
   color: inherit;
+}
+
+.node-preview,
+.element-preview {
+  position: relative;
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ===== PREVIEWS DE NODO ===== */
+
+.node-preview.is-folder {
+  width: 18px;
+  height: 13px;
+  margin-top: 2px;
+  border: 1.5px solid #93c5fd;
+  border-radius: 3px;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.node-preview.is-folder::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: -4px;
+  width: 8px;
+  height: 5px;
+  border: 1.5px solid #93c5fd;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  background: rgba(59, 130, 246, 0.24);
+}
+
+.node-preview.is-zone {
+  border-radius: 999px;
+  border: 2px solid #67e8f9;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(103, 232, 249, 0.95) 0 2px, transparent 2px),
+    radial-gradient(circle at 50% 50%, transparent 0 5px, rgba(103, 232, 249, 0.35) 5px 6px, transparent 6px),
+    radial-gradient(circle at 50% 50%, transparent 0 8px, rgba(103, 232, 249, 0.18) 8px 9px, transparent 9px);
+}
+
+.node-preview.is-site {
+  border-radius: 999px 999px 999px 0;
+  transform: rotate(-45deg);
+  background: #60a5fa;
+  width: 14px;
+  height: 14px;
+  margin: 2px;
+}
+
+.node-preview.is-site::before {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  left: 4px;
+  top: 4px;
+  border-radius: 999px;
+  background: #0b1220;
+}
+
+.node-preview.is-physical-node {
+  width: 18px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 3px;
+  border: 1.5px solid #c4b5fd;
+  background: rgba(167, 139, 250, 0.18);
+}
+
+.node-preview.is-physical-node::before,
+.node-preview.is-physical-node::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  width: 4px;
+  height: 2px;
+  background: #c4b5fd;
+  border-radius: 2px;
+}
+
+.node-preview.is-physical-node::before {
+  left: 3px;
+}
+
+.node-preview.is-physical-node::after {
+  right: 3px;
+}
+
+.node-row.active .node-preview.is-folder {
+  border-color: #dbeafe;
+  background: rgba(219, 234, 254, 0.18);
+}
+
+.node-row.active .node-preview.is-folder::before {
+  border-color: #dbeafe;
+  background: rgba(219, 234, 254, 0.22);
+}
+
+.node-row.active .node-preview.is-zone {
+  border-color: #dbeafe;
+}
+
+.node-row.active .node-preview.is-site {
+  background: #dbeafe;
+}
+
+.node-row.active .node-preview.is-site::before {
+  background: #1d4ed8;
+}
+
+.node-row.active .node-preview.is-physical-node {
+  border-color: #e9d5ff;
+  background: rgba(233, 213, 255, 0.18);
+}
+
+.node-row.active .node-preview.is-physical-node::before,
+.node-row.active .node-preview.is-physical-node::after {
+  background: #e9d5ff;
+}
+
+/* ===== PREVIEWS DE ELEMENTO ===== */
+
+.element-preview.is-point {
+  border-radius: 999px;
+  border: 2px solid var(--preview-stroke);
+  background: var(--preview-fill);
+}
+
+.element-preview.is-target {
+  border-radius: 999px;
+  border: 2px solid var(--preview-stroke);
+  background: var(--preview-fill);
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.element-preview.is-donut {
+  border-radius: 999px;
+  border: 4px solid var(--preview-stroke);
+  background: transparent;
+}
+
+.element-preview.is-triangle {
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 18px solid var(--preview-fill);
+  filter: drop-shadow(0 0 1px var(--preview-stroke));
+}
+
+.element-preview.is-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--preview-stroke);
+}
+
+.element-preview.is-polygon {
+  border-radius: 0.35rem;
+  border: 2px solid var(--preview-stroke);
+  background: color-mix(in srgb, var(--preview-fill) 35%, transparent);
 }
 
 .context-overlay {
