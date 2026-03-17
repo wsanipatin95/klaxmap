@@ -19,6 +19,7 @@ import type {
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
+import { parseWktGeometry } from '../../utils/mapa-geometry.utils';
 
 export interface MapaEditSessionState {
   active: boolean;
@@ -43,11 +44,18 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   @Input() selectedElementoId: number | null = null;
   @Input() toolMode: MapaToolMode = 'select';
   @Input() hiddenTipoIds: number[] = [];
+  @Input() mapCenter: L.LatLngTuple = [-0.22985, -78.52495];
+  @Input() mapZoom = 13;
 
   @Output() elementoSelected = new EventEmitter<MapaElemento | null>();
   @Output() elementoContext = new EventEmitter<{ elemento: MapaElemento; x: number; y: number }>();
   @Output() geometryCreated = new EventEmitter<{ wkt: string; geomTipo: MapaGeomTipo }>();
   @Output() editSessionStateChanged = new EventEmitter<MapaEditSessionState>();
+
+  private readonly DEFAULT_STROKE = '#38bdf8';
+  private readonly DEFAULT_FILL = '#38bdf8';
+  private readonly EDIT_STROKE = '#2563eb';
+  private readonly EDIT_FILL = '#60a5fa';
 
   private map!: L.Map;
   private drawnItems = new L.FeatureGroup();
@@ -101,6 +109,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if (changes['toolMode'] || changes['selectedElementoId']) {
       this.syncToolMode();
+    }
+
+    if ((changes['mapCenter'] || changes['mapZoom']) && this.map) {
+      this.map.setView(this.mapCenter, this.mapZoom);
     }
   }
 
@@ -164,8 +176,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private initMap() {
     this.map = L.map(this.mapContainer.nativeElement, {
-      center: [-0.22985, -78.52495],
-      zoom: 13,
+      center: this.mapCenter,
+      zoom: this.mapZoom,
       zoomControl: true,
     });
 
@@ -256,7 +268,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       return;
     }
 
-    const selectedElement = this.elementos.find((e) => e.idGeoElemento === this.selectedElementoId) ?? null;
+    const selectedElement =
+      this.elementos.find((e) => e.idGeoElemento === this.selectedElementoId) ?? null;
     const layer = this.renderedLayers.get(this.selectedElementoId) ?? null;
 
     if (!selectedElement || !layer) {
@@ -268,7 +281,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.disableLayerEditing(this.editSession.layer);
 
-    const geomTipo = (selectedElement.geomTipo as MapaGeomTipo) || this.inferGeomTipoFromLayer(layer);
+    const geomTipo =
+      (selectedElement.geomTipo as MapaGeomTipo) || this.inferGeomTipoFromLayer(layer);
     const originalWkt = this.layerToWkt(layer, geomTipo);
 
     this.editSession = {
@@ -305,7 +319,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.activeDrawHandler = new DrawRef.Polyline(this.map, {
         repeatMode: false,
         shapeOptions: {
-          color: '#2563eb',
+          color: this.EDIT_STROKE,
           weight: 4,
         },
       });
@@ -315,9 +329,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.activeDrawHandler = new DrawRef.Polygon(this.map, {
         repeatMode: false,
         shapeOptions: {
-          color: '#2563eb',
+          color: this.EDIT_STROKE,
           weight: 3,
-          fillColor: '#60a5fa',
+          fillColor: this.EDIT_FILL,
           fillOpacity: 0.2,
         },
       });
@@ -408,7 +422,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const activeId = this.editSession.elementId;
     const dirty = this.editSession.dirty;
     const currentWkt = this.editSession.currentWkt;
-    const geomTipo = this.editSession.geomTipo;
 
     this.renderElementos();
 
@@ -417,8 +430,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const layer = this.renderedLayers.get(activeId);
     if (!layer) return;
 
-    if (dirty && currentWkt && geomTipo) {
-      const draftLayer = this.layerFromWkt(currentWkt, '#2563eb', '#60a5fa', null);
+    if (dirty && currentWkt) {
+      const draftLayer = this.layerFromWkt(currentWkt, this.EDIT_STROKE, this.EDIT_FILL, null);
       if (draftLayer) {
         this.replaceLayerGeometry(layer, draftLayer);
       }
@@ -438,7 +451,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     for (const el of this.elementos) {
       if (hiddenSet.has(el.idGeoTipoElementoFk)) continue;
 
-      const tipo = this.tipos.find((t) => t.idGeoTipoElemento === el.idGeoTipoElementoFk) ?? null;
+      const tipo =
+        this.tipos.find((t) => t.idGeoTipoElemento === el.idGeoTipoElementoFk) ?? null;
       const layer = this.layerFromElemento(el, tipo);
       if (!layer) continue;
 
@@ -497,7 +511,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private layerFromElemento(el: MapaElemento, tipo: MapaTipoElemento | null): L.Layer | null {
     const geom = el.geometria;
-    const stroke = tipo?.colorStroke || '#38bdf8';
+    const stroke = tipo?.colorStroke || this.DEFAULT_STROKE;
     const fill = tipo?.colorFill || stroke;
 
     if (geom && typeof geom === 'object' && geom.type && geom.coordinates) {
@@ -529,7 +543,12 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const coords = geom.coordinates;
 
     if (type === 'point' && Array.isArray(coords) && coords.length >= 2) {
-      return this.createPointLayer(L.latLng(Number(coords[1]), Number(coords[0])), stroke, fill, tipo);
+      return this.createPointLayer(
+        L.latLng(Number(coords[1]), Number(coords[0])),
+        stroke,
+        fill,
+        tipo
+      );
     }
 
     if (type === 'linestring' && Array.isArray(coords)) {
@@ -541,7 +560,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if (type === 'polygon' && Array.isArray(coords) && Array.isArray(coords[0])) {
       return L.polygon(
-        coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        coords.map((ring: number[][]) =>
+          ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
+        ),
         {
           color: stroke,
           weight: 3,
@@ -558,9 +579,16 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       );
     }
 
-    if (type === 'multipolygon' && Array.isArray(coords) && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+    if (
+      type === 'multipolygon' &&
+      Array.isArray(coords) &&
+      Array.isArray(coords[0]) &&
+      Array.isArray(coords[0][0])
+    ) {
       return L.polygon(
-        coords[0][0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
+        coords[0].map((ring: number[][]) =>
+          ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
+        ),
         {
           color: stroke,
           weight: 3,
@@ -585,40 +613,24 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     fill: string,
     tipo: MapaTipoElemento | null
   ): L.Layer | null {
-    const raw = wkt.trim();
+    const parsed = parseWktGeometry(wkt);
+    if (!parsed) return null;
 
-    if (raw.startsWith('POINT')) {
-      const match = raw.match(/POINT\s*\(([-\d.]+)\s+([-\d.]+)\)/i);
-      if (!match) return null;
-
-      const lng = Number(match[1]);
-      const lat = Number(match[2]);
-
-      return this.createPointLayer(L.latLng(lat, lng), stroke, fill, tipo);
+    if (parsed.renderType === 'point' && parsed.point) {
+      return this.createPointLayer(
+        L.latLng(parsed.point[0], parsed.point[1]),
+        stroke,
+        fill,
+        tipo
+      );
     }
 
-    if (raw.startsWith('LINESTRING')) {
-      const match = raw.match(/LINESTRING\s*\((.+)\)/i);
-      if (!match) return null;
-
-      const coords = match[1].split(',').map((pair) => {
-        const [lng, lat] = pair.trim().split(/\s+/).map(Number);
-        return [lat, lng] as [number, number];
-      });
-
-      return L.polyline(coords, { color: stroke, weight: 3 });
+    if (parsed.renderType === 'polyline' && parsed.line) {
+      return L.polyline(parsed.line, { color: stroke, weight: 3 });
     }
 
-    if (raw.startsWith('POLYGON')) {
-      const match = raw.match(/POLYGON\s*\(\((.+)\)\)/i);
-      if (!match) return null;
-
-      const coords = match[1].split(',').map((pair) => {
-        const [lng, lat] = pair.trim().split(/\s+/).map(Number);
-        return [lat, lng] as [number, number];
-      });
-
-      return L.polygon(coords, {
+    if (parsed.renderType === 'polygon' && parsed.polygon) {
+      return L.polygon(parsed.polygon, {
         color: stroke,
         weight: 3,
         fillColor: fill,
@@ -668,12 +680,25 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     if (geomTipo === 'polygon' && typeof anyLayer.getLatLngs === 'function') {
-      const groups = anyLayer.getLatLngs() as L.LatLng[][];
-      const ring = Array.isArray(groups[0]) ? groups[0] : (groups as any);
-      const coords = [...ring, ring[0]]
-        .map((p: L.LatLng) => `${p.lng} ${p.lat}`)
+      const groups = anyLayer.getLatLngs() as L.LatLng[][] | L.LatLng[][][];
+      const rings = Array.isArray(groups[0]) && Array.isArray((groups as any)[0][0])
+        ? (groups as L.LatLng[][])
+        : [groups as unknown as L.LatLng[]];
+
+      const ringText = rings
+        .map((ring) => {
+          const closed =
+            ring.length > 0 &&
+            ring[0].lat === ring[ring.length - 1].lat &&
+            ring[0].lng === ring[ring.length - 1].lng
+              ? ring
+              : [...ring, ring[0]];
+
+          return `(${closed.map((p) => `${p.lng} ${p.lat}`).join(', ')})`;
+        })
         .join(', ');
-      return `POLYGON((${coords}))`;
+
+      return `POLYGON(${ringText})`;
     }
 
     return null;
@@ -683,7 +708,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const geomTipo = this.inferGeomTipoFromLayer(layer);
     const wkt = this.layerToWkt(layer, geomTipo);
     if (!wkt) return null;
-    return this.layerFromWkt(wkt, '#2563eb', '#60a5fa', null);
+    return this.layerFromWkt(wkt, this.EDIT_STROKE, this.EDIT_FILL, null);
   }
 
   private replaceLayerGeometry(target: L.Layer, source: L.Layer) {

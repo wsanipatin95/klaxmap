@@ -108,29 +108,14 @@ export class MapaHomeComponent {
   readonly totalElementos = computed(() => this.elementos().length);
 
   readonly elementosCanvas = computed(() => {
-    const hiddenNodeIds = new Set(this.hiddenNodeIds());
-    const hiddenElementoIds = new Set(this.hiddenElementoIds());
     const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
-    const byId = new Map(this.nodos().map((n) => [n.idRedNodo, n] as const));
-
-    const isNodeHidden = (nodeId: number): boolean => {
-      if (hiddenNodeIds.has(nodeId)) return true;
-
-      let current = byId.get(nodeId) ?? null;
-      while (current?.idRedNodoPadreFk != null) {
-        const parent = byId.get(current.idRedNodoPadreFk) ?? null;
-        if (!parent) break;
-        if (hiddenNodeIds.has(parent.idRedNodo)) return true;
-        current = parent;
-      }
-      return false;
-    };
 
     return this.elementos().filter((el) => {
-      if (hiddenElementoIds.has(el.idGeoElemento)) return false;
-      if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) return false;
-      if (isNodeHidden(el.idRedNodoFk)) return false;
-      return true;
+      if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) {
+        return false;
+      }
+
+      return this.visibility.isElementoVisible(el, this.nodos());
     });
   });
 
