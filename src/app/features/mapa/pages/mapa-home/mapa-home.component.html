@@ -1,4 +1,4 @@
-<app-mapa-layout>
+<app-mapa-layout [propertiesOpen]="ui.propertiesOpen()">
   <app-mapa-toolbar
     slot="toolbar"
     [selectedName]="selectedElemento()?.nombre ?? null"

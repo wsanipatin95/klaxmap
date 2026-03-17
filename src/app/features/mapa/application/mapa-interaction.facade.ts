@@ -106,10 +106,10 @@ export class MapaInteractionFacade {
     } = params;
 
     const currentEditId = this.editSessionElementId();
-    const sameElement = item?.idGeoElemento === currentEditId;
+    const sameGeometryElement = item?.idGeoElemento === currentEditId;
     const sameInfoElement = item?.idGeoElemento === this.selection.selectedElemento()?.idGeoElemento;
 
-    if (this.editSessionActive() && this.editSessionDirty() && !sameElement) {
+    if (this.editSessionActive() && this.editSessionDirty() && !sameGeometryElement) {
       onGeometryDiscardRequested(() => {
         this.applyElementoSelection(item, nodos, centerOnElemento);
         afterSelect?.();

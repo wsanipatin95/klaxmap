@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import type {
   MapaElemento,
   MapaNodo,
-  MapaTipoElemento,
   MapaPatchRequest,
+  MapaTipoElemento,
 } from '../../data-access/mapa.models';
 
 interface ElementFormState {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-mapa-layout',
@@ -6,4 +6,6 @@ import { Component } from '@angular/core';
   templateUrl: './mapa-layout.component.html',
   styleUrl: './mapa-layout.component.scss',
 })
-export class MapaLayoutComponent {}
+export class MapaLayoutComponent {
+  @Input() propertiesOpen = false;
+}

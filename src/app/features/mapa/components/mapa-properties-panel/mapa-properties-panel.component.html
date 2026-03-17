@@ -29,13 +29,15 @@
         </div>
       </div>
 
-      <app-mapa-properties-tabs
-        [elemento]="elemento"
-        [tipos]="tipos"
-        [nodos]="nodos"
-        (submitted)="guardar($event)"
-        (dirtyChange)="onDirtyStateChanged($event)"
-      />
+      <div class="panel-body">
+        <app-mapa-properties-tabs
+          [elemento]="elemento"
+          [tipos]="tipos"
+          [nodos]="nodos"
+          (submitted)="guardar($event)"
+          (dirtyChange)="onDirtyStateChanged($event)"
+        />
+      </div>
     </ng-container>
 
     <ng-template #emptyState>

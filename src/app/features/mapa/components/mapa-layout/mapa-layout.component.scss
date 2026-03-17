@@ -1,11 +1,11 @@
 .mapa-layout {
   display: grid;
-  grid-template-columns: 320px 1fr 380px;
-  grid-template-rows: 56px 1fr 36px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr) 36px;
   grid-template-areas:
-    'toolbar toolbar toolbar'
-    'sidebar canvas properties'
-    'status status status';
+    'toolbar toolbar'
+    'sidebar canvas'
+    'status status';
   height: calc(100vh - 56px);
   background: #020617;
 }
@@ -14,6 +14,7 @@
   grid-area: toolbar;
   border-bottom: 1px solid #1e293b;
   background: #111827;
+  min-width: 0;
 }
 
 .sidebar {
@@ -21,6 +22,7 @@
   border-right: 1px solid #1e293b;
   background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
   overflow: auto;
+  min-width: 0;
 }
 
 .canvas {
@@ -28,17 +30,44 @@
   position: relative;
   overflow: hidden;
   background: #0f172a;
+  min-width: 0;
+  min-height: 0;
 }
 
-.properties {
-  grid-area: properties;
-  border-left: 1px solid #1e293b;
-  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
-  overflow: auto;
+.canvas-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.properties-host {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.properties-host > * {
+  pointer-events: auto;
 }
 
 .status {
   grid-area: status;
   border-top: 1px solid #1e293b;
   background: #111827;
+  min-width: 0;
+}
+
+@media (max-width: 1200px) {
+  .mapa-layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .mapa-layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
 }

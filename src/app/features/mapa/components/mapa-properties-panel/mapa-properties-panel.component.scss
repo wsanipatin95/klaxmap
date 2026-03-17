@@ -1,30 +1,36 @@
 .properties-shell {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.properties-shell.open {
+  pointer-events: auto;
 }
 
 .properties-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.2);
-  z-index: 80;
+  background: rgba(15, 23, 42, 0.18);
+  z-index: 1;
 }
 
 .properties-drawer {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   width: min(30rem, 92vw);
-  height: 100vh;
+  height: 100%;
   background: #ffffff;
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid #dbe2ea;
   box-shadow: -12px 0 30px rgba(15, 23, 42, 0.12);
   transform: translateX(100%);
   transition: transform 0.22s ease;
-  z-index: 90;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  color: #0f172a;
 }
 
 .properties-drawer.open {
@@ -36,8 +42,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.9rem;
-  padding: 1rem 1rem 0.75rem;
+  padding: 0.3rem 0.3rem 0.3rem;
   border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
 }
 
 .panel-title-wrap {
@@ -72,13 +79,23 @@
   line-height: 1;
   cursor: pointer;
   color: #334155;
+  flex: 0 0 auto;
 }
 
 .close-btn:hover {
   background: #f8fafc;
 }
 
+.panel-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  background: #08021a;
+  padding: 15px;
+  color: rgb(255, 255, 255);;
+}
+
 .empty-state {
   padding: 1rem;
   color: #64748b;
+  background: #ffffff;
 }

@@ -1,4 +1,4 @@
-<div class="mapa-layout">
+<div class="mapa-layout" [class.properties-open]="propertiesOpen">
   <header class="toolbar">
     <ng-content select="[slot=toolbar]"></ng-content>
   </header>
@@ -8,12 +8,14 @@
   </aside>
 
   <main class="canvas">
-    <ng-content select="[slot=canvas]"></ng-content>
-  </main>
+    <div class="canvas-surface">
+      <ng-content select="[slot=canvas]"></ng-content>
+    </div>
 
-  <aside class="properties">
-    <ng-content select="[slot=properties]"></ng-content>
-  </aside>
+    <div class="properties-host">
+      <ng-content select="[slot=properties]"></ng-content>
+    </div>
+  </main>
 
   <footer class="status">
     <ng-content select="[slot=status]"></ng-content>

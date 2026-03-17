@@ -4,7 +4,6 @@ import {
   EventEmitter,
   Input,
   Output,
-  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -28,8 +27,6 @@ import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-proper
 })
 export class MapaPropertiesPanelComponent {
   private readonly repo = inject(MapaElementosRepository);
-
-  @ViewChild(MapaPropertiesTabsComponent) tabs?: MapaPropertiesTabsComponent;
 
   @Input() elemento: MapaElemento | null = null;
   @Input() tipos: MapaTipoElemento[] = [];
