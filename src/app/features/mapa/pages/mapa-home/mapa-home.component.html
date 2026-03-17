@@ -17,7 +17,6 @@
     (drawLineModeRequested)="onToolbarDrawLineMode()"
     (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
   />
-
   <app-mapa-sidebar
     slot="sidebar"
     [nodos]="nodos()"
@@ -119,6 +118,10 @@
   (editGeometryRequested)="editGeometryContextElemento($event)"
   (deleteRequested)="deleteContextElemento($event)"
 ></app-mapa-context-menu>
+
+<app-mapa-confirm-dialog
+  #confirmDialog
+></app-mapa-confirm-dialog>
 
 <div class="mapa-error" *ngIf="error() as err">
   <div class="mapa-error-title">Ocurrió un problema</div>

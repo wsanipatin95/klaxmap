@@ -1,0 +1,39 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '30rem' }"
+  [header]="title()"
+  (onHide)="onHide()"
+>
+  <div class="confirm-body">
+    <div [class]="iconClass()">
+      {{ iconSymbol() }}
+    </div>
+
+    <div class="confirm-content">
+      <div class="confirm-title">{{ title() }}</div>
+      <p class="confirm-message">{{ message() }}</p>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      [label]="cancelLabel()"
+      severity="secondary"
+      (click)="cancel()"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      [label]="confirmLabel()"
+      [severity]="confirmButtonSeverity()"
+      (click)="confirm()"
+    ></button>
+  </ng-template>
+</p-dialog>
