@@ -29,6 +29,20 @@ export interface MapaEditSessionState {
   geomTipo: MapaGeomTipo | null;
 }
 
+type BasemapKey =
+  | 'osm'
+  | 'cartoLight'
+  | 'cartoDark'
+  | 'esriWorldImagery'
+  | 'openTopo';
+
+interface BasemapOption {
+  key: BasemapKey;
+  label: string;
+  url: string;
+  options: L.TileLayerOptions;
+}
+
 @Component({
   selector: 'app-mapa-canvas',
   standalone: true,
@@ -52,12 +66,70 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   @Output() geometryCreated = new EventEmitter<{ wkt: string; geomTipo: MapaGeomTipo }>();
   @Output() editSessionStateChanged = new EventEmitter<MapaEditSessionState>();
 
+  readonly basemapOptions: BasemapOption[] = [
+    {
+      key: 'osm',
+      label: 'OpenStreetMap',
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      options: {
+        maxZoom: 22,
+        attribution: '&copy; OpenStreetMap contributors',
+      },
+    },
+    {
+      key: 'cartoLight',
+      label: 'Claro',
+      url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      options: {
+        subdomains: 'abcd',
+        maxZoom: 20,
+        attribution:
+          '&copy; OpenStreetMap contributors &copy; CARTO',
+      },
+    },
+    {
+      key: 'cartoDark',
+      label: 'Oscuro',
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      options: {
+        subdomains: 'abcd',
+        maxZoom: 20,
+        attribution:
+          '&copy; OpenStreetMap contributors &copy; CARTO',
+      },
+    },
+    {
+      key: 'esriWorldImagery',
+      label: 'Satélite',
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      options: {
+        maxZoom: 22,
+        attribution:
+          'Tiles &copy; Esri',
+      },
+    },
+    {
+      key: 'openTopo',
+      label: 'Relieve',
+      url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      options: {
+        maxZoom: 17,
+        attribution:
+          'Map data &copy; OpenStreetMap contributors, SRTM | Map style &copy; OpenTopoMap',
+      },
+    },
+  ];
+
+  selectedBasemap: BasemapKey = 'osm';
+  basemapMenuOpen = false;
+
   private readonly DEFAULT_STROKE = '#38bdf8';
   private readonly DEFAULT_FILL = '#38bdf8';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
 
   private map!: L.Map;
+  private baseLayer!: L.TileLayer;
   private drawnItems = new L.FeatureGroup();
   private renderedLayers = new Map<number, L.Layer>();
   private activeDrawHandler: any = null;
@@ -114,6 +186,43 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if ((changes['mapCenter'] || changes['mapZoom']) && this.map) {
       this.map.setView(this.mapCenter, this.mapZoom);
     }
+  }
+
+  toggleBasemapMenu() {
+    this.basemapMenuOpen = !this.basemapMenuOpen;
+  }
+
+  closeBasemapMenu() {
+    this.basemapMenuOpen = false;
+  }
+
+  setBasemap(key: BasemapKey) {
+    if (!this.map || this.selectedBasemap === key) {
+      this.basemapMenuOpen = false;
+      return;
+    }
+
+    const config = this.basemapOptions.find((item) => item.key === key);
+    if (!config) {
+      this.basemapMenuOpen = false;
+      return;
+    }
+
+    if (this.baseLayer) {
+      this.map.removeLayer(this.baseLayer);
+    }
+
+    this.baseLayer = L.tileLayer(config.url, config.options);
+    this.baseLayer.addTo(this.map);
+    this.selectedBasemap = key;
+    this.basemapMenuOpen = false;
+  }
+
+  currentBasemapLabel(): string {
+    return (
+      this.basemapOptions.find((item) => item.key === this.selectedBasemap)?.label ??
+      'Mapa'
+    );
   }
 
   centerOnElemento(id: number | null) {
@@ -181,12 +290,17 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 22,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(this.map);
+    const defaultBasemap = this.basemapOptions.find((item) => item.key === this.selectedBasemap)!;
+    this.baseLayer = L.tileLayer(defaultBasemap.url, defaultBasemap.options);
+    this.baseLayer.addTo(this.map);
 
     this.drawnItems.addTo(this.map);
+
+    this.map.on('click', () => {
+      if (this.basemapMenuOpen) {
+        this.closeBasemapMenu();
+      }
+    });
 
     this.map.on((L as any).Draw.Event.CREATED, (e: any) => {
       const layer = e.layer as L.Layer;
