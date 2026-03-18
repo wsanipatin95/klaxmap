@@ -1,39 +1,110 @@
-<div class="page-grid">
-  <section class="panel">
-    <h2>Tipos de elemento</h2>
+<div class="tipos-page-shell">
+  <header class="page-topbar">
+    <div>
+      <h2>Tipos de elemento</h2>
+      <p>Administra el catálogo visual y funcional sin perder control del flujo.</p>
+    </div>
 
-    <div class="list">
-      <button
-        type="button"
-        class="row"
-        *ngFor="let t of tipos()"
-        (click)="seleccionar(t)"
-      >
-        <strong>{{ t.nombre }}</strong>
-        <span>{{ t.codigo }} · {{ t.geometriaPermitida }}</span>
+    <div class="page-topbar-actions">
+      <button type="button" class="ghost-btn" (click)="irAlMapa()">
+        Volver al mapa
+      </button>
+
+      <button type="button" class="ghost-btn" (click)="cargar()" [disabled]="loading() || saving()">
+        {{ loading() ? 'Actualizando...' : 'Refrescar' }}
+      </button>
+
+      <button type="button" class="primary-btn" (click)="nuevoTipo()" [disabled]="saving()">
+        Nuevo tipo
       </button>
     </div>
-  </section>
+  </header>
 
-  <section class="panel">
-    <h3>Crear tipo</h3>
-    <app-mapa-tipo-form
-      [modo]="'crear'"
-      (createSubmitted)="crear($event)"
-    />
-  </section>
+  <div class="status-strip" *ngIf="loading() || saving() || success() || error()">
+    <div class="status-chip info" *ngIf="loading()">Cargando tipos...</div>
+    <div class="status-chip info" *ngIf="saving()">Guardando cambios...</div>
+    <div class="status-chip success" *ngIf="success()">{{ success() }}</div>
+    <div class="status-chip error" *ngIf="error()">{{ error() }}</div>
+    <div class="status-chip warning" *ngIf="formDirty()">Hay cambios sin guardar</div>
+  </div>
 
-  <section class="panel" *ngIf="selected() as sel">
-    <h3>Editar tipo</h3>
-    <app-mapa-tipo-form
-      [modo]="'editar'"
-      [tipo]="sel"
-      (updateSubmitted)="editar($event)"
-    />
-    <button type="button" class="delete-btn" (click)="eliminar(sel.idGeoTipoElemento)">
-      Eliminar
-    </button>
-  </section>
+  <div class="page-grid">
+    <aside class="panel panel-list">
+      <div class="panel-head">
+        <div>
+          <h3>Listado</h3>
+          <p>{{ tipos().length }} tipo(s)</p>
+        </div>
+      </div>
+
+      <div class="empty" *ngIf="!loading() && tipos().length === 0">
+        No hay tipos registrados todavía.
+      </div>
+
+      <div class="list" *ngIf="tipos().length > 0">
+        <button
+          type="button"
+          class="row"
+          [class.active]="selected()?.idGeoTipoElemento === t.idGeoTipoElemento && mode() === 'editar'"
+          *ngFor="let t of tipos()"
+          (click)="seleccionar(t)"
+        >
+          <div class="row-preview-wrap">
+            <span
+              class="row-preview"
+              [ngClass]="previewShapeClass(t)"
+              [ngStyle]="previewStyle(t)"
+            ></span>
+          </div>
+
+          <div class="row-copy">
+            <strong>{{ t.nombre }}</strong>
+            <span>{{ t.codigo }} · {{ t.geometriaPermitida }}</span>
+          </div>
+
+          <div class="row-meta">
+            <span class="badge" [class.inactive]="!t.activo">
+              {{ t.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <section class="panel panel-editor">
+      <div class="panel-head">
+        <div>
+          <h3>{{ currentTitle() }}</h3>
+          <p *ngIf="mode() === 'crear'">
+            Completa el formulario para registrar un nuevo tipo.
+          </p>
+          <p *ngIf="mode() === 'editar' && selected() as sel">
+            Editando: <strong>{{ sel.nombre }}</strong>
+          </p>
+        </div>
+
+        <button
+          *ngIf="mode() === 'editar' && selected()"
+          type="button"
+          class="danger-btn"
+          (click)="eliminarActual()"
+          [disabled]="saving()"
+        >
+          Eliminar
+        </button>
+      </div>
+
+      <app-mapa-tipo-form
+        #tipoForm
+        [modo]="mode()"
+        [tipo]="selected()"
+        [saving]="saving()"
+        (saveRequested)="guardar($event)"
+        (cancelRequested)="onFormCancel()"
+        (dirtyChange)="onDirtyChange($event)"
+      />
+    </section>
+  </div>
+
+  <app-mapa-confirm-dialog #confirmDialog />
 </div>
-
-<p class="error" *ngIf="error() as err">{{ err }}</p>

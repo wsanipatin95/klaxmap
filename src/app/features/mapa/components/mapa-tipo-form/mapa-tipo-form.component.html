@@ -1,47 +1,254 @@
-<div class="form-wrap">
-  <label>Código</label>
-  <input [(ngModel)]="form.codigo" />
+<div class="tipo-form-shell">
+  <div class="tipo-form-header">
+    <div>
+      <h3>{{ title }}</h3>
+      <p>{{ subtitle }}</p>
+    </div>
 
-  <label>Nombre</label>
-  <input [(ngModel)]="form.nombre" />
+    <div class="preview-card" [ngStyle]="previewStyle()">
+      <div class="preview-title">{{ previewLabel }}</div>
+      <div class="preview-shape" [ngClass]="previewShapeClass()"></div>
+      <div class="preview-meta">
+        <span>{{ form.geometriaPermitida || 'point' }}</span>
+        <span>z: {{ form.zIndex ?? 0 }}</span>
+      </div>
+    </div>
+  </div>
 
-  <label>Descripción</label>
-  <textarea [(ngModel)]="form.descripcion"></textarea>
+  <p class="form-error" *ngIf="error">{{ error }}</p>
 
-  <label>Geometría permitida</label>
-  <select [(ngModel)]="form.geometriaPermitida">
-    <option value="point">Point</option>
-    <option value="linestring">LineString</option>
-    <option value="polygon">Polygon</option>
-    <option value="mixed">Mixed</option>
-  </select>
+  <div class="form-grid">
+    <section class="form-section">
+      <h4>Identidad</h4>
 
-  <label>Color stroke</label>
-  <input [(ngModel)]="form.colorStroke" placeholder="#000000" />
+      <div class="field-grid two-cols">
+        <div class="field">
+          <label>Código</label>
+          <input [(ngModel)]="form.codigo" (ngModelChange)="onFieldInput()" placeholder="Ej. SPLITTER" />
+        </div>
 
-  <label>Color fill</label>
-  <input [(ngModel)]="form.colorFill" placeholder="#ffffff" />
+        <div class="field">
+          <label>Nombre</label>
+          <input [(ngModel)]="form.nombre" (ngModelChange)="onFieldInput()" placeholder="Ej. Splitter 1x8" />
+        </div>
+      </div>
 
-  <label>Icono fuente</label>
-  <input [(ngModel)]="form.iconoFuente" />
+      <div class="field">
+        <label>Descripción</label>
+        <textarea [(ngModel)]="form.descripcion" (ngModelChange)="onFieldInput()" placeholder="Descripción del tipo"></textarea>
+      </div>
+    </section>
 
-  <label>Shape base</label>
-  <input [(ngModel)]="form.shapeBase" />
+    <section class="form-section">
+      <h4>Geometría y comportamiento</h4>
 
-  <label>Prioridad clasificación</label>
-  <input type="number" [(ngModel)]="form.prioridadClasificacion" />
+      <div class="field-grid two-cols">
+        <div class="field">
+          <label>Geometría permitida</label>
+          <select [(ngModel)]="form.geometriaPermitida" (ngModelChange)="onFieldInput()">
+            <option value="point">Point</option>
+            <option value="linestring">LineString</option>
+            <option value="polygon">Polygon</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
 
-  <label class="check-line">
-    <input type="checkbox" [(ngModel)]="form.activo" />
-    Activo
-  </label>
+        <div class="field">
+          <label>Prioridad clasificación</label>
+          <input type="number" min="0" [(ngModel)]="form.prioridadClasificacion" (ngModelChange)="onFieldInput()" />
+        </div>
+      </div>
 
-  <label class="check-line">
-    <input type="checkbox" [(ngModel)]="form.permiteImportAuto" />
-    Permite importación automática
-  </label>
+      <div class="field-grid three-cols">
+        <label class="check-card">
+          <input type="checkbox" [(ngModel)]="form.activo" (ngModelChange)="onFieldInput()" />
+          <span>Activo</span>
+        </label>
 
-  <button type="button" class="save-btn" (click)="submit()">
-    {{ modo === 'crear' ? 'Crear' : 'Guardar' }}
-  </button>
+        <label class="check-card">
+          <input type="checkbox" [(ngModel)]="form.permiteImportAuto" (ngModelChange)="onFieldInput()" />
+          <span>Permite importación automática</span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" [(ngModel)]="form.requiereRevision" (ngModelChange)="onFieldInput()" />
+          <span>Requiere revisión</span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" [(ngModel)]="form.snapping" (ngModelChange)="onFieldInput()" />
+          <span>Snapping</span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" [(ngModel)]="form.conectable" (ngModelChange)="onFieldInput()" />
+          <span>Conectable</span>
+        </label>
+      </div>
+
+      <div class="field-grid two-cols">
+        <div class="field">
+          <label>Máx. puertos default</label>
+          <input type="number" min="0" [(ngModel)]="form.maxPuertosDefault" (ngModelChange)="onFieldInput()" />
+        </div>
+
+        <div class="field">
+          <label>Z index</label>
+          <input type="number" min="0" step="1" [(ngModel)]="form.zIndex" (ngModelChange)="onFieldInput()" />
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h4>Apariencia base</h4>
+
+      <div class="field-grid three-cols">
+        <div class="field">
+          <label>Color fill</label>
+          <input [(ngModel)]="form.colorFill" (ngModelChange)="onFieldInput()" placeholder="#93c5fd" />
+        </div>
+
+        <div class="field">
+          <label>Color stroke</label>
+          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+        </div>
+
+        <div class="field">
+          <label>Color texto</label>
+          <input [(ngModel)]="form.colorTexto" (ngModelChange)="onFieldInput()" placeholder="#0f172a" />
+        </div>
+      </div>
+
+      <div class="field-grid three-cols">
+        <div class="field">
+          <label>Stroke width</label>
+          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+        </div>
+
+        <div class="field">
+          <label>Tamaño icono</label>
+          <input type="number" min="0" step="0.1" [(ngModel)]="form.tamanoIcono" (ngModelChange)="onFieldInput()" />
+        </div>
+
+        <div class="field">
+          <label>Shape base</label>
+          <select [(ngModel)]="form.shapeBase" (ngModelChange)="onFieldInput()">
+            <option value="">Sin definir</option>
+            <option value="point">Point</option>
+            <option value="circle">Circle</option>
+            <option value="square">Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="target">Target</option>
+            <option value="donut">Donut</option>
+            <option value="line">Line</option>
+            <option value="polygon">Polygon</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" *ngIf="showPointAppearance">
+      <h4>Configuración visual para puntos</h4>
+
+      <div class="field-grid three-cols">
+        <div class="field">
+          <label>Icono</label>
+          <input [(ngModel)]="form.icono" (ngModelChange)="onFieldInput()" placeholder="Ej. place / router / call_split" />
+        </div>
+
+        <div class="field">
+          <label>Icono fuente</label>
+          <select [(ngModel)]="form.iconoFuente" (ngModelChange)="onFieldInput()">
+            <option value="">Sin definir</option>
+            <option value="material-symbols">Material Symbols</option>
+            <option value="primeicons">PrimeIcons</option>
+            <option value="triangle">Triangle</option>
+            <option value="target">Target</option>
+            <option value="donut">Donut</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Icono clase</label>
+          <input [(ngModel)]="form.iconoClase" (ngModelChange)="onFieldInput()" placeholder="Ej. pi pi-map-marker" />
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" *ngIf="showLineAppearance">
+      <h4>Configuración visual para líneas</h4>
+
+      <div class="hint-box">
+        Para líneas, los campos más importantes son <strong>color stroke</strong> y
+        <strong>stroke width</strong>.
+      </div>
+
+      <div class="field-grid two-cols">
+        <div class="field">
+          <label>Color stroke</label>
+          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+        </div>
+
+        <div class="field">
+          <label>Stroke width</label>
+          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" *ngIf="showPolygonAppearance">
+      <h4>Configuración visual para polígonos</h4>
+
+      <div class="hint-box">
+        Para polígonos, define <strong>relleno</strong>, <strong>borde</strong> y
+        <strong>ancho del borde</strong>.
+      </div>
+
+      <div class="field-grid three-cols">
+        <div class="field">
+          <label>Color fill</label>
+          <input [(ngModel)]="form.colorFill" (ngModelChange)="onFieldInput()" placeholder="#93c5fd" />
+        </div>
+
+        <div class="field">
+          <label>Color stroke</label>
+          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+        </div>
+
+        <div class="field">
+          <label>Stroke width</label>
+          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h4>Atributos extra</h4>
+
+      <div class="field">
+        <label>Atributos (JSON)</label>
+        <textarea
+          class="json-area"
+          [(ngModel)]="atributosText"
+          (ngModelChange)="onFieldInput()"
+          placeholder='{"clave":"valor"}'
+        ></textarea>
+      </div>
+    </section>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" class="ghost-btn" (click)="onCancelClick()" [disabled]="saving">
+      Cancelar
+    </button>
+
+    <button
+      type="button"
+      class="save-btn"
+      (click)="submit()"
+      [disabled]="saving"
+    >
+      {{ saving ? 'Guardando...' : (modo === 'crear' ? 'Crear tipo' : 'Guardar cambios') }}
+    </button>
+  </div>
 </div>

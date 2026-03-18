@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { MapaUiStore } from '../../store/mapa-ui.store';
 import { MapaSelectionStore } from '../../store/mapa-selection.store';
@@ -72,6 +73,7 @@ export class MapaHomeComponent {
   readonly visibility = inject(MapaVisibilityStore);
   readonly crud = inject(MapaCrudFacade);
   readonly interaction = inject(MapaInteractionFacade);
+  readonly router = inject(Router);
 
   @ViewChild('importDialog') importDialog?: MapaImportDialogComponent;
   @ViewChild('exportDialog') exportDialog?: MapaExportDialogComponent;
@@ -278,6 +280,16 @@ export class MapaHomeComponent {
           resultCount: this.elementosCanvas().length,
           filterSummary: this.buildExportSummary(),
         });
+      },
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
+    );
+  }
+
+  irATiposElemento() {
+    this.interaction.runWithPendingGuards(
+      () => {
+        this.router.navigate(['/app/mapa/tipos']);
       },
       (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)

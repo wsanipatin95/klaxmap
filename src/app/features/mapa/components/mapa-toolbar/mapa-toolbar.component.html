@@ -47,9 +47,35 @@
     <span class="separator"></span>
 
     <div class="toolbar-group">
-      <button pButton type="button" label="Importar KML" (click)="importRequested.emit()"></button>
-      <button pButton type="button" label="Exportar KML" (click)="exportRequested.emit()"></button>
-      <button pButton type="button" label="Refrescar" severity="secondary" (click)="refreshRequested.emit()"></button>
+      <button
+        pButton
+        type="button"
+        label="Tipos de elemento"
+        severity="secondary"
+        (click)="manageTiposRequested.emit()"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Importar KML"
+        (click)="importRequested.emit()"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Exportar KML"
+        (click)="exportRequested.emit()"
+      ></button>
+
+      <button
+        pButton
+        type="button"
+        label="Refrescar"
+        severity="secondary"
+        (click)="refreshRequested.emit()"
+      ></button>
     </div>
 
     <div class="toolbar-side-info">
