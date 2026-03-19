@@ -551,27 +551,27 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if (!activeId) return;
 
-   const layer = this.renderedLayers.get(activeId);
-if (!layer) return;
+    const layer = this.renderedLayers.get(activeId);
+    if (!layer) return;
 
-if (dirty && currentWkt) {
-  const draftStyle: ResolvedElementStyle = {
-    iconoFuente: null,
-    icono: null,
-    iconoClase: null,
-    colorFill: this.EDIT_FILL,
-    colorStroke: this.EDIT_STROKE,
-    colorTexto: this.EDIT_STROKE,
-    strokeWidth: 3,
-    zIndex: 999,
-    tamanoIcono: 18,
-  };
+    if (dirty && currentWkt) {
+      const draftStyle: ResolvedElementStyle = {
+        iconoFuente: null,
+        icono: null,
+        iconoClase: null,
+        colorFill: this.EDIT_FILL,
+        colorStroke: this.EDIT_STROKE,
+        colorTexto: this.EDIT_STROKE,
+        strokeWidth: 3,
+        zIndex: 999,
+        tamanoIcono: 18,
+      };
 
-  const draftLayer = this.layerFromWkt(currentWkt, draftStyle);
-  if (draftLayer) {
-    this.replaceLayerGeometry(layer, draftLayer);
-  }
-}
+      const draftLayer = this.layerFromWkt(currentWkt, draftStyle);
+      if (draftLayer) {
+        this.replaceLayerGeometry(layer, draftLayer);
+      }
+    }
 
     this.editSession.layer = layer;
     this.enableLayerEditing(layer);
@@ -795,46 +795,46 @@ if (dirty && currentWkt) {
   }
 
   private layerFromWkt(wkt: string, style: ResolvedElementStyle): L.Layer | null {
-  const parsed = parseWktGeometry(wkt);
-  if (!parsed) return null;
+    const parsed = parseWktGeometry(wkt);
+    if (!parsed) return null;
 
-  if (parsed.renderType === 'point' && parsed.point) {
-    return this.createPointLayer(
-      L.latLng(parsed.point[0], parsed.point[1]),
-      style
-    );
+    if (parsed.renderType === 'point' && parsed.point) {
+      return this.createPointLayer(
+        L.latLng(parsed.point[0], parsed.point[1]),
+        style
+      );
+    }
+
+    if (parsed.renderType === 'polyline' && parsed.line) {
+      const layer = L.polyline(parsed.line, {
+        color: style.colorStroke,
+        weight: style.strokeWidth,
+      });
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
+    }
+
+    if (parsed.renderType === 'polygon' && parsed.polygon) {
+      const layer = L.polygon(parsed.polygon, {
+        color: style.colorStroke,
+        weight: style.strokeWidth,
+        fillColor: style.colorFill,
+        fillOpacity: 0.15,
+      });
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0.15;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
+    }
+
+    return null;
   }
-
-  if (parsed.renderType === 'polyline' && parsed.line) {
-    const layer = L.polyline(parsed.line, {
-      color: style.colorStroke,
-      weight: style.strokeWidth,
-    });
-
-    (layer as any).__baseWeight = style.strokeWidth;
-    (layer as any).__baseFillOpacity = 0;
-    (layer as any).__baseZIndex = style.zIndex;
-
-    return layer;
-  }
-
-  if (parsed.renderType === 'polygon' && parsed.polygon) {
-    const layer = L.polygon(parsed.polygon, {
-      color: style.colorStroke,
-      weight: style.strokeWidth,
-      fillColor: style.colorFill,
-      fillOpacity: 0.15,
-    });
-
-    (layer as any).__baseWeight = style.strokeWidth;
-    (layer as any).__baseFillOpacity = 0.15;
-    (layer as any).__baseZIndex = style.zIndex;
-
-    return layer;
-  }
-
-  return null;
-}
 
   private geomTipoFromLayerType(layerType: string): MapaGeomTipo {
     if (layerType === 'marker') return 'point';
@@ -860,6 +860,10 @@ if (dirty && currentWkt) {
     return 'point';
   }
 
+  private isLatLng(value: any): value is L.LatLng {
+    return !!value && typeof value.lat === 'number' && typeof value.lng === 'number';
+  }
+
   private layerToWkt(layer: L.Layer, geomTipo: MapaGeomTipo): string | null {
     const anyLayer = layer as any;
 
@@ -875,16 +879,38 @@ if (dirty && currentWkt) {
     }
 
     if (geomTipo === 'polygon' && typeof anyLayer.getLatLngs === 'function') {
-      const groups = anyLayer.getLatLngs() as L.LatLng[][] | L.LatLng[][][];
-      const rings = Array.isArray(groups[0]) && Array.isArray((groups as any)[0][0])
-        ? (groups as L.LatLng[][])
-        : [groups as unknown as L.LatLng[]];
+      const groups = anyLayer.getLatLngs() as any;
+
+      let rings: L.LatLng[][] = [];
+
+      // Caso raro: anillo simple como LatLng[]
+      if (Array.isArray(groups) && groups.length > 0 && this.isLatLng(groups[0])) {
+        rings = [groups as L.LatLng[]];
+      }
+      // Polígono normal / con huecos: LatLng[][]
+      else if (
+        Array.isArray(groups) &&
+        Array.isArray(groups[0]) &&
+        (groups[0].length === 0 || this.isLatLng(groups[0][0]))
+      ) {
+        rings = groups as L.LatLng[][];
+      }
+      // Multipolygon anidado: LatLng[][][]
+      else if (
+        Array.isArray(groups) &&
+        Array.isArray(groups[0]) &&
+        Array.isArray(groups[0][0])
+      ) {
+        rings = groups[0] as L.LatLng[][];
+      }
+
+      if (!rings.length) return null;
 
       const ringText = rings
+        .filter((ring) => Array.isArray(ring) && ring.length > 0)
         .map((ring) => {
           const closed =
-            ring.length > 0 &&
-              ring[0].lat === ring[ring.length - 1].lat &&
+            ring[0].lat === ring[ring.length - 1].lat &&
               ring[0].lng === ring[ring.length - 1].lng
               ? ring
               : [...ring, ring[0]];
@@ -893,31 +919,31 @@ if (dirty && currentWkt) {
         })
         .join(', ');
 
-      return `POLYGON(${ringText})`;
+      return ringText ? `POLYGON(${ringText})` : null;
     }
 
     return null;
   }
 
   private cloneLayer(layer: L.Layer): L.Layer | null {
-  const geomTipo = this.inferGeomTipoFromLayer(layer);
-  const wkt = this.layerToWkt(layer, geomTipo);
-  if (!wkt) return null;
+    const geomTipo = this.inferGeomTipoFromLayer(layer);
+    const wkt = this.layerToWkt(layer, geomTipo);
+    if (!wkt) return null;
 
-  const draftStyle: ResolvedElementStyle = {
-    iconoFuente: null,
-    icono: null,
-    iconoClase: null,
-    colorFill: this.EDIT_FILL,
-    colorStroke: this.EDIT_STROKE,
-    colorTexto: this.EDIT_STROKE,
-    strokeWidth: 3,
-    zIndex: 999,
-    tamanoIcono: 18,
-  };
+    const draftStyle: ResolvedElementStyle = {
+      iconoFuente: null,
+      icono: null,
+      iconoClase: null,
+      colorFill: this.EDIT_FILL,
+      colorStroke: this.EDIT_STROKE,
+      colorTexto: this.EDIT_STROKE,
+      strokeWidth: 3,
+      zIndex: 999,
+      tamanoIcono: 18,
+    };
 
-  return this.layerFromWkt(wkt, draftStyle);
-}
+    return this.layerFromWkt(wkt, draftStyle);
+  }
 
   private replaceLayerGeometry(target: L.Layer, source: L.Layer) {
     const targetAny = target as any;
@@ -1133,107 +1159,107 @@ if (dirty && currentWkt) {
   }
 
   private resolveElementStyle(
-  el: MapaElemento,
-  tipo: MapaTipoElemento | null
-): ResolvedElementStyle {
-  const colorStroke = el.colorStroke || tipo?.colorStroke || this.DEFAULT_STROKE;
-  const colorFill = el.colorFill || tipo?.colorFill || colorStroke;
-  const colorTexto =
-    el.colorTexto || tipo?.colorTexto || el.colorStroke || tipo?.colorStroke || null;
+    el: MapaElemento,
+    tipo: MapaTipoElemento | null
+  ): ResolvedElementStyle {
+    const colorStroke = el.colorStroke || tipo?.colorStroke || this.DEFAULT_STROKE;
+    const colorFill = el.colorFill || tipo?.colorFill || colorStroke;
+    const colorTexto =
+      el.colorTexto || tipo?.colorTexto || el.colorStroke || tipo?.colorStroke || null;
 
-  return {
-    iconoFuente: el.iconoFuente || tipo?.iconoFuente || null,
-    icono: el.icono || tipo?.icono || null,
-    iconoClase: el.iconoClase || tipo?.iconoClase || null,
-    colorFill,
-    colorStroke,
-    colorTexto,
-    strokeWidth: this.normalizeStrokeWidth(el.strokeWidth ?? tipo?.strokeWidth ?? null),
-    zIndex: this.normalizeZIndex(el.zIndex ?? tipo?.zIndex ?? null),
-    tamanoIcono: this.normalizeIconSize(el.tamanoIcono ?? tipo?.tamanoIcono ?? null),
-  };
-}
+    return {
+      iconoFuente: el.iconoFuente || tipo?.iconoFuente || null,
+      icono: el.icono || tipo?.icono || null,
+      iconoClase: el.iconoClase || tipo?.iconoClase || null,
+      colorFill,
+      colorStroke,
+      colorTexto,
+      strokeWidth: this.normalizeStrokeWidth(el.strokeWidth ?? tipo?.strokeWidth ?? null),
+      zIndex: this.normalizeZIndex(el.zIndex ?? tipo?.zIndex ?? null),
+      tamanoIcono: this.normalizeIconSize(el.tamanoIcono ?? tipo?.tamanoIcono ?? null),
+    };
+  }
 
-private normalizeStrokeWidth(value: number | null | undefined): number {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return 3;
-  return Math.max(1, Math.min(12, n));
-}
+  private normalizeStrokeWidth(value: number | null | undefined): number {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 3;
+    return Math.max(1, Math.min(12, n));
+  }
 
-private normalizeZIndex(value: number | null | undefined): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n);
-}
+  private normalizeZIndex(value: number | null | undefined): number {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    return Math.round(n);
+  }
 
-private normalizeIconSize(value: number | null | undefined): number {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return 18;
-  return Math.max(12, Math.min(64, Math.round(n)));
-}
+  private normalizeIconSize(value: number | null | undefined): number {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 18;
+    return Math.max(12, Math.min(64, Math.round(n)));
+  }
 
-private normalizeIconSource(value: string | null | undefined): string {
-  return (value || '').trim().toLowerCase();
-}
+  private normalizeIconSource(value: string | null | undefined): string {
+    return (value || '').trim().toLowerCase();
+  }
 
-private isMaterialSymbol(iconSource: string): boolean {
-  return (
-    iconSource.includes('material-symbols') ||
-    iconSource.includes('material symbols') ||
-    iconSource === 'google' ||
-    iconSource === 'google-icons'
-  );
-}
+  private isMaterialSymbol(iconSource: string): boolean {
+    return (
+      iconSource.includes('material-symbols') ||
+      iconSource.includes('material symbols') ||
+      iconSource === 'google' ||
+      iconSource === 'google-icons'
+    );
+  }
 
-private isCssClassIcon(iconSource: string, value: string): boolean {
-  if (!value) return false;
+  private isCssClassIcon(iconSource: string, value: string): boolean {
+    if (!value) return false;
 
-  return (
-    iconSource === 'class' ||
-    iconSource === 'css' ||
-    iconSource === 'primeicons' ||
-    iconSource === 'fontawesome' ||
-    iconSource === 'fa' ||
-    iconSource === 'mdi' ||
-    iconSource === 'bootstrap-icons'
-  );
-}
+    return (
+      iconSource === 'class' ||
+      iconSource === 'css' ||
+      iconSource === 'primeicons' ||
+      iconSource === 'fontawesome' ||
+      iconSource === 'fa' ||
+      iconSource === 'mdi' ||
+      iconSource === 'bootstrap-icons'
+    );
+  }
 
-private isUrlIcon(iconSource: string, value: string): boolean {
-  if (!value) return false;
+  private isUrlIcon(iconSource: string, value: string): boolean {
+    if (!value) return false;
 
-  return (
-    iconSource === 'url' ||
-    iconSource === 'image' ||
-    iconSource === 'img' ||
-    /^https?:\/\//i.test(value) ||
-    /^data:image\//i.test(value) ||
-    /^\/assets\//i.test(value)
-  );
-}
+    return (
+      iconSource === 'url' ||
+      iconSource === 'image' ||
+      iconSource === 'img' ||
+      /^https?:\/\//i.test(value) ||
+      /^data:image\//i.test(value) ||
+      /^\/assets\//i.test(value)
+    );
+  }
 
-private resolveMaterialFamily(iconSource: string): string {
-  if (iconSource.includes('rounded')) return 'material-symbols-rounded';
-  if (iconSource.includes('sharp')) return 'material-symbols-sharp';
-  return 'material-symbols-outlined';
-}
+  private resolveMaterialFamily(iconSource: string): string {
+    if (iconSource.includes('rounded')) return 'material-symbols-rounded';
+    if (iconSource.includes('sharp')) return 'material-symbols-sharp';
+    return 'material-symbols-outlined';
+  }
 
-private toMaterialSymbolWeight(strokeWidth: number): number {
-  const raw = strokeWidth > 10 ? strokeWidth : strokeWidth * 100;
-  const snapped = Math.round(raw / 100) * 100;
-  return Math.max(100, Math.min(700, snapped));
-}
+  private toMaterialSymbolWeight(strokeWidth: number): number {
+    const raw = strokeWidth > 10 ? strokeWidth : strokeWidth * 100;
+    const snapped = Math.round(raw / 100) * 100;
+    return Math.max(100, Math.min(700, snapped));
+  }
 
-private escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
-private escapeHtmlAttr(value: string): string {
-  return this.escapeHtml(value);
-}
+  private escapeHtmlAttr(value: string): string {
+    return this.escapeHtml(value);
+  }
 }
