@@ -45,18 +45,23 @@ export interface MapaElemento {
   idRedNodoFk: number;
   idGeoTipoElementoFk: number;
   idGeoImportLoteFk?: number | null;
+
   codigo?: string | null;
   nombre: string;
   descripcion?: string | null;
   etiqueta?: string | null;
   observacion?: string | null;
+
   estado: string;
   visible: boolean;
+
   origen: string;
   origenRef?: string | null;
   styleUrl?: string | null;
+
   kmlExtendedData?: Record<string, any> | null;
   atributos?: Record<string, any> | null;
+
   geomTipo: MapaGeomTipo;
   geometria?: any;
   wkt?: string | null;
@@ -65,6 +70,23 @@ export interface MapaElemento {
   longitudM?: number;
   areaM2?: number;
   ordenDibujo?: number;
+
+  // enriquecidos desde el backend
+  tipoCodigo?: string | null;
+  tipoNombre?: string | null;
+  tipoActivo?: boolean | null;
+  geometriaPermitida?: 'point' | 'linestring' | 'polygon' | 'mixed' | null;
+
+  iconoFuente?: string | null;
+  icono?: string | null;
+  iconoClase?: string | null;
+  shapeBase?: string | null;
+  colorFill?: string | null;
+  colorStroke?: string | null;
+  colorTexto?: string | null;
+  strokeWidth?: number | null;
+  zIndex?: number | null;
+  tamanoIcono?: number | null;
 }
 
 export interface MapaImportLoteResumen {

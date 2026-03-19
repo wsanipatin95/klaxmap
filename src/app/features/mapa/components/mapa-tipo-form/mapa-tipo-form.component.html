@@ -1,16 +1,60 @@
 <div class="tipo-form-shell">
   <div class="tipo-form-header">
-    <div>
+    <div class="header-copy">
       <h3>{{ title }}</h3>
       <p>{{ subtitle }}</p>
+
+      <div class="info-strip">
+        <span class="info-chip">
+          <strong>Geometría:</strong> {{ form.geometriaPermitida || 'point' }}
+        </span>
+        <span class="info-chip">
+          <strong>Render:</strong> {{ renderSummary }}
+        </span>
+      </div>
     </div>
 
     <div class="preview-card" [ngStyle]="previewStyle()">
       <div class="preview-title">{{ previewLabel }}</div>
-      <div class="preview-shape" [ngClass]="previewShapeClass()"></div>
-      <div class="preview-meta">
-        <span>{{ form.geometriaPermitida || 'point' }}</span>
-        <span>z: {{ form.zIndex ?? 0 }}</span>
+
+      <div class="preview-shape" [ngClass]="previewShapeClass()">
+        <ng-container [ngSwitch]="previewVisualMode()">
+          <span
+            *ngSwitchCase="'material'"
+            class="preview-material-glyph"
+            [class]="previewMaterialFamilyClass()"
+            [style.fontVariationSettings]="previewMaterialVariation()"
+            [style.color]="previewTextColor()"
+            [style.fontSize.px]="previewPointSize()"
+          >
+            {{ previewMaterialGlyph() }}
+          </span>
+
+          <span
+            *ngSwitchCase="'class'"
+            class="preview-class-icon"
+            [style.color]="previewTextColor()"
+            [style.fontSize.px]="previewPointSize()"
+          >
+            <i [class]="previewCssClass()"></i>
+          </span>
+
+          <img
+            *ngSwitchCase="'url'"
+            class="preview-image-icon"
+            [src]="previewImageUrl()"
+            [style.width.px]="previewPointSize()"
+            [style.height.px]="previewPointSize()"
+            alt="preview icon"
+          />
+        </ng-container>
+      </div>
+
+      <div class="preview-meta-grid">
+        <span><strong>z-index:</strong> {{ form.zIndex ?? 0 }}</span>
+        <span><strong>stroke:</strong> {{ form.strokeWidth ?? 1 }}</span>
+        <span *ngIf="showPointAppearance"><strong>size:</strong> {{ form.tamanoIcono ?? 18 }}</span>
+        <span *ngIf="showPointAppearance"><strong>fuente:</strong> {{ form.iconoFuente || 'shape' }}</span>
       </div>
     </div>
   </div>
@@ -21,118 +65,258 @@
     <section class="form-section">
       <h4>Identidad</h4>
 
-      <div class="field-grid two-cols">
-        <div class="field">
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Código</label>
-          <input [(ngModel)]="form.codigo" (ngModelChange)="onFieldInput()" placeholder="Ej. SPLITTER" />
+          <input
+            [(ngModel)]="form.codigo"
+            (ngModelChange)="onFieldInput()"
+            placeholder="Ej. SPLITTER"
+          />
+          <small>Identificador técnico único del tipo.</small>
         </div>
 
-        <div class="field">
+        <div class="field span-2">
           <label>Nombre</label>
-          <input [(ngModel)]="form.nombre" (ngModelChange)="onFieldInput()" placeholder="Ej. Splitter 1x8" />
+          <input
+            [(ngModel)]="form.nombre"
+            (ngModelChange)="onFieldInput()"
+            placeholder="Ej. Splitter 1x8"
+          />
+          <small>Nombre visible para el usuario.</small>
         </div>
-      </div>
 
-      <div class="field">
-        <label>Descripción</label>
-        <textarea [(ngModel)]="form.descripcion" (ngModelChange)="onFieldInput()" placeholder="Descripción del tipo"></textarea>
+        <div class="field span-4">
+          <label>Descripción</label>
+          <textarea
+            [(ngModel)]="form.descripcion"
+            (ngModelChange)="onFieldInput()"
+            placeholder="Qué representa este tipo y cuándo usarlo"
+          ></textarea>
+        </div>
       </div>
     </section>
 
     <section class="form-section">
       <h4>Geometría y comportamiento</h4>
 
-      <div class="field-grid two-cols">
-        <div class="field">
+      <div class="hint-box">
+        {{ geometryDescription }}
+      </div>
+
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Geometría permitida</label>
-          <select [(ngModel)]="form.geometriaPermitida" (ngModelChange)="onFieldInput()">
+          <select
+            [(ngModel)]="form.geometriaPermitida"
+            (ngModelChange)="onGeometryChange()"
+          >
             <option value="point">Point</option>
             <option value="linestring">LineString</option>
             <option value="polygon">Polygon</option>
             <option value="mixed">Mixed</option>
           </select>
+          <small>Forma que puede usar este tipo en el mapa.</small>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Prioridad clasificación</label>
-          <input type="number" min="0" [(ngModel)]="form.prioridadClasificacion" (ngModelChange)="onFieldInput()" />
+          <input
+            type="number"
+            min="0"
+            [(ngModel)]="form.prioridadClasificacion"
+            (ngModelChange)="onFieldInput()"
+          />
+          <small>Orden sugerido para clasificación automática o visual.</small>
+        </div>
+
+        <div class="field span-1">
+          <label>Z index</label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="form.zIndex"
+            (ngModelChange)="onFieldInput()"
+          />
+          <small>Orden visual del render.</small>
+        </div>
+
+        <div class="field span-1">
+          <label>Máx. puertos default</label>
+          <input
+            type="number"
+            min="0"
+            [(ngModel)]="form.maxPuertosDefault"
+            (ngModelChange)="onFieldInput()"
+          />
+          <small>Capacidad por defecto cuando aplique conectividad.</small>
         </div>
       </div>
 
-      <div class="field-grid three-cols">
+      <div class="check-grid">
         <label class="check-card">
-          <input type="checkbox" [(ngModel)]="form.activo" (ngModelChange)="onFieldInput()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="form.activo"
+            (ngModelChange)="onFieldInput()"
+          />
           <span>Activo</span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" [(ngModel)]="form.permiteImportAuto" (ngModelChange)="onFieldInput()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="form.permiteImportAuto"
+            (ngModelChange)="onFieldInput()"
+          />
           <span>Permite importación automática</span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" [(ngModel)]="form.requiereRevision" (ngModelChange)="onFieldInput()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="form.requiereRevision"
+            (ngModelChange)="onFieldInput()"
+          />
           <span>Requiere revisión</span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" [(ngModel)]="form.snapping" (ngModelChange)="onFieldInput()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="form.snapping"
+            (ngModelChange)="onFieldInput()"
+          />
           <span>Snapping</span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" [(ngModel)]="form.conectable" (ngModelChange)="onFieldInput()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="form.conectable"
+            (ngModelChange)="onFieldInput()"
+          />
           <span>Conectable</span>
         </label>
-      </div>
-
-      <div class="field-grid two-cols">
-        <div class="field">
-          <label>Máx. puertos default</label>
-          <input type="number" min="0" [(ngModel)]="form.maxPuertosDefault" (ngModelChange)="onFieldInput()" />
-        </div>
-
-        <div class="field">
-          <label>Z index</label>
-          <input type="number" min="0" step="1" [(ngModel)]="form.zIndex" (ngModelChange)="onFieldInput()" />
-        </div>
       </div>
     </section>
 
     <section class="form-section">
-      <h4>Apariencia base</h4>
+      <h4>Estilo base compartido</h4>
 
-      <div class="field-grid three-cols">
-        <div class="field">
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Color fill</label>
-          <input [(ngModel)]="form.colorFill" (ngModelChange)="onFieldInput()" placeholder="#93c5fd" />
+          <div class="color-row">
+            <input
+              class="color-picker"
+              type="color"
+              [ngModel]="form.colorFill || '#93c5fd'"
+              (ngModelChange)="setColor('colorFill', $event)"
+            />
+            <input
+              [(ngModel)]="form.colorFill"
+              (ngModelChange)="onFieldInput()"
+              placeholder="#93c5fd"
+            />
+          </div>
+          <div class="swatches">
+            <button
+              type="button"
+              class="swatch"
+              *ngFor="let c of fillPresets"
+              [style.background]="c"
+              [title]="c"
+              (click)="setColor('colorFill', c)"
+            ></button>
+          </div>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Color stroke</label>
-          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+          <div class="color-row">
+            <input
+              class="color-picker"
+              type="color"
+              [ngModel]="form.colorStroke || '#2563eb'"
+              (ngModelChange)="setColor('colorStroke', $event)"
+            />
+            <input
+              [(ngModel)]="form.colorStroke"
+              (ngModelChange)="onFieldInput()"
+              placeholder="#2563eb"
+            />
+          </div>
+          <div class="swatches">
+            <button
+              type="button"
+              class="swatch"
+              *ngFor="let c of strokePresets"
+              [style.background]="c"
+              [title]="c"
+              (click)="setColor('colorStroke', c)"
+            ></button>
+          </div>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Color texto</label>
-          <input [(ngModel)]="form.colorTexto" (ngModelChange)="onFieldInput()" placeholder="#0f172a" />
+          <div class="color-row">
+            <input
+              class="color-picker"
+              type="color"
+              [ngModel]="form.colorTexto || '#0f172a'"
+              (ngModelChange)="setColor('colorTexto', $event)"
+            />
+            <input
+              [(ngModel)]="form.colorTexto"
+              (ngModelChange)="onFieldInput()"
+              placeholder="#0f172a"
+            />
+          </div>
+          <div class="swatches">
+            <button
+              type="button"
+              class="swatch"
+              *ngFor="let c of textPresets"
+              [style.background]="c"
+              [title]="c"
+              (click)="setColor('colorTexto', c)"
+            ></button>
+          </div>
         </div>
-      </div>
 
-      <div class="field-grid three-cols">
-        <div class="field">
+        <div class="field span-1">
           <label>Stroke width</label>
-          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            [(ngModel)]="form.strokeWidth"
+            (ngModelChange)="onFieldInput()"
+          />
+          <small>Grosor de línea o peso visual.</small>
         </div>
 
-        <div class="field">
+        <div class="field span-1" *ngIf="showPointAppearance">
           <label>Tamaño icono</label>
-          <input type="number" min="0" step="0.1" [(ngModel)]="form.tamanoIcono" (ngModelChange)="onFieldInput()" />
+          <input
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="form.tamanoIcono"
+            (ngModelChange)="onFieldInput()"
+          />
+          <small>Escala del punto si usa icono o glyph.</small>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Shape base</label>
-          <select [(ngModel)]="form.shapeBase" (ngModelChange)="onFieldInput()">
+          <select
+            [(ngModel)]="form.shapeBase"
+            (ngModelChange)="onFieldInput()"
+          >
             <option value="">Sin definir</option>
             <option value="point">Point</option>
             <option value="circle">Circle</option>
@@ -148,76 +332,201 @@
     </section>
 
     <section class="form-section" *ngIf="showPointAppearance">
-      <h4>Configuración visual para puntos</h4>
+      <h4>Render para puntos</h4>
 
-      <div class="field-grid three-cols">
-        <div class="field">
-          <label>Icono</label>
-          <input [(ngModel)]="form.icono" (ngModelChange)="onFieldInput()" placeholder="Ej. place / router / call_split" />
-        </div>
+      <div class="hint-box">
+        Aquí defines cómo se dibuja un punto: por Material Symbols, clase CSS, URL o forma predefinida.
+      </div>
 
-        <div class="field">
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Icono fuente</label>
-          <select [(ngModel)]="form.iconoFuente" (ngModelChange)="onFieldInput()">
-            <option value="">Sin definir</option>
-            <option value="material-symbols">Material Symbols</option>
-            <option value="primeicons">PrimeIcons</option>
+          <select
+            [(ngModel)]="form.iconoFuente"
+            (ngModelChange)="onIconSourceChange()"
+          >
+            <option value="">Sin definir / shape base</option>
+            <option value="material-symbols-outlined">Material Symbols Outlined</option>
+            <option value="material-symbols-rounded">Material Symbols Rounded</option>
+            <option value="material-symbols-sharp">Material Symbols Sharp</option>
+            <option value="class">Clase CSS</option>
+            <option value="url">URL / imagen</option>
             <option value="triangle">Triangle</option>
             <option value="target">Target</option>
             <option value="donut">Donut</option>
           </select>
         </div>
 
-        <div class="field">
-          <label>Icono clase</label>
-          <input [(ngModel)]="form.iconoClase" (ngModelChange)="onFieldInput()" placeholder="Ej. pi pi-map-marker" />
+        <div class="field span-1">
+          <label>Tamaño icono</label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="form.tamanoIcono"
+            (ngModelChange)="onFieldInput()"
+          />
+        </div>
+
+        <div class="field span-2">
+          <label>Resumen</label>
+          <div class="inline-info">
+            {{ renderSummary }}
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" *ngIf="showMaterialBlock">
+        <div class="sub-block-head">
+          <strong>Configuración Material Symbols</strong>
+          <span>Usa el nombre del glyph en <code>icono</code>.</span>
+        </div>
+
+        <div class="compact-grid">
+          <div class="field span-1">
+            <label>Icono</label>
+            <input
+              [(ngModel)]="form.icono"
+              (ngModelChange)="onFieldInput()"
+              placeholder="Ej. home, router, radio_button_checked"
+            />
+          </div>
+
+          <div class="field span-1">
+            <label>Fuente</label>
+            <div class="inline-info">
+              {{ form.iconoFuente }}
+            </div>
+          </div>
+
+          <div class="field span-2">
+            <label>Uso</label>
+            <div class="inline-info">
+              El backend enviará <strong>iconoFuente</strong> y <strong>icono</strong> para que el canvas renderice el glyph correcto.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" *ngIf="showCssClassBlock">
+        <div class="sub-block-head">
+          <strong>Configuración por clase CSS</strong>
+          <span>Útil para PrimeIcons, Font Awesome, MDI y similares.</span>
+        </div>
+
+        <div class="compact-grid">
+          <div class="field span-2">
+            <label>Icono clase</label>
+            <input
+              [(ngModel)]="form.iconoClase"
+              (ngModelChange)="onFieldInput()"
+              placeholder="Ej. pi pi-map-marker o fa-solid fa-house"
+            />
+          </div>
+
+          <div class="field span-2">
+            <label>Icono (fallback)</label>
+            <input
+              [(ngModel)]="form.icono"
+              (ngModelChange)="onFieldInput()"
+              placeholder="Opcional"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" *ngIf="showUrlBlock">
+        <div class="sub-block-head">
+          <strong>Configuración por URL</strong>
+          <span>Útil para PNG, SVG, assets locales o rutas públicas.</span>
+        </div>
+
+        <div class="compact-grid">
+          <div class="field span-4">
+            <label>Icono</label>
+            <input
+              [(ngModel)]="form.icono"
+              (ngModelChange)="onFieldInput()"
+              placeholder="https://.../icon.svg o /assets/icons/nodo.svg"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" *ngIf="showPresetBlock">
+        <div class="sub-block-head">
+          <strong>Forma predefinida</strong>
+          <span>En este modo el render usa la forma elegida en <code>iconoFuente</code>.</span>
+        </div>
+
+        <div class="hint-box soft">
+          No necesitas completar <strong>icono</strong> ni <strong>iconoClase</strong>. El dibujo sale de la forma seleccionada.
+        </div>
+      </div>
+
+      <div class="sub-block" *ngIf="showNeutralPointBlock">
+        <div class="sub-block-head">
+          <strong>Punto simple</strong>
+          <span>Si no defines una fuente, el sistema cae en shape base + colores.</span>
+        </div>
+
+        <div class="hint-box soft">
+          Este modo es útil para un punto básico sin depender de librerías externas.
         </div>
       </div>
     </section>
 
     <section class="form-section" *ngIf="showLineAppearance">
-      <h4>Configuración visual para líneas</h4>
+      <h4>Render para líneas</h4>
 
       <div class="hint-box">
-        Para líneas, los campos más importantes son <strong>color stroke</strong> y
-        <strong>stroke width</strong>.
+        En líneas lo importante es el borde. El relleno no tiene efecto principal.
       </div>
 
-      <div class="field-grid two-cols">
-        <div class="field">
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Color stroke</label>
-          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+          <div class="inline-info">{{ form.colorStroke || '#2563eb' }}</div>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Stroke width</label>
-          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+          <div class="inline-info">{{ form.strokeWidth ?? 1 }}</div>
+        </div>
+
+        <div class="field span-1">
+          <label>Z index</label>
+          <div class="inline-info">{{ form.zIndex ?? 0 }}</div>
         </div>
       </div>
     </section>
 
     <section class="form-section" *ngIf="showPolygonAppearance">
-      <h4>Configuración visual para polígonos</h4>
+      <h4>Render para polígonos</h4>
 
       <div class="hint-box">
-        Para polígonos, define <strong>relleno</strong>, <strong>borde</strong> y
-        <strong>ancho del borde</strong>.
+        En polígonos debes cuidar relleno, borde y grosor. El z-index ordena la superposición.
       </div>
 
-      <div class="field-grid three-cols">
-        <div class="field">
+      <div class="compact-grid">
+        <div class="field span-1">
           <label>Color fill</label>
-          <input [(ngModel)]="form.colorFill" (ngModelChange)="onFieldInput()" placeholder="#93c5fd" />
+          <div class="inline-info">{{ form.colorFill || '#93c5fd' }}</div>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Color stroke</label>
-          <input [(ngModel)]="form.colorStroke" (ngModelChange)="onFieldInput()" placeholder="#2563eb" />
+          <div class="inline-info">{{ form.colorStroke || '#2563eb' }}</div>
         </div>
 
-        <div class="field">
+        <div class="field span-1">
           <label>Stroke width</label>
-          <input type="number" min="0" step="0.1" [(ngModel)]="form.strokeWidth" (ngModelChange)="onFieldInput()" />
+          <div class="inline-info">{{ form.strokeWidth ?? 1 }}</div>
+        </div>
+
+        <div class="field span-1">
+          <label>Z index</label>
+          <div class="inline-info">{{ form.zIndex ?? 0 }}</div>
         </div>
       </div>
     </section>
@@ -225,20 +534,28 @@
     <section class="form-section">
       <h4>Atributos extra</h4>
 
-      <div class="field">
-        <label>Atributos (JSON)</label>
-        <textarea
-          class="json-area"
-          [(ngModel)]="atributosText"
-          (ngModelChange)="onFieldInput()"
-          placeholder='{"clave":"valor"}'
-        ></textarea>
+      <div class="compact-grid">
+        <div class="field span-4">
+          <label>Atributos (JSON)</label>
+          <textarea
+            class="json-area"
+            [(ngModel)]="atributosText"
+            (ngModelChange)="onFieldInput()"
+            placeholder='{"clave":"valor"}'
+          ></textarea>
+          <small>Guarda aquí configuración adicional que no tenga un campo fijo.</small>
+        </div>
       </div>
     </section>
   </div>
 
   <div class="form-actions">
-    <button type="button" class="ghost-btn" (click)="onCancelClick()" [disabled]="saving">
+    <button
+      type="button"
+      class="ghost-btn"
+      (click)="onCancelClick()"
+      [disabled]="saving"
+    >
       Cancelar
     </button>
 

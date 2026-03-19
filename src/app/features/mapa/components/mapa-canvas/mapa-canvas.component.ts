@@ -42,7 +42,17 @@ interface BasemapOption {
   url: string;
   options: L.TileLayerOptions;
 }
-
+interface ResolvedElementStyle {
+  iconoFuente: string | null;
+  icono: string | null;
+  iconoClase: string | null;
+  colorFill: string;
+  colorStroke: string;
+  colorTexto: string | null;
+  strokeWidth: number;
+  zIndex: number;
+  tamanoIcono: number;
+}
 @Component({
   selector: 'app-mapa-canvas',
   standalone: true,
@@ -145,16 +155,16 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     layer: L.Layer | null;
     originalSnapshot: L.Layer | null;
   } = {
-    active: false,
-    dirty: false,
-    elementId: null,
-    elementName: null,
-    geomTipo: null,
-    originalWkt: null,
-    currentWkt: null,
-    layer: null,
-    originalSnapshot: null,
-  };
+      active: false,
+      dirty: false,
+      elementId: null,
+      elementName: null,
+      geomTipo: null,
+      originalWkt: null,
+      currentWkt: null,
+      layer: null,
+      originalSnapshot: null,
+    };
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -541,15 +551,27 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if (!activeId) return;
 
-    const layer = this.renderedLayers.get(activeId);
-    if (!layer) return;
+   const layer = this.renderedLayers.get(activeId);
+if (!layer) return;
 
-    if (dirty && currentWkt) {
-      const draftLayer = this.layerFromWkt(currentWkt, this.EDIT_STROKE, this.EDIT_FILL, null);
-      if (draftLayer) {
-        this.replaceLayerGeometry(layer, draftLayer);
-      }
-    }
+if (dirty && currentWkt) {
+  const draftStyle: ResolvedElementStyle = {
+    iconoFuente: null,
+    icono: null,
+    iconoClase: null,
+    colorFill: this.EDIT_FILL,
+    colorStroke: this.EDIT_STROKE,
+    colorTexto: this.EDIT_STROKE,
+    strokeWidth: 3,
+    zIndex: 999,
+    tamanoIcono: 18,
+  };
+
+  const draftLayer = this.layerFromWkt(currentWkt, draftStyle);
+  if (draftLayer) {
+    this.replaceLayerGeometry(layer, draftLayer);
+  }
+}
 
     this.editSession.layer = layer;
     this.enableLayerEditing(layer);
@@ -561,12 +583,26 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.renderedLayers.clear();
 
     const hiddenSet = new Set(this.hiddenTipoIds);
+    const tipoMap = new Map(this.tipos.map((t) => [t.idGeoTipoElemento, t]));
 
-    for (const el of this.elementos) {
-      if (hiddenSet.has(el.idGeoTipoElementoFk)) continue;
+    const renderQueue = [...this.elementos]
+      .filter((el) => !hiddenSet.has(el.idGeoTipoElementoFk))
+      .sort((a, b) => {
+        const tipoA = tipoMap.get(a.idGeoTipoElementoFk) ?? null;
+        const tipoB = tipoMap.get(b.idGeoTipoElementoFk) ?? null;
 
-      const tipo =
-        this.tipos.find((t) => t.idGeoTipoElemento === el.idGeoTipoElementoFk) ?? null;
+        const styleA = this.resolveElementStyle(a, tipoA);
+        const styleB = this.resolveElementStyle(b, tipoB);
+
+        return (
+          styleA.zIndex - styleB.zIndex ||
+          Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
+          a.idGeoElemento - b.idGeoElemento
+        );
+      });
+
+    for (const el of renderQueue) {
+      const tipo = tipoMap.get(el.idGeoTipoElementoFk) ?? null;
       const layer = this.layerFromElemento(el, tipo);
       if (!layer) continue;
 
@@ -605,11 +641,20 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const isSelected = id === this.selectedElementoId;
       const anyLayer = layer as any;
 
+      const baseWeight =
+        typeof anyLayer.__baseWeight === 'number' ? Number(anyLayer.__baseWeight) : 3;
+      const baseFillOpacity =
+        typeof anyLayer.__baseFillOpacity === 'number'
+          ? Number(anyLayer.__baseFillOpacity)
+          : 0.15;
+      const baseZIndex =
+        typeof anyLayer.__baseZIndex === 'number' ? Number(anyLayer.__baseZIndex) : 0;
+
       if (typeof anyLayer.setStyle === 'function') {
         anyLayer.setStyle({
-          weight: isSelected ? 5 : 3,
+          weight: isSelected ? baseWeight + 2 : baseWeight,
           opacity: isSelected ? 1 : 0.9,
-          fillOpacity: isSelected ? 0.28 : 0.15,
+          fillOpacity: isSelected ? Math.max(baseFillOpacity, 0.28) : baseFillOpacity,
         });
       }
 
@@ -618,30 +663,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       }
 
       if (typeof anyLayer.setZIndexOffset === 'function') {
-        anyLayer.setZIndexOffset(isSelected ? 1000 : 0);
+        anyLayer.setZIndexOffset(baseZIndex + (isSelected ? 1000 : 0));
       }
     }
   }
 
-  private layerFromElemento(el: MapaElemento, tipo: MapaTipoElemento | null): L.Layer | null {
+  private layerFromElemento(
+    el: MapaElemento,
+    tipo: MapaTipoElemento | null
+  ): L.Layer | null {
     const geom = el.geometria;
-    const stroke = tipo?.colorStroke || this.DEFAULT_STROKE;
-    const fill = tipo?.colorFill || stroke;
+    const style = this.resolveElementStyle(el, tipo);
 
     if (geom && typeof geom === 'object' && geom.type && geom.coordinates) {
-      const fromGeoJson = this.layerFromGeoJsonGeometry(geom, stroke, fill, tipo);
+      const fromGeoJson = this.layerFromGeoJsonGeometry(geom, style);
       if (fromGeoJson) return fromGeoJson;
     }
 
     if (geom) {
       const embeddedWkt = this.tryExtractWkt(geom);
       if (embeddedWkt) {
-        return this.layerFromWkt(embeddedWkt, stroke, fill, tipo);
+        return this.layerFromWkt(embeddedWkt, style);
       }
     }
 
     if ((el as any).wkt) {
-      return this.layerFromWkt((el as any).wkt, stroke, fill, tipo);
+      return this.layerFromWkt((el as any).wkt, style);
     }
 
     return null;
@@ -649,9 +696,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private layerFromGeoJsonGeometry(
     geom: any,
-    stroke: string,
-    fill: string,
-    tipo: MapaTipoElemento | null
+    style: ResolvedElementStyle
   ): L.Layer | null {
     const type = String(geom.type || '').toLowerCase();
     const coords = geom.coordinates;
@@ -659,38 +704,60 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (type === 'point' && Array.isArray(coords) && coords.length >= 2) {
       return this.createPointLayer(
         L.latLng(Number(coords[1]), Number(coords[0])),
-        stroke,
-        fill,
-        tipo
+        style
       );
     }
 
     if (type === 'linestring' && Array.isArray(coords)) {
-      return L.polyline(
+      const layer = L.polyline(
         coords.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
-        { color: stroke, weight: 3 }
+        {
+          color: style.colorStroke,
+          weight: style.strokeWidth,
+        }
       );
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
     }
 
     if (type === 'polygon' && Array.isArray(coords) && Array.isArray(coords[0])) {
-      return L.polygon(
+      const layer = L.polygon(
         coords.map((ring: number[][]) =>
           ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
         ),
         {
-          color: stroke,
-          weight: 3,
-          fillColor: fill,
+          color: style.colorStroke,
+          weight: style.strokeWidth,
+          fillColor: style.colorFill,
           fillOpacity: 0.15,
         }
       );
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0.15;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
     }
 
     if (type === 'multilinestring' && Array.isArray(coords) && Array.isArray(coords[0])) {
-      return L.polyline(
+      const layer = L.polyline(
         coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
-        { color: stroke, weight: 3 }
+        {
+          color: style.colorStroke,
+          weight: style.strokeWidth,
+        }
       );
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
     }
 
     if (
@@ -699,17 +766,23 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       Array.isArray(coords[0]) &&
       Array.isArray(coords[0][0])
     ) {
-      return L.polygon(
+      const layer = L.polygon(
         coords[0].map((ring: number[][]) =>
           ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
         ),
         {
-          color: stroke,
-          weight: 3,
-          fillColor: fill,
+          color: style.colorStroke,
+          weight: style.strokeWidth,
+          fillColor: style.colorFill,
           fillOpacity: 0.15,
         }
       );
+
+      (layer as any).__baseWeight = style.strokeWidth;
+      (layer as any).__baseFillOpacity = 0.15;
+      (layer as any).__baseZIndex = style.zIndex;
+
+      return layer;
     }
 
     return null;
@@ -721,39 +794,47 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     return null;
   }
 
-  private layerFromWkt(
-    wkt: string,
-    stroke: string,
-    fill: string,
-    tipo: MapaTipoElemento | null
-  ): L.Layer | null {
-    const parsed = parseWktGeometry(wkt);
-    if (!parsed) return null;
+  private layerFromWkt(wkt: string, style: ResolvedElementStyle): L.Layer | null {
+  const parsed = parseWktGeometry(wkt);
+  if (!parsed) return null;
 
-    if (parsed.renderType === 'point' && parsed.point) {
-      return this.createPointLayer(
-        L.latLng(parsed.point[0], parsed.point[1]),
-        stroke,
-        fill,
-        tipo
-      );
-    }
-
-    if (parsed.renderType === 'polyline' && parsed.line) {
-      return L.polyline(parsed.line, { color: stroke, weight: 3 });
-    }
-
-    if (parsed.renderType === 'polygon' && parsed.polygon) {
-      return L.polygon(parsed.polygon, {
-        color: stroke,
-        weight: 3,
-        fillColor: fill,
-        fillOpacity: 0.15,
-      });
-    }
-
-    return null;
+  if (parsed.renderType === 'point' && parsed.point) {
+    return this.createPointLayer(
+      L.latLng(parsed.point[0], parsed.point[1]),
+      style
+    );
   }
+
+  if (parsed.renderType === 'polyline' && parsed.line) {
+    const layer = L.polyline(parsed.line, {
+      color: style.colorStroke,
+      weight: style.strokeWidth,
+    });
+
+    (layer as any).__baseWeight = style.strokeWidth;
+    (layer as any).__baseFillOpacity = 0;
+    (layer as any).__baseZIndex = style.zIndex;
+
+    return layer;
+  }
+
+  if (parsed.renderType === 'polygon' && parsed.polygon) {
+    const layer = L.polygon(parsed.polygon, {
+      color: style.colorStroke,
+      weight: style.strokeWidth,
+      fillColor: style.colorFill,
+      fillOpacity: 0.15,
+    });
+
+    (layer as any).__baseWeight = style.strokeWidth;
+    (layer as any).__baseFillOpacity = 0.15;
+    (layer as any).__baseZIndex = style.zIndex;
+
+    return layer;
+  }
+
+  return null;
+}
 
   private geomTipoFromLayerType(layerType: string): MapaGeomTipo {
     if (layerType === 'marker') return 'point';
@@ -803,8 +884,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         .map((ring) => {
           const closed =
             ring.length > 0 &&
-            ring[0].lat === ring[ring.length - 1].lat &&
-            ring[0].lng === ring[ring.length - 1].lng
+              ring[0].lat === ring[ring.length - 1].lat &&
+              ring[0].lng === ring[ring.length - 1].lng
               ? ring
               : [...ring, ring[0]];
 
@@ -819,11 +900,24 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   private cloneLayer(layer: L.Layer): L.Layer | null {
-    const geomTipo = this.inferGeomTipoFromLayer(layer);
-    const wkt = this.layerToWkt(layer, geomTipo);
-    if (!wkt) return null;
-    return this.layerFromWkt(wkt, this.EDIT_STROKE, this.EDIT_FILL, null);
-  }
+  const geomTipo = this.inferGeomTipoFromLayer(layer);
+  const wkt = this.layerToWkt(layer, geomTipo);
+  if (!wkt) return null;
+
+  const draftStyle: ResolvedElementStyle = {
+    iconoFuente: null,
+    icono: null,
+    iconoClase: null,
+    colorFill: this.EDIT_FILL,
+    colorStroke: this.EDIT_STROKE,
+    colorTexto: this.EDIT_STROKE,
+    strokeWidth: 3,
+    zIndex: 999,
+    tamanoIcono: 18,
+  };
+
+  return this.layerFromWkt(wkt, draftStyle);
+}
 
   private replaceLayerGeometry(target: L.Layer, source: L.Layer) {
     const targetAny = target as any;
@@ -843,79 +937,303 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private createPointLayer(
     latlng: L.LatLng,
-    stroke: string,
-    fill: string,
-    tipo: MapaTipoElemento | null
+    style: ResolvedElementStyle
   ): L.Layer {
-    const iconoFuente = (tipo?.iconoFuente || '').toLowerCase();
+    const iconSource = this.normalizeIconSource(style.iconoFuente);
+    const iconValue = (style.icono || '').trim();
+    const iconClassValue = (style.iconoClase || '').trim();
+    const size = style.tamanoIcono;
+    const stroke = style.colorStroke;
+    const fill = style.colorFill;
+    const textColor = style.colorTexto || stroke;
 
-    if (iconoFuente.includes('triangle')) {
+    if (this.isUrlIcon(iconSource, iconValue)) {
+      const icon = L.icon({
+        iconUrl: iconValue,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
+        className: 'mapa-url-icon',
+      });
+
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
+    }
+
+    if (this.isMaterialSymbol(iconSource)) {
+      const familyClass = this.resolveMaterialFamily(iconSource);
+      const weightAxis = this.toMaterialSymbolWeight(style.strokeWidth);
+      const fillAxis = fill && fill !== 'transparent' ? 1 : 0;
+      const glyph = this.escapeHtml(iconValue || 'radio_button_checked');
+
       const icon = L.divIcon({
         className: 'mapa-div-icon',
-        html: `<div style="
+        html: `
+        <div style="
+          width:${size}px;
+          height:${size}px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:${textColor};
+        ">
+          <span
+            class="${familyClass}"
+            style="
+              font-size:${size}px;
+              line-height:1;
+              font-variation-settings:'FILL' ${fillAxis}, 'wght' ${weightAxis}, 'GRAD' 0, 'opsz' ${Math.max(20, Math.round(size))};
+            "
+          >${glyph}</span>
+        </div>
+      `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
+      });
+
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
+    }
+
+    if (this.isCssClassIcon(iconSource, iconClassValue || iconValue)) {
+      const classValue = this.escapeHtmlAttr(iconClassValue || iconValue);
+
+      const icon = L.divIcon({
+        className: 'mapa-div-icon',
+        html: `
+        <div style="
+          width:${size}px;
+          height:${size}px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:${textColor};
+          font-size:${size}px;
+          line-height:1;
+        ">
+          <i class="${classValue}"></i>
+        </div>
+      `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
+      });
+
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
+    }
+
+    if (iconSource.includes('triangle')) {
+      const half = Math.max(6, Math.round(size * 0.5));
+      const icon = L.divIcon({
+        className: 'mapa-div-icon',
+        html: `
+        <div style="
           width:0;
           height:0;
-          border-left:8px solid transparent;
-          border-right:8px solid transparent;
-          border-bottom:16px solid ${fill};
+          border-left:${half}px solid transparent;
+          border-right:${half}px solid transparent;
+          border-bottom:${size}px solid ${fill};
           filter: drop-shadow(0 0 1px ${stroke});
-        "></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 14],
+        "></div>
+      `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size * 0.85)],
       });
 
-      return L.marker(latlng, { icon, draggable: false });
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
     }
 
-    if (iconoFuente.includes('target')) {
+    if (iconSource.includes('target')) {
+      const border = Math.max(2, Math.round(style.strokeWidth));
+      const inner = Math.max(2, Math.round(size * 0.18));
+
       const icon = L.divIcon({
         className: 'mapa-div-icon',
-        html: `<div style="
-          width:16px;
-          height:16px;
-          border:2px solid ${stroke};
+        html: `
+        <div style="
+          width:${size}px;
+          height:${size}px;
+          border:${border}px solid ${stroke};
           border-radius:999px;
           background:${fill};
-          box-shadow: inset 0 0 0 3px white;
-        "></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+          box-shadow: inset 0 0 0 ${inner}px white;
+        "></div>
+      `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
       });
 
-      return L.marker(latlng, { icon, draggable: false });
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
     }
 
-    if (iconoFuente.includes('donut')) {
+    if (iconSource.includes('donut')) {
+      const border = Math.max(3, Math.round(size * 0.22));
+
       const icon = L.divIcon({
         className: 'mapa-div-icon',
-        html: `<div style="
-          width:16px;
-          height:16px;
-          border:4px solid ${stroke};
+        html: `
+        <div style="
+          width:${size}px;
+          height:${size}px;
+          border:${border}px solid ${stroke};
           border-radius:999px;
           background:transparent;
-        "></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+        "></div>
+      `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
       });
 
-      return L.marker(latlng, { icon, draggable: false });
+      const marker = L.marker(latlng, { icon, draggable: false });
+      marker.setZIndexOffset(style.zIndex);
+
+      (marker as any).__baseZIndex = style.zIndex;
+      return marker;
     }
+
+    const border = Math.max(2, Math.round(style.strokeWidth));
 
     const icon = L.divIcon({
       className: 'mapa-div-icon',
-      html: `<div style="
-        width:14px;
-        height:14px;
+      html: `
+      <div style="
+        width:${size}px;
+        height:${size}px;
         border-radius:999px;
         background:${fill};
-        border:2px solid ${stroke};
+        border:${border}px solid ${stroke};
         box-shadow: 0 0 0 1px rgba(255,255,255,0.8);
-      "></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
+      "></div>
+    `,
+      iconSize: [size, size],
+      iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
     });
 
-    return L.marker(latlng, { icon, draggable: false });
+    const marker = L.marker(latlng, { icon, draggable: false });
+    marker.setZIndexOffset(style.zIndex);
+
+    (marker as any).__baseZIndex = style.zIndex;
+    return marker;
   }
+
+  private resolveElementStyle(
+  el: MapaElemento,
+  tipo: MapaTipoElemento | null
+): ResolvedElementStyle {
+  const colorStroke = el.colorStroke || tipo?.colorStroke || this.DEFAULT_STROKE;
+  const colorFill = el.colorFill || tipo?.colorFill || colorStroke;
+  const colorTexto =
+    el.colorTexto || tipo?.colorTexto || el.colorStroke || tipo?.colorStroke || null;
+
+  return {
+    iconoFuente: el.iconoFuente || tipo?.iconoFuente || null,
+    icono: el.icono || tipo?.icono || null,
+    iconoClase: el.iconoClase || tipo?.iconoClase || null,
+    colorFill,
+    colorStroke,
+    colorTexto,
+    strokeWidth: this.normalizeStrokeWidth(el.strokeWidth ?? tipo?.strokeWidth ?? null),
+    zIndex: this.normalizeZIndex(el.zIndex ?? tipo?.zIndex ?? null),
+    tamanoIcono: this.normalizeIconSize(el.tamanoIcono ?? tipo?.tamanoIcono ?? null),
+  };
+}
+
+private normalizeStrokeWidth(value: number | null | undefined): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 3;
+  return Math.max(1, Math.min(12, n));
+}
+
+private normalizeZIndex(value: number | null | undefined): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n);
+}
+
+private normalizeIconSize(value: number | null | undefined): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 18;
+  return Math.max(12, Math.min(64, Math.round(n)));
+}
+
+private normalizeIconSource(value: string | null | undefined): string {
+  return (value || '').trim().toLowerCase();
+}
+
+private isMaterialSymbol(iconSource: string): boolean {
+  return (
+    iconSource.includes('material-symbols') ||
+    iconSource.includes('material symbols') ||
+    iconSource === 'google' ||
+    iconSource === 'google-icons'
+  );
+}
+
+private isCssClassIcon(iconSource: string, value: string): boolean {
+  if (!value) return false;
+
+  return (
+    iconSource === 'class' ||
+    iconSource === 'css' ||
+    iconSource === 'primeicons' ||
+    iconSource === 'fontawesome' ||
+    iconSource === 'fa' ||
+    iconSource === 'mdi' ||
+    iconSource === 'bootstrap-icons'
+  );
+}
+
+private isUrlIcon(iconSource: string, value: string): boolean {
+  if (!value) return false;
+
+  return (
+    iconSource === 'url' ||
+    iconSource === 'image' ||
+    iconSource === 'img' ||
+    /^https?:\/\//i.test(value) ||
+    /^data:image\//i.test(value) ||
+    /^\/assets\//i.test(value)
+  );
+}
+
+private resolveMaterialFamily(iconSource: string): string {
+  if (iconSource.includes('rounded')) return 'material-symbols-rounded';
+  if (iconSource.includes('sharp')) return 'material-symbols-sharp';
+  return 'material-symbols-outlined';
+}
+
+private toMaterialSymbolWeight(strokeWidth: number): number {
+  const raw = strokeWidth > 10 ? strokeWidth : strokeWidth * 100;
+  const snapped = Math.round(raw / 100) * 100;
+  return Math.max(100, Math.min(700, snapped));
+}
+
+private escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+private escapeHtmlAttr(value: string): string {
+  return this.escapeHtml(value);
+}
 }

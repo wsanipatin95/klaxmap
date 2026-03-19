@@ -51,7 +51,16 @@ export interface TreeDrawElementRequest {
 }
 
 type ContextKind = 'node' | 'element' | null;
-
+interface TreeElementVisual {
+  mode: 'shape' | 'material' | 'class' | 'url';
+  iconoFuente: string | null;
+  icono: string | null;
+  iconoClase: string | null;
+  colorFill: string;
+  colorStroke: string;
+  colorTexto: string | null;
+  tamanoIcono: number;
+}
 @Component({
   selector: 'app-mapa-tree',
   standalone: true,
@@ -204,18 +213,21 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   tipoDeElemento(elemento: MapaElemento): MapaTipoElemento | null {
-    return (
-      this.tipos.find((t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk) ??
-      null
-    );
+    return this.tipos.find((t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk) ?? null;
   }
 
   previewShapeClassForElemento(elemento: MapaElemento): string {
-    const tipo = this.tipoDeElemento(elemento);
-    const iconoFuente = String(tipo?.iconoFuente || '').toLowerCase();
+    const visual = this.resolveTreeElementVisual(elemento);
 
     if (elemento.geomTipo === 'linestring') return 'is-line';
     if (elemento.geomTipo === 'polygon') return 'is-polygon';
+
+    if (visual.mode === 'material' || visual.mode === 'class' || visual.mode === 'url') {
+      return 'is-icon-host';
+    }
+
+    const iconoFuente = String(visual.iconoFuente || '').toLowerCase();
+
     if (iconoFuente.includes('triangle')) return 'is-triangle';
     if (iconoFuente.includes('target')) return 'is-target';
     if (iconoFuente.includes('donut')) return 'is-donut';
@@ -224,14 +236,121 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   previewStyleForElemento(elemento: MapaElemento): Record<string, string> {
-    const tipo = this.tipoDeElemento(elemento);
-    const stroke = tipo?.colorStroke || '#93c5fd';
-    const fill = tipo?.colorFill || stroke;
+    const visual = this.resolveTreeElementVisual(elemento);
 
     return {
-      '--preview-stroke': stroke,
-      '--preview-fill': fill,
-    } as Record<string, string>;
+      '--preview-stroke': visual.colorStroke,
+      '--preview-fill': visual.colorFill,
+      '--preview-text': visual.colorTexto || visual.colorStroke,
+      '--preview-size': `${visual.tamanoIcono}px`,
+    };
+  }
+
+  previewMaterialFamilyForElemento(elemento: MapaElemento): string {
+    const visual = this.resolveTreeElementVisual(elemento);
+    const source = String(visual.iconoFuente || '').toLowerCase();
+
+    if (source.includes('rounded')) return 'material-symbols-rounded';
+    if (source.includes('sharp')) return 'material-symbols-sharp';
+    return 'material-symbols-outlined';
+  }
+
+  previewMaterialGlyphForElemento(elemento: MapaElemento): string {
+    const visual = this.resolveTreeElementVisual(elemento);
+    return visual.icono || 'radio_button_checked';
+  }
+
+  previewClassForElemento(elemento: MapaElemento): string {
+    const visual = this.resolveTreeElementVisual(elemento);
+    return visual.iconoClase || visual.icono || '';
+  }
+
+  previewImageUrlForElemento(elemento: MapaElemento): string {
+    const visual = this.resolveTreeElementVisual(elemento);
+    return visual.icono || '';
+  }
+
+  showMaterialPreviewForElemento(elemento: MapaElemento): boolean {
+    return this.resolveTreeElementVisual(elemento).mode === 'material';
+  }
+
+  showClassPreviewForElemento(elemento: MapaElemento): boolean {
+    return this.resolveTreeElementVisual(elemento).mode === 'class';
+  }
+
+  showUrlPreviewForElemento(elemento: MapaElemento): boolean {
+    return this.resolveTreeElementVisual(elemento).mode === 'url';
+  }
+
+  private resolveTreeElementVisual(elemento: MapaElemento): TreeElementVisual {
+    const tipo = this.tipoDeElemento(elemento);
+
+    const iconoFuente = (elemento.iconoFuente || tipo?.iconoFuente || null) as string | null;
+    const icono = (elemento.icono || tipo?.icono || null) as string | null;
+    const iconoClase = (elemento.iconoClase || tipo?.iconoClase || null) as string | null;
+
+    const colorStroke =
+      (elemento.colorStroke || tipo?.colorStroke || '#93c5fd') as string;
+    const colorFill =
+      (elemento.colorFill || tipo?.colorFill || colorStroke) as string;
+    const colorTexto =
+      (elemento.colorTexto || tipo?.colorTexto || colorStroke || null) as string | null;
+
+    const tamanoIconoRaw = Number(elemento.tamanoIcono ?? tipo?.tamanoIcono ?? 16);
+    const tamanoIcono =
+      Number.isFinite(tamanoIconoRaw) && tamanoIconoRaw > 0
+        ? Math.max(12, Math.min(24, Math.round(tamanoIconoRaw)))
+        : 16;
+
+    const source = String(iconoFuente || '').trim().toLowerCase();
+
+    let mode: TreeElementVisual['mode'] = 'shape';
+
+    if (this.isMaterialSource(source)) {
+      mode = 'material';
+    } else if (this.isCssClassSource(source) && !!(iconoClase || icono)) {
+      mode = 'class';
+    } else if (this.isUrlSource(source) && !!icono) {
+      mode = 'url';
+    }
+
+    return {
+      mode,
+      iconoFuente,
+      icono,
+      iconoClase,
+      colorFill,
+      colorStroke,
+      colorTexto,
+      tamanoIcono,
+    };
+  }
+
+  private isMaterialSource(source: string): boolean {
+    return (
+      source === 'material-symbols-outlined' ||
+      source === 'material-symbols-rounded' ||
+      source === 'material-symbols-sharp' ||
+      source === 'material-symbols' ||
+      source === 'material symbols' ||
+      source === 'google' ||
+      source === 'google-icons'
+    );
+  }
+
+  private isCssClassSource(source: string): boolean {
+    return (
+      source === 'class' ||
+      source === 'css' ||
+      source === 'primeicons' ||
+      source === 'fontawesome' ||
+      source === 'mdi' ||
+      source === 'fa'
+    );
+  }
+
+  private isUrlSource(source: string): boolean {
+    return source === 'url' || source === 'image' || source === 'img';
   }
 
   isNodeVisible(node: MapaNodo): boolean {
