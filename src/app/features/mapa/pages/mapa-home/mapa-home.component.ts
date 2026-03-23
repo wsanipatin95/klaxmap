@@ -120,6 +120,17 @@ export class MapaHomeComponent {
     });
   });
 
+  readonly searchResultIndex = computed(() => {
+    const results = this.getSearchNavigableItems();
+    const selectedId = this.selectedElemento()?.idGeoElemento ?? null;
+
+    if (!results.length || selectedId == null) {
+      return -1;
+    }
+
+    return results.findIndex((item) => item.idGeoElemento === selectedId);
+  });
+
   readonly quickInfo = computed(() => {
     const q = (this.filtros.q() || '').trim();
     const nodo = this.selectedNodo();
@@ -181,6 +192,14 @@ export class MapaHomeComponent {
       (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
     );
+  }
+
+  onSearchPrev() {
+    this.navigateSearchResults(-1);
+  }
+
+  onSearchNext() {
+    this.navigateSearchResults(1);
   }
 
   onNodoSelect(nodo: MapaNodo | null) {
@@ -630,6 +649,48 @@ export class MapaHomeComponent {
     const first = items[0];
     this.selection.setElemento(first);
     setTimeout(() => this.mapCanvas?.centerOnElemento(first.idGeoElemento), 0);
+  }
+
+  private navigateSearchResults(direction: 1 | -1) {
+    const results = this.getSearchNavigableItems();
+
+    if (!results.length) {
+      return;
+    }
+
+    const currentId = this.selectedElemento()?.idGeoElemento ?? null;
+    const currentIndex =
+      currentId == null
+        ? -1
+        : results.findIndex((item) => item.idGeoElemento === currentId);
+
+    const nextIndex =
+      currentIndex < 0
+        ? direction > 0
+          ? 0
+          : results.length - 1
+        : (currentIndex + direction + results.length) % results.length;
+
+    const nextItem = results[nextIndex];
+
+    this.interaction.selectElementoWithPendingGuard({
+      item: nextItem,
+      nodos: this.nodos(),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      afterSelect: () => {
+        setTimeout(() => this.mapCanvas?.centerOnElemento(nextItem.idGeoElemento), 0);
+      },
+    });
+  }
+
+  private getSearchNavigableItems(): MapaElemento[] {
+    if (!(this.filtros.q() || '').trim()) {
+      return [];
+    }
+
+    return this.elementosCanvas();
   }
 
   private buildExportSummary(): string {

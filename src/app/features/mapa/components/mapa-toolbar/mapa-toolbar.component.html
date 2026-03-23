@@ -1,132 +1,136 @@
-<div class="toolbar-shell">
-  <div class="toolbar-wrap">
-    <div class="toolbar-group">
-      <button
-        pButton
-        type="button"
-        label="Seleccionar elementos"
-        [class.active]="isActive('select')"
-        (click)="selectModeRequested.emit()"
-      ></button>
+<div class="ge-toolbar-shell">
+  <div class="ge-toolbar-strip" role="toolbar" aria-label="Herramientas del mapa">
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('select')"
+      title="Seleccionar elementos"
+      aria-label="Seleccionar elementos"
+      (click)="selectModeRequested.emit()"
+    >
+      <i class="pi pi-mouse-pointer"></i>
+    </button>
 
-      <button
-        pButton
-        type="button"
-        label="Editar forma"
-        [class.active]="isActive('edit-geometry') || editSessionActive"
-        (click)="editGeometryModeRequested.emit()"
-      ></button>
-    </div>
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('edit-geometry') || editSessionActive"
+      title="Editar forma"
+      aria-label="Editar forma"
+      (click)="editGeometryModeRequested.emit()"
+    >
+      <i class="pi pi-pencil"></i>
+    </button>
 
-    <div class="toolbar-group">
-      <button
-        pButton
-        type="button"
-        label="Crear punto"
-        [class.active]="isActive('draw-point')"
-        (click)="drawPointModeRequested.emit()"
-      ></button>
+    <span class="tool-separator" aria-hidden="true"></span>
 
-      <button
-        pButton
-        type="button"
-        label="Crear línea"
-        [class.active]="isActive('draw-line')"
-        (click)="drawLineModeRequested.emit()"
-      ></button>
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('draw-point')"
+      title="Crear punto"
+      aria-label="Crear punto"
+      (click)="drawPointModeRequested.emit()"
+    >
+      <i class="pi pi-map-marker"></i>
+    </button>
 
-      <button
-        pButton
-        type="button"
-        label="Crear polígono"
-        [class.active]="isActive('draw-polygon')"
-        (click)="drawPolygonModeRequested.emit()"
-      ></button>
-    </div>
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('draw-line')"
+      title="Crear línea"
+      aria-label="Crear línea"
+      (click)="drawLineModeRequested.emit()"
+    >
+      <i class="pi pi-minus"></i>
+    </button>
 
-    <span class="separator"></span>
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('draw-polygon')"
+      title="Crear polígono"
+      aria-label="Crear polígono"
+      (click)="drawPolygonModeRequested.emit()"
+    >
+      <i class="pi pi-stop"></i>
+    </button>
 
-    <div class="toolbar-group">
-      <button
-        pButton
-        type="button"
-        label="Tipos de elemento"
-        severity="secondary"
-        (click)="manageTiposRequested.emit()"
-      ></button>
+    <span class="tool-separator" aria-hidden="true"></span>
 
-      <button
-        pButton
-        type="button"
-        label="Importar KML"
-        (click)="importRequested.emit()"
-      ></button>
+    <button
+      type="button"
+      class="tool-btn"
+      title="Tipos de elemento"
+      aria-label="Tipos de elemento"
+      (click)="manageTiposRequested.emit()"
+    >
+      <i class="pi pi-sitemap"></i>
+    </button>
 
-      <button
-        pButton
-        type="button"
-        label="Exportar KML"
-        (click)="exportRequested.emit()"
-      ></button>
+    <button
+      type="button"
+      class="tool-btn"
+      title="Importar KML"
+      aria-label="Importar KML"
+      (click)="importRequested.emit()"
+    >
+      <i class="pi pi-upload"></i>
+    </button>
 
-      <button
-        pButton
-        type="button"
-        label="Refrescar"
-        severity="secondary"
-        (click)="refreshRequested.emit()"
-      ></button>
-    </div>
+    <button
+      type="button"
+      class="tool-btn"
+      title="Exportar KML"
+      aria-label="Exportar KML"
+      (click)="exportRequested.emit()"
+    >
+      <i class="pi pi-download"></i>
+    </button>
 
-    <div class="toolbar-side-info">
-      <div class="toolbar-mode">
-        <span class="toolbar-mode-label">Modo actual</span>
-        <strong>{{ modeName(ui.toolMode()) }}</strong>
-      </div>
-
-      <div class="toolbar-total">
-        <span class="toolbar-mode-label">Elementos visibles</span>
-        <strong>{{ totalElementos }}</strong>
-      </div>
-    </div>
+    <button
+      type="button"
+      class="tool-btn"
+      title="Refrescar"
+      aria-label="Refrescar"
+      (click)="refreshRequested.emit()"
+    >
+      <i class="pi pi-refresh"></i>
+    </button>
   </div>
 
-  <div class="toolbar-help">
-    <div class="toolbar-help-title">{{ help().title }}</div>
-    <div class="toolbar-help-text">{{ help().text }}</div>
-  </div>
-
-  <div class="edit-session-bar" *ngIf="editSessionActive">
-    <div class="edit-session-info">
-      <div class="edit-session-title">
-        Editando: {{ editSessionElementName || 'elemento' }}
-      </div>
-      <div class="edit-session-text" *ngIf="editSessionDirty; else pendingNoChanges">
-        Hay cambios pendientes. Guarda para aplicar o cancela para volver al estado anterior.
-      </div>
-      <ng-template #pendingNoChanges>
-        <div class="edit-session-text">
-          Aún no has hecho cambios. Puedes mover, agregar o quitar vértices y luego guardar.
-        </div>
-      </ng-template>
+  <div class="edit-strip" *ngIf="editSessionActive">
+    <div class="edit-strip-copy">
+      <strong>{{ editSessionElementName || 'Elemento' }}</strong>
+      <span>
+        {{
+          editSessionDirty
+            ? 'Hay cambios pendientes.'
+            : 'Edición activa.'
+        }}
+      </span>
     </div>
 
-    <div class="edit-session-actions">
+    <div class="edit-strip-actions">
       <button
-        pButton
         type="button"
-        label="Cancelar"
-        severity="secondary"
+        class="edit-action"
         (click)="cancelEditRequested.emit()"
-      ></button>
+      >
+        <i class="pi pi-times"></i>
+        <span>Cancelar</span>
+      </button>
 
       <button
-        pButton
         type="button"
-        label="Guardar cambios"
+        class="edit-action edit-action--primary"
         [disabled]="!editSessionDirty"
         (click)="saveEditRequested.emit()"
-      ></button>
+      >
+        <i class="pi pi-check"></i>
+        <span>Guardar</span>
+      </button>
     </div>
   </div>
 </div>

@@ -1,89 +1,102 @@
-<div class="tree-toolbar">
-  <div class="tree-toolbar-left">
-    <button type="button" class="toolbar-btn" (click)="selectAll()">
-      Ver todo
-    </button>
-
-    <button type="button" class="toolbar-btn ghost" (click)="expandAll()">
-      Expandir
-    </button>
-
-    <button type="button" class="toolbar-btn ghost" (click)="collapseAll()">
-      Contraer
-    </button>
-  </div>
-
-  <span class="tree-hint" *ngIf="searchValue">
-    Coincidencias visibles
-  </span>
-</div>
-
 <div class="tree-empty" *ngIf="!hasAnyTreeData">
-  <strong>No hay nodos cargados.</strong>
-  <p>
-    Crea una carpeta raíz o revisa que el backend esté devolviendo nodos.
-  </p>
-
-  <div class="tree-empty-actions">
-    <button type="button" (click)="createRootNode('carpeta')">Crear carpeta raíz</button>
-    <button type="button" (click)="createRootNode('zona')">Crear zona raíz</button>
-  </div>
+  <span>No hay elementos.</span>
 </div>
 
 <div class="tree-empty" *ngIf="hasAnyTreeData && !hasVisibleTreeData">
-  <strong>No hay coincidencias.</strong>
-  <p>
-    Borra la búsqueda o usa “Ver todo”.
-  </p>
+  <span>Sin resultados.</span>
 </div>
 
 <div class="tree-scroll" *ngIf="hasVisibleTreeData">
   <ul class="tree-root">
     <ng-container *ngFor="let item of tree; trackBy: trackByNode">
-      <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"></ng-container>
+      <ng-container
+        *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
+      ></ng-container>
     </ng-container>
   </ul>
 </div>
 
 <ng-template #nodeTpl let-item let-level="level">
   <li class="tree-node" *ngIf="item.visible">
-    <div class="node-row" [class.active]="item.node.idRedNodo === selectedNodoId"
-      [class.is-hidden]="!isNodeVisible(item.node)" [style.paddingLeft.px]="6 + (level * 10)"
-      (click)="onNodeClick(item.node, $event)" (contextmenu)="openNodeContext(item.node, $event)"
-      [attr.title]="item.node.nodo">
-      <button type="button" class="expand-btn" *ngIf="item.children.length > 0 || item.elementos.length > 0"
-        (click)="toggleExpanded(item.node.idRedNodo, $event)" aria-label="Expandir o contraer nodo">
+    <div
+      class="node-row"
+      [class.active]="item.node.idRedNodo === selectedNodoId"
+      [class.is-hidden]="!isNodeVisible(item.node)"
+      [style.paddingLeft.px]="4 + (level * 12)"
+      (click)="onNodeClick(item.node, $event)"
+      (contextmenu)="openNodeContext(item.node, $event)"
+      [attr.title]="item.node.nodo"
+    >
+      <button
+        type="button"
+        class="expand-btn"
+        *ngIf="item.children.length > 0 || item.elementos.length > 0"
+        (click)="toggleExpanded(item.node.idRedNodo, $event)"
+        aria-label="Expandir o contraer nodo"
+      >
         <span class="expand-chevron" [class.expanded]="isExpanded(item.node)">▸</span>
       </button>
 
-      <span class="expand-placeholder" *ngIf="item.children.length === 0 && item.elementos.length === 0"></span>
+      <span
+        class="expand-placeholder"
+        *ngIf="item.children.length === 0 && item.elementos.length === 0"
+      ></span>
 
-      <input type="checkbox" class="tree-check" [checked]="isNodeVisible(item.node)"
-        [indeterminate]="isNodeIndeterminate(item.node)" (click)="$event.stopPropagation()"
-        (change)="onToggleNode(item.node, $event)" />
+      <input
+        type="checkbox"
+        class="tree-check"
+        [checked]="isNodeVisible(item.node)"
+        [indeterminate]="isNodeIndeterminate(item.node)"
+        (click)="$event.stopPropagation()"
+        (change)="onToggleNode(item.node, $event)"
+      />
 
-      <span class="node-preview" [ngClass]="previewShapeClassForNode(item.node)" aria-hidden="true"></span>
+      <span
+        class="node-preview"
+        [ngClass]="previewShapeClassForNode(item.node)"
+        aria-hidden="true"
+      ></span>
 
       <span class="node-name">{{ item.node.nodo }}</span>
     </div>
 
     <ul class="tree-children" *ngIf="isExpanded(item.node)">
       <ng-container *ngFor="let child of item.children; trackBy: trackByNode">
-        <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: child, level: level + 1 }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="nodeTpl; context: { $implicit: child, level: level + 1 }"
+        ></ng-container>
       </ng-container>
 
-      <li class="element-row" *ngFor="let el of item.elementos; trackBy: trackByElemento"
-        [class.active]="el.idGeoElemento === selectedElementoId" [class.is-hidden]="!isElementoVisible(el)"
-        [style.paddingLeft.px]="30 + ((level + 1) * 10)" (click)="onElementoClick(el, $event)"
-        (contextmenu)="openElementoContext(el, $event)" [attr.title]="el.nombre">
+      <li
+        class="element-row"
+        *ngFor="let el of item.elementos; trackBy: trackByElemento"
+        [class.active]="el.idGeoElemento === selectedElementoId"
+        [class.is-hidden]="!isElementoVisible(el)"
+        [style.paddingLeft.px]="26 + ((level + 1) * 12)"
+        (click)="onElementoClick(el, $event)"
+        (contextmenu)="openElementoContext(el, $event)"
+        [attr.title]="el.nombre"
+      >
         <div class="element-row-grid">
-          <input type="checkbox" class="tree-check" [checked]="isElementoVisible(el)" (click)="$event.stopPropagation()"
-            (change)="onToggleElemento(el, $event)" />
+          <input
+            type="checkbox"
+            class="tree-check"
+            [checked]="isElementoVisible(el)"
+            (click)="$event.stopPropagation()"
+            (change)="onToggleElemento(el, $event)"
+          />
 
-          <span class="element-preview" [ngClass]="previewShapeClassForElemento(el)"
-            [ngStyle]="previewStyleForElemento(el)" aria-hidden="true">
+          <span
+            class="element-preview"
+            [ngClass]="previewShapeClassForElemento(el)"
+            [ngStyle]="previewStyleForElemento(el)"
+            aria-hidden="true"
+          >
             <ng-container *ngIf="showMaterialPreviewForElemento(el)">
-              <span class="element-preview-material" [class]="previewMaterialFamilyForElemento(el)">
+              <span
+                class="element-preview-material"
+                [class]="previewMaterialFamilyForElemento(el)"
+              >
                 {{ previewMaterialGlyphForElemento(el) }}
               </span>
             </ng-container>
@@ -93,7 +106,11 @@
             </ng-container>
 
             <ng-container *ngIf="showUrlPreviewForElemento(el)">
-              <img class="element-preview-image" [src]="previewImageUrlForElemento(el)" alt="" />
+              <img
+                class="element-preview-image"
+                [src]="previewImageUrlForElemento(el)"
+                alt=""
+              />
             </ng-container>
           </span>
 
@@ -105,7 +122,12 @@
 </ng-template>
 
 <div class="context-overlay" *ngIf="contextVisible()" (click)="closeContext()">
-  <div class="context-menu" [style.left.px]="contextX()" [style.top.px]="contextY()" (click)="$event.stopPropagation()">
+  <div
+    class="context-menu"
+    [style.left.px]="contextX()"
+    [style.top.px]="contextY()"
+    (click)="$event.stopPropagation()"
+  >
     <ng-container *ngIf="contextKind() === 'node' && contextNode() as node">
       <div class="context-title">{{ node.nodo }}</div>
 

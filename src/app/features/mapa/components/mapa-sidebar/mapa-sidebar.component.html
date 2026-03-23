@@ -1,96 +1,89 @@
-<div class="sidebar-wrap">
-  <div class="sidebar-header">
-    <h3>Mapa ISP</h3>
-    <small>Navegación, visibilidad y control visual</small>
-  </div>
+<div #shell class="sidebar-shell">
+  <section
+    class="sidebar-pane pane-places"
+    [class.is-collapsed]="!isExpanded('lugares')"
+    [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? topPanePercent() : null"
+  >
+    <button
+      type="button"
+      class="pane-header"
+      (click)="toggleSection('lugares')"
+    >
+      <span class="pane-header-left">
+        <span class="pane-toggle-icon" [class.expanded]="isExpanded('lugares')">▾</span>
+        <span class="pane-title">Lugares</span>
+      </span>
+    </button>
 
-  <app-mapa-search
-    [value]="searchValue"
-    [loading]="searchLoading"
-    [resultCount]="searchResultCount"
-    (valueChange)="searchChange.emit($event)"
-    (clearRequested)="searchClear.emit()"
-  />
+    <div class="pane-body" *ngIf="isExpanded('lugares')">
+      <div class="places-stack">
+        <div class="places-tree">
+          <app-mapa-tree
+            [nodos]="nodos"
+            [elementos]="elementos"
+            [tipos]="tipos"
+            [selectedNodoId]="selectedNodoId"
+            [selectedElementoId]="selectedElementoId"
+            [searchValue]="searchValue"
+            [hiddenNodeIds]="hiddenNodeIds"
+            [hiddenElementoIds]="hiddenElementoIds"
+            (nodoSelected)="nodoSelected.emit($event)"
+            (elementoSelected)="treeElementoSelected.emit($event)"
+            (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
+            (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
+            (createNodeRequested)="treeCreateNodeRequested.emit($event)"
+            (editNodeRequested)="treeEditNodeRequested.emit($event)"
+            (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
+            (drawElementRequested)="treeDrawElementRequested.emit($event)"
+            (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
+            (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
+            (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
+            (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
+          />
+        </div>
 
-  <div class="sidebar-summary">
-    {{ hiddenSummary }}
-  </div>
-
-  <section class="sidebar-card tree-card">
-    <div class="section-title section-title-fixed">
-      <div class="section-title-copy">
-        <span class="section-title-main">Árbol de elementos</span>
-        <span class="section-title-sub">
-          Siempre visible · navegación principal
-        </span>
+        <div class="places-search">
+          <app-mapa-search
+            [value]="searchValue"
+            [loading]="searchLoading"
+            [resultCount]="searchResultCount"
+            [currentIndex]="searchResultIndex"
+            (valueChange)="searchChange.emit($event)"
+            (clearRequested)="searchClear.emit()"
+            (prevRequested)="searchPrev.emit()"
+            (nextRequested)="searchNext.emit()"
+          />
+        </div>
       </div>
     </div>
-
-    <div class="section-body tree-body tree-body-fixed">
-      <app-mapa-tree
-        [nodos]="nodos"
-        [elementos]="elementos"
-        [tipos]="tipos"
-        [selectedNodoId]="selectedNodoId"
-        [selectedElementoId]="selectedElementoId"
-        [searchValue]="searchValue"
-        [hiddenNodeIds]="hiddenNodeIds"
-        [hiddenElementoIds]="hiddenElementoIds"
-        (nodoSelected)="nodoSelected.emit($event)"
-        (elementoSelected)="treeElementoSelected.emit($event)"
-        (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
-        (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
-        (createNodeRequested)="treeCreateNodeRequested.emit($event)"
-        (editNodeRequested)="treeEditNodeRequested.emit($event)"
-        (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
-        (drawElementRequested)="treeDrawElementRequested.emit($event)"
-        (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
-        (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
-        (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
-        (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
-      />
-    </div>
   </section>
 
-  <section class="sidebar-card accordion-card" [class.collapsed]="!isExpanded('capas')">
+  <div
+    class="sidebar-splitter"
+    *ngIf="isExpanded('lugares') && isExpanded('capas')"
+    (pointerdown)="startResize($event)"
+  >
+    <span></span>
+  </div>
+
+  <section
+    class="sidebar-pane pane-layers"
+    [class.is-collapsed]="!isExpanded('capas')"
+    [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? (100 - topPanePercent()) : null"
+  >
     <button
       type="button"
-      class="section-toggle"
+      class="pane-header"
       (click)="toggleSection('capas')"
     >
-      <span class="section-toggle-copy">
-        <span class="section-toggle-title">Capas y leyenda</span>
-        <span class="section-toggle-sub">Control visual de tipos y capas</span>
-      </span>
-
-      <span class="toggle-icon" [class.expanded]="isExpanded('capas')">
-        ▾
+      <span class="pane-header-left">
+        <span class="pane-toggle-icon" [class.expanded]="isExpanded('capas')">▾</span>
+        <span class="pane-title">Uso de capas</span>
       </span>
     </button>
 
-    <div class="section-body capas-body" *ngIf="isExpanded('capas')">
+    <div class="pane-body" *ngIf="isExpanded('capas')">
       <app-mapa-capas-panel [tipos]="tipos" />
-    </div>
-  </section>
-
-  <section class="sidebar-card accordion-card" [class.collapsed]="!isExpanded('lotes')">
-    <button
-      type="button"
-      class="section-toggle"
-      (click)="toggleSection('lotes')"
-    >
-      <span class="section-toggle-copy">
-        <span class="section-toggle-title">Lotes e importaciones</span>
-        <span class="section-toggle-sub">Historial y estado de importación</span>
-      </span>
-
-      <span class="toggle-icon" [class.expanded]="isExpanded('lotes')">
-        ▾
-      </span>
-    </button>
-
-    <div class="section-body lotes-body" *ngIf="isExpanded('lotes')">
-      <app-mapa-import-lotes-panel />
     </div>
   </section>
 </div>

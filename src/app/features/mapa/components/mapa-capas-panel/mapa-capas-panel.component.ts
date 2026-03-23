@@ -37,25 +37,25 @@ export class MapaCapasPanelComponent {
     }
   }
 
-  geomLabel(tipo: MapaTipoElemento): string {
-    switch (tipo.geometriaPermitida) {
-      case 'point':
-        return 'point';
-      case 'linestring':
-        return 'linestring';
-      case 'polygon':
-        return 'polygon';
-      case 'mixed':
-      default:
-        return 'mixed';
+  allVisible(): boolean {
+    if (!this.tipos.length) return true;
+    return this.tipos.every((tipo) => this.visible(tipo.idGeoTipoElemento));
+  }
+
+  onRootToggle(checked: boolean) {
+    if (checked) {
+      this.showAll();
+      return;
     }
+
+    this.hideAll();
   }
 
   previewShapeClass(tipo: MapaTipoElemento): string {
     const iconoFuente = String(tipo.iconoFuente || '').toLowerCase();
 
-    if (this.geomLabel(tipo) === 'linestring') return 'is-line';
-    if (this.geomLabel(tipo) === 'polygon') return 'is-polygon';
+    if (tipo.geometriaPermitida === 'linestring') return 'is-line';
+    if (tipo.geometriaPermitida === 'polygon') return 'is-polygon';
     if (iconoFuente.includes('triangle')) return 'is-triangle';
     if (iconoFuente.includes('target')) return 'is-target';
     if (iconoFuente.includes('donut')) return 'is-donut';
@@ -64,7 +64,7 @@ export class MapaCapasPanelComponent {
   }
 
   previewStyle(tipo: MapaTipoElemento): Record<string, string> {
-    const stroke = tipo.colorStroke || '#93c5fd';
+    const stroke = tipo.colorStroke || '#7b0061';
     const fill = tipo.colorFill || stroke;
 
     return {

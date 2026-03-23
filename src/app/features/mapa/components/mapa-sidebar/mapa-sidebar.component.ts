@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  Output,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
 import type {
   MapaElemento,
   MapaNodo,
@@ -14,7 +24,6 @@ import {
 } from '../mapa-tree/mapa-tree.component';
 import { MapaSearchComponent } from '../mapa-search/mapa-search.component';
 import { MapaCapasPanelComponent } from '../mapa-capas-panel/mapa-capas-panel.component';
-import { MapaImportLotesPanelComponent } from '../mapa-import-lotes-panel/mapa-import-lotes-panel.component';
 import {
   MapaSidebarSectionKey,
   MapaSidebarSectionsStore,
@@ -28,13 +37,14 @@ import {
     MapaTreeComponent,
     MapaSearchComponent,
     MapaCapasPanelComponent,
-    MapaImportLotesPanelComponent,
   ],
   templateUrl: './mapa-sidebar.component.html',
   styleUrl: './mapa-sidebar.component.scss',
 })
 export class MapaSidebarComponent {
   readonly sections = inject(MapaSidebarSectionsStore);
+
+  @ViewChild('shell', { static: true }) shell?: ElementRef<HTMLDivElement>;
 
   @Input() nodos: MapaNodo[] = [];
   @Input() elementos: MapaElemento[] = [];
@@ -44,11 +54,14 @@ export class MapaSidebarComponent {
   @Input() searchValue = '';
   @Input() searchLoading = false;
   @Input() searchResultCount = 0;
+  @Input() searchResultIndex = -1;
   @Input() hiddenNodeIds: number[] = [];
   @Input() hiddenElementoIds: number[] = [];
 
   @Output() searchChange = new EventEmitter<string>();
   @Output() searchClear = new EventEmitter<void>();
+  @Output() searchPrev = new EventEmitter<void>();
+  @Output() searchNext = new EventEmitter<void>();
   @Output() nodoSelected = new EventEmitter<MapaNodo | null>();
   @Output() treeElementoSelected = new EventEmitter<MapaElemento>();
   @Output() treeNodeVisibilityChange = new EventEmitter<TreeNodeVisibilityChange>();
@@ -62,6 +75,9 @@ export class MapaSidebarComponent {
   @Output() treeEditGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeDeleteElementoRequested = new EventEmitter<MapaElemento>();
 
+  readonly topPanePercent = signal(60);
+  private resizing = false;
+
   isExpanded(key: MapaSidebarSectionKey): boolean {
     return this.sections.isExpanded(key);
   }
@@ -70,14 +86,36 @@ export class MapaSidebarComponent {
     this.sections.toggle(key);
   }
 
-  get hiddenSummary(): string {
-    const hiddenNodes = this.hiddenNodeIds.length;
-    const hiddenElements = this.hiddenElementoIds.length;
-
-    if (!hiddenNodes && !hiddenElements) {
-      return 'Todo visible';
+  startResize(event: PointerEvent) {
+    if (!this.isExpanded('lugares') || !this.isExpanded('capas')) {
+      return;
     }
 
-    return `${hiddenNodes} nodo(s) y ${hiddenElements} elemento(s) ocultos`;
+    this.resizing = true;
+    event.preventDefault();
+  }
+
+  @HostListener('window:pointerup')
+  stopResize() {
+    this.resizing = false;
+  }
+
+  @HostListener('window:pointermove', ['$event'])
+  onPointerMove(event: PointerEvent) {
+    if (!this.resizing || !this.shell) {
+      return;
+    }
+
+    const rect = this.shell.nativeElement.getBoundingClientRect();
+    if (!rect.height) {
+      return;
+    }
+
+    const percent = ((event.clientY - rect.top) / rect.height) * 100;
+    this.topPanePercent.set(this.clampPercent(percent));
+  }
+
+  private clampPercent(value: number): number {
+    return Math.max(32, Math.min(78, Math.round(value)));
   }
 }

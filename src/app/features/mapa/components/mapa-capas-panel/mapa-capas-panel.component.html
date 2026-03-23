@@ -1,39 +1,29 @@
-<div class="capas-wrap">
-  <div class="capas-toolbar">
-    <small class="capas-help">
-      Activa o desactiva capas. Aquí mismo ves color, símbolo y tipo geométrico.
-    </small>
+<div class="layers-panel">
+  <div class="layers-toolbar">
+    <button type="button" class="toolbar-btn" title="Mostrar todo" aria-label="Mostrar todo" (click)="showAll()">
+      <i class="pi pi-eye"></i>
+    </button>
 
-    <div class="capas-actions">
-      <button type="button" (click)="showAll()">Mostrar todo</button>
-      <button type="button" class="secondary" (click)="hideAll()">Ocultar todo</button>
-    </div>
+    <button type="button" class="toolbar-btn" title="Ocultar todo" aria-label="Ocultar todo" (click)="hideAll()">
+      <i class="pi pi-eye-slash"></i>
+    </button>
   </div>
 
-  <div class="capas-list">
-    <div class="capa-row" *ngFor="let t of tipos; trackBy: trackByTipo">
-      <label class="capa-label">
-        <input
-          type="checkbox"
-          [checked]="visible(t.idGeoTipoElemento)"
-          (change)="toggle(t.idGeoTipoElemento)"
-        />
+  <div class="layers-tree">
+    <label class="layers-root-row">
+      <input #rootToggle type="checkbox" [checked]="allVisible()" (change)="onRootToggle(rootToggle.checked)" />
+      <span class="layers-expander">▾</span>
+      <span class="layers-root-name">Base de datos principal</span>
+    </label>
 
-        <span
-          class="capa-preview"
-          [ngClass]="previewShapeClass(t)"
-          [ngStyle]="previewStyle(t)"
-          aria-hidden="true"
-        ></span>
+    <div class="layers-children">
+      <label class="layer-row" *ngFor="let t of tipos; trackBy: trackByTipo">
+        <input type="checkbox" [checked]="visible(t.idGeoTipoElemento)" (change)="toggle(t.idGeoTipoElemento)" />
 
-        <span class="capa-copy">
-          <span class="capa-name">{{ t.nombre }}</span>
-          <small class="capa-meta">{{ geomLabel(t) }}</small>
-        </span>
+        <span class="layer-preview" [ngClass]="previewShapeClass(t)" [ngStyle]="previewStyle(t)"
+          aria-hidden="true"></span>
 
-        <span class="capa-state">
-          {{ visible(t.idGeoTipoElemento) ? 'Visible' : 'Oculta' }}
-        </span>
+        <span class="layer-name">{{ t.nombre }}</span>
       </label>
     </div>
   </div>

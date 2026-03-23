@@ -1,25 +1,56 @@
-<div class="mapa-search">
-  <div class="search-input-wrap">
-    <input
-      type="text"
-      [ngModel]="value"
-      (ngModelChange)="valueChange.emit($event)"
-      [placeholder]="placeholder"
-    />
+<div class="ge-search">
+  <button
+    type="button"
+    class="search-icon"
+    [attr.title]="loading ? 'Buscando...' : 'Buscar'"
+    [attr.aria-label]="loading ? 'Buscando...' : 'Buscar'"
+  >
+    <i class="pi" [ngClass]="loading ? 'pi-spin pi-spinner' : 'pi-search'"></i>
+  </button>
 
-    <button
-      type="button"
-      class="clear-btn"
-      *ngIf="value"
-      (click)="clearRequested.emit()"
-      aria-label="Limpiar búsqueda"
-    >
-      ✕
-    </button>
-  </div>
+  <input
+    type="text"
+    [ngModel]="value"
+    (ngModelChange)="onInput($event)"
+    [placeholder]="placeholder"
+    autocomplete="off"
+    spellcheck="false"
+  />
 
-  <div class="search-status" *ngIf="value || loading">
-    <span *ngIf="loading">Buscando...</span>
-    <span *ngIf="!loading && value">Resultados visibles: {{ resultCount }}</span>
-  </div>
+  <button
+    type="button"
+    class="nav-btn"
+    title="Resultado anterior"
+    aria-label="Resultado anterior"
+    [disabled]="resultCount <= 1"
+    (click)="prevRequested.emit()"
+  >
+    <i class="pi pi-angle-up"></i>
+  </button>
+
+  <button
+    type="button"
+    class="nav-btn"
+    title="Resultado siguiente"
+    aria-label="Resultado siguiente"
+    [disabled]="resultCount <= 1"
+    (click)="nextRequested.emit()"
+  >
+    <i class="pi pi-angle-down"></i>
+  </button>
+
+  <button
+    type="button"
+    class="clear-btn"
+    title="Limpiar búsqueda"
+    aria-label="Limpiar búsqueda"
+    [disabled]="!value"
+    (click)="clear()"
+  >
+    <i class="pi pi-times"></i>
+  </button>
+</div>
+
+<div class="ge-search-status">
+  {{ loading ? 'Buscando…' : counterLabel }}
 </div>

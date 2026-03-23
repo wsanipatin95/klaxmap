@@ -1,12 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
-export type MapaSidebarSectionKey = 'capas' | 'lotes';
+export type MapaSidebarSectionKey = 'lugares' | 'capas';
 
 @Injectable({ providedIn: 'root' })
 export class MapaSidebarSectionsStore {
   readonly state = signal<Record<MapaSidebarSectionKey, boolean>>({
-    capas: false,
-    lotes: false,
+    lugares: true,
+    capas: true,
   });
 
   isExpanded(key: MapaSidebarSectionKey): boolean {
