@@ -3,19 +3,19 @@
     <button
       type="button"
       class="tab-btn"
-      [class.active]="tab() === 'propiedades'"
-      (click)="setTab('propiedades')"
+      [class.active]="tab() === 'datos'"
+      (click)="setTab('datos')"
     >
-      Propiedades
+      Datos
     </button>
 
     <button
       type="button"
       class="tab-btn"
-      [class.active]="tab() === 'metadatos'"
-      (click)="setTab('metadatos')"
+      [class.active]="tab() === 'meta'"
+      (click)="setTab('meta')"
     >
-      Metadatos
+      Meta
     </button>
 
     <button
@@ -28,7 +28,7 @@
     </button>
   </div>
 
-  <div class="tabs-content" *ngIf="tab() === 'propiedades'">
+  <div class="tabs-content" *ngIf="tab() === 'datos'">
     <app-mapa-element-form
       [elemento]="el"
       [tipos]="tipos"
@@ -38,11 +38,17 @@
     />
   </div>
 
-  <div class="tabs-content" *ngIf="tab() === 'metadatos'">
-    <pre>{{ jsonPretty(el.atributos) }}</pre>
+  <div class="tabs-content" *ngIf="tab() === 'meta'">
+    <div class="json-block">
+      <div class="json-title">Atributos</div>
+      <pre>{{ isEmptyObject(el.atributos) ? '{}' : jsonPretty(el.atributos) }}</pre>
+    </div>
   </div>
 
   <div class="tabs-content" *ngIf="tab() === 'kml'">
-    <pre>{{ jsonPretty(el.kmlExtendedData) }}</pre>
+    <div class="json-block">
+      <div class="json-title">KML</div>
+      <pre>{{ isEmptyObject(el.kmlExtendedData) ? '{}' : jsonPretty(el.kmlExtendedData) }}</pre>
+    </div>
   </div>
 </div>

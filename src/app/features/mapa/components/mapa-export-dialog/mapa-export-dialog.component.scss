@@ -1,43 +1,121 @@
+:host {
+  display: block;
+}
+
 .dialog-body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding-top: 0.2rem;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.summary-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.summary-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #f3c7df;
+  background: #fdf4f9;
+  color: #7b0061;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.summary-text {
+  font-size: 0.73rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem 0.75rem;
+}
+
+.span-2 { grid-column: span 2; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
 }
 
 label {
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
 }
 
 input,
 select {
   width: 100%;
-  padding: 0.6rem 0.75rem;
+  min-width: 0;
+  height: 38px;
+  padding: 0 0.68rem;
+  border-radius: 0.55rem;
   border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #334155;
+  outline: none;
+  font-size: 0.74rem;
 }
 
-.callout {
-  padding: 0.85rem 0.95rem;
-  border-radius: 0.8rem;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e3a8a;
+input:focus,
+select:focus {
+  border-color: #b02365;
+  box-shadow: 0 0 0 3px rgba(176, 35, 101, 0.12);
 }
 
-.callout p {
-  margin: 0.35rem 0 0;
-}
-
-.summary {
-  font-size: 0.92rem;
-}
-
-.help-text {
+.dialog-note {
+  font-size: 0.72rem;
   color: #64748b;
   line-height: 1.35;
 }
 
 .error {
-  color: #dc2626;
   margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: #fff1f2;
+  color: #b42318;
+  border: 1px solid #fecdd3;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 760px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .span-2 {
+    grid-column: span 1;
+  }
 }

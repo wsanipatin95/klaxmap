@@ -24,6 +24,10 @@ export class MapaImportDialogComponent {
 
   @Output() imported = new EventEmitter<MapaImportResult>();
 
+  get fileName(): string {
+    return this.selectedFile()?.name || 'Sin archivo';
+  }
+
   open() {
     this.visible.set(true);
     this.error.set(null);
@@ -43,7 +47,7 @@ export class MapaImportDialogComponent {
   importar() {
     const file = this.selectedFile();
     if (!file) {
-      this.error.set('Debe seleccionar un archivo KML');
+      this.error.set('Selecciona un archivo KML o KMZ.');
       return;
     }
 
@@ -59,7 +63,7 @@ export class MapaImportDialogComponent {
         },
         error: (err) => {
           console.error(err);
-          this.error.set(err?.message || 'No se pudo importar el archivo');
+          this.error.set(err?.message || 'No se pudo importar.');
         },
       });
   }

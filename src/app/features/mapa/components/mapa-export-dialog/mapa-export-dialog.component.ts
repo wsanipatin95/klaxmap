@@ -26,7 +26,7 @@ export class MapaExportDialogComponent {
   loading = signal(false);
   error = signal<string | null>(null);
   resultCount = signal(0);
-  filterSummary = signal('Sin filtros activos');
+  filterSummary = signal('Sin filtros');
 
   form: MapaExportRequest = {
     q: '',
@@ -43,7 +43,7 @@ export class MapaExportDialogComponent {
     this.visible.set(true);
     this.error.set(null);
     this.resultCount.set(meta?.resultCount ?? 0);
-    this.filterSummary.set(meta?.filterSummary ?? 'Sin filtros activos');
+    this.filterSummary.set(meta?.filterSummary ?? 'Sin filtros');
 
     this.form = {
       q: prefill?.q ?? '',
@@ -78,7 +78,7 @@ export class MapaExportDialogComponent {
         },
         error: (err) => {
           console.error(err);
-          this.error.set(err?.message || 'No se pudo exportar');
+          this.error.set(err?.message || 'No se pudo exportar.');
         },
       });
   }

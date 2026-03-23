@@ -3,58 +3,82 @@
   (visibleChange)="visible.set($event)"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '42rem' }"
+  [style]="{ width: '38rem' }"
   header="Exportar KML"
 >
   <div class="dialog-body">
-    <div class="callout">
-      <strong>Qué se exporta</strong>
-      <p>
-        Se exportan los elementos según los filtros actuales del mapa. No depende del
-        elemento seleccionado.
-      </p>
-      <p class="summary">{{ filterSummary() }}</p>
-      <p class="summary">Resultados visibles con esos filtros: <strong>{{ resultCount() }}</strong></p>
+    <div class="summary-card">
+      <div class="summary-top">
+        <span class="summary-title">Resumen</span>
+        <span class="summary-count">{{ resultCount() }} resultado(s)</span>
+      </div>
+
+      <div class="summary-text">{{ filterSummary() }}</div>
     </div>
 
-    <label>Nombre del documento</label>
-    <input type="text" [(ngModel)]="form.nombreDocumento" />
+    <div class="form-grid">
+      <div class="field span-2">
+        <label>Nombre</label>
+        <input type="text" [(ngModel)]="form.nombreDocumento" />
+      </div>
 
-    <label>Búsqueda</label>
-    <input type="text" [(ngModel)]="form.q" />
+      <div class="field span-2">
+        <label>Buscar</label>
+        <input type="text" [(ngModel)]="form.q" />
+      </div>
 
-    <label>Nodo</label>
-    <select [(ngModel)]="form.idRedNodoFk">
-      <option [ngValue]="null">Todos</option>
-      <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-        {{ n.nodo }}
-      </option>
-    </select>
+      <div class="field span-2">
+        <label>Nodo</label>
+        <select [(ngModel)]="form.idRedNodoFk">
+          <option [ngValue]="null">Todos</option>
+          <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+            {{ n.nodo }}
+          </option>
+        </select>
+      </div>
 
-    <label>Tipo</label>
-    <select [(ngModel)]="form.idGeoTipoElementoFk">
-      <option [ngValue]="null">Todos</option>
-      <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
-        {{ t.nombre }}
-      </option>
-    </select>
+      <div class="field span-2">
+        <label>Tipo</label>
+        <select [(ngModel)]="form.idGeoTipoElementoFk">
+          <option [ngValue]="null">Todos</option>
+          <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+            {{ t.nombre }}
+          </option>
+        </select>
+      </div>
 
-    <label>Visibilidad</label>
-    <select [(ngModel)]="form.visible">
-      <option [ngValue]="true">Sólo visibles</option>
-      <option [ngValue]="false">Sólo no visibles</option>
-      <option [ngValue]="null">Todos</option>
-    </select>
+      <div class="field span-2">
+        <label>Visibilidad</label>
+        <select [(ngModel)]="form.visible">
+          <option [ngValue]="true">Sólo visibles</option>
+          <option [ngValue]="false">Sólo no visibles</option>
+          <option [ngValue]="null">Todos</option>
+        </select>
+      </div>
+    </div>
 
-    <small class="help-text">
-      Las ocultaciones locales del árbol y de capas sólo afectan la vista del usuario. La exportación usa los filtros de la API mostrados arriba.
-    </small>
+    <div class="dialog-note">
+      La exportación usa los filtros del formulario.
+    </div>
 
     <p class="error" *ngIf="error() as err">{{ err }}</p>
   </div>
 
   <ng-template pTemplate="footer">
-    <button pButton type="button" label="Cerrar" severity="secondary" (click)="close()"></button>
-    <button pButton type="button" label="Exportar KML" [disabled]="loading()" (click)="exportar()"></button>
+    <button
+      pButton
+      type="button"
+      label="Cerrar"
+      severity="secondary"
+      (click)="close()"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      label="{{ loading() ? 'Exportando...' : 'Exportar' }}"
+      [disabled]="loading()"
+      (click)="exportar()"
+    ></button>
   </ng-template>
 </p-dialog>

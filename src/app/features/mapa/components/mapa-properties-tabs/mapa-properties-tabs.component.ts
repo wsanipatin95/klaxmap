@@ -18,9 +18,9 @@ export class MapaPropertiesTabsComponent {
   @Output() submitted = new EventEmitter<MapaPatchRequest>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
-  readonly tab = signal<'propiedades' | 'metadatos' | 'kml'>('propiedades');
+  readonly tab = signal<'datos' | 'meta' | 'kml'>('datos');
 
-  setTab(tab: 'propiedades' | 'metadatos' | 'kml') {
+  setTab(tab: 'datos' | 'meta' | 'kml') {
     this.tab.set(tab);
   }
 
@@ -34,5 +34,13 @@ export class MapaPropertiesTabsComponent {
     } catch {
       return '{}';
     }
+  }
+
+  isEmptyObject(value: unknown): boolean {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return true;
+    }
+
+    return Object.keys(value as Record<string, unknown>).length === 0;
   }
 }

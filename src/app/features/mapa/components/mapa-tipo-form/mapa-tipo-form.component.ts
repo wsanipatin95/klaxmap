@@ -32,36 +32,36 @@ export class MapaTipoFormComponent {
   private lastSnapshot = '';
 
   readonly fillPresets = [
-    '#93c5fd',
-    '#60a5fa',
-    '#22c55e',
-    '#f59e0b',
-    '#ef4444',
-    '#a855f7',
-    '#14b8a6',
-    '#e5e7eb',
+    '#f8c7e0',
+    '#f3aad6',
+    '#eb79ba',
+    '#d9468f',
+    '#f1f5f9',
+    '#e2e8f0',
+    '#cbd5e1',
+    '#fde68a',
   ];
 
   readonly strokePresets = [
-    '#2563eb',
-    '#1d4ed8',
-    '#166534',
-    '#b45309',
-    '#b91c1c',
-    '#7e22ce',
-    '#0f766e',
-    '#0f172a',
+    '#7b0061',
+    '#921f54',
+    '#b02365',
+    '#c0267b',
+    '#475569',
+    '#334155',
+    '#1f2937',
+    '#a16207',
   ];
 
   readonly textPresets = [
-    '#0f172a',
-    '#1e293b',
     '#334155',
+    '#475569',
+    '#0f172a',
     '#ffffff',
-    '#1d4ed8',
-    '#166534',
-    '#b91c1c',
-    '#7e22ce',
+    '#7b0061',
+    '#921f54',
+    '#1f2937',
+    '#64748b',
   ];
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -72,6 +72,10 @@ export class MapaTipoFormComponent {
         this.resetForm(false);
       }
     }
+  }
+
+  get title(): string {
+    return this.modo === 'crear' ? 'Nuevo tipo' : 'Editar tipo';
   }
 
   get geometryMode(): GeometryMode {
@@ -130,68 +134,22 @@ export class MapaTipoFormComponent {
     return this.showPointAppearance && this.pointIconMode === 'none';
   }
 
-  get title(): string {
-    return this.modo === 'crear' ? 'Nuevo tipo de elemento' : 'Editar tipo de elemento';
-  }
-
-  get subtitle(): string {
-    return this.modo === 'crear'
-      ? 'Configura cómo se clasifica, se comporta y se renderiza este tipo.'
-      : 'Ajusta el catálogo visual y funcional del tipo seleccionado.';
-  }
-
-  get previewLabel(): string {
-    switch (this.geometryMode) {
-      case 'linestring':
-        return 'Vista previa de línea';
-      case 'polygon':
-        return 'Vista previa de polígono';
-      case 'mixed':
-        return 'Vista previa mixta';
-      case 'point':
-      default:
-        return 'Vista previa de punto';
-    }
-  }
-
-  get geometryDescription(): string {
-    switch (this.geometryMode) {
-      case 'point':
-        return 'Este tipo se usará para elementos puntuales. Aquí sí aplican icono, fuente, clase y tamaño.';
-      case 'linestring':
-        return 'Este tipo se usará para líneas. Aquí importan sobre todo color de trazo, grosor y z-index.';
-      case 'polygon':
-        return 'Este tipo se usará para polígonos. Aquí importan relleno, borde, grosor y orden visual.';
-      case 'mixed':
-      default:
-        return 'Este tipo puede usarse en varias geometrías. El formulario te muestra los bloques relevantes para punto, línea y polígono.';
-    }
-  }
-
-  get renderSummary(): string {
-    if (this.geometryMode === 'linestring') {
-      return 'Render principal: línea con color de borde y grosor.';
-    }
-
-    if (this.geometryMode === 'polygon') {
-      return 'Render principal: polígono con relleno, borde y grosor.';
-    }
-
-    if (this.geometryMode === 'mixed') {
-      return 'Render principal: mixto. Conserva configuración de punto y estilos de línea/polígono.';
-    }
+  get modeSummary(): string {
+    if (this.geometryMode === 'linestring') return 'Línea';
+    if (this.geometryMode === 'polygon') return 'Polígono';
+    if (this.geometryMode === 'mixed') return 'Mixto';
 
     switch (this.pointIconMode) {
       case 'material':
-        return 'Render principal: Material Symbols / Google.';
+        return 'Punto · Material';
       case 'class':
-        return 'Render principal: clase CSS.';
+        return 'Punto · Clase';
       case 'url':
-        return 'Render principal: imagen o SVG por URL.';
+        return 'Punto · Imagen';
       case 'preset':
-        return 'Render principal: forma predefinida.';
+        return 'Punto · Forma';
       default:
-        return 'Render principal: punto simple con colores y shape base.';
+        return 'Punto';
     }
   }
 
@@ -199,32 +157,32 @@ export class MapaTipoFormComponent {
     this.error = null;
 
     if (!this.form.codigo?.trim()) {
-      this.error = 'El código es obligatorio.';
+      this.error = 'Ingresa el código.';
       return;
     }
 
     if (!this.form.nombre?.trim()) {
-      this.error = 'El nombre es obligatorio.';
+      this.error = 'Ingresa el nombre.';
       return;
     }
 
     if (!this.form.geometriaPermitida?.trim()) {
-      this.error = 'La geometría permitida es obligatoria.';
+      this.error = 'Selecciona la geometría.';
       return;
     }
 
     if (this.showMaterialBlock && !this.form.icono?.trim()) {
-      this.error = 'Debes indicar el nombre del icono de Material Symbols.';
+      this.error = 'Ingresa el icono Material.';
       return;
     }
 
     if (this.showCssClassBlock && !(this.form.iconoClase?.trim() || this.form.icono?.trim())) {
-      this.error = 'Debes indicar la clase CSS del icono.';
+      this.error = 'Ingresa la clase CSS.';
       return;
     }
 
     if (this.showUrlBlock && !this.form.icono?.trim()) {
-      this.error = 'Debes indicar la URL o ruta del icono.';
+      this.error = 'Ingresa la URL o ruta del icono.';
       return;
     }
 
@@ -325,8 +283,8 @@ export class MapaTipoFormComponent {
   }
 
   previewStyle(): Record<string, string> {
-    const stroke = this.form.colorStroke?.trim() || '#2563eb';
-    const fill = this.form.colorFill?.trim() || '#93c5fd';
+    const stroke = this.form.colorStroke?.trim() || '#7b0061';
+    const fill = this.form.colorFill?.trim() || '#f3aad6';
     const width = `${this.normalizeNumber(this.form.strokeWidth, 1)}`;
     const size = `${this.previewPointSize()}px`;
 
@@ -401,7 +359,7 @@ export class MapaTipoFormComponent {
   }
 
   previewTextColor(): string {
-    return this.form.colorTexto?.trim() || this.form.colorStroke?.trim() || '#0f172a';
+    return this.form.colorTexto?.trim() || this.form.colorStroke?.trim() || '#334155';
   }
 
   markSaved(tipo?: MapaTipoElemento | null) {
@@ -466,9 +424,9 @@ export class MapaTipoFormComponent {
       iconoFuente: 'target',
       iconoClase: '',
       shapeBase: 'point',
-      colorFill: '#93c5fd',
-      colorStroke: '#2563eb',
-      colorTexto: '#0f172a',
+      colorFill: '#f3aad6',
+      colorStroke: '#7b0061',
+      colorTexto: '#334155',
       strokeWidth: 1,
       zIndex: 0,
       tamanoIcono: 18,
@@ -526,7 +484,7 @@ export class MapaTipoFormComponent {
     try {
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        this.error = 'Atributos debe ser un objeto JSON válido.';
+        this.error = 'Atributos debe ser un objeto JSON.';
         return null;
       }
       return parsed;
