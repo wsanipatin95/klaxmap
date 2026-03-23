@@ -122,7 +122,7 @@ export class MapaTreeComponent implements OnChanges {
       this.expandVisibleBranches();
     }
 
-    if (selectedNodoChanged || selectedElementoChanged) {
+    if ((selectedNodoChanged || selectedElementoChanged) && !this.searchValue.trim()) {
       this.ensureSelectionPathExpanded();
     }
   }
@@ -145,30 +145,7 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   collapseAll() {
-    const keepExpanded = new Set<number>();
-
-    for (const rootId of getRootNodeIds(this.nodos)) {
-      keepExpanded.add(rootId);
-    }
-
-    if (this.selectedNodoId != null) {
-      for (const id of getAncestorNodeIds(this.selectedNodoId, this.nodos)) {
-        keepExpanded.add(id);
-      }
-      keepExpanded.add(this.selectedNodoId);
-    }
-
-    if (this.selectedElementoId != null) {
-      const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
-      if (el) {
-        for (const id of getAncestorNodeIds(el.idRedNodoFk, this.nodos)) {
-          keepExpanded.add(id);
-        }
-        keepExpanded.add(el.idRedNodoFk);
-      }
-    }
-
-    this.expandedIds.set([...keepExpanded]);
+    this.expandedIds.set([]);
   }
 
   createRootNode(tipo: MapaNodo['tipoNodo']) {
@@ -190,10 +167,6 @@ export class MapaTreeComponent implements OnChanges {
 
   isExpanded(node: MapaNodo): boolean {
     if (this.searchValue.trim()) return true;
-    if (this.isRootNode(node.idRedNodo)) return true;
-    if (this.isAncestorOfSelectedNodo(node.idRedNodo)) return true;
-    if (this.isAncestorOfSelectedElemento(node.idRedNodo)) return true;
-
     return this.expandedIds().includes(node.idRedNodo);
   }
 
