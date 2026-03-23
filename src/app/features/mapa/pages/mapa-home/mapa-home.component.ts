@@ -138,33 +138,33 @@ export class MapaHomeComponent {
 
     if (this.editSessionActive()) {
       return this.editSessionDirty()
-        ? `Editando forma de "${this.editSessionElementName() || 'elemento'}". Tienes cambios pendientes.`
-        : `Editando forma de "${this.editSessionElementName() || 'elemento'}".`;
+        ? `Editando forma: ${this.editSessionElementName() || 'elemento'} · cambios pendientes`
+        : `Editando forma: ${this.editSessionElementName() || 'elemento'}`;
     }
 
     if (this.ui.propertiesOpen()) {
       return this.infoPanelDirty()
-        ? `Editando información de "${elemento?.nombre || 'elemento'}". Tienes cambios pendientes.`
-        : `Editando información de "${elemento?.nombre || 'elemento'}".`;
+        ? `Editando datos: ${elemento?.nombre || 'elemento'} · cambios pendientes`
+        : `Editando datos: ${elemento?.nombre || 'elemento'}`;
     }
 
     if (this.ui.loading()) {
-      return 'Buscando y actualizando resultados del mapa...';
+      return 'Actualizando mapa...';
     }
 
     if (q) {
-      return `Búsqueda actual: "${q}" · ${this.elementosCanvas().length} resultado(s) visibles en el mapa.`;
+      return `Búsqueda: "${q}" · ${this.elementosCanvas().length} resultado(s)`;
     }
 
     if (elemento) {
-      return `Elemento activo: "${elemento.nombre}". Puedes editar sus datos desde el menú o el árbol.`;
+      return `Activo: ${elemento.nombre}`;
     }
 
     if (nodo) {
-      return `Nodo activo: "${nodo.nodo}". Puedes dibujar nuevos elementos dentro de este nodo.`;
+      return `Nodo: ${nodo.nodo}`;
     }
 
-    return 'Arrastra el mapa libremente, selecciona un elemento o crea una nueva geometría.';
+    return 'Selecciona o dibuja un elemento';
   });
 
   constructor() {

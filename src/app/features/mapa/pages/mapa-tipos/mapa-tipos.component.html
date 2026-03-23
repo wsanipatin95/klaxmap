@@ -1,13 +1,13 @@
 <div class="tipos-page-shell">
   <header class="page-topbar">
-    <div>
-      <h2>Tipos de elemento</h2>
-      <p>Administra el catálogo visual y funcional sin perder control del flujo.</p>
+    <div class="page-topbar-copy">
+      <h2>Tipos</h2>
+      <p>Catálogo visual</p>
     </div>
 
     <div class="page-topbar-actions">
       <button type="button" class="ghost-btn" (click)="irAlMapa()">
-        Volver al mapa
+        Volver
       </button>
 
       <button type="button" class="ghost-btn" (click)="cargar()" [disabled]="loading() || saving()">
@@ -20,12 +20,12 @@
     </div>
   </header>
 
-  <div class="status-strip" *ngIf="loading() || saving() || success() || error()">
-    <div class="status-chip info" *ngIf="loading()">Cargando tipos...</div>
-    <div class="status-chip info" *ngIf="saving()">Guardando cambios...</div>
+  <div class="status-strip" *ngIf="loading() || saving() || success() || error() || formDirty()">
+    <div class="status-chip info" *ngIf="loading()">Cargando...</div>
+    <div class="status-chip info" *ngIf="saving()">Guardando...</div>
     <div class="status-chip success" *ngIf="success()">{{ success() }}</div>
     <div class="status-chip error" *ngIf="error()">{{ error() }}</div>
-    <div class="status-chip warning" *ngIf="formDirty()">Hay cambios sin guardar</div>
+    <div class="status-chip warning" *ngIf="formDirty()">Cambios sin guardar</div>
   </div>
 
   <div class="page-grid">
@@ -38,7 +38,7 @@
       </div>
 
       <div class="empty" *ngIf="!loading() && tipos().length === 0">
-        No hay tipos registrados todavía.
+        No hay tipos.
       </div>
 
       <div class="list" *ngIf="tipos().length > 0">
@@ -54,12 +54,35 @@
               class="row-preview"
               [ngClass]="previewShapeClass(t)"
               [ngStyle]="previewStyle(t)"
-            ></span>
+            >
+              <ng-container [ngSwitch]="previewVisualMode(t)">
+                <span
+                  *ngSwitchCase="'material'"
+                  class="row-preview-material"
+                  [class]="previewMaterialFamilyClass(t)"
+                >
+                  {{ previewMaterialGlyph(t) }}
+                </span>
+
+                <i
+                  *ngSwitchCase="'class'"
+                  class="row-preview-class"
+                  [class]="previewClassName(t)"
+                ></i>
+
+                <img
+                  *ngSwitchCase="'url'"
+                  class="row-preview-image"
+                  [src]="previewImageUrl(t)"
+                  alt=""
+                />
+              </ng-container>
+            </span>
           </div>
 
           <div class="row-copy">
-            <strong>{{ t.nombre }}</strong>
-            <span>{{ t.codigo }} · {{ t.geometriaPermitida }}</span>
+            <strong [title]="t.nombre">{{ t.nombre }}</strong>
+            <span>{{ t.codigo }} · {{ geometryLabel(t) }}</span>
           </div>
 
           <div class="row-meta">
@@ -72,15 +95,10 @@
     </aside>
 
     <section class="panel panel-editor">
-      <div class="panel-head">
+      <div class="panel-head panel-head--editor">
         <div>
           <h3>{{ currentTitle() }}</h3>
-          <p *ngIf="mode() === 'crear'">
-            Completa el formulario para registrar un nuevo tipo.
-          </p>
-          <p *ngIf="mode() === 'editar' && selected() as sel">
-            Editando: <strong>{{ sel.nombre }}</strong>
-          </p>
+          <p>{{ currentSubtitle() }}</p>
         </div>
 
         <button
@@ -94,15 +112,17 @@
         </button>
       </div>
 
-      <app-mapa-tipo-form
-        #tipoForm
-        [modo]="mode()"
-        [tipo]="selected()"
-        [saving]="saving()"
-        (saveRequested)="guardar($event)"
-        (cancelRequested)="onFormCancel()"
-        (dirtyChange)="onDirtyChange($event)"
-      />
+      <div class="editor-scroll">
+        <app-mapa-tipo-form
+          #tipoForm
+          [modo]="mode()"
+          [tipo]="selected()"
+          [saving]="saving()"
+          (saveRequested)="guardar($event)"
+          (cancelRequested)="onFormCancel()"
+          (dirtyChange)="onDirtyChange($event)"
+        />
+      </div>
     </section>
   </div>
 

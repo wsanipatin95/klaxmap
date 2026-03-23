@@ -1,8 +1,4 @@
-<div
-  class="overlay"
-  *ngIf="visible"
-  (click)="closeRequested.emit()"
->
+<div class="overlay" *ngIf="visible" (click)="close()">
   <div
     class="context-wrap"
     *ngIf="elemento as e"
@@ -11,39 +7,28 @@
     (click)="$event.stopPropagation()"
   >
     <div class="context-header">
-      <div class="context-title">{{ e.nombre }}</div>
-      <div class="context-subtitle">{{ e.geomTipo }} · {{ e.estado }}</div>
+      <div class="context-title" [title]="e.nombre">{{ e.nombre }}</div>
+      <div class="context-subtitle">
+        {{ geomLabel(e.geomTipo) }} · {{ estadoLabel(e.estado) }}
+      </div>
     </div>
 
-    <button
-      pButton
-      type="button"
-      label="Editar datos"
-      (click)="editDataRequested.emit(e)"
-    ></button>
+    <div class="context-actions">
+      <button type="button" class="menu-btn menu-btn--primary" (click)="onEditData(e)">
+        Editar datos
+      </button>
 
-    <button
-      pButton
-      type="button"
-      label="Editar forma"
-      severity="secondary"
-      (click)="editGeometryRequested.emit(e)"
-    ></button>
+      <button type="button" class="menu-btn" (click)="onEditGeometry(e)">
+        Editar forma
+      </button>
 
-    <button
-      pButton
-      type="button"
-      label="Centrar en mapa"
-      severity="secondary"
-      (click)="centerRequested.emit(e)"
-    ></button>
+      <button type="button" class="menu-btn" (click)="onCenter(e)">
+        Centrar en mapa
+      </button>
 
-    <button
-      pButton
-      type="button"
-      label="Eliminar"
-      severity="danger"
-      (click)="deleteRequested.emit(e)"
-    ></button>
+      <button type="button" class="menu-btn menu-btn--danger" (click)="onDelete(e)">
+        Eliminar
+      </button>
+    </div>
   </div>
 </div>

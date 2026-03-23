@@ -7,7 +7,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
 
 import type {
   MapaElemento,
@@ -21,7 +20,7 @@ import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-proper
 @Component({
   selector: 'app-mapa-properties-panel',
   standalone: true,
-  imports: [CommonModule, ButtonModule, MapaPropertiesTabsComponent],
+  imports: [CommonModule, MapaPropertiesTabsComponent],
   templateUrl: './mapa-properties-panel.component.html',
   styleUrl: './mapa-properties-panel.component.scss',
 })
@@ -70,10 +69,5 @@ export class MapaPropertiesPanelComponent {
 
   onPanelClick(event: MouseEvent) {
     event.stopPropagation();
-  }
-
-  onDirtyStateChanged(isDirty: boolean) {
-    this.dirty.set(isDirty);
-    this.dirtyChange.emit(isDirty);
   }
 }

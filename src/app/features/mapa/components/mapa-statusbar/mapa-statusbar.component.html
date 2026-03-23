@@ -1,6 +1,20 @@
 <div class="status-wrap">
-  <span>Modo: {{ modo }}</span>
-  <span>Total elementos: {{ totalElementos }}</span>
-  <span *ngIf="selectedName">Seleccionado: {{ selectedName }}</span>
-  <span *ngIf="loading">Cargando...</span>
+  <span class="status-chip">
+    <strong>Modo:</strong>
+    {{ modeLabel(modo) }}
+  </span>
+
+  <span class="status-chip">
+    <strong>Total:</strong>
+    {{ totalElementos }}
+  </span>
+
+  <span class="status-chip status-chip--active" *ngIf="selectedName">
+    <strong>Activo:</strong>
+    {{ selectedName }}
+  </span>
+
+  <span class="status-chip status-chip--loading" *ngIf="loading">
+    Actualizando...
+  </span>
 </div>

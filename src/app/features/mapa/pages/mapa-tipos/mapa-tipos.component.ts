@@ -35,8 +35,17 @@ export class MapaTiposComponent {
   readonly formDirty = signal(false);
 
   readonly currentTitle = computed(() =>
-    this.mode() === 'crear' ? 'Nuevo tipo de elemento' : 'Editar tipo de elemento'
+    this.mode() === 'crear' ? 'Nuevo tipo' : 'Editar tipo'
   );
+
+  readonly currentSubtitle = computed(() => {
+    if (this.mode() === 'crear') {
+      return 'Completa los datos básicos.';
+    }
+
+    const current = this.selected();
+    return current ? `Editando: ${current.nombre}` : 'Editar tipo';
+  });
 
   constructor() {
     this.cargar();
@@ -68,7 +77,7 @@ export class MapaTiposComponent {
         },
         error: (err) => {
           console.error(err);
-          this.error.set(err?.message || 'No se pudo cargar tipos');
+          this.error.set(err?.message || 'No se pudo cargar tipos.');
         },
       });
   }
@@ -112,7 +121,7 @@ export class MapaTiposComponent {
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
-            this.success.set('Tipo creado correctamente.');
+            this.success.set('Tipo creado.');
             this.cargar();
             this.mode.set('crear');
             this.selected.set(null);
@@ -123,7 +132,7 @@ export class MapaTiposComponent {
           },
           error: (err) => {
             console.error(err);
-            this.error.set(err?.message || 'No se pudo crear');
+            this.error.set(err?.message || 'No se pudo crear.');
           },
         });
 
@@ -133,7 +142,7 @@ export class MapaTiposComponent {
     const current = this.selected();
     if (!current) {
       this.saving.set(false);
-      this.error.set('No hay un tipo seleccionado para editar.');
+      this.error.set('No hay un tipo seleccionado.');
       return;
     }
 
@@ -144,13 +153,13 @@ export class MapaTiposComponent {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.success.set('Tipo actualizado correctamente.');
+          this.success.set('Tipo actualizado.');
           this.formDirty.set(false);
           this.cargar();
         },
         error: (err) => {
           console.error(err);
-          this.error.set(err?.message || 'No se pudo editar');
+          this.error.set(err?.message || 'No se pudo editar.');
         },
       });
   }
@@ -161,9 +170,9 @@ export class MapaTiposComponent {
 
     this.confirmDialog?.open(
       {
-        title: 'Eliminar tipo de elemento',
-        message: `Vas a eliminar el tipo "${current.nombre}".\n\nEsta acción no se puede deshacer.`,
-        confirmLabel: 'Eliminar tipo',
+        title: 'Eliminar tipo',
+        message: `Se eliminará "${current.nombre}".\n\nEsta acción no se puede deshacer.`,
+        confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
       },
@@ -176,7 +185,7 @@ export class MapaTiposComponent {
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
-              this.success.set('Tipo eliminado correctamente.');
+              this.success.set('Tipo eliminado.');
               this.selected.set(null);
               this.mode.set('crear');
               this.formDirty.set(false);
@@ -187,7 +196,7 @@ export class MapaTiposComponent {
             },
             error: (err) => {
               console.error(err);
-              this.error.set(err?.message || 'No se pudo eliminar');
+              this.error.set(err?.message || 'No se pudo eliminar.');
             },
           });
       }
@@ -206,10 +215,9 @@ export class MapaTiposComponent {
 
     this.confirmDialog?.open(
       {
-        title: 'Descartar cambios pendientes',
-        message:
-          'Tienes cambios sin guardar en el tipo de elemento.\n\nSi continúas, esos cambios se perderán.',
-        confirmLabel: 'Descartar cambios',
+        title: 'Descartar cambios',
+        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        confirmLabel: 'Descartar',
         cancelLabel: 'Seguir editando',
         severity: 'warning',
       },
@@ -229,15 +237,40 @@ export class MapaTiposComponent {
     this.formDirty.set(dirty);
   }
 
+  geometryLabel(tipo: MapaTipoElemento): string {
+    const geom = String(tipo.geometriaPermitida ?? 'point').toLowerCase();
+
+    if (geom === 'linestring') return 'línea';
+    if (geom === 'polygon') return 'polígono';
+    if (geom === 'mixed') return 'mixto';
+    return 'punto';
+  }
+
+  previewStyle(tipo: MapaTipoElemento): Record<string, string> {
+    const stroke = tipo.colorStroke || '#7b0061';
+    const fill = tipo.colorFill || '#f3aad6';
+    const text = tipo.colorTexto || stroke;
+    const size = `${tipo.tamanoIcono ?? 16}px`;
+
+    return {
+      '--preview-stroke': stroke,
+      '--preview-fill': fill,
+      '--preview-text': text,
+      '--preview-size': size,
+      '--preview-stroke-width': `${tipo.strokeWidth ?? 1}`,
+    };
+  }
+
   previewShapeClass(tipo: MapaTipoElemento): string {
-    const source = (tipo.iconoFuente ?? '').toLowerCase();
-    const shape = (tipo.shapeBase ?? '').toLowerCase();
-    const geom = (tipo.geometriaPermitida ?? 'point').toLowerCase();
+    const source = this.normalizedSource(tipo);
+    const shape = String(tipo.shapeBase ?? '').toLowerCase();
+    const geom = String(tipo.geometriaPermitida ?? 'point').toLowerCase();
 
     if (geom === 'linestring') return 'is-line';
     if (geom === 'polygon') return 'is-polygon';
     if (geom === 'mixed') return 'is-mixed';
 
+    if (this.previewVisualMode(tipo) !== 'shape') return 'is-icon-host';
     if (source.includes('triangle') || shape.includes('triangle')) return 'is-triangle';
     if (source.includes('target') || shape.includes('target')) return 'is-target';
     if (source.includes('donut') || shape.includes('donut')) return 'is-donut';
@@ -246,12 +279,62 @@ export class MapaTiposComponent {
     return 'is-point';
   }
 
-  previewStyle(tipo: MapaTipoElemento): Record<string, string> {
-    return {
-      '--preview-stroke': tipo.colorStroke || '#2563eb',
-      '--preview-fill': tipo.colorFill || '#93c5fd',
-      '--preview-stroke-width': `${tipo.strokeWidth ?? 1}`,
-    };
+  previewVisualMode(tipo: MapaTipoElemento): 'material' | 'class' | 'url' | 'shape' {
+    const geom = String(tipo.geometriaPermitida ?? 'point').toLowerCase();
+    const source = this.normalizedSource(tipo);
+
+    if (geom !== 'point') {
+      return 'shape';
+    }
+
+    if (this.isMaterialSource(source)) return 'material';
+    if (this.isCssClassSource(source)) return 'class';
+    if (this.isUrlSource(source)) return 'url';
+
+    return 'shape';
+  }
+
+  previewMaterialFamilyClass(tipo: MapaTipoElemento): string {
+    const source = this.normalizedSource(tipo);
+
+    if (source.includes('rounded')) return 'material-symbols-rounded';
+    if (source.includes('sharp')) return 'material-symbols-sharp';
+
+    return 'material-symbols-outlined';
+  }
+
+  previewMaterialGlyph(tipo: MapaTipoElemento): string {
+    return tipo.icono?.trim() || 'radio_button_checked';
+  }
+
+  previewClassName(tipo: MapaTipoElemento): string {
+    return tipo.iconoClase?.trim() || tipo.icono?.trim() || 'pi pi-circle';
+  }
+
+  previewImageUrl(tipo: MapaTipoElemento): string {
+    return tipo.icono?.trim() || '';
+  }
+
+  private normalizedSource(tipo: MapaTipoElemento): string {
+    return String(tipo.iconoFuente ?? '').trim().toLowerCase();
+  }
+
+  private isMaterialSource(source: string): boolean {
+    return (
+      source === 'material-symbols-outlined' ||
+      source === 'material-symbols-rounded' ||
+      source === 'material-symbols-sharp' ||
+      source === 'material symbols' ||
+      source === 'material-symbols'
+    );
+  }
+
+  private isCssClassSource(source: string): boolean {
+    return source === 'class' || source === 'css' || source === 'primeicons' || source === 'fontawesome' || source === 'mdi';
+  }
+
+  private isUrlSource(source: string): boolean {
+    return source === 'url' || source === 'image' || source === 'img';
   }
 
   private runWithDiscardGuard(action: () => void) {
@@ -262,10 +345,9 @@ export class MapaTiposComponent {
 
     this.confirmDialog?.open(
       {
-        title: 'Descartar cambios pendientes',
-        message:
-          'Tienes cambios sin guardar en el tipo de elemento.\n\nSi continúas, esos cambios se perderán.',
-        confirmLabel: 'Descartar cambios',
+        title: 'Descartar cambios',
+        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        confirmLabel: 'Descartar',
         cancelLabel: 'Seguir editando',
         severity: 'warning',
       },

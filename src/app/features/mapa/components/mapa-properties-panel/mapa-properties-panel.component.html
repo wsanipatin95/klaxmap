@@ -5,7 +5,7 @@
     <ng-container *ngIf="elemento; else emptyState">
       <div class="panel-header">
         <div class="panel-title-wrap">
-          <h3>{{ elemento.nombre }}</h3>
+          <h3 [title]="elemento.nombre">{{ elemento.nombre }}</h3>
           <small>{{ elemento.geomTipo }} · {{ elemento.estado }}</small>
         </div>
 
@@ -20,12 +20,12 @@
           </button>
 
           <button
-            pButton
             type="button"
-            label="Eliminar"
-            severity="danger"
+            class="delete-btn"
             (click)="eliminar()"
-          ></button>
+          >
+            Eliminar
+          </button>
         </div>
       </div>
 
@@ -35,14 +35,14 @@
           [tipos]="tipos"
           [nodos]="nodos"
           (submitted)="guardar($event)"
-          (dirtyChange)="onDirtyStateChanged($event)"
+          (dirtyChange)="dirtyChange.emit($event)"
         />
       </div>
     </ng-container>
 
     <ng-template #emptyState>
       <div class="empty-state">
-        Selecciona un elemento del mapa para ver sus propiedades.
+        Selecciona un elemento.
       </div>
     </ng-template>
   </aside>

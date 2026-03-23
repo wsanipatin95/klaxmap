@@ -14,4 +14,22 @@ export class MapaStatusbarComponent {
   @Input() modo: MapaToolMode = 'select';
   @Input() loading = false;
   @Input() selectedName: string | null = null;
+
+  modeLabel(mode: MapaToolMode): string {
+    switch (mode) {
+      case 'edit-geometry':
+        return 'Editar forma';
+      case 'draw-point':
+        return 'Crear punto';
+      case 'draw-line':
+        return 'Crear línea';
+      case 'draw-polygon':
+        return 'Crear polígono';
+      case 'move':
+        return 'Mover';
+      case 'select':
+      default:
+        return 'Seleccionar';
+    }
+  }
 }
