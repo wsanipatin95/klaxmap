@@ -731,10 +731,10 @@ export class MapaHomeComponent {
   private confirmDiscardGeometryChanges(onConfirm?: () => void) {
     this.confirmDialog?.open(
       {
-        title: 'Descartar cambios pendientes',
+        title: 'Hay cambios sin guardar',
         message:
-          'Tienes cambios de geometría sin guardar.\n\nSi continúas, esos cambios se perderán.',
-        confirmLabel: 'Descartar cambios',
+          'La forma fue modificada.\n\nSi continúas, esos cambios se perderán.',
+        confirmLabel: 'Descartar',
         cancelLabel: 'Seguir editando',
         severity: 'warning',
       },
@@ -750,10 +750,10 @@ export class MapaHomeComponent {
   private confirmDiscardInfoChanges(onConfirm?: () => void) {
     this.confirmDialog?.open(
       {
-        title: 'Descartar cambios de información',
+        title: 'Hay cambios sin guardar',
         message:
-          'Tienes cambios de información sin guardar.\n\nSi continúas, esos cambios se perderán.',
-        confirmLabel: 'Descartar cambios',
+          'Los datos del elemento fueron modificados.\n\nSi continúas, esos cambios se perderán.',
+        confirmLabel: 'Descartar',
         cancelLabel: 'Seguir editando',
         severity: 'warning',
       },

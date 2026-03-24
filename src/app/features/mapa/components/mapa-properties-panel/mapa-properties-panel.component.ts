@@ -70,4 +70,9 @@ export class MapaPropertiesPanelComponent {
   onPanelClick(event: MouseEvent) {
     event.stopPropagation();
   }
+
+  onDirtyStateChanged(isDirty: boolean) {
+    this.dirty.set(isDirty);
+    this.dirtyChange.emit(isDirty);
+  }
 }

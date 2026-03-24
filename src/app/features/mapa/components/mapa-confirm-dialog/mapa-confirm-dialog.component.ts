@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
 
 export type MapaConfirmSeverity = 'danger' | 'warning' | 'info';
 
@@ -16,13 +15,13 @@ export interface MapaConfirmDialogConfig {
 @Component({
   selector: 'app-mapa-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, DialogModule, ButtonModule],
+  imports: [CommonModule, DialogModule],
   templateUrl: './mapa-confirm-dialog.component.html',
   styleUrl: './mapa-confirm-dialog.component.scss',
 })
 export class MapaConfirmDialogComponent {
   readonly visible = signal(false);
-  readonly title = signal('Confirmar acción');
+  readonly title = signal('Confirmar');
   readonly message = signal('');
   readonly confirmLabel = signal('Confirmar');
   readonly cancelLabel = signal('Cancelar');
@@ -62,17 +61,10 @@ export class MapaConfirmDialogComponent {
     this.closeInternal(false);
   }
 
-  confirmButtonSeverity(): 'danger' | 'warn' | 'info' | 'primary' {
-    if (this.severity() === 'danger') return 'danger';
-    if (this.severity() === 'warning') return 'warn';
-    if (this.severity() === 'info') return 'info';
-    return 'primary';
-  }
-
-  iconClass(): string {
-    if (this.severity() === 'danger') return 'confirm-icon danger';
-    if (this.severity() === 'warning') return 'confirm-icon warning';
-    return 'confirm-icon info';
+  severityClass(): string {
+    if (this.severity() === 'danger') return 'is-danger';
+    if (this.severity() === 'warning') return 'is-warning';
+    return 'is-info';
   }
 
   iconSymbol(): string {

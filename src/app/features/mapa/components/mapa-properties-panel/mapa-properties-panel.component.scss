@@ -49,6 +49,14 @@
 
 .panel-title-wrap {
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
 .panel-title-wrap h3 {
@@ -64,6 +72,20 @@
   margin-top: 0.18rem;
   color: #64748b;
   font-size: 0.74rem;
+}
+
+.dirty-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #f3c7df;
+  background: #fdf4f9;
+  color: #7b0061;
+  font-size: 0.66rem;
+  font-weight: 800;
+  flex: 0 0 auto;
 }
 
 .panel-actions {

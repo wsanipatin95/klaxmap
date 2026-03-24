@@ -7,7 +7,6 @@ import {
   type FormControl,
   type FormGroup,
 } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import type { MapaNodo, MapaNodoSaveRequest, MapaPatchRequest } from '../../data-access/mapa.models';
 
@@ -27,7 +26,7 @@ interface NodeDialogFormValue {
 @Component({
   selector: 'app-mapa-node-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DialogModule],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule],
   templateUrl: './mapa-node-dialog.component.html',
   styleUrl: './mapa-node-dialog.component.scss',
 })
@@ -63,7 +62,7 @@ export class MapaNodeDialogComponent {
 
   openCreate(parent: MapaNodo | null, tipo: NodeTipo = 'carpeta') {
     this.mode.set('create');
-    this.title.set(parent ? `Crear dentro de ${parent.nodo}` : 'Crear nodo raíz');
+    this.title.set(parent ? 'Nuevo nodo' : 'Nuevo nodo raíz');
     this.parentNode.set(parent);
     this.editingNode.set(null);
     this.error.set(null);
@@ -89,7 +88,7 @@ export class MapaNodeDialogComponent {
 
   openEdit(node: MapaNodo) {
     this.mode.set('edit');
-    this.title.set(`Editar ${node.nodo}`);
+    this.title.set('Editar nodo');
     this.parentNode.set(null);
     this.editingNode.set(node);
     this.error.set(null);
@@ -127,7 +126,7 @@ export class MapaNodeDialogComponent {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Revisa los campos obligatorios antes de continuar.');
+      this.error.set('Revisa los campos obligatorios.');
       return;
     }
 
@@ -141,7 +140,7 @@ export class MapaNodeDialogComponent {
 
     const editing = this.editingNode();
     if (!editing) {
-      this.error.set('No se encontró el nodo a editar.');
+      this.error.set('No se encontró el nodo.');
       return;
     }
 
@@ -174,25 +173,29 @@ export class MapaNodeDialogComponent {
     if (control.errors?.['required']) {
       switch (name) {
         case 'nodo':
-          return 'El nombre del nodo es obligatorio.';
+          return 'Ingresa el nombre.';
         case 'tipoNodo':
-          return 'Debes seleccionar el tipo de nodo.';
+          return 'Selecciona el tipo.';
         default:
-          return 'Este campo es obligatorio.';
+          return 'Campo obligatorio.';
       }
     }
 
     if (control.errors?.['maxlength']) {
-      if (name === 'nodo') return 'El nombre no puede superar 160 caracteres.';
-      if (name === 'descripcion') return 'La descripción no puede superar 500 caracteres.';
-      return 'El valor supera la longitud permitida.';
+      if (name === 'nodo') return 'Máximo 160 caracteres.';
+      if (name === 'descripcion') return 'Máximo 500 caracteres.';
+      return 'Valor demasiado largo.';
     }
 
     if (control.errors?.['min']) {
-      return 'El orden no puede ser negativo.';
+      return 'No puede ser negativo.';
     }
 
     return 'Valor inválido.';
+  }
+
+  parentLabel(): string {
+    return this.parentNode()?.nodo || 'Raíz';
   }
 
   private buildCreatePayload(): MapaNodoSaveRequest {

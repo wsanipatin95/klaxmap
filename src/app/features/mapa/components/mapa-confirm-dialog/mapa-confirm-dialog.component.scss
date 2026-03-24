@@ -1,56 +1,125 @@
+:host {
+  display: block;
+}
+
 .confirm-body {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding-top: 0.25rem;
+  gap: 0.85rem;
+  padding-top: 0.2rem;
 }
 
 .confirm-icon {
   flex: 0 0 auto;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
 }
 
-.confirm-icon.danger {
+.confirm-icon.is-danger {
   background: #fee2e2;
   color: #b91c1c;
-  border: 1px solid #fecaca;
+  border-color: #fecaca;
 }
 
-.confirm-icon.warning {
+.confirm-icon.is-warning {
   background: #fef3c7;
   color: #b45309;
-  border: 1px solid #fde68a;
+  border-color: #fde68a;
 }
 
-.confirm-icon.info {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+.confirm-icon.is-info {
+  background: #eef2f7;
+  color: #475569;
+  border-color: #d8dee6;
 }
 
 .confirm-content {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.3rem;
   min-width: 0;
 }
 
 .confirm-title {
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 800;
+  color: #334155;
   line-height: 1.2;
+  font-size: 0.84rem;
 }
 
 .confirm-message {
   margin: 0;
-  color: #334155;
-  line-height: 1.5;
+  color: #475569;
+  line-height: 1.45;
   white-space: pre-wrap;
+  font-size: 0.74rem;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.ghost-btn,
+.confirm-btn {
+  min-height: 2.2rem;
+  padding: 0 0.85rem;
+  border-radius: 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.ghost-btn:hover {
+  background: #f8fafc;
+}
+
+.confirm-btn {
+  border: 1px solid #7b0061;
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.confirm-btn.is-danger {
+  border-color: #ef4444;
+  background: #ef4444;
+}
+
+.confirm-btn.is-danger:hover {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+.confirm-btn.is-warning {
+  border-color: #b02365;
+  background: #b02365;
+}
+
+.confirm-btn.is-warning:hover {
+  border-color: #921f54;
+  background: #921f54;
+}
+
+.confirm-btn.is-info {
+  border-color: #7b0061;
+  background: #7b0061;
+}
+
+.confirm-btn.is-info:hover {
+  border-color: #921f54;
+  background: #921f54;
 }

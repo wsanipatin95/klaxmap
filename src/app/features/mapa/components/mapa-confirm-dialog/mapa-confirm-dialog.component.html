@@ -4,12 +4,12 @@
   [modal]="true"
   [closable]="true"
   [dismissableMask]="true"
-  [style]="{ width: '30rem' }"
+  [style]="{ width: '28rem' }"
   [header]="title()"
   (onHide)="onHide()"
 >
   <div class="confirm-body">
-    <div [class]="iconClass()">
+    <div class="confirm-icon" [class]="severityClass()">
       {{ iconSymbol() }}
     </div>
 
@@ -20,20 +20,21 @@
   </div>
 
   <ng-template pTemplate="footer">
-    <button
-      pButton
-      type="button"
-      [label]="cancelLabel()"
-      severity="secondary"
-      (click)="cancel()"
-    ></button>
+    <div class="dialog-footer">
+      <button type="button" class="ghost-btn" (click)="cancel()">
+        {{ cancelLabel() }}
+      </button>
 
-    <button
-      pButton
-      type="button"
-      [label]="confirmLabel()"
-      [severity]="confirmButtonSeverity()"
-      (click)="confirm()"
-    ></button>
+      <button
+        type="button"
+        class="confirm-btn"
+        [class.is-danger]="severity() === 'danger'"
+        [class.is-warning]="severity() === 'warning'"
+        [class.is-info]="severity() === 'info'"
+        (click)="confirm()"
+      >
+        {{ confirmLabel() }}
+      </button>
+    </div>
   </ng-template>
 </p-dialog>

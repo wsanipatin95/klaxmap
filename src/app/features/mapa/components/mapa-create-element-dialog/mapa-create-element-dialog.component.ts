@@ -16,7 +16,6 @@ import {
   type FormGroup,
 } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
 import type {
   MapaElementoSaveRequest,
   MapaGeomTipo,
@@ -39,7 +38,7 @@ interface CreateElementoFormValue {
 @Component({
   selector: 'app-mapa-create-element-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DialogModule, ButtonModule],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule],
   templateUrl: './mapa-create-element-dialog.component.html',
   styleUrl: './mapa-create-element-dialog.component.scss',
 })
@@ -144,18 +143,18 @@ export class MapaCreateElementDialogComponent {
     this.submittedAttempt.set(true);
 
     if (!this.currentWkt()) {
-      this.error.set('No hay geometría a guardar.');
+      this.error.set('No hay geometría.');
       return;
     }
 
     if (!this.currentGeomTipo()) {
-      this.error.set('No se pudo determinar el tipo de geometría.');
+      this.error.set('No se pudo leer la geometría.');
       return;
     }
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Revisa los campos obligatorios antes de continuar.');
+      this.error.set('Revisa los campos obligatorios.');
       return;
     }
 
@@ -189,27 +188,35 @@ export class MapaCreateElementDialogComponent {
     if (control.errors?.['required']) {
       switch (name) {
         case 'idRedNodoFk':
-          return 'Debe seleccionar un nodo.';
+          return 'Selecciona un nodo.';
         case 'idGeoTipoElementoFk':
-          return 'Debe seleccionar un tipo.';
+          return 'Selecciona un tipo.';
         case 'nombre':
-          return 'Debe ingresar un nombre.';
+          return 'Ingresa el nombre.';
         default:
-          return 'Este campo es obligatorio.';
+          return 'Campo obligatorio.';
       }
     }
 
     if (control.errors?.['maxlength']) {
-      if (name === 'nombre') return 'El nombre no puede superar 180 caracteres.';
-      if (name === 'descripcion') return 'La descripción no puede superar 500 caracteres.';
-      return 'El valor supera la longitud permitida.';
+      if (name === 'nombre') return 'Máximo 180 caracteres.';
+      if (name === 'descripcion') return 'Máximo 500 caracteres.';
+      return 'Valor demasiado largo.';
     }
 
     if (control.errors?.['min']) {
-      return 'El orden de dibujo no puede ser negativo.';
+      return 'No puede ser negativo.';
     }
 
     return 'Valor inválido.';
+  }
+
+  geomLabel(): string {
+    const geom = String(this.currentGeomTipo() || '').toLowerCase();
+
+    if (geom === 'linestring') return 'Línea';
+    if (geom === 'polygon') return 'Polígono';
+    return 'Punto';
   }
 
   private resolveTiposCompatibles(geomTipo: MapaGeomTipo): MapaTipoElemento[] {

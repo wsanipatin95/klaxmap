@@ -5,7 +5,11 @@
     <ng-container *ngIf="elemento; else emptyState">
       <div class="panel-header">
         <div class="panel-title-wrap">
-          <h3 [title]="elemento.nombre">{{ elemento.nombre }}</h3>
+          <div class="title-row">
+            <h3 [title]="elemento.nombre">{{ elemento.nombre }}</h3>
+            <span class="dirty-badge" *ngIf="dirty()">Sin guardar</span>
+          </div>
+
           <small>{{ elemento.geomTipo }} · {{ elemento.estado }}</small>
         </div>
 
@@ -35,7 +39,7 @@
           [tipos]="tipos"
           [nodos]="nodos"
           (submitted)="guardar($event)"
-          (dirtyChange)="dirtyChange.emit($event)"
+          (dirtyChange)="onDirtyStateChanged($event)"
         />
       </div>
     </ng-container>

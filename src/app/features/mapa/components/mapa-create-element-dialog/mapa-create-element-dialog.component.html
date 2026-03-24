@@ -3,29 +3,28 @@
   (visibleChange)="visible.set($event)"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '44rem' }"
-  header="Crear elemento"
+  [style]="{ width: '42rem' }"
+  header="Nuevo elemento"
   (onHide)="close()"
 >
   <form class="dialog-body" [formGroup]="form" (ngSubmit)="guardar()">
-    <div class="callout">
-      <div>
-        <strong>Geometría detectada:</strong>
-        {{ currentGeomTipo() || 'sin definir' }}
-      </div>
-      <div *ngIf="selectedNodo() as nodo">
-        <strong>Nodo actual:</strong> {{ nodo.nodo }}
-      </div>
-      <div *ngIf="selectedTipo() as tipo">
-        <strong>Tipo seleccionado:</strong> {{ tipo.nombre }}
-      </div>
+    <div class="mini-summary">
+      <span class="summary-chip">{{ geomLabel() }}</span>
+
+      <span class="summary-chip" *ngIf="selectedNodo() as nodo">
+        {{ nodo.nodo }}
+      </span>
+
+      <span class="summary-chip" *ngIf="selectedTipo() as tipo">
+        {{ tipo.nombre }}
+      </span>
     </div>
 
-    <div class="grid two-cols">
+    <div class="form-grid two-cols">
       <div class="field">
         <label for="elemento-nodo">Nodo</label>
         <select id="elemento-nodo" formControlName="idRedNodoFk">
-          <option [ngValue]="null">Seleccione un nodo</option>
+          <option [ngValue]="null">Seleccionar</option>
           <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
             {{ n.nodo }}
           </option>
@@ -40,7 +39,7 @@
           formControlName="idGeoTipoElementoFk"
           (change)="onTipoChange()"
         >
-          <option [ngValue]="null">Seleccione un tipo</option>
+          <option [ngValue]="null">Seleccionar</option>
           <option *ngFor="let t of tiposCompatibles()" [ngValue]="t.idGeoTipoElemento">
             {{ t.nombre }}
           </option>
@@ -51,40 +50,49 @@
 
     <div class="field">
       <label for="elemento-nombre">Nombre</label>
-      <input id="elemento-nombre" type="text" formControlName="nombre" />
+      <input
+        id="elemento-nombre"
+        type="text"
+        formControlName="nombre"
+        placeholder="Nombre"
+      />
       <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
     </div>
 
     <div class="field">
       <label for="elemento-descripcion">Descripción</label>
-      <textarea id="elemento-descripcion" formControlName="descripcion"></textarea>
+      <textarea
+        id="elemento-descripcion"
+        formControlName="descripcion"
+        placeholder="Descripción breve"
+      ></textarea>
       <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
     </div>
 
-    <div class="grid two-cols align-end">
+    <div class="form-grid two-cols">
       <div class="field">
         <label for="elemento-estado">Estado</label>
         <select id="elemento-estado" formControlName="estado">
           <option value="activo">Activo</option>
           <option value="planificado">Planificado</option>
-          <option value="pendiente_clasificar">Pendiente clasificar</option>
+          <option value="pendiente_clasificar">Pendiente</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="elemento-orden">Orden de dibujo</label>
+        <label for="elemento-orden">Orden</label>
         <input id="elemento-orden" type="number" formControlName="ordenDibujo" />
         <p class="field-error" *ngIf="controlError('ordenDibujo') as err">{{ err }}</p>
       </div>
     </div>
 
-    <label class="check-line">
+    <label class="check-card">
       <input type="checkbox" formControlName="visible" />
-      Visible
+      <span>Visible</span>
     </label>
 
-    <div class="geometry-box">
-      <label>WKT generado</label>
+    <div class="wkt-box">
+      <div class="wkt-title">Geometría</div>
       <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
     </div>
 
@@ -92,20 +100,19 @@
   </form>
 
   <ng-template pTemplate="footer">
-    <button
-      pButton
-      type="button"
-      label="Cancelar"
-      severity="secondary"
-      (click)="close()"
-    ></button>
+    <div class="dialog-footer">
+      <button type="button" class="ghost-btn" (click)="close()">
+        Cancelar
+      </button>
 
-    <button
-      pButton
-      type="button"
-      label="Guardar"
-      [disabled]="form.invalid || !currentWkt()"
-      (click)="guardar()"
-    ></button>
+      <button
+        type="button"
+        class="save-btn"
+        [disabled]="form.invalid || !currentWkt()"
+        (click)="guardar()"
+      >
+        Guardar
+      </button>
+    </div>
   </ng-template>
 </p-dialog>

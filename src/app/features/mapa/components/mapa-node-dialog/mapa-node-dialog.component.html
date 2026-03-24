@@ -8,8 +8,8 @@
   (onHide)="close()"
 >
   <form class="dialog-body" [formGroup]="form" (ngSubmit)="submit()">
-    <div class="callout" *ngIf="mode() === 'create' && parentNode() as parent">
-      El nuevo nodo se creará dentro de <strong>{{ parent.nodo }}</strong>.
+    <div class="mini-summary" *ngIf="mode() === 'create'">
+      <span class="summary-chip">Padre: {{ parentLabel() }}</span>
     </div>
 
     <div class="field">
@@ -18,7 +18,7 @@
         id="node-nodo"
         type="text"
         formControlName="nodo"
-        placeholder="Ej. GUACHALA / SAN JOSE MORAN"
+        placeholder="Nombre"
       />
       <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
     </div>
@@ -29,14 +29,14 @@
         id="node-descripcion"
         rows="4"
         formControlName="descripcion"
-        placeholder="Descripción opcional"
+        placeholder="Descripción breve"
       ></textarea>
       <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
     </div>
 
-    <div class="grid two-cols">
+    <div class="form-grid two-cols">
       <div class="field">
-        <label for="node-tipo">Tipo de nodo</label>
+        <label for="node-tipo">Tipo</label>
         <select id="node-tipo" formControlName="tipoNodo">
           <option value="carpeta">Carpeta</option>
           <option value="zona">Zona</option>
@@ -52,19 +52,19 @@
           id="node-codigo"
           type="text"
           formControlName="codigo"
-          placeholder="Código opcional"
+          placeholder="Opcional"
         />
       </div>
     </div>
 
-    <div class="grid two-cols align-end">
+    <div class="form-grid two-cols">
       <div class="field">
         <label for="node-orden">Orden</label>
         <input id="node-orden" type="number" formControlName="orden" />
         <p class="field-error" *ngIf="controlError('orden') as err">{{ err }}</p>
       </div>
 
-      <label class="check-row">
+      <label class="check-card">
         <input type="checkbox" formControlName="visible" />
         <span>Visible</span>
       </label>
@@ -74,20 +74,19 @@
   </form>
 
   <ng-template pTemplate="footer">
-    <button
-      pButton
-      type="button"
-      label="Cancelar"
-      severity="secondary"
-      (click)="close()"
-    ></button>
+    <div class="dialog-footer">
+      <button type="button" class="ghost-btn" (click)="close()">
+        Cancelar
+      </button>
 
-    <button
-      pButton
-      type="button"
-      [label]="mode() === 'create' ? 'Crear nodo' : 'Guardar cambios'"
-      [disabled]="form.invalid"
-      (click)="submit()"
-    ></button>
+      <button
+        type="button"
+        class="save-btn"
+        [disabled]="form.invalid"
+        (click)="submit()"
+      >
+        {{ mode() === 'create' ? 'Crear' : 'Guardar' }}
+      </button>
+    </div>
   </ng-template>
 </p-dialog>
