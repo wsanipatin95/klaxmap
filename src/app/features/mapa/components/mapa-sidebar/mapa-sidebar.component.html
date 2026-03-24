@@ -1,17 +1,4 @@
 <div #shell class="sidebar-shell">
-  <div class="sidebar-top-search">
-    <app-mapa-search
-      [value]="searchValue"
-      [loading]="searchLoading"
-      [resultCount]="searchResultCount"
-      [currentIndex]="searchResultIndex"
-      (valueChange)="searchChange.emit($event)"
-      (clearRequested)="searchClear.emit()"
-      (prevRequested)="searchPrev.emit()"
-      (nextRequested)="searchNext.emit()"
-    />
-  </div>
-
   <div class="sidebar-sections">
     <section
       class="sidebar-pane pane-places"
@@ -30,29 +17,44 @@
       </button>
 
       <div class="pane-body" *ngIf="isExpanded('lugares')">
-        <div class="places-tree">
-          <app-mapa-tree
-            [nodos]="nodos"
-            [elementos]="elementos"
-            [tipos]="tipos"
-            [selectedNodoId]="selectedNodoId"
-            [selectedElementoId]="selectedElementoId"
-            [searchValue]="searchValue"
-            [hiddenNodeIds]="hiddenNodeIds"
-            [hiddenElementoIds]="hiddenElementoIds"
-            (nodoSelected)="nodoSelected.emit($event)"
-            (elementoSelected)="treeElementoSelected.emit($event)"
-            (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
-            (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
-            (createNodeRequested)="treeCreateNodeRequested.emit($event)"
-            (editNodeRequested)="treeEditNodeRequested.emit($event)"
-            (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
-            (drawElementRequested)="treeDrawElementRequested.emit($event)"
-            (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
-            (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
-            (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
-            (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
-          />
+        <div class="places-stack">
+          <div class="places-tree">
+            <app-mapa-tree
+              [nodos]="nodos"
+              [elementos]="elementos"
+              [tipos]="tipos"
+              [selectedNodoId]="selectedNodoId"
+              [selectedElementoId]="selectedElementoId"
+              [searchValue]="searchValue"
+              [hiddenNodeIds]="hiddenNodeIds"
+              [hiddenElementoIds]="hiddenElementoIds"
+              (nodoSelected)="nodoSelected.emit($event)"
+              (elementoSelected)="treeElementoSelected.emit($event)"
+              (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
+              (elementoVisibilityChange)="treeElementoVisibilityChange.emit($event)"
+              (createNodeRequested)="treeCreateNodeRequested.emit($event)"
+              (editNodeRequested)="treeEditNodeRequested.emit($event)"
+              (deleteNodeRequested)="treeDeleteNodeRequested.emit($event)"
+              (drawElementRequested)="treeDrawElementRequested.emit($event)"
+              (centerElementoRequested)="treeCenterElementoRequested.emit($event)"
+              (editDataElementoRequested)="treeEditDataElementoRequested.emit($event)"
+              (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
+              (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
+            />
+          </div>
+
+          <div class="places-search">
+            <app-mapa-search
+              [value]="searchValue"
+              [loading]="searchLoading"
+              [resultCount]="searchResultCount"
+              [currentIndex]="searchResultIndex"
+              (valueChange)="searchChange.emit($event)"
+              (clearRequested)="searchClear.emit()"
+              (prevRequested)="searchPrev.emit()"
+              (nextRequested)="searchNext.emit()"
+            />
+          </div>
         </div>
       </div>
     </section>
