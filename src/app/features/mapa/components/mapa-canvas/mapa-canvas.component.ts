@@ -263,14 +263,25 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   saveEditSession(): { idGeoElemento: number; geomTipo: MapaGeomTipo; wkt: string } | null {
-    if (!this.editSession.active || !this.editSession.dirty) {
+    if (!this.editSession.active) {
+      return null;
+    }
+
+    this.syncEditSessionFromLayer();
+
+    if (
+      !this.editSession.dirty ||
+      this.editSession.elementId == null ||
+      !this.editSession.geomTipo ||
+      !this.editSession.currentWkt
+    ) {
       return null;
     }
 
     const payload = {
-      idGeoElemento: this.editSession.elementId as number,
-      geomTipo: this.editSession.geomTipo as MapaGeomTipo,
-      wkt: this.editSession.currentWkt as string,
+      idGeoElemento: this.editSession.elementId,
+      geomTipo: this.editSession.geomTipo,
+      wkt: this.editSession.currentWkt,
     };
 
     this.disableLayerEditing(this.editSession.layer);
@@ -470,15 +481,20 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   private enableLayerEditing(layer: L.Layer | null) {
-    if (!layer) return;
+    if (!layer || !this.map) return;
 
     const anyLayer = layer as any;
 
+    layer.off('drag', this.onLayerEdited);
     layer.off('dragend', this.onLayerEdited);
     layer.off('edit', this.onLayerEdited);
 
+    this.map.off('mouseup', this.onMapInteractionFinished);
+    this.map.off('touchend', this.onMapInteractionFinished);
+
     if (typeof anyLayer.dragging?.enable === 'function') {
       anyLayer.dragging.enable();
+      layer.on('drag', this.onLayerEdited);
       layer.on('dragend', this.onLayerEdited);
     }
 
@@ -486,6 +502,11 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       anyLayer.editing.enable();
       layer.on('edit', this.onLayerEdited);
     }
+
+    this.map.on('mouseup', this.onMapInteractionFinished);
+    this.map.on('touchend', this.onMapInteractionFinished);
+
+    this.syncEditSessionFromLayer(true);
   }
 
   private disableLayerEditing(layer: L.Layer | null) {
@@ -493,8 +514,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     const anyLayer = layer as any;
 
+    layer.off('drag', this.onLayerEdited);
     layer.off('dragend', this.onLayerEdited);
     layer.off('edit', this.onLayerEdited);
+
+    if (this.map) {
+      this.map.off('mouseup', this.onMapInteractionFinished);
+      this.map.off('touchend', this.onMapInteractionFinished);
+    }
 
     if (typeof anyLayer.dragging?.disable === 'function') {
       anyLayer.dragging.disable();
@@ -506,17 +533,37 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   private onLayerEdited = () => {
+    queueMicrotask(() => {
+      this.syncEditSessionFromLayer();
+    });
+  };
+  private onMapInteractionFinished = () => {
+    queueMicrotask(() => {
+      this.syncEditSessionFromLayer();
+    });
+  };
+  private syncEditSessionFromLayer(forceEmit = false) {
     if (!this.editSession.active || !this.editSession.layer || !this.editSession.geomTipo) {
       return;
     }
 
     const wkt = this.layerToWkt(this.editSession.layer, this.editSession.geomTipo);
-    if (!wkt) return;
+    if (!wkt) {
+      return;
+    }
+
+    const nextDirty = wkt !== this.editSession.originalWkt;
+    const changed =
+      this.editSession.currentWkt !== wkt ||
+      this.editSession.dirty !== nextDirty;
 
     this.editSession.currentWkt = wkt;
-    this.editSession.dirty = wkt !== this.editSession.originalWkt;
-    this.emitEditSessionState();
-  };
+    this.editSession.dirty = nextDirty;
+
+    if (changed || forceEmit) {
+      this.emitEditSessionState();
+    }
+  }
 
   private emitEditSessionState() {
     this.editSessionStateChanged.emit({
