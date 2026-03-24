@@ -1,11 +1,11 @@
 <div class="mapa-layout" [class.properties-open]="propertiesOpen">
-  <header class="toolbar">
-    <ng-content select="[slot=toolbar]"></ng-content>
-  </header>
-
   <aside class="sidebar">
     <ng-content select="[slot=sidebar]"></ng-content>
   </aside>
+
+  <header class="toolbar">
+    <ng-content select="[slot=toolbar]"></ng-content>
+  </header>
 
   <main class="canvas">
     <div class="canvas-surface">

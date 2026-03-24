@@ -1,22 +1,35 @@
 <div #shell class="sidebar-shell">
-  <section
-    class="sidebar-pane pane-places"
-    [class.is-collapsed]="!isExpanded('lugares')"
-    [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? topPanePercent() : null"
-  >
-    <button
-      type="button"
-      class="pane-header"
-      (click)="toggleSection('lugares')"
-    >
-      <span class="pane-header-left">
-        <span class="pane-toggle-icon" [class.expanded]="isExpanded('lugares')">▾</span>
-        <span class="pane-title">Lugares</span>
-      </span>
-    </button>
+  <div class="sidebar-top-search">
+    <app-mapa-search
+      [value]="searchValue"
+      [loading]="searchLoading"
+      [resultCount]="searchResultCount"
+      [currentIndex]="searchResultIndex"
+      (valueChange)="searchChange.emit($event)"
+      (clearRequested)="searchClear.emit()"
+      (prevRequested)="searchPrev.emit()"
+      (nextRequested)="searchNext.emit()"
+    />
+  </div>
 
-    <div class="pane-body" *ngIf="isExpanded('lugares')">
-      <div class="places-stack">
+  <div class="sidebar-sections">
+    <section
+      class="sidebar-pane pane-places"
+      [class.is-collapsed]="!isExpanded('lugares')"
+      [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? topPanePercent() : null"
+    >
+      <button
+        type="button"
+        class="pane-header"
+        (click)="toggleSection('lugares')"
+      >
+        <span class="pane-header-left">
+          <span class="pane-toggle-icon" [class.expanded]="isExpanded('lugares')">▾</span>
+          <span class="pane-title">Lugares</span>
+        </span>
+      </button>
+
+      <div class="pane-body" *ngIf="isExpanded('lugares')">
         <div class="places-tree">
           <app-mapa-tree
             [nodos]="nodos"
@@ -41,49 +54,36 @@
             (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
           />
         </div>
-
-        <div class="places-search">
-          <app-mapa-search
-            [value]="searchValue"
-            [loading]="searchLoading"
-            [resultCount]="searchResultCount"
-            [currentIndex]="searchResultIndex"
-            (valueChange)="searchChange.emit($event)"
-            (clearRequested)="searchClear.emit()"
-            (prevRequested)="searchPrev.emit()"
-            (nextRequested)="searchNext.emit()"
-          />
-        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <div
-    class="sidebar-splitter"
-    *ngIf="isExpanded('lugares') && isExpanded('capas')"
-    (pointerdown)="startResize($event)"
-  >
-    <span></span>
-  </div>
-
-  <section
-    class="sidebar-pane pane-layers"
-    [class.is-collapsed]="!isExpanded('capas')"
-    [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? (100 - topPanePercent()) : null"
-  >
-    <button
-      type="button"
-      class="pane-header"
-      (click)="toggleSection('capas')"
+    <div
+      class="sidebar-splitter"
+      *ngIf="isExpanded('lugares') && isExpanded('capas')"
+      (pointerdown)="startResize($event)"
     >
-      <span class="pane-header-left">
-        <span class="pane-toggle-icon" [class.expanded]="isExpanded('capas')">▾</span>
-        <span class="pane-title">Uso de capas</span>
-      </span>
-    </button>
-
-    <div class="pane-body" *ngIf="isExpanded('capas')">
-      <app-mapa-capas-panel [tipos]="tipos" />
+      <span></span>
     </div>
-  </section>
+
+    <section
+      class="sidebar-pane pane-layers"
+      [class.is-collapsed]="!isExpanded('capas')"
+      [style.flexBasis.%]="isExpanded('lugares') && isExpanded('capas') ? (100 - topPanePercent()) : null"
+    >
+      <button
+        type="button"
+        class="pane-header"
+        (click)="toggleSection('capas')"
+      >
+        <span class="pane-header-left">
+          <span class="pane-toggle-icon" [class.expanded]="isExpanded('capas')">▾</span>
+          <span class="pane-title">Uso de capas</span>
+        </span>
+      </button>
+
+      <div class="pane-body" *ngIf="isExpanded('capas')">
+        <app-mapa-capas-panel [tipos]="tipos" />
+      </div>
+    </section>
+  </div>
 </div>

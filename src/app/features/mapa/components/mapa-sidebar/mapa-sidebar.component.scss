@@ -11,8 +11,26 @@
   min-height: 0;
   overflow: hidden;
   background: #eef2f7;
-  border-right: 1px solid #cbd5e1;
   color: #334155;
+}
+
+.sidebar-top-search {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0.22rem 0.28rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-sections {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #eef2f7;
 }
 
 .sidebar-pane {
@@ -29,7 +47,7 @@
 
 .pane-header {
   width: 100%;
-  min-height: 24px;
+  min-height: 22px;
   border: 0;
   border-bottom: 1px solid #cbd5e1;
   background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
@@ -54,7 +72,7 @@
 }
 
 .pane-title {
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   font-weight: 700;
   color: #3b5c79;
   letter-spacing: 0.01em;
@@ -64,7 +82,7 @@
   width: 12px;
   display: inline-flex;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   color: #475569;
   transform: rotate(-90deg);
   transition: transform 0.14s ease;
@@ -81,31 +99,21 @@
   background: #f8fafc;
 }
 
-.places-stack {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+.pane-layers .pane-body {
+  overflow: auto;
 }
 
 .places-tree {
-  flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
-  padding: 0.1rem 0.1rem 0;
+  padding: 0.08rem 0.08rem 0;
   background: #f8fafc;
 }
 
-.places-search {
-  flex: 0 0 auto;
-  border-top: 1px solid #d8dee6;
-  background: #eef2f7;
-  padding: 0.2rem;
-}
-
 .sidebar-splitter {
-  height: 8px;
-  flex: 0 0 8px;
+  height: 7px;
+  flex: 0 0 7px;
   border-top: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
   background: #e2e8f0;
@@ -116,7 +124,7 @@
 }
 
 .sidebar-splitter span {
-  width: 26px;
+  width: 24px;
   height: 2px;
   border-radius: 999px;
   background: #94a3b8;
