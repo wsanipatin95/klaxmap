@@ -4,14 +4,16 @@
     class="search-icon"
     [attr.title]="loading ? 'Buscando...' : 'Buscar'"
     [attr.aria-label]="loading ? 'Buscando...' : 'Buscar'"
+    (click)="submitSearch()"
   >
     <i class="pi" [ngClass]="loading ? 'pi-spin pi-spinner' : 'pi-search'"></i>
   </button>
 
   <input
     type="text"
-    [ngModel]="value"
-    (ngModelChange)="onInput($event)"
+    [ngModel]="draftValue"
+    (ngModelChange)="onDraftChange($event)"
+    (keydown)="onKeydown($event)"
     [placeholder]="placeholder"
     autocomplete="off"
     spellcheck="false"
@@ -44,7 +46,7 @@
     class="clear-btn"
     title="Limpiar búsqueda"
     aria-label="Limpiar búsqueda"
-    [disabled]="!value"
+    [disabled]="!draftValue"
     (click)="clear()"
   >
     <i class="pi pi-times"></i>

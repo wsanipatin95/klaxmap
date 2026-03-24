@@ -58,7 +58,7 @@ export class MapaSidebarComponent {
   @Input() hiddenNodeIds: number[] = [];
   @Input() hiddenElementoIds: number[] = [];
 
-  @Output() searchChange = new EventEmitter<string>();
+  @Output() searchRequested = new EventEmitter<string>();
   @Output() searchClear = new EventEmitter<void>();
   @Output() searchPrev = new EventEmitter<void>();
   @Output() searchNext = new EventEmitter<void>();
@@ -102,7 +102,7 @@ export class MapaSidebarComponent {
 
   @HostListener('window:pointermove', ['$event'])
   onPointerMove(event: PointerEvent) {
-    if (!this.resizing || !this.shell) {
+    if (!this.resizing || !this.shell?.nativeElement) {
       return;
     }
 
@@ -111,11 +111,8 @@ export class MapaSidebarComponent {
       return;
     }
 
-    const percent = ((event.clientY - rect.top) / rect.height) * 100;
-    this.topPanePercent.set(this.clampPercent(percent));
-  }
-
-  private clampPercent(value: number): number {
-    return Math.max(32, Math.min(78, Math.round(value)));
+    const rawPercent = ((event.clientY - rect.top) / rect.height) * 100;
+    const clamped = Math.max(20, Math.min(80, rawPercent));
+    this.topPanePercent.set(clamped);
   }
 }

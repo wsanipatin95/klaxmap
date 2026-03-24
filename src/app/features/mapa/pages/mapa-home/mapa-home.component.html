@@ -32,7 +32,7 @@
     [searchResultIndex]="(filtros.q() || '').trim() ? searchResultIndex() : -1"
     [hiddenNodeIds]="hiddenNodeIds()"
     [hiddenElementoIds]="hiddenElementoIds()"
-    (searchChange)="onSearchChange($event)"
+    (searchRequested)="onSearchRequested($event)"
     (searchClear)="clearSearch()"
     (searchPrev)="onSearchPrev()"
     (searchNext)="onSearchNext()"

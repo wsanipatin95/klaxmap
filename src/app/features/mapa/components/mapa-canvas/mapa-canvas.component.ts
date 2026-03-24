@@ -254,6 +254,35 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
   }
 
+  centerOnElementos(elementos: MapaElemento[]) {
+    if (!this.map || !Array.isArray(elementos) || elementos.length === 0) {
+      return;
+    }
+
+    const bounds = L.latLngBounds([]);
+
+    for (const item of elementos) {
+      const layer = this.renderedLayers.get(item.idGeoElemento);
+      if (!layer) continue;
+
+      if ('getBounds' in layer && typeof (layer as any).getBounds === 'function') {
+        const layerBounds = (layer as any).getBounds();
+        if (layerBounds?.isValid?.()) {
+          bounds.extend(layerBounds);
+          continue;
+        }
+      }
+
+      if ('getLatLng' in layer && typeof (layer as any).getLatLng === 'function') {
+        bounds.extend((layer as any).getLatLng());
+      }
+    }
+
+    if (bounds.isValid()) {
+      this.map.fitBounds(bounds.pad(0.2));
+    }
+  }
+
   hasPendingEditChanges(): boolean {
     return this.editSession.active && this.editSession.dirty;
   }

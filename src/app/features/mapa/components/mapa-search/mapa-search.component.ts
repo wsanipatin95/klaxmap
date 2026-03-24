@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -9,17 +9,25 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './mapa-search.component.html',
   styleUrl: './mapa-search.component.scss',
 })
-export class MapaSearchComponent {
+export class MapaSearchComponent implements OnChanges {
   @Input() value = '';
   @Input() loading = false;
   @Input() resultCount = 0;
   @Input() currentIndex = -1;
   @Input() placeholder = 'Buscar';
 
-  @Output() valueChange = new EventEmitter<string>();
+  @Output() searchRequested = new EventEmitter<string>();
   @Output() clearRequested = new EventEmitter<void>();
   @Output() prevRequested = new EventEmitter<void>();
   @Output() nextRequested = new EventEmitter<void>();
+
+  draftValue = '';
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['value']) {
+      this.draftValue = this.value ?? '';
+    }
+  }
 
   get counterLabel(): string {
     if (!this.resultCount) {
@@ -30,11 +38,23 @@ export class MapaSearchComponent {
     return `${safeIndex} / ${this.resultCount}`;
   }
 
-  onInput(value: string) {
-    this.valueChange.emit(value);
+  onDraftChange(value: string) {
+    this.draftValue = value;
+  }
+
+  submitSearch() {
+    this.searchRequested.emit((this.draftValue ?? '').trim());
+  }
+
+  onKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.submitSearch();
+    }
   }
 
   clear() {
+    this.draftValue = '';
     this.clearRequested.emit();
   }
 }

@@ -49,7 +49,7 @@
               [loading]="searchLoading"
               [resultCount]="searchResultCount"
               [currentIndex]="searchResultIndex"
-              (valueChange)="searchChange.emit($event)"
+              (searchRequested)="searchRequested.emit($event)"
               (clearRequested)="searchClear.emit()"
               (prevRequested)="searchPrev.emit()"
               (nextRequested)="searchNext.emit()"

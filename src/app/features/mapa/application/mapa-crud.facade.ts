@@ -179,7 +179,7 @@ export class MapaCrudFacade {
     this.nodosRepo.crear(payload).subscribe({
       next: (resp) => {
         this.selection.setNodo(resp.data);
-        this.loadNodos();
+        this.refreshAll();
         onDone?.(resp.data);
       },
       error: (err) => {
@@ -202,7 +202,7 @@ export class MapaCrudFacade {
           this.selection.setNodo(resp.data);
         }
 
-        this.loadNodos();
+        this.refreshAll();
         onDone?.(resp.data);
       },
       error: (err) => {
@@ -219,11 +219,9 @@ export class MapaCrudFacade {
       next: () => {
         if (this.selection.selectedNodo()?.idRedNodo === id) {
           this.selection.setNodo(null);
-          this.filtros.setNodo(null);
         }
 
-        this.loadNodos();
-        this.loadElementos();
+        this.refreshAll();
         onDone?.();
       },
       error: (err) => {

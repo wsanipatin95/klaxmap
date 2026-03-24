@@ -444,7 +444,13 @@ export class MapaTreeComponent implements OnChanges {
 
       const rawElementos = (elementosByNodo.get(node.idRedNodo) ?? [])
         .slice()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+        .sort((a, b) => {
+          return (
+            Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
+            a.nombre.localeCompare(b.nombre) ||
+            a.idGeoElemento - b.idGeoElemento
+          );
+        });
 
       const elementos = q
         ? rawElementos.filter((e) => this.matchesElemento(e))
