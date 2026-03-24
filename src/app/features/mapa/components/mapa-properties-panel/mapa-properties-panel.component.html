@@ -2,6 +2,13 @@
   <div class="properties-overlay" *ngIf="open" (click)="onOverlayClick()"></div>
 
   <aside class="properties-drawer" [class.open]="open" (click)="onPanelClick($event)">
+    <div class="panel-save-blocker" *ngIf="saving()">
+      <div class="panel-save-card">
+        <div class="panel-save-title">Guardando cambios...</div>
+        <div class="panel-save-text">Espera un momento mientras se actualiza la información.</div>
+      </div>
+    </div>
+
     <ng-container *ngIf="elemento; else emptyState">
       <div class="panel-header">
         <div class="panel-title-wrap">
@@ -18,6 +25,7 @@
             type="button"
             class="close-btn"
             aria-label="Cerrar panel"
+            [disabled]="saving()"
             (click)="requestClose()"
           >
             ×
@@ -26,6 +34,7 @@
           <button
             type="button"
             class="delete-btn"
+            [disabled]="saving()"
             (click)="eliminar()"
           >
             Eliminar
@@ -33,11 +42,21 @@
         </div>
       </div>
 
+      <div
+        class="panel-status"
+        *ngIf="statusMessage() as message"
+        [class.is-success]="statusKind() === 'success'"
+        [class.is-error]="statusKind() === 'error'"
+      >
+        {{ message }}
+      </div>
+
       <div class="panel-body">
         <app-mapa-properties-tabs
           [elemento]="elemento"
           [tipos]="tipos"
           [nodos]="nodos"
+          [saving]="saving()"
           (submitted)="guardar($event)"
           (dirtyChange)="onDirtyStateChanged($event)"
         />

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, computed, inject } from '@angular/core';
+import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { MapaUiStore } from '../../store/mapa-ui.store';
@@ -107,6 +107,14 @@ export class MapaHomeComponent {
   readonly selectedTipo = this.selection.selectedTipo;
 
   readonly totalElementos = this.crud.totalElementos;
+
+  readonly actionBusy = signal(false);
+  readonly actionBusyTitle = signal('Guardando cambios');
+  readonly actionBusyText = signal('Espera un momento mientras se procesa la información.');
+
+  readonly successVisible = signal(false);
+  readonly successTitle = signal('');
+  readonly successText = signal('');
 
   readonly elementosCanvas = computed(() => {
     const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
@@ -254,6 +262,7 @@ export class MapaHomeComponent {
     this.selection.setElemento(item);
     this.interaction.setInfoPanelDirty(false);
     this.crud.loadElementos();
+    this.showSuccess('Información guardada', `Se actualizó "${item.nombre}" correctamente.`);
   }
 
   onElementoDeleted(id: number) {
@@ -330,7 +339,18 @@ export class MapaHomeComponent {
   }
 
   crearElemento(payload: MapaElementoSaveRequest) {
-    this.crud.createElemento(payload);
+    this.createDialog?.markSaving();
+
+    this.crud.createElemento(
+      payload,
+      (created) => {
+        this.createDialog?.handleSaveSuccess();
+        this.showSuccess('Elemento guardado', `Se creó "${created.nombre}" correctamente.`);
+      },
+      (message) => {
+        this.createDialog?.handleSaveError(message);
+      }
+    );
   }
 
   onEditSessionStateChanged(state: MapaEditSessionState) {
@@ -429,15 +449,53 @@ export class MapaHomeComponent {
   }
 
   saveGeometryEdition() {
-    const payload = this.mapCanvas?.saveEditSession();
-    if (!payload) return;
+    if (!this.editSessionActive()) {
+      return;
+    }
 
-    this.crud.saveElementoGeometria(
+    if (!this.editSessionDirty()) {
+      this.ui.setSelectMode();
+      return;
+    }
+
+    const elementName = this.editSessionElementName() || 'elemento';
+
+    this.confirmDialog?.open(
       {
-        id: payload.idGeoElemento,
-        wkt: payload.wkt,
+        title: 'Guardar cambios de forma',
+        message: `Se guardará la geometría de "${elementName}".\n\n¿Deseas continuar?`,
+        confirmLabel: 'Guardar',
+        cancelLabel: 'Seguir editando',
+        alternateLabel: 'Descartar',
+        severity: 'info',
       },
       () => {
+        const payload = this.mapCanvas?.saveEditSession();
+        if (!payload) return;
+
+        this.actionBusyTitle.set('Guardando forma');
+        this.actionBusyText.set('Espera un momento mientras se actualiza la geometría.');
+        this.actionBusy.set(true);
+
+        this.crud.saveElementoGeometria(
+          {
+            id: payload.idGeoElemento,
+            wkt: payload.wkt,
+          },
+          () => {
+            this.actionBusy.set(false);
+            this.interaction.resetEditSessionState();
+            this.ui.setSelectMode();
+            this.showSuccess('Forma guardada', `Se actualizó la geometría de "${elementName}".`);
+          },
+          () => {
+            this.actionBusy.set(false);
+          }
+        );
+      },
+      undefined,
+      () => {
+        this.mapCanvas?.cancelEditSession();
         this.interaction.resetEditSessionState();
         this.ui.setSelectMode();
       }
@@ -624,15 +682,49 @@ export class MapaHomeComponent {
   }
 
   onCreateNodeSubmitted(payload: MapaNodoSaveRequest) {
-    this.crud.createNodo(payload);
+    this.nodeDialog?.markSaving();
+
+    this.crud.createNodo(
+      payload,
+      (created) => {
+        this.nodeDialog?.handleSaveSuccess();
+        this.showSuccess('Nodo guardado', `Se creó "${created.nodo}" correctamente.`);
+      },
+      (message) => {
+        this.nodeDialog?.handleSaveError(message);
+      }
+    );
   }
 
   onEditNodeSubmitted(payload: MapaPatchRequest) {
-    this.crud.editNodo(payload);
+    this.nodeDialog?.markSaving();
+
+    this.crud.editNodo(
+      payload,
+      (updated) => {
+        this.nodeDialog?.handleSaveSuccess();
+        this.showSuccess('Nodo actualizado', `Se actualizó "${updated.nodo}" correctamente.`);
+      },
+      (message) => {
+        this.nodeDialog?.handleSaveError(message);
+      }
+    );
   }
 
   clearError() {
     this.crud.clearError();
+  }
+
+  clearSuccess() {
+    this.successVisible.set(false);
+    this.successTitle.set('');
+    this.successText.set('');
+  }
+
+  private showSuccess(title: string, text: string) {
+    this.successTitle.set(title);
+    this.successText.set(text);
+    this.successVisible.set(true);
   }
 
   private reloadElementosAndCenterFirstIfSearching() {

@@ -30,9 +30,11 @@
 
   <div class="tabs-content" *ngIf="tab() === 'datos'">
     <app-mapa-element-form
+      #elementForm
       [elemento]="el"
       [tipos]="tipos"
       [nodos]="nodos"
+      [saving]="saving"
       (submitted)="submitted.emit($event)"
       (dirtyChange)="onDirtyChange($event)"
     />

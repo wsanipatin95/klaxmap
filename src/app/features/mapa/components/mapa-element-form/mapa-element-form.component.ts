@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type {
   MapaElemento,
@@ -7,6 +7,7 @@ import type {
   MapaPatchRequest,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
 
 interface ElementFormState {
   nombre: string;
@@ -20,7 +21,7 @@ interface ElementFormState {
 @Component({
   selector: 'app-mapa-element-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MapaConfirmDialogComponent],
   templateUrl: './mapa-element-form.component.html',
   styleUrl: './mapa-element-form.component.scss',
 })
@@ -28,9 +29,12 @@ export class MapaElementFormComponent implements OnChanges {
   @Input() elemento: MapaElemento | null = null;
   @Input() nodos: MapaNodo[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
+  @Input() saving = false;
 
   @Output() submitted = new EventEmitter<MapaPatchRequest>();
   @Output() dirtyChange = new EventEmitter<boolean>();
+
+  @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
 
   form: ElementFormState = this.buildFormState(null);
   private initialForm: ElementFormState = this.buildFormState(null);
@@ -46,9 +50,11 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   guardar() {
-    if (!this.elemento) return;
+    if (!this.elemento || this.saving || !this.hasUnsavedChanges()) {
+      return;
+    }
 
-    this.submitted.emit({
+    const payload: MapaPatchRequest = {
       id: this.elemento.idGeoElemento,
       cambios: {
         nombre: this.form.nombre.trim(),
@@ -58,14 +64,38 @@ export class MapaElementFormComponent implements OnChanges {
         idRedNodoFk: this.form.idRedNodoFk,
         idGeoTipoElementoFk: this.form.idGeoTipoElementoFk,
       },
-    });
+    };
 
-    this.initialForm = this.cloneState(this.form);
-    this.emitDirtyState();
+    this.confirmDialog?.open(
+      {
+        title: 'Guardar cambios del elemento',
+        message:
+          'Se guardarán los cambios de la información del elemento.\n\n¿Deseas continuar?',
+        confirmLabel: 'Guardar',
+        cancelLabel: 'Seguir editando',
+        alternateLabel: 'Descartar',
+        severity: 'info',
+      },
+      () => {
+        this.submitted.emit(payload);
+      },
+      undefined,
+      () => {
+        this.discardChanges();
+      }
+    );
   }
 
   hasUnsavedChanges(): boolean {
     return !this.statesEqual(this.form, this.initialForm);
+  }
+
+  discardChanges() {
+    this.resetFromElemento(this.elemento);
+  }
+
+  markSaved(elemento: MapaElemento | null = this.elemento) {
+    this.resetFromElemento(elemento);
   }
 
   resetFromElemento(elemento: MapaElemento | null) {

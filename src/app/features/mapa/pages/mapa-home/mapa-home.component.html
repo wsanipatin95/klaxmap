@@ -129,8 +129,21 @@
   #confirmDialog
 ></app-mapa-confirm-dialog>
 
+<div class="mapa-success" *ngIf="successVisible()">
+  <div class="mapa-success-title">{{ successTitle() }}</div>
+  <div class="mapa-success-text">{{ successText() }}</div>
+  <button type="button" class="mapa-success-close" (click)="clearSuccess()">Cerrar</button>
+</div>
+
 <div class="mapa-error" *ngIf="error() as err">
   <div class="mapa-error-title">Ocurrió un problema</div>
   <div class="mapa-error-text">{{ err }}</div>
   <button type="button" class="mapa-error-close" (click)="clearError()">Cerrar</button>
+</div>
+
+<div class="mapa-action-blocker" *ngIf="actionBusy()">
+  <div class="mapa-action-card">
+    <div class="mapa-action-title">{{ actionBusyTitle() }}</div>
+    <div class="mapa-action-text">{{ actionBusyText() }}</div>
+  </div>
 </div>

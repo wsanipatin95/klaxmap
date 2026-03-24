@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  ViewChild,
   computed,
   inject,
   signal,
@@ -22,6 +23,7 @@ import type {
   MapaNodo,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
 
 type EstadoElemento = 'activo' | 'planificado' | 'pendiente_clasificar';
 
@@ -38,7 +40,7 @@ interface CreateElementoFormValue {
 @Component({
   selector: 'app-mapa-create-element-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DialogModule],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule, MapaConfirmDialogComponent],
   templateUrl: './mapa-create-element-dialog.component.html',
   styleUrl: './mapa-create-element-dialog.component.scss',
 })
@@ -48,9 +50,12 @@ export class MapaCreateElementDialogComponent {
 
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
 
+  @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
+
   private readonly fb = inject(FormBuilder);
 
   readonly visible = signal(false);
+  readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly currentWkt = signal<string | null>(null);
   readonly currentGeomTipo = signal<MapaGeomTipo | null>(null);
@@ -92,6 +97,7 @@ export class MapaCreateElementDialogComponent {
 
   open(params: { wkt: string; geomTipo: MapaGeomTipo; nodoId?: number | null }) {
     this.visible.set(true);
+    this.saving.set(false);
     this.error.set(null);
     this.submittedAttempt.set(false);
     this.currentWkt.set(params.wkt);
@@ -118,15 +124,43 @@ export class MapaCreateElementDialogComponent {
     this.form.markAsUntouched();
   }
 
-  close() {
-    this.visible.set(false);
-    this.error.set(null);
-    this.submittedAttempt.set(false);
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
+  onVisibleChange(nextVisible: boolean) {
+    if (nextVisible) {
+      this.visible.set(true);
+      return;
+    }
+
+    this.requestClose();
+  }
+
+  requestClose() {
+    if (this.saving()) {
+      return;
+    }
+
+    if (!this.hasPendingChanges()) {
+      this.closeImmediately();
+      return;
+    }
+
+    this.confirmDialog?.open(
+      {
+        title: 'Descartar nuevo elemento',
+        message:
+          'Hay un elemento nuevo sin guardar.\n\nSi continúas, la geometría y los datos capturados se perderán.',
+        confirmLabel: 'Descartar cambios',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.closeImmediately();
+      }
+    );
   }
 
   onTipoChange() {
+    this.error.set(null);
+
     const tipoId = this.form.controls.idGeoTipoElementoFk.value;
     if (tipoId == null) return;
 
@@ -139,6 +173,10 @@ export class MapaCreateElementDialogComponent {
   }
 
   guardar() {
+    if (this.saving()) {
+      return;
+    }
+
     this.error.set(null);
     this.submittedAttempt.set(true);
 
@@ -158,21 +196,43 @@ export class MapaCreateElementDialogComponent {
       return;
     }
 
-    const raw = this.form.getRawValue();
-    const payload: MapaElementoSaveRequest = {
-      idRedNodoFk: raw.idRedNodoFk as number,
-      idGeoTipoElementoFk: raw.idGeoTipoElementoFk as number,
-      nombre: raw.nombre.trim(),
-      descripcion: this.emptyToNull(raw.descripcion) ?? '',
-      estado: raw.estado,
-      visible: raw.visible ?? true,
-      origen: 'manual',
-      wkt: this.currentWkt() as string,
-      ordenDibujo: Number.isFinite(raw.ordenDibujo) ? raw.ordenDibujo : 0,
-    };
+    const payload = this.buildPayload();
 
-    this.submitted.emit(payload);
-    this.close();
+    this.confirmDialog?.open(
+      {
+        title: 'Guardar nuevo elemento',
+        message:
+          'Se guardará el nuevo elemento con la geometría dibujada.\n\n¿Deseas continuar?',
+        confirmLabel: 'Guardar',
+        cancelLabel: 'Seguir editando',
+        alternateLabel: 'Descartar',
+        severity: 'info',
+      },
+      () => {
+        this.saving.set(true);
+        this.error.set(null);
+        this.submitted.emit(payload);
+      },
+      undefined,
+      () => {
+        this.closeImmediately();
+      }
+    );
+  }
+
+  markSaving() {
+    this.saving.set(true);
+    this.error.set(null);
+  }
+
+  handleSaveSuccess() {
+    this.saving.set(false);
+    this.closeImmediately();
+  }
+
+  handleSaveError(message: string) {
+    this.saving.set(false);
+    this.error.set(message || 'No se pudo guardar el elemento.');
   }
 
   controlInvalid(name: keyof CreateElementoFormValue): boolean {
@@ -217,6 +277,37 @@ export class MapaCreateElementDialogComponent {
     if (geom === 'linestring') return 'Línea';
     if (geom === 'polygon') return 'Polígono';
     return 'Punto';
+  }
+
+  private buildPayload(): MapaElementoSaveRequest {
+    const raw = this.form.getRawValue();
+
+    return {
+      idRedNodoFk: raw.idRedNodoFk as number,
+      idGeoTipoElementoFk: raw.idGeoTipoElementoFk as number,
+      nombre: raw.nombre.trim(),
+      descripcion: this.emptyToNull(raw.descripcion) ?? '',
+      estado: raw.estado,
+      visible: raw.visible ?? true,
+      origen: 'manual',
+      wkt: this.currentWkt() as string,
+      ordenDibujo: Number.isFinite(raw.ordenDibujo) ? raw.ordenDibujo : 0,
+    };
+  }
+
+  private hasPendingChanges(): boolean {
+    return !!this.currentWkt() || this.form.dirty;
+  }
+
+  private closeImmediately() {
+    this.visible.set(false);
+    this.saving.set(false);
+    this.error.set(null);
+    this.submittedAttempt.set(false);
+    this.currentWkt.set(null);
+    this.currentGeomTipo.set(null);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
   }
 
   private resolveTiposCompatibles(geomTipo: MapaGeomTipo): MapaTipoElemento[] {

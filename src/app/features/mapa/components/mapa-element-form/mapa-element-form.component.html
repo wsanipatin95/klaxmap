@@ -8,63 +8,74 @@
     <span class="dirty-badge" *ngIf="hasUnsavedChanges()">Sin guardar</span>
   </div>
 
-  <div class="form-grid">
-    <div class="field span-2">
-      <label>Nombre</label>
-      <input
-        type="text"
-        [(ngModel)]="form.nombre"
-        (ngModelChange)="onFieldChanged()"
-        placeholder="Nombre"
-      />
+  <fieldset class="form-fieldset" [disabled]="saving">
+    <div class="form-grid">
+      <div class="field span-2">
+        <label>Nombre</label>
+        <input
+          type="text"
+          [(ngModel)]="form.nombre"
+          (ngModelChange)="onFieldChanged()"
+          placeholder="Nombre"
+        />
+      </div>
+
+      <div class="field span-2">
+        <label>Estado</label>
+        <select [(ngModel)]="form.estado" (ngModelChange)="onFieldChanged()">
+          <option value="activo">Activo</option>
+          <option value="planificado">Planificado</option>
+          <option value="pendiente_clasificar">Pendiente</option>
+        </select>
+      </div>
+
+      <div class="field span-4">
+        <label>Descripción</label>
+        <textarea
+          rows="4"
+          [(ngModel)]="form.descripcion"
+          (ngModelChange)="onFieldChanged()"
+          placeholder="Descripción breve"
+        ></textarea>
+      </div>
+
+      <div class="field span-2">
+        <label>Nodo</label>
+        <select [(ngModel)]="form.idRedNodoFk" (ngModelChange)="onFieldChanged()">
+          <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+            {{ n.nodo }}
+          </option>
+        </select>
+      </div>
+
+      <div class="field span-2">
+        <label>Tipo</label>
+        <select [(ngModel)]="form.idGeoTipoElementoFk" (ngModelChange)="onFieldChanged()">
+          <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
+            {{ t.nombre }}
+          </option>
+        </select>
+      </div>
     </div>
 
-    <div class="field span-2">
-      <label>Estado</label>
-      <select [(ngModel)]="form.estado" (ngModelChange)="onFieldChanged()">
-        <option value="activo">Activo</option>
-        <option value="planificado">Planificado</option>
-        <option value="pendiente_clasificar">Pendiente</option>
-      </select>
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="form.visible" (ngModelChange)="onFieldChanged()" />
+      <span>Visible</span>
+    </label>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="save-btn"
+        [disabled]="!hasUnsavedChanges() || saving"
+        (click)="guardar()"
+      >
+        {{ saving ? 'Guardando...' : 'Guardar' }}
+      </button>
     </div>
+  </fieldset>
 
-    <div class="field span-4">
-      <label>Descripción</label>
-      <textarea
-        rows="4"
-        [(ngModel)]="form.descripcion"
-        (ngModelChange)="onFieldChanged()"
-        placeholder="Descripción breve"
-      ></textarea>
-    </div>
-
-    <div class="field span-2">
-      <label>Nodo</label>
-      <select [(ngModel)]="form.idRedNodoFk" (ngModelChange)="onFieldChanged()">
-        <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-          {{ n.nodo }}
-        </option>
-      </select>
-    </div>
-
-    <div class="field span-2">
-      <label>Tipo</label>
-      <select [(ngModel)]="form.idGeoTipoElementoFk" (ngModelChange)="onFieldChanged()">
-        <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
-          {{ t.nombre }}
-        </option>
-      </select>
-    </div>
-  </div>
-
-  <label class="check-line">
-    <input type="checkbox" [(ngModel)]="form.visible" (ngModelChange)="onFieldChanged()" />
-    <span>Visible</span>
-  </label>
-
-  <div class="actions">
-    <button type="button" class="save-btn" (click)="guardar()">
-      Guardar
-    </button>
-  </div>
+  <p class="save-hint" *ngIf="saving">Guardando cambios del elemento...</p>
 </div>
+
+<app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>

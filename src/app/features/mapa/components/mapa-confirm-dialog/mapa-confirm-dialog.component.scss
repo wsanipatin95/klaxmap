@@ -66,9 +66,11 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .ghost-btn,
+.alternate-btn,
 .confirm-btn {
   min-height: 2.2rem;
   padding: 0 0.85rem;
@@ -86,6 +88,17 @@
 
 .ghost-btn:hover {
   background: #f8fafc;
+}
+
+.alternate-btn {
+  border: 1px solid #f3c7df;
+  background: #fdf4f9;
+  color: #7b0061;
+}
+
+.alternate-btn:hover {
+  background: #fbe8f3;
+  border-color: #e9a8cb;
 }
 
 .confirm-btn {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
 import type { MapaElemento, MapaNodo, MapaPatchRequest, MapaTipoElemento } from '../../data-access/mapa.models';
 import { MapaElementFormComponent } from '../mapa-element-form/mapa-element-form.component';
 
@@ -14,9 +14,12 @@ export class MapaPropertiesTabsComponent {
   @Input() elemento: MapaElemento | null = null;
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() nodos: MapaNodo[] = [];
+  @Input() saving = false;
 
   @Output() submitted = new EventEmitter<MapaPatchRequest>();
   @Output() dirtyChange = new EventEmitter<boolean>();
+
+  @ViewChild(MapaElementFormComponent) elementForm?: MapaElementFormComponent;
 
   readonly tab = signal<'datos' | 'meta' | 'kml'>('datos');
 
@@ -26,6 +29,18 @@ export class MapaPropertiesTabsComponent {
 
   onDirtyChange(dirty: boolean) {
     this.dirtyChange.emit(dirty);
+  }
+
+  markSaved(updated: MapaElemento | null) {
+    this.elementForm?.markSaved(updated);
+  }
+
+  discardPendingChanges() {
+    this.elementForm?.discardChanges();
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.elementForm?.hasUnsavedChanges() ?? false;
   }
 
   jsonPretty(value: unknown): string {

@@ -9,6 +9,7 @@ export interface MapaConfirmDialogConfig {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  alternateLabel?: string | null;
   severity?: MapaConfirmSeverity;
 }
 
@@ -25,23 +26,28 @@ export class MapaConfirmDialogComponent {
   readonly message = signal('');
   readonly confirmLabel = signal('Confirmar');
   readonly cancelLabel = signal('Cancelar');
+  readonly alternateLabel = signal<string | null>(null);
   readonly severity = signal<MapaConfirmSeverity>('warning');
 
   private onConfirmCallback: (() => void) | null = null;
   private onCancelCallback: (() => void) | null = null;
+  private onAlternateCallback: (() => void) | null = null;
 
   open(
     config: MapaConfirmDialogConfig,
     onConfirm?: () => void,
-    onCancel?: () => void
+    onCancel?: () => void,
+    onAlternate?: () => void
   ) {
     this.title.set(config.title);
     this.message.set(config.message);
     this.confirmLabel.set(config.confirmLabel ?? 'Confirmar');
     this.cancelLabel.set(config.cancelLabel ?? 'Cancelar');
+    this.alternateLabel.set(config.alternateLabel ?? null);
     this.severity.set(config.severity ?? 'warning');
     this.onConfirmCallback = onConfirm ?? null;
     this.onCancelCallback = onCancel ?? null;
+    this.onAlternateCallback = onAlternate ?? null;
     this.visible.set(true);
   }
 
@@ -53,6 +59,12 @@ export class MapaConfirmDialogComponent {
 
   cancel() {
     const callback = this.onCancelCallback;
+    this.closeInternal();
+    callback?.();
+  }
+
+  alternate() {
+    const callback = this.onAlternateCallback;
     this.closeInternal();
     callback?.();
   }
@@ -79,6 +91,7 @@ export class MapaConfirmDialogComponent {
     if (resetCallbacks) {
       this.onConfirmCallback = null;
       this.onCancelCallback = null;
+      this.onAlternateCallback = null;
     }
   }
 }

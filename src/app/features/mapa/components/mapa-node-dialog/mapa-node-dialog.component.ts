@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, computed, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Output, ViewChild, computed, inject, signal } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import type { MapaNodo, MapaNodoSaveRequest, MapaPatchRequest } from '../../data-access/mapa.models';
+import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
 
 type NodeDialogMode = 'create' | 'edit';
 type NodeTipo = MapaNodo['tipoNodo'];
@@ -26,7 +27,7 @@ interface NodeDialogFormValue {
 @Component({
   selector: 'app-mapa-node-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DialogModule],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule, MapaConfirmDialogComponent],
   templateUrl: './mapa-node-dialog.component.html',
   styleUrl: './mapa-node-dialog.component.scss',
 })
@@ -34,9 +35,12 @@ export class MapaNodeDialogComponent {
   @Output() createSubmitted = new EventEmitter<MapaNodoSaveRequest>();
   @Output() editSubmitted = new EventEmitter<MapaPatchRequest>();
 
+  @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
+
   private readonly fb = inject(FormBuilder);
 
   readonly visible = signal(false);
+  readonly saving = signal(false);
   readonly mode = signal<NodeDialogMode>('create');
   readonly error = signal<string | null>(null);
   readonly title = signal('Crear nodo');
@@ -66,6 +70,7 @@ export class MapaNodeDialogComponent {
     this.parentNode.set(parent);
     this.editingNode.set(null);
     this.error.set(null);
+    this.saving.set(false);
     this.submitted.set(false);
 
     this.form.reset(
@@ -92,6 +97,7 @@ export class MapaNodeDialogComponent {
     this.parentNode.set(null);
     this.editingNode.set(node);
     this.error.set(null);
+    this.saving.set(false);
     this.submitted.set(false);
 
     this.form.reset(
@@ -112,15 +118,45 @@ export class MapaNodeDialogComponent {
     this.visible.set(true);
   }
 
-  close() {
-    this.visible.set(false);
-    this.error.set(null);
-    this.submitted.set(false);
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
+  onVisibleChange(nextVisible: boolean) {
+    if (nextVisible) {
+      this.visible.set(true);
+      return;
+    }
+
+    this.requestClose();
+  }
+
+  requestClose() {
+    if (this.saving()) {
+      return;
+    }
+
+    if (!this.hasPendingChanges()) {
+      this.closeImmediately();
+      return;
+    }
+
+    this.confirmDialog?.open(
+      {
+        title: this.isEditMode() ? 'Descartar edición del nodo' : 'Descartar nuevo nodo',
+        message:
+          'Hay cambios sin guardar en el nodo.\n\nSi continúas, esos cambios se perderán.',
+        confirmLabel: 'Descartar cambios',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.closeImmediately();
+      }
+    );
   }
 
   submit() {
+    if (this.saving()) {
+      return;
+    }
+
     this.error.set(null);
     this.submitted.set(true);
 
@@ -132,32 +168,66 @@ export class MapaNodeDialogComponent {
 
     const payload = this.buildCreatePayload();
 
-    if (this.mode() === 'create') {
-      this.createSubmitted.emit(payload);
-      this.close();
-      return;
-    }
-
-    const editing = this.editingNode();
-    if (!editing) {
-      this.error.set('No se encontró el nodo.');
-      return;
-    }
-
-    this.editSubmitted.emit({
-      id: editing.idRedNodo,
-      cambios: {
-        codigo: payload.codigo,
-        nodo: payload.nodo,
-        descripcion: payload.descripcion,
-        tipoNodo: payload.tipoNodo,
-        orden: payload.orden ?? 0,
-        visible: payload.visible ?? true,
-        atributos: {},
+    this.confirmDialog?.open(
+      {
+        title: this.isEditMode() ? 'Guardar cambios del nodo' : 'Guardar nuevo nodo',
+        message: this.isEditMode()
+          ? 'Se guardarán los cambios del nodo seleccionado.\n\n¿Deseas continuar?'
+          : 'Se creará el nuevo nodo con la información capturada.\n\n¿Deseas continuar?',
+        confirmLabel: 'Guardar',
+        cancelLabel: 'Seguir editando',
+        alternateLabel: 'Descartar',
+        severity: 'info',
       },
-    });
+      () => {
+        this.saving.set(true);
+        this.error.set(null);
 
-    this.close();
+        if (this.mode() === 'create') {
+          this.createSubmitted.emit(payload);
+          return;
+        }
+
+        const editing = this.editingNode();
+        if (!editing) {
+          this.saving.set(false);
+          this.error.set('No se encontró el nodo.');
+          return;
+        }
+
+        this.editSubmitted.emit({
+          id: editing.idRedNodo,
+          cambios: {
+            codigo: payload.codigo,
+            nodo: payload.nodo,
+            descripcion: payload.descripcion,
+            tipoNodo: payload.tipoNodo,
+            orden: payload.orden ?? 0,
+            visible: payload.visible ?? true,
+            atributos: {},
+          },
+        });
+      },
+      undefined,
+      () => {
+        this.closeImmediately();
+      }
+    );
+  }
+
+  markSaving() {
+    this.saving.set(true);
+    this.error.set(null);
+  }
+
+  handleSaveSuccess() {
+    this.saving.set(false);
+    this.closeImmediately();
+  }
+
+  handleSaveError(message: string) {
+    this.saving.set(false);
+    this.error.set(message || 'No se pudo guardar el nodo.');
   }
 
   controlInvalid(name: keyof NodeDialogFormValue): boolean {
@@ -198,6 +268,10 @@ export class MapaNodeDialogComponent {
     return this.parentNode()?.nodo || 'Raíz';
   }
 
+  private hasPendingChanges(): boolean {
+    return this.form.dirty;
+  }
+
   private buildCreatePayload(): MapaNodoSaveRequest {
     const raw = this.form.getRawValue();
 
@@ -211,6 +285,15 @@ export class MapaNodeDialogComponent {
       visible: raw.visible ?? true,
       atributos: {},
     };
+  }
+
+  private closeImmediately() {
+    this.visible.set(false);
+    this.saving.set(false);
+    this.error.set(null);
+    this.submitted.set(false);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
   }
 
   private nullable(value: string | null | undefined): string | null {

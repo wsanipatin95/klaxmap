@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -37,21 +38,43 @@ export class MapaPropertiesPanelComponent {
   @Output() closeRequested = new EventEmitter<void>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
+  @ViewChild(MapaPropertiesTabsComponent) tabs?: MapaPropertiesTabsComponent;
+
   readonly dirty = signal(false);
+  readonly saving = signal(false);
+  readonly statusKind = signal<'success' | 'error' | null>(null);
+  readonly statusMessage = signal<string | null>(null);
 
   guardar(payload: MapaPatchRequest) {
+    if (this.saving()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.statusKind.set(null);
+    this.statusMessage.set(null);
+
     this.repo.editar(payload).subscribe({
       next: (resp) => {
+        this.saving.set(false);
         this.dirty.set(false);
         this.dirtyChange.emit(false);
+        this.tabs?.markSaved(resp.data);
+        this.statusKind.set('success');
+        this.statusMessage.set('Los cambios se guardaron correctamente.');
         this.saved.emit(resp.data);
       },
-      error: (err) => console.error(err),
+      error: (err) => {
+        console.error(err);
+        this.saving.set(false);
+        this.statusKind.set('error');
+        this.statusMessage.set(err?.message || 'No se pudieron guardar los cambios.');
+      },
     });
   }
 
   eliminar() {
-    if (!this.elemento) return;
+    if (!this.elemento || this.saving()) return;
 
     this.repo.eliminar(this.elemento.idGeoElemento).subscribe({
       next: () => this.deleted.emit(this.elemento!.idGeoElemento),
@@ -60,10 +83,18 @@ export class MapaPropertiesPanelComponent {
   }
 
   requestClose() {
+    if (this.saving()) {
+      return;
+    }
+
     this.closeRequested.emit();
   }
 
   onOverlayClick() {
+    if (this.saving()) {
+      return;
+    }
+
     this.requestClose();
   }
 
@@ -74,5 +105,10 @@ export class MapaPropertiesPanelComponent {
   onDirtyStateChanged(isDirty: boolean) {
     this.dirty.set(isDirty);
     this.dirtyChange.emit(isDirty);
+
+    if (isDirty && this.statusKind() === 'success') {
+      this.statusKind.set(null);
+      this.statusMessage.set(null);
+    }
   }
 }

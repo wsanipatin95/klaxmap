@@ -1,118 +1,129 @@
 <p-dialog
   [visible]="visible()"
-  (visibleChange)="visible.set($event)"
+  (visibleChange)="onVisibleChange($event)"
   [modal]="true"
-  [closable]="true"
+  [closable]="!saving()"
+  [dismissableMask]="!saving()"
   [style]="{ width: '42rem' }"
   header="Nuevo elemento"
-  (onHide)="close()"
 >
-  <form class="dialog-body" [formGroup]="form" (ngSubmit)="guardar()">
-    <div class="mini-summary">
-      <span class="summary-chip">{{ geomLabel() }}</span>
-
-      <span class="summary-chip" *ngIf="selectedNodo() as nodo">
-        {{ nodo.nodo }}
-      </span>
-
-      <span class="summary-chip" *ngIf="selectedTipo() as tipo">
-        {{ tipo.nombre }}
-      </span>
-    </div>
-
-    <div class="form-grid two-cols">
-      <div class="field">
-        <label for="elemento-nodo">Nodo</label>
-        <select id="elemento-nodo" formControlName="idRedNodoFk">
-          <option [ngValue]="null">Seleccionar</option>
-          <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-            {{ n.nodo }}
-          </option>
-        </select>
-        <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
-      </div>
-
-      <div class="field">
-        <label for="elemento-tipo">Tipo</label>
-        <select
-          id="elemento-tipo"
-          formControlName="idGeoTipoElementoFk"
-          (change)="onTipoChange()"
-        >
-          <option [ngValue]="null">Seleccionar</option>
-          <option *ngFor="let t of tiposCompatibles()" [ngValue]="t.idGeoTipoElemento">
-            {{ t.nombre }}
-          </option>
-        </select>
-        <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
+  <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="guardar()">
+    <div class="save-blocker" *ngIf="saving()">
+      <div class="save-blocker-card">
+        <div class="save-blocker-title">Guardando elemento...</div>
+        <div class="save-blocker-text">Espera un momento mientras se registra la información.</div>
       </div>
     </div>
 
-    <div class="field">
-      <label for="elemento-nombre">Nombre</label>
-      <input
-        id="elemento-nombre"
-        type="text"
-        formControlName="nombre"
-        placeholder="Nombre"
-      />
-      <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
-    </div>
+    <fieldset class="dialog-fieldset" [disabled]="saving()">
+      <div class="mini-summary">
+        <span class="summary-chip">{{ geomLabel() }}</span>
 
-    <div class="field">
-      <label for="elemento-descripcion">Descripción</label>
-      <textarea
-        id="elemento-descripcion"
-        formControlName="descripcion"
-        placeholder="Descripción breve"
-      ></textarea>
-      <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
-    </div>
+        <span class="summary-chip" *ngIf="selectedNodo() as nodo">
+          {{ nodo.nodo }}
+        </span>
 
-    <div class="form-grid two-cols">
-      <div class="field">
-        <label for="elemento-estado">Estado</label>
-        <select id="elemento-estado" formControlName="estado">
-          <option value="activo">Activo</option>
-          <option value="planificado">Planificado</option>
-          <option value="pendiente_clasificar">Pendiente</option>
-        </select>
+        <span class="summary-chip" *ngIf="selectedTipo() as tipo">
+          {{ tipo.nombre }}
+        </span>
+      </div>
+
+      <div class="form-grid two-cols">
+        <div class="field">
+          <label for="elemento-nodo">Nodo</label>
+          <select id="elemento-nodo" formControlName="idRedNodoFk">
+            <option [ngValue]="null">Seleccionar</option>
+            <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
+              {{ n.nodo }}
+            </option>
+          </select>
+          <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
+        </div>
+
+        <div class="field">
+          <label for="elemento-tipo">Tipo</label>
+          <select
+            id="elemento-tipo"
+            formControlName="idGeoTipoElementoFk"
+            (change)="onTipoChange()"
+          >
+            <option [ngValue]="null">Seleccionar</option>
+            <option *ngFor="let t of tiposCompatibles()" [ngValue]="t.idGeoTipoElemento">
+              {{ t.nombre }}
+            </option>
+          </select>
+          <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
+        </div>
       </div>
 
       <div class="field">
-        <label for="elemento-orden">Orden</label>
-        <input id="elemento-orden" type="number" formControlName="ordenDibujo" />
-        <p class="field-error" *ngIf="controlError('ordenDibujo') as err">{{ err }}</p>
+        <label for="elemento-nombre">Nombre</label>
+        <input
+          id="elemento-nombre"
+          type="text"
+          formControlName="nombre"
+          placeholder="Nombre"
+        />
+        <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
       </div>
-    </div>
 
-    <label class="check-card">
-      <input type="checkbox" formControlName="visible" />
-      <span>Visible</span>
-    </label>
+      <div class="field">
+        <label for="elemento-descripcion">Descripción</label>
+        <textarea
+          id="elemento-descripcion"
+          formControlName="descripcion"
+          placeholder="Descripción breve"
+        ></textarea>
+        <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+      </div>
 
-    <div class="wkt-box">
-      <div class="wkt-title">Geometría</div>
-      <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
-    </div>
+      <div class="form-grid two-cols">
+        <div class="field">
+          <label for="elemento-estado">Estado</label>
+          <select id="elemento-estado" formControlName="estado">
+            <option value="activo">Activo</option>
+            <option value="planificado">Planificado</option>
+            <option value="pendiente_clasificar">Pendiente</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="elemento-orden">Orden</label>
+          <input id="elemento-orden" type="number" formControlName="ordenDibujo" />
+          <p class="field-error" *ngIf="controlError('ordenDibujo') as err">{{ err }}</p>
+        </div>
+      </div>
+
+      <label class="check-card">
+        <input type="checkbox" formControlName="visible" />
+        <span>Visible</span>
+      </label>
+
+      <div class="wkt-box">
+        <div class="wkt-title">Geometría</div>
+        <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
+      </div>
+    </fieldset>
 
     <p class="error" *ngIf="error() as err">{{ err }}</p>
   </form>
 
   <ng-template pTemplate="footer">
     <div class="dialog-footer">
-      <button type="button" class="ghost-btn" (click)="close()">
+      <button type="button" class="ghost-btn" [disabled]="saving()" (click)="requestClose()">
         Cancelar
       </button>
 
       <button
         type="button"
         class="save-btn"
-        [disabled]="form.invalid || !currentWkt()"
+        [disabled]="form.invalid || !currentWkt() || saving()"
         (click)="guardar()"
       >
-        Guardar
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
   </ng-template>
 </p-dialog>
+
+<app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>

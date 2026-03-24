@@ -115,7 +115,8 @@ export class MapaCrudFacade {
 
   createElemento(
     payload: MapaElementoSaveRequest,
-    onDone?: (created: MapaElemento) => void
+    onDone?: (created: MapaElemento) => void,
+    onError?: (message: string) => void
   ) {
     this.elementosRepo.crear(payload).subscribe({
       next: (resp) => {
@@ -125,14 +126,17 @@ export class MapaCrudFacade {
       },
       error: (err) => {
         console.error('[MAPA][CREATE ELEMENTO] error:', err);
-        this.error.set(err?.message || 'No se pudo crear el elemento');
+        const message = err?.message || 'No se pudo crear el elemento';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }
 
   saveElementoGeometria(
     payload: MapaElementoGeometriaRequest,
-    onDone?: (updated: MapaElemento) => void
+    onDone?: (updated: MapaElemento) => void,
+    onError?: (message: string) => void
   ) {
     this.elementosRepo.editarGeometria(payload).subscribe({
       next: (resp) => {
@@ -142,7 +146,9 @@ export class MapaCrudFacade {
       },
       error: (err) => {
         console.error('[MAPA][EDIT GEOMETRY] error:', err);
-        this.error.set(err?.message || 'No se pudo guardar la geometría');
+        const message = err?.message || 'No se pudo guardar la geometría';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }
@@ -165,7 +171,11 @@ export class MapaCrudFacade {
     });
   }
 
-  createNodo(payload: MapaNodoSaveRequest, onDone?: (created: MapaNodo) => void) {
+  createNodo(
+    payload: MapaNodoSaveRequest,
+    onDone?: (created: MapaNodo) => void,
+    onError?: (message: string) => void
+  ) {
     this.nodosRepo.crear(payload).subscribe({
       next: (resp) => {
         this.selection.setNodo(resp.data);
@@ -174,12 +184,18 @@ export class MapaCrudFacade {
       },
       error: (err) => {
         console.error('[MAPA][CREATE NODO] error:', err);
-        this.error.set(err?.message || 'No se pudo crear el nodo');
+        const message = err?.message || 'No se pudo crear el nodo';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }
 
-  editNodo(payload: MapaPatchRequest, onDone?: (updated: MapaNodo) => void) {
+  editNodo(
+    payload: MapaPatchRequest,
+    onDone?: (updated: MapaNodo) => void,
+    onError?: (message: string) => void
+  ) {
     this.nodosRepo.editar(payload).subscribe({
       next: (resp) => {
         if (this.selection.selectedNodo()?.idRedNodo === resp.data.idRedNodo) {
@@ -191,7 +207,9 @@ export class MapaCrudFacade {
       },
       error: (err) => {
         console.error('[MAPA][EDIT NODO] error:', err);
-        this.error.set(err?.message || 'No se pudo editar el nodo');
+        const message = err?.message || 'No se pudo editar el nodo';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }

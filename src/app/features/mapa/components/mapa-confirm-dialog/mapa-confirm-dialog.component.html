@@ -26,6 +26,15 @@
       </button>
 
       <button
+        *ngIf="alternateLabel() as altLabel"
+        type="button"
+        class="alternate-btn"
+        (click)="alternate()"
+      >
+        {{ altLabel }}
+      </button>
+
+      <button
         type="button"
         class="confirm-btn"
         [class.is-danger]="severity() === 'danger'"
