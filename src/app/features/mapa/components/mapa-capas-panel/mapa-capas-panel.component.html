@@ -1,19 +1,9 @@
 <div class="layers-panel">
-  <div class="layers-toolbar">
-    <button type="button" class="toolbar-btn" title="Mostrar todo" aria-label="Mostrar todo" (click)="showAll()">
-      <i class="pi pi-eye"></i>
-    </button>
-
-    <button type="button" class="toolbar-btn" title="Ocultar todo" aria-label="Ocultar todo" (click)="hideAll()">
-      <i class="pi pi-eye-slash"></i>
-    </button>
-  </div>
-
   <div class="layers-tree">
     <label class="layers-root-row">
       <input #rootToggle type="checkbox" [checked]="allVisible()" (change)="onRootToggle(rootToggle.checked)" />
       <span class="layers-expander">▾</span>
-      <span class="layers-root-name">Base de datos principal</span>
+      <span class="">Todos</span>
     </label>
 
     <div class="layers-children">

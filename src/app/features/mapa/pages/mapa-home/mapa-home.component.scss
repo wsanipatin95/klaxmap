@@ -5,12 +5,12 @@
 
 .mapa-quick-info {
   position: fixed;
-  left: clamp(1rem, 18vw, 16rem);
+  left: clamp(1rem, 50vw, 25rem);
   right: clamp(1rem, 24vw, 20rem);
   bottom: 2.95rem;
-  z-index: 1200;
+  z-index: 500;
   margin: 0 auto;
-  max-width: 52rem;
+  max-width: 40rem;
   background: rgba(255, 255, 255, 0.94);
   color: #475569;
   border: 1px solid rgba(203, 213, 225, 0.92);
