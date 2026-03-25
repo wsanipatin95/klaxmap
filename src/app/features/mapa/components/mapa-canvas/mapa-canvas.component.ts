@@ -10,7 +10,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import * as L from 'leaflet';
+import type * as Leaflet from 'leaflet';
 
 import type {
   MapaElemento,
@@ -19,6 +19,8 @@ import type {
 } from '../../data-access/mapa.models';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
 import { parseWktGeometry } from '../../utils/mapa-geometry.utils';
+
+declare const L: typeof import('leaflet');
 
 export interface MapaEditSessionState {
   active: boolean;
