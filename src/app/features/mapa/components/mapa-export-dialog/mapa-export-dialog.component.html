@@ -1,12 +1,23 @@
 <p-dialog
   [visible]="visible()"
-  (visibleChange)="visible.set($event)"
+  (visibleChange)="onDialogVisibilityChange($event)"
   [modal]="true"
-  [closable]="true"
+  [closable]="!loading()"
+  [dismissableMask]="!loading()"
+  [closeOnEscape]="!loading()"
   [style]="{ width: '38rem' }"
   header="Exportar KML"
 >
-  <div class="dialog-body">
+  <div class="dialog-body" [class.is-busy]="loading()">
+    <div class="dialog-blocker" *ngIf="loading()">
+      <div class="dialog-blocker-card">
+        <div class="dialog-blocker-title">Exportando archivo...</div>
+        <div class="dialog-blocker-text">
+          Espera un momento mientras se genera la descarga.
+        </div>
+      </div>
+    </div>
+
     <div class="summary-card">
       <div class="summary-top">
         <span class="summary-title">Resumen</span>
@@ -19,17 +30,17 @@
     <div class="form-grid">
       <div class="field span-2">
         <label>Nombre</label>
-        <input type="text" [(ngModel)]="form.nombreDocumento" />
+        <input type="text" [(ngModel)]="form.nombreDocumento" [disabled]="loading()" />
       </div>
 
       <div class="field span-2">
         <label>Buscar</label>
-        <input type="text" [(ngModel)]="form.q" />
+        <input type="text" [(ngModel)]="form.q" [disabled]="loading()" />
       </div>
 
       <div class="field span-2">
         <label>Nodo</label>
-        <select [(ngModel)]="form.idRedNodoFk">
+        <select [(ngModel)]="form.idRedNodoFk" [disabled]="loading()">
           <option [ngValue]="null">Todos</option>
           <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
             {{ n.nodo }}
@@ -39,7 +50,7 @@
 
       <div class="field span-2">
         <label>Tipo</label>
-        <select [(ngModel)]="form.idGeoTipoElementoFk">
+        <select [(ngModel)]="form.idGeoTipoElementoFk" [disabled]="loading()">
           <option [ngValue]="null">Todos</option>
           <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
             {{ t.nombre }}
@@ -49,7 +60,7 @@
 
       <div class="field span-2">
         <label>Visibilidad</label>
-        <select [(ngModel)]="form.visible">
+        <select [(ngModel)]="form.visible" [disabled]="loading()">
           <option [ngValue]="true">Sólo visibles</option>
           <option [ngValue]="false">Sólo no visibles</option>
           <option [ngValue]="null">Todos</option>
@@ -70,6 +81,7 @@
       type="button"
       label="Cerrar"
       severity="secondary"
+      [disabled]="loading()"
       (click)="close()"
     ></button>
 

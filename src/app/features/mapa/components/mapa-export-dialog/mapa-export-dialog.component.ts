@@ -40,6 +40,8 @@ export class MapaExportDialogComponent {
     prefill?: Partial<MapaExportRequest>,
     meta?: { resultCount?: number; filterSummary?: string }
   ) {
+    if (this.loading()) return;
+
     this.visible.set(true);
     this.error.set(null);
     this.resultCount.set(meta?.resultCount ?? 0);
@@ -55,18 +57,40 @@ export class MapaExportDialogComponent {
   }
 
   close() {
+    if (this.loading()) return;
     this.visible.set(false);
   }
 
+  onDialogVisibilityChange(next: boolean) {
+    if (this.loading()) {
+      this.visible.set(true);
+      return;
+    }
+
+    this.visible.set(next);
+  }
+
   exportar() {
+    if (this.loading()) return;
+
+    const nombre = (this.form.nombreDocumento || '').trim();
+    if (!nombre) {
+      this.error.set('Ingresa un nombre para el archivo.');
+      return;
+    }
+
     this.loading.set(true);
     this.error.set(null);
 
-    this.repo.exportarKml(this.form)
+    this.repo
+      .exportarKml({
+        ...this.form,
+        nombreDocumento: nombre,
+      })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (blob) => {
-          const name = (this.form.nombreDocumento || 'mapa_red_isp') + '.kml';
+          const name = `${nombre}.kml`;
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;

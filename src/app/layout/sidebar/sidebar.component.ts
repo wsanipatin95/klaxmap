@@ -212,12 +212,18 @@ export class SidebarComponent {
   }
 
   navigateToRoute(route?: string) {
-    if (route) {
-      this.router.navigate([route]);
+    if (!route) return;
 
-      if (this.isMobile()) {
-        this.sidebarService.closeMobileSidebar();
-      }
+    this.router.navigate([route]);
+
+    if (this.isMobile()) {
+      this.sidebarService.closeMobileSidebar();
+      return;
+    }
+
+    // Auto-contraer solo al entrar al módulo de mapas
+    if (route.startsWith('/app/mapa')) {
+      this.sidebarService.setCollapsed(true);
     }
   }
 

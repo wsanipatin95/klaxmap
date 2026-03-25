@@ -1,16 +1,33 @@
 <p-dialog
   [visible]="visible()"
-  (visibleChange)="visible.set($event)"
+  (visibleChange)="onDialogVisibilityChange($event)"
   [modal]="true"
-  [closable]="true"
+  [closable]="!loading()"
+  [dismissableMask]="!loading()"
+  [closeOnEscape]="!loading()"
   [style]="{ width: '34rem' }"
   header="Importar KML"
 >
-  <div class="dialog-body">
+  <div class="dialog-body" [class.is-busy]="loading()">
+    <div class="dialog-blocker" *ngIf="loading()">
+      <div class="dialog-blocker-card">
+        <div class="dialog-blocker-title">Importando archivo...</div>
+        <div class="dialog-blocker-text">
+          Espera un momento mientras se procesa el lote.
+        </div>
+      </div>
+    </div>
+
     <div class="dialog-note">Carga un archivo y procesa el lote.</div>
 
-    <label class="upload-box">
-      <input type="file" accept=".kml,.kmz" (change)="onFileSelected($event)" />
+    <label class="upload-box" [class.is-disabled]="loading()">
+      <input
+        #fileInput
+        type="file"
+        accept=".kml,.kmz"
+        [disabled]="loading()"
+        (change)="onFileSelected($event)"
+      />
       <span class="upload-title">Seleccionar archivo</span>
       <span class="upload-name">{{ fileName }}</span>
     </label>
@@ -37,6 +54,7 @@
       type="button"
       label="Cerrar"
       severity="secondary"
+      [disabled]="loading()"
       (click)="close()"
     ></button>
 
@@ -44,7 +62,7 @@
       pButton
       type="button"
       label="{{ loading() ? 'Importando...' : 'Importar' }}"
-      [disabled]="loading()"
+      [disabled]="loading() || !selectedFile()"
       (click)="importar()"
     ></button>
   </ng-template>
