@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
-import 'leaflet-draw';
 
 import type {
   MapaElemento,
@@ -158,6 +157,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private renderFrameId: number | null = null;
   private currentViewBounds: L.LatLngBounds | null = null;
   private hasInitialAutoFit = false;
+  private drawPluginAvailable = false;
 
   private editSession: {
     active: boolean;
@@ -375,6 +375,22 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.scheduleRender();
   }
 
+  private getDrawRef(): any | null {
+    const drawRef = (L as any)?.Draw ?? null;
+    return drawRef;
+  }
+
+  private detectDrawPlugin(): boolean {
+    const drawRef = this.getDrawRef();
+    return !!(
+      drawRef &&
+      drawRef.Event &&
+      typeof drawRef.Marker === 'function' &&
+      typeof drawRef.Polyline === 'function' &&
+      typeof drawRef.Polygon === 'function'
+    );
+  }
+
   private initMap() {
     this.map = L.map(this.mapContainer.nativeElement, {
       center: this.mapCenter,
@@ -403,17 +419,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       }
     });
 
-    this.map.on((L as any).Draw.Event.CREATED, (e: any) => {
-      const layer = e.layer as L.Layer;
-      const geomTipo = this.geomTipoFromLayerType(e.layerType);
-      const wkt = this.layerToWkt(layer, geomTipo);
+    this.drawPluginAvailable = this.detectDrawPlugin();
 
-      this.stopActiveDraw();
+    console.log('Leaflet version:', (L as any)?.version);
+    console.log('Leaflet Draw disponible:', this.drawPluginAvailable);
+    console.log('L.Draw:', (L as any)?.Draw);
+    console.log('L.Draw.Event:', (L as any)?.Draw?.Event);
 
-      if (!wkt) return;
+    const drawRef = this.getDrawRef();
 
-      this.geometryCreated.emit({ wkt, geomTipo });
-    });
+    if (drawRef?.Event?.CREATED) {
+      this.map.on(drawRef.Event.CREATED, (e: any) => {
+        const layer = e.layer as L.Layer;
+        const geomTipo = this.geomTipoFromLayerType(e.layerType);
+        const wkt = this.layerToWkt(layer, geomTipo);
+
+        this.stopActiveDraw();
+
+        if (!wkt) return;
+
+        this.geometryCreated.emit({ wkt, geomTipo });
+      });
+    } else {
+      console.error(
+        'Leaflet Draw no está cargado. Verifica angular.json -> scripts/styles y el orden de carga.'
+      );
+    }
   }
 
   private updateViewBounds() {
@@ -548,8 +579,12 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private startDrawHandler(type: 'point' | 'line' | 'polygon') {
     if (!this.map) return;
 
-    const DrawRef: any = (L as any).Draw;
-    if (!DrawRef) return;
+    const DrawRef: any = this.getDrawRef();
+
+    if (!DrawRef) {
+      console.error('No se puede iniciar dibujo porque L.Draw no está disponible.');
+      return;
+    }
 
     this.stopActiveDraw();
 
@@ -848,7 +883,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     const geomTipo = String(el.geomTipo ?? '').toLowerCase();
 
-    // Mantener líneas y polígonos siempre presentes.
     if (geomTipo !== 'point') {
       return true;
     }
@@ -1070,8 +1104,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const geom = el.geometria;
     const style = this.resolveElementStyle(el, tipo);
 
-    const simplifyPoint =
-      this.shouldSimplifyPoint(el);
+    const simplifyPoint = this.shouldSimplifyPoint(el);
 
     if (geom && typeof geom === 'object' && (geom as any).type && (geom as any).coordinates) {
       const fromGeoJson = this.layerFromGeoJsonGeometry(geom, style, simplifyPoint);
