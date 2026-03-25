@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import { environment } from 'src/app/environments/environment';
+import { environment } from 'src/environments/environment';
 
 export interface AppEnvironment {
   production: boolean;
