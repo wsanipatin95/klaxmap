@@ -6,6 +6,10 @@
   <span>Sin resultados.</span>
 </div>
 
+<div class="tree-performance-note" *ngIf="performanceNotice">
+  {{ performanceNotice }}
+</div>
+
 <div class="tree-scroll" *ngIf="hasVisibleTreeData">
   <ul class="tree-root">
     <ng-container *ngFor="let item of tree; trackBy: trackByNode">
@@ -30,7 +34,7 @@
       <button
         type="button"
         class="expand-btn"
-        *ngIf="item.children.length > 0 || item.elementos.length > 0"
+        *ngIf="item.children.length > 0 || item.elementos.length > 0 || item.hiddenElementCount > 0"
         (click)="toggleExpanded(item.node.idRedNodo, $event)"
         aria-label="Expandir o contraer nodo"
       >
@@ -39,7 +43,7 @@
 
       <span
         class="expand-placeholder"
-        *ngIf="item.children.length === 0 && item.elementos.length === 0"
+        *ngIf="item.children.length === 0 && item.elementos.length === 0 && item.hiddenElementCount === 0"
       ></span>
 
       <input
@@ -115,6 +119,18 @@
           </span>
 
           <span class="element-name">{{ el.nombre }}</span>
+        </div>
+      </li>
+
+      <li
+        class="element-row element-row-overflow"
+        *ngIf="item.hiddenElementCount > 0"
+        [style.paddingLeft.px]="26 + ((level + 1) * 12)"
+        [attr.title]="nodeOverflowLabel(item)"
+      >
+        <div class="element-row-grid">
+          <span class="element-preview is-point" aria-hidden="true"></span>
+          <span class="element-name">{{ nodeOverflowLabel(item) }}</span>
         </div>
       </li>
     </ul>

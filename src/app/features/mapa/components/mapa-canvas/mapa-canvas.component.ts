@@ -42,6 +42,7 @@ interface BasemapOption {
   url: string;
   options: L.TileLayerOptions;
 }
+
 interface ResolvedElementStyle {
   iconoFuente: string | null;
   icono: string | null;
@@ -53,6 +54,12 @@ interface ResolvedElementStyle {
   zIndex: number;
   tamanoIcono: number;
 }
+
+interface CachedElementBounds {
+  signature: string;
+  bounds: L.LatLngBounds | null;
+}
+
 @Component({
   selector: 'app-mapa-canvas',
   standalone: true,
@@ -93,8 +100,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       options: {
         subdomains: 'abcd',
         maxZoom: 20,
-        attribution:
-          '&copy; OpenStreetMap contributors &copy; CARTO',
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       },
     },
     {
@@ -104,8 +110,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       options: {
         subdomains: 'abcd',
         maxZoom: 20,
-        attribution:
-          '&copy; OpenStreetMap contributors &copy; CARTO',
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       },
     },
     {
@@ -114,8 +119,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       options: {
         maxZoom: 22,
-        attribution:
-          'Tiles &copy; Esri',
+        attribution: 'Tiles &copy; Esri',
       },
     },
     {
@@ -138,11 +142,22 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
 
+  private readonly PERFORMANCE_THRESHOLD = 5000;
+  private readonly SIMPLIFY_POINTS_BELOW_ZOOM = 14;
+  private readonly VIEWPORT_PAD_FACTOR = 0.85;
+  private readonly PERFORMANCE_POINT_RADIUS = 5;
+
   private map!: L.Map;
   private baseLayer!: L.TileLayer;
-  private drawnItems = new L.FeatureGroup();
-  private renderedLayers = new Map<number, L.Layer>();
+  private readonly drawnItems = new L.FeatureGroup();
+  private readonly renderedLayers = new Map<number, L.Layer>();
+  private readonly elementBoundsCache = new Map<number, CachedElementBounds>();
+  private readonly vectorRenderer = L.canvas({ padding: 0.8 });
+
   private activeDrawHandler: any = null;
+  private renderFrameId: number | null = null;
+  private currentViewBounds: L.LatLngBounds | null = null;
+  private hasInitialAutoFit = false;
 
   private editSession: {
     active: boolean;
@@ -155,20 +170,29 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     layer: L.Layer | null;
     originalSnapshot: L.Layer | null;
   } = {
-      active: false,
-      dirty: false,
-      elementId: null,
-      elementName: null,
-      geomTipo: null,
-      originalWkt: null,
-      currentWkt: null,
-      layer: null,
-      originalSnapshot: null,
-    };
+    active: false,
+    dirty: false,
+    elementId: null,
+    elementName: null,
+    geomTipo: null,
+    originalWkt: null,
+    currentWkt: null,
+    layer: null,
+    originalSnapshot: null,
+  };
+
+  private get performanceModeEnabled(): boolean {
+    return this.elementos.length >= this.PERFORMANCE_THRESHOLD;
+  }
+
+  private get currentZoom(): number {
+    return this.map ? this.map.getZoom() : this.mapZoom;
+  }
 
   ngAfterViewInit(): void {
     this.initMap();
-    this.renderElementos();
+    this.updateViewBounds();
+    this.scheduleRender();
     this.syncToolMode();
   }
 
@@ -183,9 +207,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if (dataChanged) {
       if (!this.editSession.active) {
-        this.renderElementos();
+        this.scheduleRender();
       } else {
-        this.renderElementosKeepingDraft();
+        this.scheduleRenderKeepingDraft();
       }
     }
 
@@ -195,6 +219,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     if ((changes['mapCenter'] || changes['mapZoom']) && this.map) {
       this.map.setView(this.mapCenter, this.mapZoom);
+      this.updateViewBounds();
+      this.scheduleRender();
     }
   }
 
@@ -239,18 +265,25 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (id == null) return;
 
     const selected = this.renderedLayers.get(id);
-    if (!selected) return;
+    if (!selected) {
+      this.scheduleRender();
+      return;
+    }
 
     if ('getBounds' in selected && typeof (selected as any).getBounds === 'function') {
       const bounds = (selected as any).getBounds();
       if (bounds?.isValid?.()) {
         this.map.fitBounds(bounds.pad(0.3));
+        this.updateViewBounds();
+        this.openTooltipForLayer(selected);
         return;
       }
     }
 
     if ('getLatLng' in selected && typeof (selected as any).getLatLng === 'function') {
       this.map.panTo((selected as any).getLatLng());
+      this.updateViewBounds();
+      this.openTooltipForLayer(selected);
     }
   }
 
@@ -263,23 +296,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     for (const item of elementos) {
       const layer = this.renderedLayers.get(item.idGeoElemento);
-      if (!layer) continue;
 
-      if ('getBounds' in layer && typeof (layer as any).getBounds === 'function') {
-        const layerBounds = (layer as any).getBounds();
-        if (layerBounds?.isValid?.()) {
-          bounds.extend(layerBounds);
+      if (layer) {
+        if ('getBounds' in layer && typeof (layer as any).getBounds === 'function') {
+          const layerBounds = (layer as any).getBounds();
+          if (layerBounds?.isValid?.()) {
+            bounds.extend(layerBounds);
+            continue;
+          }
+        }
+
+        if ('getLatLng' in layer && typeof (layer as any).getLatLng === 'function') {
+          bounds.extend((layer as any).getLatLng());
           continue;
         }
       }
 
-      if ('getLatLng' in layer && typeof (layer as any).getLatLng === 'function') {
-        bounds.extend((layer as any).getLatLng());
+      const cachedBounds = this.getElementBounds(item);
+      if (cachedBounds?.isValid?.()) {
+        bounds.extend(cachedBounds);
       }
     }
 
     if (bounds.isValid()) {
       this.map.fitBounds(bounds.pad(0.2));
+      this.updateViewBounds();
+      this.scheduleRender();
     }
   }
 
@@ -330,7 +372,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.disableLayerEditing(this.editSession.layer);
     this.clearEditSession();
     this.emitEditSessionState();
-    this.renderElementos();
+    this.scheduleRender();
   }
 
   private initMap() {
@@ -338,6 +380,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       center: this.mapCenter,
       zoom: this.mapZoom,
       zoomControl: true,
+      preferCanvas: true,
     });
 
     const defaultBasemap = this.basemapOptions.find((item) => item.key === this.selectedBasemap)!;
@@ -349,6 +392,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.map.on('click', () => {
       if (this.basemapMenuOpen) {
         this.closeBasemapMenu();
+      }
+    });
+
+    this.map.on('moveend zoomend resize', () => {
+      this.updateViewBounds();
+
+      if (!this.editSession.active) {
+        this.scheduleRender();
       }
     });
 
@@ -365,6 +416,35 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     });
   }
 
+  private updateViewBounds() {
+    if (!this.map) {
+      this.currentViewBounds = null;
+      return;
+    }
+
+    this.currentViewBounds = this.map.getBounds();
+  }
+
+  private scheduleRender() {
+    if (!this.map) return;
+    if (this.renderFrameId != null) return;
+
+    this.renderFrameId = window.requestAnimationFrame(() => {
+      this.renderFrameId = null;
+      this.renderElementos();
+    });
+  }
+
+  private scheduleRenderKeepingDraft() {
+    if (!this.map) return;
+    if (this.renderFrameId != null) return;
+
+    this.renderFrameId = window.requestAnimationFrame(() => {
+      this.renderFrameId = null;
+      this.renderElementosKeepingDraft();
+    });
+  }
+
   private syncToolMode() {
     if (!this.map) return;
 
@@ -376,7 +456,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.disableLayerEditing(this.editSession.layer);
       this.clearEditSession();
       this.emitEditSessionState();
-      this.renderElementos();
+      this.scheduleRender();
     }
 
     if (!this.editSession.active) {
@@ -566,11 +646,13 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.syncEditSessionFromLayer();
     });
   };
+
   private onMapInteractionFinished = () => {
     queueMicrotask(() => {
       this.syncEditSessionFromLayer();
     });
   };
+
   private syncEditSessionFromLayer(forceEmit = false) {
     if (!this.editSession.active || !this.editSession.layer || !this.editSession.geomTipo) {
       return;
@@ -643,7 +725,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         tamanoIcono: 18,
       };
 
-      const draftLayer = this.layerFromWkt(currentWkt, draftStyle);
+      const draftLayer = this.layerFromWkt(currentWkt, draftStyle, false);
       if (draftLayer) {
         this.replaceLayerGeometry(layer, draftLayer);
       }
@@ -661,21 +743,27 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const hiddenSet = new Set(this.hiddenTipoIds);
     const tipoMap = new Map(this.tipos.map((t) => [t.idGeoTipoElemento, t]));
 
-    const renderQueue = [...this.elementos]
-      .filter((el) => !hiddenSet.has(el.idGeoTipoElementoFk))
-      .sort((a, b) => {
-        const tipoA = tipoMap.get(a.idGeoTipoElementoFk) ?? null;
-        const tipoB = tipoMap.get(b.idGeoTipoElementoFk) ?? null;
+    const candidates = this.elementos.filter((el) => {
+      if (hiddenSet.has(el.idGeoTipoElementoFk)) {
+        return false;
+      }
 
-        const styleA = this.resolveElementStyle(a, tipoA);
-        const styleB = this.resolveElementStyle(b, tipoB);
+      return this.shouldRenderElement(el);
+    });
 
-        return (
-          styleA.zIndex - styleB.zIndex ||
-          Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
-          a.idGeoElemento - b.idGeoElemento
-        );
-      });
+    const renderQueue = candidates.sort((a, b) => {
+      const tipoA = tipoMap.get(a.idGeoTipoElementoFk) ?? null;
+      const tipoB = tipoMap.get(b.idGeoTipoElementoFk) ?? null;
+
+      const styleA = this.resolveElementStyle(a, tipoA);
+      const styleB = this.resolveElementStyle(b, tipoB);
+
+      return (
+        styleA.zIndex - styleB.zIndex ||
+        Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
+        a.idGeoElemento - b.idGeoElemento
+      );
+    });
 
     for (const el of renderQueue) {
       const tipo = tipoMap.get(el.idGeoTipoElementoFk) ?? null;
@@ -684,6 +772,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
       (layer as any).__idGeoElemento = el.idGeoElemento;
       (layer as any).__geomTipo = el.geomTipo;
+      (layer as any).__elementName = el.nombre ?? '';
+      (layer as any).__tooltipBound = true;
+
+      this.bindTooltipForLayer(layer, el.nombre ?? '');
 
       layer.on('click', () => this.elementoSelected.emit(el));
       layer.on('contextmenu', (ev: any) => {
@@ -700,15 +792,215 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.applySelectionStyle();
 
-    if (!this.editSession.active) {
-      if (this.selectedElementoId != null) {
-        this.centerOnElemento(this.selectedElementoId);
-      } else if (this.drawnItems.getLayers().length > 0) {
-        const bounds = this.drawnItems.getBounds();
-        if (bounds.isValid()) {
-          this.map.fitBounds(bounds.pad(0.2));
-        }
+    if (
+      !this.editSession.active &&
+      !this.performanceModeEnabled &&
+      !this.hasInitialAutoFit &&
+      this.selectedElementoId == null &&
+      this.drawnItems.getLayers().length > 0
+    ) {
+      const bounds = this.drawnItems.getBounds();
+      if (bounds.isValid()) {
+        this.map.fitBounds(bounds.pad(0.2));
+        this.updateViewBounds();
       }
+      this.hasInitialAutoFit = true;
+    }
+  }
+
+  private bindTooltipForLayer(layer: L.Layer, name: string) {
+    const safeName = (name || '').trim();
+    if (!safeName) return;
+
+    const anyLayer = layer as any;
+    if (typeof anyLayer.bindTooltip !== 'function') {
+      return;
+    }
+
+    anyLayer.bindTooltip(safeName, {
+      direction: 'top',
+      sticky: true,
+      opacity: 0.96,
+      className: 'mapa-element-tooltip',
+    });
+  }
+
+  private openTooltipForLayer(layer: L.Layer | null) {
+    if (!layer) return;
+    const anyLayer = layer as any;
+    if (typeof anyLayer.openTooltip === 'function') {
+      anyLayer.openTooltip();
+    }
+  }
+
+  private shouldRenderElement(el: MapaElemento): boolean {
+    if (!this.performanceModeEnabled) {
+      return true;
+    }
+
+    if (this.selectedElementoId === el.idGeoElemento) {
+      return true;
+    }
+
+    if (this.editSession.active && this.editSession.elementId === el.idGeoElemento) {
+      return true;
+    }
+
+    const geomTipo = String(el.geomTipo ?? '').toLowerCase();
+
+    // Mantener líneas y polígonos siempre presentes.
+    if (geomTipo !== 'point') {
+      return true;
+    }
+
+    const viewBounds = this.currentViewBounds;
+    if (!viewBounds) {
+      return true;
+    }
+
+    const elementBounds = this.getElementBounds(el);
+    if (!elementBounds?.isValid?.()) {
+      return true;
+    }
+
+    return viewBounds.pad(this.VIEWPORT_PAD_FACTOR).intersects(elementBounds);
+  }
+
+  private getElementBounds(el: MapaElemento): L.LatLngBounds | null {
+    const signature = this.getElementSignature(el);
+    const cached = this.elementBoundsCache.get(el.idGeoElemento);
+
+    if (cached && cached.signature === signature) {
+      return cached.bounds;
+    }
+
+    const bounds = this.computeElementBounds(el);
+    this.elementBoundsCache.set(el.idGeoElemento, { signature, bounds });
+
+    return bounds;
+  }
+
+  private getElementSignature(el: MapaElemento): string {
+    const geom = el.geometria;
+    const wkt = typeof (el as any).wkt === 'string' ? String((el as any).wkt) : '';
+    const rawGeom =
+      typeof geom === 'string'
+        ? geom
+        : geom != null
+          ? JSON.stringify(geom)
+          : '';
+
+    return `${el.idGeoElemento}|${el.geomTipo ?? ''}|${wkt}|${rawGeom}`;
+  }
+
+  private computeElementBounds(el: MapaElemento): L.LatLngBounds | null {
+    const geom = el.geometria;
+
+    if (geom && typeof geom === 'object' && (geom as any).type && (geom as any).coordinates) {
+      return this.boundsFromGeoJsonGeometry(geom as any);
+    }
+
+    if (geom) {
+      const embeddedWkt = this.tryExtractWkt(geom);
+      if (embeddedWkt) {
+        return this.boundsFromWkt(embeddedWkt);
+      }
+    }
+
+    if (typeof (el as any).wkt === 'string' && (el as any).wkt.trim()) {
+      return this.boundsFromWkt((el as any).wkt);
+    }
+
+    return null;
+  }
+
+  private boundsFromGeoJsonGeometry(geom: any): L.LatLngBounds | null {
+    const type = String(geom.type || '').toLowerCase();
+    const coords = geom.coordinates;
+
+    if (type === 'point' && Array.isArray(coords) && coords.length >= 2) {
+      const ll = L.latLng(Number(coords[1]), Number(coords[0]));
+      return L.latLngBounds([ll, ll]);
+    }
+
+    return this.boundsFromCoordinates(coords);
+  }
+
+  private boundsFromCoordinates(coords: any): L.LatLngBounds | null {
+    const points: L.LatLng[] = [];
+    this.collectCoordinatePoints(coords, points);
+
+    if (!points.length) {
+      return null;
+    }
+
+    return L.latLngBounds(points);
+  }
+
+  private collectCoordinatePoints(value: any, out: L.LatLng[]) {
+    if (!Array.isArray(value)) {
+      return;
+    }
+
+    if (
+      value.length >= 2 &&
+      typeof value[0] === 'number' &&
+      typeof value[1] === 'number'
+    ) {
+      out.push(L.latLng(Number(value[1]), Number(value[0])));
+      return;
+    }
+
+    for (const item of value) {
+      this.collectCoordinatePoints(item, out);
+    }
+  }
+
+  private boundsFromWkt(wkt: string): L.LatLngBounds | null {
+    const parsed = parseWktGeometry(wkt);
+    if (!parsed) return null;
+
+    if (parsed.renderType === 'point' && parsed.point) {
+      const ll = L.latLng(parsed.point[0], parsed.point[1]);
+      return L.latLngBounds([ll, ll]);
+    }
+
+    if (parsed.renderType === 'polyline' && parsed.line?.length) {
+      return L.latLngBounds(parsed.line);
+    }
+
+    if (parsed.renderType === 'polygon' && parsed.polygon?.length) {
+      return this.boundsFromLatLngCollections(parsed.polygon as any);
+    }
+
+    return null;
+  }
+
+  private boundsFromLatLngCollections(value: any): L.LatLngBounds | null {
+    const points: L.LatLng[] = [];
+    this.collectLatLngPoints(value, points);
+
+    if (!points.length) {
+      return null;
+    }
+
+    return L.latLngBounds(points);
+  }
+
+  private collectLatLngPoints(value: any, out: L.LatLng[]) {
+    if (!Array.isArray(value)) {
+      return;
+    }
+
+    if (value.length && this.isLatLng(value[0])) {
+      for (const point of value as L.LatLng[]) {
+        out.push(point);
+      }
+      return;
+    }
+
+    for (const item of value) {
+      this.collectLatLngPoints(item, out);
     }
   }
 
@@ -725,23 +1017,50 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
           : 0.15;
       const baseZIndex =
         typeof anyLayer.__baseZIndex === 'number' ? Number(anyLayer.__baseZIndex) : 0;
+      const baseRadius =
+        typeof anyLayer.__baseRadius === 'number'
+          ? Number(anyLayer.__baseRadius)
+          : this.PERFORMANCE_POINT_RADIUS;
 
       if (typeof anyLayer.setStyle === 'function') {
         anyLayer.setStyle({
-          weight: isSelected ? baseWeight + 2 : baseWeight,
-          opacity: isSelected ? 1 : 0.9,
-          fillOpacity: isSelected ? Math.max(baseFillOpacity, 0.28) : baseFillOpacity,
+          weight: isSelected ? Math.max(baseWeight + 2, baseWeight * 1.45) : baseWeight,
+          opacity: isSelected ? 1 : 0.92,
+          fillOpacity: isSelected ? Math.max(baseFillOpacity, 0.36) : baseFillOpacity,
+          dashArray: isSelected ? '8 6' : undefined,
         });
       }
 
       if (typeof anyLayer.setRadius === 'function') {
-        anyLayer.setRadius(isSelected ? 8 : 6);
+        anyLayer.setRadius(isSelected ? Math.max(baseRadius + 3, 9) : baseRadius);
       }
 
       if (typeof anyLayer.setZIndexOffset === 'function') {
-        anyLayer.setZIndexOffset(baseZIndex + (isSelected ? 1000 : 0));
+        anyLayer.setZIndexOffset(baseZIndex + (isSelected ? 2000 : 0));
+      }
+
+      const element = this.tryGetMarkerElement(layer);
+      if (element) {
+        element.classList.toggle('is-selected', isSelected);
+      }
+
+      if (isSelected) {
+        if (typeof anyLayer.bringToFront === 'function') {
+          anyLayer.bringToFront();
+        }
+        this.openTooltipForLayer(layer);
+      } else if (typeof anyLayer.closeTooltip === 'function') {
+        anyLayer.closeTooltip();
       }
     }
+  }
+
+  private tryGetMarkerElement(layer: L.Layer): HTMLElement | null {
+    const anyLayer = layer as any;
+    if (typeof anyLayer.getElement === 'function') {
+      return anyLayer.getElement() as HTMLElement | null;
+    }
+    return null;
   }
 
   private layerFromElemento(
@@ -751,28 +1070,42 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const geom = el.geometria;
     const style = this.resolveElementStyle(el, tipo);
 
-    if (geom && typeof geom === 'object' && geom.type && geom.coordinates) {
-      const fromGeoJson = this.layerFromGeoJsonGeometry(geom, style);
+    const simplifyPoint =
+      this.shouldSimplifyPoint(el);
+
+    if (geom && typeof geom === 'object' && (geom as any).type && (geom as any).coordinates) {
+      const fromGeoJson = this.layerFromGeoJsonGeometry(geom, style, simplifyPoint);
       if (fromGeoJson) return fromGeoJson;
     }
 
     if (geom) {
       const embeddedWkt = this.tryExtractWkt(geom);
       if (embeddedWkt) {
-        return this.layerFromWkt(embeddedWkt, style);
+        return this.layerFromWkt(embeddedWkt, style, simplifyPoint);
       }
     }
 
     if ((el as any).wkt) {
-      return this.layerFromWkt((el as any).wkt, style);
+      return this.layerFromWkt((el as any).wkt, style, simplifyPoint);
     }
 
     return null;
   }
 
+  private shouldSimplifyPoint(el: MapaElemento): boolean {
+    if (!this.performanceModeEnabled) return false;
+    if (this.currentZoom >= this.SIMPLIFY_POINTS_BELOW_ZOOM) return false;
+    if (this.selectedElementoId === el.idGeoElemento) return false;
+    if (this.editSession.active && this.editSession.elementId === el.idGeoElemento) return false;
+
+    const geomTipo = String(el.geomTipo ?? '').toLowerCase();
+    return geomTipo === 'point';
+  }
+
   private layerFromGeoJsonGeometry(
     geom: any,
-    style: ResolvedElementStyle
+    style: ResolvedElementStyle,
+    simplifyPoint = false
   ): L.Layer | null {
     const type = String(geom.type || '').toLowerCase();
     const coords = geom.coordinates;
@@ -780,7 +1113,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (type === 'point' && Array.isArray(coords) && coords.length >= 2) {
       return this.createPointLayer(
         L.latLng(Number(coords[1]), Number(coords[0])),
-        style
+        style,
+        simplifyPoint
       );
     }
 
@@ -790,6 +1124,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          renderer: this.vectorRenderer,
         }
       );
 
@@ -810,6 +1145,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
           weight: style.strokeWidth,
           fillColor: style.colorFill,
           fillOpacity: 0.15,
+          renderer: this.vectorRenderer,
         }
       );
 
@@ -826,6 +1162,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          renderer: this.vectorRenderer,
         }
       );
 
@@ -851,6 +1188,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
           weight: style.strokeWidth,
           fillColor: style.colorFill,
           fillOpacity: 0.15,
+          renderer: this.vectorRenderer,
         }
       );
 
@@ -870,14 +1208,19 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     return null;
   }
 
-  private layerFromWkt(wkt: string, style: ResolvedElementStyle): L.Layer | null {
+  private layerFromWkt(
+    wkt: string,
+    style: ResolvedElementStyle,
+    simplifyPoint = false
+  ): L.Layer | null {
     const parsed = parseWktGeometry(wkt);
     if (!parsed) return null;
 
     if (parsed.renderType === 'point' && parsed.point) {
       return this.createPointLayer(
         L.latLng(parsed.point[0], parsed.point[1]),
-        style
+        style,
+        simplifyPoint
       );
     }
 
@@ -885,6 +1228,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const layer = L.polyline(parsed.line, {
         color: style.colorStroke,
         weight: style.strokeWidth,
+        renderer: this.vectorRenderer,
       });
 
       (layer as any).__baseWeight = style.strokeWidth;
@@ -900,6 +1244,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         weight: style.strokeWidth,
         fillColor: style.colorFill,
         fillOpacity: 0.15,
+        renderer: this.vectorRenderer,
       });
 
       (layer as any).__baseWeight = style.strokeWidth;
@@ -959,20 +1304,15 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
       let rings: L.LatLng[][] = [];
 
-      // Caso raro: anillo simple como LatLng[]
       if (Array.isArray(groups) && groups.length > 0 && this.isLatLng(groups[0])) {
         rings = [groups as L.LatLng[]];
-      }
-      // Polígono normal / con huecos: LatLng[][]
-      else if (
+      } else if (
         Array.isArray(groups) &&
         Array.isArray(groups[0]) &&
         (groups[0].length === 0 || this.isLatLng(groups[0][0]))
       ) {
         rings = groups as L.LatLng[][];
-      }
-      // Multipolygon anidado: LatLng[][][]
-      else if (
+      } else if (
         Array.isArray(groups) &&
         Array.isArray(groups[0]) &&
         Array.isArray(groups[0][0])
@@ -987,7 +1327,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         .map((ring) => {
           const closed =
             ring[0].lat === ring[ring.length - 1].lat &&
-              ring[0].lng === ring[ring.length - 1].lng
+            ring[0].lng === ring[ring.length - 1].lng
               ? ring
               : [...ring, ring[0]];
 
@@ -1018,7 +1358,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       tamanoIcono: 18,
     };
 
-    return this.layerFromWkt(wkt, draftStyle);
+    return this.layerFromWkt(wkt, draftStyle, false);
   }
 
   private replaceLayerGeometry(target: L.Layer, source: L.Layer) {
@@ -1039,8 +1379,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private createPointLayer(
     latlng: L.LatLng,
-    style: ResolvedElementStyle
+    style: ResolvedElementStyle,
+    simplifyPoint = false
   ): L.Layer {
+    if (simplifyPoint) {
+      const radius = Math.max(
+        this.PERFORMANCE_POINT_RADIUS,
+        Math.min(10, Math.round(style.tamanoIcono * 0.28))
+      );
+
+      const layer = L.circleMarker(latlng, {
+        radius,
+        color: style.colorStroke,
+        weight: Math.max(1, Math.min(5, style.strokeWidth)),
+        fillColor: style.colorFill,
+        fillOpacity: 0.88,
+        renderer: this.vectorRenderer,
+      });
+
+      (layer as any).__baseWeight = Math.max(1, Math.min(5, style.strokeWidth));
+      (layer as any).__baseFillOpacity = 0.88;
+      (layer as any).__baseZIndex = style.zIndex;
+      (layer as any).__baseRadius = radius;
+
+      return layer;
+    }
+
     const iconSource = this.normalizeIconSource(style.iconoFuente);
     const iconValue = (style.icono || '').trim();
     const iconClassValue = (style.iconoClase || '').trim();
@@ -1073,12 +1437,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `
-        <div style="
+        <div class="mapa-point-icon-shell" style="
           width:${size}px;
           height:${size}px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
           color:${textColor};
         ">
           <span
@@ -1108,12 +1469,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `
-        <div style="
+        <div class="mapa-point-icon-shell" style="
           width:${size}px;
           height:${size}px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
           color:${textColor};
           font-size:${size}px;
           line-height:1;
@@ -1137,14 +1495,22 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `
-        <div style="
-          width:0;
-          height:0;
-          border-left:${half}px solid transparent;
-          border-right:${half}px solid transparent;
-          border-bottom:${size}px solid ${fill};
-          filter: drop-shadow(0 0 1px ${stroke});
-        "></div>
+        <div class="mapa-point-icon-shell" style="
+          width:${size}px;
+          height:${size}px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div style="
+            width:0;
+            height:0;
+            border-left:${half}px solid transparent;
+            border-right:${half}px solid transparent;
+            border-bottom:${size}px solid ${fill};
+            filter: drop-shadow(0 0 1px ${stroke});
+          "></div>
+        </div>
       `,
         iconSize: [size, size],
         iconAnchor: [Math.round(size / 2), Math.round(size * 0.85)],
@@ -1164,7 +1530,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `
-        <div style="
+        <div class="mapa-point-icon-shell" style="
           width:${size}px;
           height:${size}px;
           border:${border}px solid ${stroke};
@@ -1190,7 +1556,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const icon = L.divIcon({
         className: 'mapa-div-icon',
         html: `
-        <div style="
+        <div class="mapa-point-icon-shell" style="
           width:${size}px;
           height:${size}px;
           border:${border}px solid ${stroke};
@@ -1214,7 +1580,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     const icon = L.divIcon({
       className: 'mapa-div-icon',
       html: `
-      <div style="
+      <div class="mapa-point-icon-shell" style="
         width:${size}px;
         height:${size}px;
         border-radius:999px;

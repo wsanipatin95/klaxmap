@@ -28,6 +28,7 @@ interface TreeNodeVm {
   children: TreeNodeVm[];
   elementos: MapaElemento[];
   visible: boolean;
+  hiddenElementCount: number;
 }
 
 export interface TreeNodeVisibilityChange {
@@ -51,6 +52,7 @@ export interface TreeDrawElementRequest {
 }
 
 type ContextKind = 'node' | 'element' | null;
+
 interface TreeElementVisual {
   mode: 'shape' | 'material' | 'class' | 'url';
   iconoFuente: string | null;
@@ -61,6 +63,7 @@ interface TreeElementVisual {
   colorTexto: string | null;
   tamanoIcono: number;
 }
+
 @Component({
   selector: 'app-mapa-tree',
   standalone: true,
@@ -102,11 +105,30 @@ export class MapaTreeComponent implements OnChanges {
 
   tree: TreeNodeVm[] = [];
 
+  performanceMode = false;
+  performanceNotice = '';
+
+  private readonly TREE_PERFORMANCE_THRESHOLD = 2500;
+  private readonly TREE_LIMIT_NO_SEARCH = 2500;
+  private readonly TREE_LIMIT_SEARCH = 1500;
+  private readonly MAX_ELEMENTS_PER_NODE = 150;
+
+  private treeElementos: MapaElemento[] = [];
+  private hiddenNodeSet = new Set<number>();
+  private hiddenElementoSet = new Set<number>();
+  private tipoMap = new Map<number, MapaTipoElemento>();
+
   ngOnChanges(changes: SimpleChanges): void {
     const nodosChanged = !!changes['nodos'];
     const searchChanged = !!changes['searchValue'];
     const selectedNodoChanged = !!changes['selectedNodoId'];
     const selectedElementoChanged = !!changes['selectedElementoId'];
+
+    this.hiddenNodeSet = new Set(this.hiddenNodeIds);
+    this.hiddenElementoSet = new Set(this.hiddenElementoIds);
+    this.tipoMap = new Map(this.tipos.map((t) => [t.idGeoTipoElemento, t]));
+    this.performanceMode = this.elementos.length >= this.TREE_PERFORMANCE_THRESHOLD;
+    this.treeElementos = this.selectElementosForTree();
 
     if (nodosChanged) {
       this.pruneExpandedIds();
@@ -128,7 +150,7 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   get hasAnyTreeData(): boolean {
-    return this.nodos.length > 0 || this.elementos.length > 0;
+    return this.nodos.length > 0 || this.treeElementos.length > 0;
   }
 
   get hasVisibleTreeData(): boolean {
@@ -186,7 +208,7 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   tipoDeElemento(elemento: MapaElemento): MapaTipoElemento | null {
-    return this.tipos.find((t) => t.idGeoTipoElemento === elemento.idGeoTipoElementoFk) ?? null;
+    return this.tipoMap.get(elemento.idGeoTipoElementoFk) ?? null;
   }
 
   previewShapeClassForElemento(elemento: MapaElemento): string {
@@ -253,6 +275,11 @@ export class MapaTreeComponent implements OnChanges {
 
   showUrlPreviewForElemento(elemento: MapaElemento): boolean {
     return this.resolveTreeElementVisual(elemento).mode === 'url';
+  }
+
+  nodeOverflowLabel(item: TreeNodeVm): string {
+    const hidden = Math.max(0, item.hiddenElementCount || 0);
+    return `+${hidden} elemento(s) no listados para proteger el rendimiento`;
   }
 
   private resolveTreeElementVisual(elemento: MapaElemento): TreeElementVisual {
@@ -332,7 +359,7 @@ export class MapaTreeComponent implements OnChanges {
 
   isElementoVisible(elemento: MapaElemento): boolean {
     return (
-      !this.hiddenElementoIds.includes(elemento.idGeoElemento) &&
+      !this.hiddenElementoSet.has(elemento.idGeoElemento) &&
       !isNodeHidden(elemento.idRedNodoFk, this.nodos, this.hiddenNodeIds)
     );
   }
@@ -340,20 +367,22 @@ export class MapaTreeComponent implements OnChanges {
   isNodeIndeterminate(node: MapaNodo): boolean {
     if (!this.isNodeVisible(node)) return false;
 
-    const branchNodeIds = [...getBranchNodeIds(node.idRedNodo, this.nodos)];
-    const branchElementos = this.elementos.filter((e) =>
-      branchNodeIds.includes(e.idRedNodoFk)
+    const branchNodeIds = getBranchNodeIds(node.idRedNodo, this.nodos);
+    const hasHiddenDescendantNode = [...branchNodeIds].some(
+      (id) => id !== node.idRedNodo && this.hiddenNodeSet.has(id)
     );
 
-    const hasHiddenDescendantNode = branchNodeIds.some(
-      (id) => id !== node.idRedNodo && this.hiddenNodeIds.includes(id)
-    );
+    if (hasHiddenDescendantNode) {
+      return true;
+    }
 
-    const hasHiddenDescendantElemento = branchElementos.some((e) =>
-      this.hiddenElementoIds.includes(e.idGeoElemento)
-    );
+    for (const elemento of this.elementos) {
+      if (branchNodeIds.has(elemento.idRedNodoFk) && this.hiddenElementoSet.has(elemento.idGeoElemento)) {
+        return true;
+      }
+    }
 
-    return hasHiddenDescendantNode || hasHiddenDescendantElemento;
+    return false;
   }
 
   onNodeClick(node: MapaNodo, event?: MouseEvent) {
@@ -408,6 +437,68 @@ export class MapaTreeComponent implements OnChanges {
   trackByNode = (_: number, item: TreeNodeVm) => item.node.idRedNodo;
   trackByElemento = (_: number, item: MapaElemento) => item.idGeoElemento;
 
+  private selectElementosForTree(): MapaElemento[] {
+    const q = this.searchValue.trim().toLowerCase();
+    let source = this.elementos.slice();
+
+    if (!this.performanceMode) {
+      this.performanceNotice = '';
+      return source;
+    }
+
+    if (!q) {
+      const focusNodeId = this.resolveFocusNodeId();
+      if (focusNodeId != null) {
+        const branchIds = getBranchNodeIds(focusNodeId, this.nodos);
+        source = source.filter((el) => branchIds.has(el.idRedNodoFk));
+      }
+    } else {
+      source = source.filter((el) => this.matchesElementoWithQuery(el, q));
+    }
+
+    const limit = q ? this.TREE_LIMIT_SEARCH : this.TREE_LIMIT_NO_SEARCH;
+
+    if (source.length <= limit) {
+      this.performanceNotice = q
+        ? ``
+        : '';
+      return source;
+    }
+
+    const trimmed = source.slice(0, limit);
+    const selected = this.selectedElementoId != null
+      ? source.find((el) => el.idGeoElemento === this.selectedElementoId) ?? null
+      : null;
+
+    if (
+      selected &&
+      !trimmed.some((el) => el.idGeoElemento === selected.idGeoElemento)
+    ) {
+      trimmed[trimmed.length - 1] = selected;
+    }
+
+    this.performanceNotice = q
+      ? ``
+      : ``;
+
+    return trimmed;
+  }
+
+  private resolveFocusNodeId(): number | null {
+    if (this.selectedNodoId != null) {
+      return this.selectedNodoId;
+    }
+
+    if (this.selectedElementoId != null) {
+      const selected = this.elementos.find((el) => el.idGeoElemento === this.selectedElementoId);
+      if (selected) {
+        return selected.idRedNodoFk;
+      }
+    }
+
+    return null;
+  }
+
   private rebuildTree() {
     const byParent = new Map<number | null, MapaNodo[]>();
     const elementosByNodo = new Map<number, MapaElemento[]>();
@@ -422,7 +513,7 @@ export class MapaTreeComponent implements OnChanges {
       byParent.set(parentId, arr);
     }
 
-    for (const el of this.elementos) {
+    for (const el of this.treeElementos) {
       const arr = elementosByNodo.get(el.idRedNodoFk) ?? [];
       arr.push(el);
       elementosByNodo.set(el.idRedNodoFk, arr);
@@ -452,9 +543,15 @@ export class MapaTreeComponent implements OnChanges {
           );
         });
 
-      const elementos = q
-        ? rawElementos.filter((e) => this.matchesElemento(e))
-        : rawElementos;
+      const elementLimit =
+        this.performanceMode && !q ? this.MAX_ELEMENTS_PER_NODE : Number.MAX_SAFE_INTEGER;
+
+      const elementos =
+        rawElementos.length > elementLimit
+          ? rawElementos.slice(0, elementLimit)
+          : rawElementos;
+
+      const hiddenElementCount = Math.max(0, rawElementos.length - elementos.length);
 
       const childVisible = children.some((c) => c.visible);
       const nodeVisible = this.matchesNode(node);
@@ -465,6 +562,7 @@ export class MapaTreeComponent implements OnChanges {
         children: q ? children.filter((c) => c.visible) : children,
         elementos,
         visible,
+        hiddenElementCount,
       };
     };
 
@@ -553,24 +651,6 @@ export class MapaTreeComponent implements OnChanges {
     this.expandedIds.set([...visibleIds]);
   }
 
-  private isRootNode(nodeId: number): boolean {
-    return getRootNodeIds(this.nodos).includes(nodeId);
-  }
-
-  private isAncestorOfSelectedNodo(nodeId: number): boolean {
-    if (this.selectedNodoId == null) return false;
-    return getAncestorNodeIds(this.selectedNodoId, this.nodos).includes(nodeId);
-  }
-
-  private isAncestorOfSelectedElemento(nodeId: number): boolean {
-    if (this.selectedElementoId == null) return false;
-
-    const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
-    if (!el) return false;
-
-    return getAncestorNodeIds(el.idRedNodoFk, this.nodos).includes(nodeId);
-  }
-
   private matchesNode(node: MapaNodo): boolean {
     const q = this.searchValue.trim().toLowerCase();
     if (!q) return true;
@@ -587,6 +667,10 @@ export class MapaTreeComponent implements OnChanges {
     const q = this.searchValue.trim().toLowerCase();
     if (!q) return true;
 
+    return this.matchesElementoWithQuery(elemento, q);
+  }
+
+  private matchesElementoWithQuery(elemento: MapaElemento, q: string): boolean {
     return [
       elemento.nombre,
       elemento.descripcion ?? '',

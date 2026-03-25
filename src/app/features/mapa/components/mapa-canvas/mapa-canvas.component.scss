@@ -24,6 +24,53 @@
   border: 0;
 }
 
+.mapa-point-icon-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center;
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.mapa-div-icon.is-selected .mapa-point-icon-shell,
+.leaflet-marker-icon.is-selected .mapa-point-icon-shell {
+  animation: mapa-selected-pulse 1.15s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 0.5rem rgba(250, 204, 21, 0.82))
+    drop-shadow(0 0 1rem rgba(250, 204, 21, 0.42));
+  z-index: 9999;
+}
+
+@keyframes mapa-selected-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.mapa-element-tooltip {
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  border-radius: 0.65rem;
+  background: rgba(8, 18, 36, 0.96);
+  color: #f8fafc;
+  box-shadow: 0 12px 26px rgba(2, 6, 23, 0.35);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.28rem 0.5rem;
+}
+
+.mapa-element-tooltip::before {
+  border-top-color: rgba(8, 18, 36, 0.96);
+}
+
 .mapa-basemap-control {
   position: absolute;
   top: 0.85rem;
