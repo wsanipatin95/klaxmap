@@ -2,7 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { map, tap, catchError, throwError } from 'rxjs';
 import { AuthApi } from './auth.api';
 import {
-  LoginRequest, RegistroGlobalRequest,
+  LoginRequest,
+  RegistroGlobalRequest,
   RegistroGlobalData,
   ResetearClaveData,
   ConfirmarCuentaData,
@@ -21,7 +22,6 @@ export class AuthRepository {
   login(payload: LoginRequest) {
     return this.api.login(payload).pipe(
       tap((res: any) => {
-        // 👇 OJO: ajusta estos nombres si tu backend usa keys distintas
         const privilegiosOrg = res.privilegiosOrg ?? res.privilegios_organizacion ?? [];
         const privilegiosEmpresa = res.privilegiosEmpresa ?? res.privilegios_empresa ?? [];
         const menusEmpresa = res.menusEmpresa ?? res.menus_empresa ?? [];
@@ -33,19 +33,15 @@ export class AuthRepository {
             username: res.usuario,
             catalogo: res.catalogo,
             tipo: res.tipo,
-            organizacion: res.organizacion
+            organizacion: res.organizacion ?? []
           },
           meta: {
             environment: res.environment,
             contextPath: res.contextPath,
           },
-
           privilegiosOrg,
           privilegiosEmpresa,
           menusEmpresa,
-
-          activeCompanyId: null,
-          activeCompanyName: null,
         });
       })
     );
@@ -60,6 +56,7 @@ export class AuthRepository {
         complete: () => { },
       });
     }
+
     this.sessionStore.clearSession();
     this.router.navigate(['/login'], { replaceUrl: true });
   }
@@ -163,6 +160,7 @@ export class AuthRepository {
   checkSesion() {
     return this.api.checkSesion();
   }
+
   confirmarInvitacion(payload: ConfirmarInvitacionRequest) {
     return this.api.confirmarInvitacion(payload).pipe(
       map((resp) => {
@@ -181,5 +179,4 @@ export class AuthRepository {
       })
     );
   }
-
 }

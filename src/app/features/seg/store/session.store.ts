@@ -11,7 +11,7 @@ export interface SessionOrg {
 export interface SessionUser {
   id: number;            // viene de "usu"
   username: string;      // viene de "usuario"
-  catalogo: string;      // "public"
+  catalogo: string;      // se conserva por compatibilidad, aunque ya no gobierna el contexto
   tipo: number;
   organizacion: SessionOrg[];
 }
@@ -22,7 +22,7 @@ export interface SessionMeta {
 }
 
 /**
- * Menú dinámico que viene del backend para MODO EMPRESA
+ * Menú dinámico que viene del backend.
  * - si submenu.length > 0 => padre
  * - si funcion tiene ruta => item navegable
  */
@@ -30,8 +30,8 @@ export interface DynamicMenuItem {
   id: string;
   menu: string;
   icono?: string;
-  funcion?: string;          // ruta: "/app/isp/..." (recomendado)
-  privilegio?: string;       // ej: "adc_isp"
+  funcion?: string;      // ruta: "/app/..."
+  privilegio?: string;   // ej: "adc_isp"
   submenu?: DynamicMenuItem[];
 }
 
@@ -40,31 +40,17 @@ export interface Session {
   user: SessionUser;
   meta: SessionMeta;
 
-  // (1) Privilegios organización (panel organización)
+  // Privilegios organización (fallback / panel org)
   privilegiosOrg: string[];
 
-  // (2) Privilegios por empresa (empresa activa)
+  // Privilegios resueltos por backend al login
   privilegiosEmpresa: string[];
 
-  // (3) Menú dinámico por empresa (empresa activa)
+  // Menú resuelto por backend al login
   menusEmpresa: DynamicMenuItem[];
-
-  // ===== Contexto de trabajo (UI/menú) =====
-  activeCompanyId?: string | null;
-  activeCompanyName?: string | null;
-  activeCompanySchemaBase?: string | null;
-
-  // ===== Tenant/Requests =====
-  tenantCompanyId?: string | null;
-  tenantCompanyName?: string | null;
-  tenantCompanySchemaBase?: string | null;
 }
 
 const SESSION_KEY = 'app_session';
-
-function stripDashes(uuid: string) {
-  return (uuid || '').replace(/-/g, '');
-}
 
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
@@ -79,40 +65,22 @@ export class SessionStore {
   readonly user = computed(() => this._session()?.user ?? null);
   readonly meta = computed(() => this._session()?.meta ?? null);
 
-  // ===== Trabajo/UI =====
-  readonly activeCompanyId = computed(() => this._session()?.activeCompanyId ?? null);
-  readonly activeCompanyName = computed(() => this._session()?.activeCompanyName ?? null);
-  readonly activeCompanySchemaBase = computed(() => this._session()?.activeCompanySchemaBase ?? null);
-
-  // ===== Tenant/Requests =====
-  readonly tenantCompanyId = computed(() => this._session()?.tenantCompanyId ?? null);
-  readonly tenantCompanyName = computed(() => this._session()?.tenantCompanyName ?? null);
-  readonly tenantCompanySchemaBase = computed(() => this._session()?.tenantCompanySchemaBase ?? null);
-
-  readonly inCompanyMode = computed(() => !!this.activeCompanyId());
-
-  /**
-   * X-Tenant esperado por backend:
-   *   `${schemaBase}_${uuidSinGuiones}`
-   * Ej: "public_4f3a...."
-   */
-  readonly xTenant = computed(() => {
-    const id = this.tenantCompanyId();
-    const base = this.tenantCompanySchemaBase();
-    if (!id || !base) return null;
-    const clean = stripDashes(id);
-    if (!clean) return null;
-    return `${base}_${clean}`;
-  });
-
   readonly orgRole = computed<OrgRole | null>(() => {
     const u = this._session()?.user;
     return u?.organizacion?.[0]?.rol ?? null;
   });
+
   readonly isOrgAdmin = computed(() => this.orgRole() === 'administrador');
 
   readonly privilegiosOrg = computed(() => this._session()?.privilegiosOrg ?? []);
   readonly privilegiosEmpresa = computed(() => this._session()?.privilegiosEmpresa ?? []);
+  readonly menusEmpresa = computed(() => this._session()?.menusEmpresa ?? []);
+
+  /**
+   * Nuevo criterio:
+   * Si backend ya envió menú de empresa en login, la app trabaja directo con eso.
+   */
+  readonly hasDynamicCompanyMenu = computed(() => this.menusEmpresa().length > 0);
 
   private readonly _orgSet = computed(() => new Set(this.privilegiosOrg()));
   private readonly _empSet = computed(() => new Set(this.privilegiosEmpresa()));
@@ -155,58 +123,20 @@ export class SessionStore {
     return this._orgSet().has(code);
   }
 
-  /** Empresa: se basa en privilegiosEmpresa (empresa activa) */
+  /** Privilegios resueltos por backend al login */
   hasCompanyPrivilege(code: string) {
     return this._empSet().has(code);
   }
 
   /**
-   * - afecta MENÚ (inCompanyMode)
-   * - y también el TENANT para requests
+   * Limpia solo menú/privilegios dinámicos.
+   * Ya no existe “salir de empresa”, pero dejamos este helper por si en algún flujo
+   * necesitas reiniciar el contexto dinámico sin cerrar sesión.
    */
-  setActiveCompany(params: { companyId: string; schemaBase: string; companyName?: string }) {
+  clearDynamicAccess() {
     this.patchSession({
-      // trabajo/UI
-      activeCompanyId: params.companyId,
-      activeCompanySchemaBase: params.schemaBase,
-      activeCompanyName: params.companyName ?? null,
-
-      // tenant/requests
-      tenantCompanyId: params.companyId,
-      tenantCompanySchemaBase: params.schemaBase,
-      tenantCompanyName: params.companyName ?? null,
-    });
-  }
-
-  setTenantCompany(params: { companyId: string; schemaBase: string; companyName?: string }) {
-    this.patchSession({
-      tenantCompanyId: params.companyId,
-      tenantCompanySchemaBase: params.schemaBase,
-      tenantCompanyName: params.companyName ?? null,
-    });
-  }
-
-  clearActiveCompany() {
-    // volver a modo organización: limpia empresa activa + tenant + permisos/menú
-    this.patchSession({
-      activeCompanyId: null,
-      activeCompanyName: null,
-      activeCompanySchemaBase: null,
-
-      tenantCompanyId: null,
-      tenantCompanyName: null,
-      tenantCompanySchemaBase: null,
-
       privilegiosEmpresa: [],
       menusEmpresa: [],
-    });
-  }
-
-  clearTenantCompany() {
-    this.patchSession({
-      tenantCompanyId: null,
-      tenantCompanyName: null,
-      tenantCompanySchemaBase: null,
     });
   }
 

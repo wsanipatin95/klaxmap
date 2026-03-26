@@ -27,7 +27,7 @@ export class NavbarComponent {
   @ViewChild('notificationSidebar') notificationSidebar!: NotificationSidebar;
 
   userName = computed(() => this.sessionStore.user()?.username ?? 'Usuario');
-  inCompanyMode = this.sessionStore.inCompanyMode;
+  hasDynamicMenu = this.sessionStore.hasDynamicCompanyMenu;
 
   notificationCount = signal(3);
 
@@ -47,17 +47,6 @@ export class NavbarComponent {
       },
     ];
 
-    if (this.inCompanyMode()) {
-      items.push(
-        { separator: true },
-        {
-          label: 'Cambiar Empresa',
-          icon: 'pi pi-refresh',
-          command: () => this.changeCompany(),
-        }
-      );
-    }
-
     items.push(
       { separator: true },
       {
@@ -71,9 +60,8 @@ export class NavbarComponent {
   }
 
   constructor() {
-    // Recalcula el menú cuando cambia el modo
     effect(() => {
-      this.inCompanyMode();
+      this.hasDynamicMenu();
       this.buildUserMenu();
     });
   }
@@ -98,11 +86,6 @@ export class NavbarComponent {
 
   changePassword() {
     console.log('Change password');
-  }
-
-  changeCompany() {
-    this.sessionStore.clearActiveCompany();
-    this.router.navigate(['/app/mis-empresas']);
   }
 
   logout() {

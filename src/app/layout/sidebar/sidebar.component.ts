@@ -21,26 +21,25 @@ export class SidebarComponent {
   menuItems = signal<MenuItem[]>([]);
 
   constructor() {
-    // reconstruye menú cuando cambia:
-    // - rol
-    // - activeCompanyId
-    // - privilegios/menus de sesión
+    /**
+     * Nuevo flujo:
+     * - si backend ya mandó menusEmpresa al login => usamos ese menú
+     * - si no hay menú dinámico => usamos menú org como fallback
+     */
     effect(() => {
-      const inCompany = this.sessionStore.inCompanyMode();
-      const role = this.sessionStore.orgRole();
       const session = this.sessionStore.session();
+      const hasDynamicMenu = this.sessionStore.hasDynamicCompanyMenu();
+      const role = this.sessionStore.orgRole();
 
       if (!session) {
         this.menuItems.set([]);
         return;
       }
 
-      if (inCompany) {
-        // MODO EMPRESA: menú viene del backend
+      if (hasDynamicMenu) {
         const built = this.buildCompanyMenu(session.menusEmpresa ?? []);
         this.menuItems.set(built);
       } else {
-        // MODO ORGANIZACIÓN: menú fijo pero controlado por rol/privilegiosOrg
         const built = this.buildOrgMenu();
         this.menuItems.set(built);
       }
@@ -56,30 +55,24 @@ export class SidebarComponent {
 
     const items: MenuItem[] = [
       { label: 'Principal', isDivider: true },
-     /* {
-        label: 'Dashboard',
-        icon: 'pi pi-home',
-        route: '/app/dashboard',
-      },*/
-
       {
         label: 'MAPAS',
         icon: 'pi pi-building',
         route: '/app/mapa/home',
       },
     ];
+
     items.push({
       label: 'Auditoría',
       icon: 'pi pi-history',
       route: '/app/adm/auditoria',
     });
-    // ADMIN: siempre ve organización/suscripción.
-    // MIEMBRO: solo si tiene privilegio (acc_mod_organizacion / acc_mod_suscripcion)
+
     if (isAdmin || canOrgModule) {
       items.push({
         label: 'Organización',
         icon: 'pi pi-sitemap',
-        route: '/app/org', // aquí cae el dashboard con tabs de organización
+        route: '/app/org',
       });
     }
 
@@ -87,7 +80,7 @@ export class SidebarComponent {
       items.push({
         label: 'Suscripción',
         icon: 'pi pi-credit-card',
-        route: '/app/fac', // si luego haces ruta dedicada, cámbiala aquí
+        route: '/app/fac',
       });
     }
 
@@ -95,11 +88,10 @@ export class SidebarComponent {
   }
 
   private buildCompanyMenu(raw: DynamicMenuItem[]): MenuItem[] {
-    // Filtramos por privilegios de empresa
     const filtered = this.filterDynamicMenu(raw);
 
     const items: MenuItem[] = [
-      { label: 'Empresa', isDivider: true },
+      { label: 'Principal', isDivider: true },
     ];
 
     for (const it of filtered) {
@@ -107,23 +99,11 @@ export class SidebarComponent {
       if (mapped) items.push(mapped);
     }
 
-    items.push(
-      { label: '—', isDivider: true },
-      {
-        label: 'Salir de empresa',
-        icon: 'pi pi-sign-out',
-        action: () => {
-          this.sessionStore.clearActiveCompany();
-          this.router.navigate(['/app/mis-empresas']);
-          if (this.isMobile()) this.sidebarService.closeMobileSidebar();
-        },
-      }
-    );
-
     return items;
   }
 
-  /** Filtra menú por privilegiosEmpresa:
+  /**
+   * Filtra menú por privilegiosEmpresa:
    * - un item se muestra si:
    *   - no tiene privilegio (libre) OR
    *   - tiene privilegio y el usuario lo posee OR
@@ -148,7 +128,6 @@ export class SidebarComponent {
   private mapDynamicToSidebarItem(item: DynamicMenuItem): MenuItem | null {
     const icon = this.mapIcon(item.icono);
 
-    // Si tiene hijos => parent
     if ((item.submenu?.length ?? 0) > 0) {
       return {
         label: item.menu,
@@ -162,7 +141,6 @@ export class SidebarComponent {
       };
     }
 
-    // Item final
     return {
       label: item.menu,
       icon,
@@ -172,16 +150,12 @@ export class SidebarComponent {
 
   private normalizeRoute(funcion?: string) {
     if (!funcion) return '/app/dashboard';
-    // recomendamos que backend mande rutas absolutas
     if (funcion.startsWith('/')) return funcion;
     return '/' + funcion;
   }
 
   private mapIcon(icono?: string) {
-    // Si backend ya manda clases pi (ej: "pi pi-phone"), se usa.
     if (icono && icono.includes('pi ')) return icono;
-    // Si manda iconos propios "ino-isp", puedes mapearlo aquí a una clase css o a pi icon.
-    // Por ahora fallback:
     return 'pi pi-folder';
   }
 
@@ -225,7 +199,6 @@ export class SidebarComponent {
       return;
     }
 
-    // Auto-contraer solo al entrar al módulo de mapas
     if (route.startsWith('/app/mapa')) {
       this.sidebarService.setCollapsed(true);
     }
