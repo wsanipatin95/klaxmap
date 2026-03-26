@@ -14,6 +14,7 @@ import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-regi
 
 type NodeDialogMode = 'create' | 'edit';
 type NodeTipo = MapaNodo['tipoNodo'];
+type NodeDialogTab = 'edicion' | 'historial';
 
 interface NodeDialogFormValue {
   idRedNodoPadreFk: FormControl<number | null>;
@@ -45,6 +46,8 @@ export class MapaNodeDialogComponent {
   readonly mode = signal<NodeDialogMode>('create');
   readonly error = signal<string | null>(null);
   readonly title = signal('Crear nodo');
+  readonly activeTab = signal<NodeDialogTab>('edicion');
+  readonly auditRefreshKey = signal(0);
 
   readonly parentNode = signal<MapaNodo | null>(null);
   readonly editingNode = signal<MapaNodo | null>(null);
@@ -65,6 +68,10 @@ export class MapaNodeDialogComponent {
 
   readonly isEditMode = computed(() => this.mode() === 'edit');
 
+  setTab(tab: NodeDialogTab) {
+    this.activeTab.set(tab);
+  }
+
   openCreate(parent: MapaNodo | null, tipo: NodeTipo = 'carpeta') {
     this.mode.set('create');
     this.title.set(parent ? 'Nuevo nodo' : 'Nuevo nodo raíz');
@@ -73,6 +80,7 @@ export class MapaNodeDialogComponent {
     this.error.set(null);
     this.saving.set(false);
     this.submitted.set(false);
+    this.activeTab.set('edicion');
 
     this.form.reset(
       {
@@ -100,6 +108,7 @@ export class MapaNodeDialogComponent {
     this.error.set(null);
     this.saving.set(false);
     this.submitted.set(false);
+    this.activeTab.set('edicion');
 
     this.form.reset(
       {
@@ -223,6 +232,7 @@ export class MapaNodeDialogComponent {
 
   handleSaveSuccess() {
     this.saving.set(false);
+    this.auditRefreshKey.update(v => v + 1);
     this.closeImmediately();
   }
 

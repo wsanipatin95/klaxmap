@@ -12,6 +12,8 @@ import { MapaTipoFormComponent } from '../../components/mapa-tipo-form/mapa-tipo
 import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog/mapa-confirm-dialog.component';
 import { AuditoriaRegistroComponent } from '../../components/auditoria-registro/auditoria-registro.component';
 
+type TipoPanelTab = 'edicion' | 'historial';
+
 @Component({
   selector: 'app-mapa-tipos',
   standalone: true,
@@ -34,6 +36,8 @@ export class MapaTiposComponent {
   readonly selected = signal<MapaTipoElemento | null>(null);
   readonly mode = signal<'crear' | 'editar'>('crear');
   readonly formDirty = signal(false);
+  readonly activeTab = signal<TipoPanelTab>('edicion');
+  readonly auditRefreshKey = signal(0);
 
   readonly currentTitle = computed(() =>
     this.mode() === 'crear' ? 'Nuevo tipo' : 'Editar tipo'
@@ -50,6 +54,10 @@ export class MapaTiposComponent {
 
   constructor() {
     this.cargar();
+  }
+
+  setTab(tab: TipoPanelTab) {
+    this.activeTab.set(tab);
   }
 
   cargar() {
@@ -73,6 +81,7 @@ export class MapaTiposComponent {
 
             if (!updated) {
               this.mode.set('crear');
+              this.activeTab.set('edicion');
             }
           }
         },
@@ -93,6 +102,7 @@ export class MapaTiposComponent {
     this.runWithDiscardGuard(() => {
       this.selected.set(null);
       this.mode.set('crear');
+      this.activeTab.set('edicion');
       this.success.set(null);
       queueMicrotask(() => {
         this.tipoForm?.resetForNew();
@@ -108,6 +118,7 @@ export class MapaTiposComponent {
     this.runWithDiscardGuard(() => {
       this.selected.set(t);
       this.mode.set('editar');
+      this.activeTab.set('edicion');
       this.success.set(null);
     });
   }
@@ -125,6 +136,7 @@ export class MapaTiposComponent {
             this.success.set('Tipo creado.');
             this.cargar();
             this.mode.set('crear');
+            this.activeTab.set('edicion');
             this.selected.set(null);
             queueMicrotask(() => {
               this.tipoForm?.resetForNew();
@@ -156,6 +168,7 @@ export class MapaTiposComponent {
         next: () => {
           this.success.set('Tipo actualizado.');
           this.formDirty.set(false);
+          this.auditRefreshKey.update(v => v + 1);
           this.cargar();
         },
         error: (err) => {
@@ -189,6 +202,7 @@ export class MapaTiposComponent {
               this.success.set('Tipo eliminado.');
               this.selected.set(null);
               this.mode.set('crear');
+              this.activeTab.set('edicion');
               this.formDirty.set(false);
               this.cargar();
               queueMicrotask(() => {

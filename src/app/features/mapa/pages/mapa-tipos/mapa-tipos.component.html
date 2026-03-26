@@ -112,26 +112,54 @@
         </button>
       </div>
 
-      <div class="editor-scroll">
-        <app-mapa-tipo-form
-          #tipoForm
-          [modo]="mode()"
-          [tipo]="selected()"
-          [saving]="saving()"
-          (saveRequested)="guardar($event)"
-          (cancelRequested)="onFormCancel()"
-          (dirtyChange)="onDirtyChange($event)"
-        />
-      </div>
-    </section>
+      <div class="editor-tabs" *ngIf="mode() === 'editar' && selected()">
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'edicion'"
+          (click)="setTab('edicion')"
+        >
+          Edición
+        </button>
 
-    <section class="panel">
-      <app-auditoria-registro
-        [tabla]="'kxt_geo_tipo_elemento'"
-        [idRegistro]="selected()?.idGeoTipoElemento ?? null"
-        titulo="Historial del tipo"
-        subtitulo="Cambios realizados sobre el tipo seleccionado"
-      />
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'historial'"
+          (click)="setTab('historial')"
+        >
+          Historial
+        </button>
+      </div>
+
+      <div class="editor-body">
+        <section class="editor-view" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
+          <div class="editor-scroll">
+            <app-mapa-tipo-form
+              #tipoForm
+              [modo]="mode()"
+              [tipo]="selected()"
+              [saving]="saving()"
+              (saveRequested)="guardar($event)"
+              (cancelRequested)="onFormCancel()"
+              (dirtyChange)="onDirtyChange($event)"
+            />
+          </div>
+        </section>
+
+        <section class="editor-view" *ngIf="mode() === 'editar' && activeTab() === 'historial' && selected() as sel">
+          <div class="editor-scroll">
+            <app-auditoria-registro
+              [tabla]="'kxt_geo_tipo_elemento'"
+              [idRegistro]="sel.idGeoTipoElemento"
+              [refreshKey]="auditRefreshKey()"
+              [compact]="true"
+              titulo="Historial del tipo"
+              subtitulo="Cambios realizados sobre el tipo seleccionado"
+            />
+          </div>
+        </section>
+      </div>
     </section>
   </div>
 

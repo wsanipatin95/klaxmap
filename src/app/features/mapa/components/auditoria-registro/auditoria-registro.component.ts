@@ -23,13 +23,14 @@ export class AuditoriaRegistroComponent implements OnChanges {
   @Input() titulo = 'Historial';
   @Input() subtitulo = 'Trazabilidad del registro';
   @Input() compact = false;
+  @Input() refreshKey: string | number | null = null;
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<AuditoriaRegistroResponse | null>(null);
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['tabla'] || changes['idRegistro']) {
+    if (changes['tabla'] || changes['idRegistro'] || changes['refreshKey']) {
       this.cargar();
     }
   }

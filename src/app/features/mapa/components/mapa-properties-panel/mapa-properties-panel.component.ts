@@ -19,6 +19,8 @@ import { MapaElementosRepository } from '../../data-access/elemento/mapa-element
 import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
+type PropertiesPanelTab = 'edicion' | 'historial';
+
 @Component({
   selector: 'app-mapa-properties-panel',
   standalone: true,
@@ -45,6 +47,12 @@ export class MapaPropertiesPanelComponent {
   readonly saving = signal(false);
   readonly statusKind = signal<'success' | 'error' | null>(null);
   readonly statusMessage = signal<string | null>(null);
+  readonly activeTab = signal<PropertiesPanelTab>('edicion');
+  readonly auditRefreshKey = signal(0);
+
+  setTab(tab: PropertiesPanelTab) {
+    this.activeTab.set(tab);
+  }
 
   guardar(payload: MapaPatchRequest) {
     if (this.saving()) {
@@ -63,6 +71,7 @@ export class MapaPropertiesPanelComponent {
         this.tabs?.markSaved(resp.data);
         this.statusKind.set('success');
         this.statusMessage.set('Los cambios se guardaron correctamente.');
+        this.auditRefreshKey.update(v => v + 1);
         this.saved.emit(resp.data);
       },
       error: (err) => {

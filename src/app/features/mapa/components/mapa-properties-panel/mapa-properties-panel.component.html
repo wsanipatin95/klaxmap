@@ -51,31 +51,58 @@
         {{ message }}
       </div>
 
-      <div class="panel-body">
-        <section class="panel-section">
-          <div class="section-head">
-            <h4>Datos del elemento</h4>
-            <p>Edita la información principal y guarda los cambios.</p>
-          </div>
+      <div class="panel-tabs">
+        <button
+          type="button"
+          class="panel-tab-btn"
+          [class.active]="activeTab() === 'edicion'"
+          (click)="setTab('edicion')"
+        >
+          Edición
+        </button>
 
-          <app-mapa-properties-tabs
-            [elemento]="elemento"
-            [tipos]="tipos"
-            [nodos]="nodos"
-            [saving]="saving()"
-            (submitted)="guardar($event)"
-            (dirtyChange)="onDirtyStateChanged($event)"
-          />
+        <button
+          type="button"
+          class="panel-tab-btn"
+          [class.active]="activeTab() === 'historial'"
+          (click)="setTab('historial')"
+        >
+          Historial
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <section class="panel-view" *ngIf="activeTab() === 'edicion'">
+          <div class="panel-view-scroll">
+            <section class="panel-section">
+              <div class="section-head">
+                <h4>Datos del elemento</h4>
+                <p>Edita la información principal y guarda los cambios.</p>
+              </div>
+
+              <app-mapa-properties-tabs
+                [elemento]="elemento"
+                [tipos]="tipos"
+                [nodos]="nodos"
+                [saving]="saving()"
+                (submitted)="guardar($event)"
+                (dirtyChange)="onDirtyStateChanged($event)"
+              />
+            </section>
+          </div>
         </section>
 
-        <section class="panel-section panel-section-audit">
-          <app-auditoria-registro
-            [tabla]="'kxt_geo_elemento'"
-            [idRegistro]="elemento.idGeoElemento"
-            [compact]="true"
-            titulo="Historial del elemento"
-            subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
-          />
+        <section class="panel-view" *ngIf="activeTab() === 'historial'">
+          <div class="panel-view-scroll">
+            <app-auditoria-registro
+              [tabla]="'kxt_geo_elemento'"
+              [idRegistro]="elemento.idGeoElemento"
+              [refreshKey]="auditRefreshKey()"
+              [compact]="true"
+              titulo="Historial del elemento"
+              subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
+            />
+          </div>
         </section>
       </div>
     </ng-container>

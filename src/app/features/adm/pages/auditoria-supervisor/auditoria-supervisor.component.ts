@@ -60,6 +60,18 @@ export class AuditoriaSupervisorComponent {
     { label: 'Eliminación', value: 'DELETE' },
   ];
 
+  readonly totalInserciones = computed(() =>
+    this.items().filter((x) => String(x.operacion || '').toUpperCase() === 'INSERT').length
+  );
+
+  readonly totalEdiciones = computed(() =>
+    this.items().filter((x) => String(x.operacion || '').toUpperCase() === 'UPDATE').length
+  );
+
+  readonly totalEliminaciones = computed(() =>
+    this.items().filter((x) => String(x.operacion || '').toUpperCase() === 'DELETE').length
+  );
+
   constructor() {
     this.buscar();
   }
@@ -141,8 +153,29 @@ export class AuditoriaSupervisorComponent {
     return item.idSegAuditoria;
   }
 
-  shortValue(value: string | null | undefined, max = 140): string {
+  shortValue(value: string | null | undefined, max = 180): string {
     if (value == null || value === '') return '—';
     return value.length > max ? value.slice(0, max) + '…' : value;
+  }
+
+  operacionClass(value: string | null | undefined): string {
+    const op = String(value ?? '').toUpperCase();
+    if (op === 'INSERT') return 'is-insert';
+    if (op === 'UPDATE') return 'is-update';
+    if (op === 'DELETE') return 'is-delete';
+    return 'is-default';
+  }
+
+  hasFiltersApplied(): boolean {
+    const f = this.filtros();
+    return !!(
+      (f.q && f.q.trim()) ||
+      f.usuario != null ||
+      (f.tabla && f.tabla.trim()) ||
+      (f.operacion && f.operacion.trim()) ||
+      (f.idRegistro && f.idRegistro.trim()) ||
+      (f.fechaDesde && f.fechaDesde.trim()) ||
+      (f.fechaHasta && f.fechaHasta.trim())
+    );
   }
 }

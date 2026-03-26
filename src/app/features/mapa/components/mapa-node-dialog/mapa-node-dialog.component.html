@@ -4,104 +4,134 @@
   [modal]="true"
   [closable]="!saving()"
   [dismissableMask]="!saving()"
-  [style]="{ width: isEditMode() ? '70rem' : '38rem', maxWidth: '96vw' }"
+  [style]="{ width: isEditMode() ? '56rem' : '38rem', maxWidth: '96vw' }"
+  [contentStyle]="{ padding: '0', overflow: 'hidden' }"
   [header]="title()"
 >
-  <div class="dialog-layout" [class.is-edit]="isEditMode()">
-    <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="save-blocker" *ngIf="saving()">
-        <div class="save-blocker-card">
-          <div class="save-blocker-title">Guardando nodo...</div>
-          <div class="save-blocker-text">Espera un momento mientras se procesa la operación.</div>
+  <div class="dialog-shell" [class.is-edit]="isEditMode()">
+    <div class="dialog-tabs" *ngIf="isEditMode()">
+      <button
+        type="button"
+        class="dialog-tab-btn"
+        [class.active]="activeTab() === 'edicion'"
+        (click)="setTab('edicion')"
+      >
+        Edición
+      </button>
+
+      <button
+        type="button"
+        class="dialog-tab-btn"
+        [class.active]="activeTab() === 'historial'"
+        (click)="setTab('historial')"
+      >
+        Historial
+      </button>
+    </div>
+
+    <div class="dialog-body-wrap">
+      <section class="dialog-view" *ngIf="!isEditMode() || activeTab() === 'edicion'">
+        <div class="dialog-view-scroll">
+          <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="submit()">
+            <div class="save-blocker" *ngIf="saving()">
+              <div class="save-blocker-card">
+                <div class="save-blocker-title">Guardando nodo...</div>
+                <div class="save-blocker-text">Espera un momento mientras se procesa la operación.</div>
+              </div>
+            </div>
+
+            <fieldset class="dialog-fieldset" [disabled]="saving()">
+              <div class="mini-summary">
+                <span class="summary-chip" *ngIf="mode() === 'create'">
+                  Padre: {{ parentLabel() }}
+                </span>
+
+                <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
+                  Registro: #{{ node.idRedNodo }}
+                </span>
+
+                <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
+                  Tipo actual: {{ node.tipoNodo }}
+                </span>
+              </div>
+
+              <div class="field">
+                <label for="node-nodo">Nombre</label>
+                <input
+                  id="node-nodo"
+                  type="text"
+                  formControlName="nodo"
+                  placeholder="Nombre"
+                />
+                <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
+              </div>
+
+              <div class="field">
+                <label for="node-descripcion">Descripción</label>
+                <textarea
+                  id="node-descripcion"
+                  rows="4"
+                  formControlName="descripcion"
+                  placeholder="Descripción breve"
+                ></textarea>
+                <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+              </div>
+
+              <div class="form-grid two-cols">
+                <div class="field">
+                  <label for="node-tipo">Tipo</label>
+                  <select id="node-tipo" formControlName="tipoNodo">
+                    <option value="carpeta">Carpeta</option>
+                    <option value="zona">Zona</option>
+                    <option value="sitio">Sitio</option>
+                    <option value="nodo_fisico">Nodo físico</option>
+                  </select>
+                  <p class="field-error" *ngIf="controlError('tipoNodo') as err">{{ err }}</p>
+                </div>
+
+                <div class="field">
+                  <label for="node-codigo">Código</label>
+                  <input
+                    id="node-codigo"
+                    type="text"
+                    formControlName="codigo"
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+
+              <div class="form-grid two-cols">
+                <div class="field">
+                  <label for="node-orden">Orden</label>
+                  <input id="node-orden" type="number" formControlName="orden" />
+                  <p class="field-error" *ngIf="controlError('orden') as err">{{ err }}</p>
+                </div>
+
+                <label class="check-card">
+                  <input type="checkbox" formControlName="visible" />
+                  <span>Visible</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <p class="error" *ngIf="error() as err">{{ err }}</p>
+          </form>
         </div>
-      </div>
+      </section>
 
-      <fieldset class="dialog-fieldset" [disabled]="saving()">
-        <div class="mini-summary">
-          <span class="summary-chip" *ngIf="mode() === 'create'">
-            Padre: {{ parentLabel() }}
-          </span>
-
-          <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
-            Registro: #{{ node.idRedNodo }}
-          </span>
-
-          <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
-            Tipo actual: {{ node.tipoNodo }}
-          </span>
-        </div>
-
-        <div class="field">
-          <label for="node-nodo">Nombre</label>
-          <input
-            id="node-nodo"
-            type="text"
-            formControlName="nodo"
-            placeholder="Nombre"
+      <section class="dialog-view" *ngIf="isEditMode() && activeTab() === 'historial' && editingNode() as node">
+        <div class="dialog-view-scroll">
+          <app-auditoria-registro
+            [tabla]="'kxt_red_nodo'"
+            [idRegistro]="node.idRedNodo"
+            [refreshKey]="auditRefreshKey()"
+            [compact]="true"
+            titulo="Historial del nodo"
+            subtitulo="Auditoría de carpetas, zonas, sitios y nodos físicos"
           />
-          <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
         </div>
-
-        <div class="field">
-          <label for="node-descripcion">Descripción</label>
-          <textarea
-            id="node-descripcion"
-            rows="4"
-            formControlName="descripcion"
-            placeholder="Descripción breve"
-          ></textarea>
-          <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
-        </div>
-
-        <div class="form-grid two-cols">
-          <div class="field">
-            <label for="node-tipo">Tipo</label>
-            <select id="node-tipo" formControlName="tipoNodo">
-              <option value="carpeta">Carpeta</option>
-              <option value="zona">Zona</option>
-              <option value="sitio">Sitio</option>
-              <option value="nodo_fisico">Nodo físico</option>
-            </select>
-            <p class="field-error" *ngIf="controlError('tipoNodo') as err">{{ err }}</p>
-          </div>
-
-          <div class="field">
-            <label for="node-codigo">Código</label>
-            <input
-              id="node-codigo"
-              type="text"
-              formControlName="codigo"
-              placeholder="Opcional"
-            />
-          </div>
-        </div>
-
-        <div class="form-grid two-cols">
-          <div class="field">
-            <label for="node-orden">Orden</label>
-            <input id="node-orden" type="number" formControlName="orden" />
-            <p class="field-error" *ngIf="controlError('orden') as err">{{ err }}</p>
-          </div>
-
-          <label class="check-card">
-            <input type="checkbox" formControlName="visible" />
-            <span>Visible</span>
-          </label>
-        </div>
-      </fieldset>
-
-      <p class="error" *ngIf="error() as err">{{ err }}</p>
-    </form>
-
-    <section class="audit-side" *ngIf="isEditMode() && editingNode() as node">
-      <app-auditoria-registro
-        [tabla]="'kxt_red_nodo'"
-        [idRegistro]="node.idRedNodo"
-        [compact]="true"
-        titulo="Historial del nodo"
-        subtitulo="Auditoría de carpetas, zonas, sitios y nodos físicos"
-      />
-    </section>
+      </section>
+    </div>
   </div>
 
   <ng-template pTemplate="footer">
