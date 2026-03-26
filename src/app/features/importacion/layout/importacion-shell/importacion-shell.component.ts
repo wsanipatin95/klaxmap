@@ -12,7 +12,7 @@ import { NgxSonnerToaster } from 'ngx-sonner';
   styleUrl: './importacion-shell.component.scss',
 })
 export class ImportacionShellComponent {
-  private router = inject(Router);
+  private readonly router = inject(Router);
 
   readonly tabs = [
     { label: 'Proveedores', route: '/app/importacion/proveedores', icon: 'pi pi-building' },
@@ -21,15 +21,23 @@ export class ImportacionShellComponent {
     { label: 'Solicitudes', route: '/app/importacion/solicitudes', icon: 'pi pi-sitemap' },
   ];
 
+  // El computed devuelve el índice numérico basado en la URL actual
   readonly activeIndex = computed(() => {
     const current = this.router.url;
-    const idx = this.tabs.findIndex((x) => current.startsWith(x.route));
+    const idx = this.tabs.findIndex((tab) => current.startsWith(tab.route));
     return idx >= 0 ? idx : 0;
   });
 
-  go(index: number) {
-    const tab = this.tabs[index];
-    if (!tab) return;
-    this.router.navigateByUrl(tab.route);
+  /**
+   * Navega a la ruta según el índice del tab seleccionado.
+   * Usamos 'any' para el evento para evitar errores de tipado estricto en el HTML.
+   */
+  go(index: any) {
+    const numericIndex = Number(index);
+    const target = this.tabs[numericIndex];
+    
+    if (target && target.route) {
+      this.router.navigateByUrl(target.route);
+    }
   }
 }

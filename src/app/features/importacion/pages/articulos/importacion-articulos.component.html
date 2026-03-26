@@ -1,8 +1,8 @@
 <div class="imp-page">
   <div class="imp-page__header">
     <div class="imp-page__title">
-      <h1>Comparador de solicitud</h1>
-      <p>Compara opciones y selecciona la mejor alternativa por detalle.</p>
+      <h1>Artículos prospecto</h1>
+      <p>Homologa artículos del proveedor con tu catálogo ERP.</p>
     </div>
     <button pButton type="button" icon="pi pi-plus" label="Nuevo" size="small" (click)="nuevo()"></button>
   </div>
@@ -26,20 +26,20 @@
         [paginator]="true"
         [rows]="size"
         [totalRecords]="total()"
-        [rowsPerPageOptions]="[10,20,50]"
+        [rowsPerPageOptions]="[10, 20, 50]"
         (onLazyLoad)="onLazyLoad($event)"
         styleClass="compact-table">
         <ng-template pTemplate="header">
           <tr>
             <th>Nombre</th>
             <th>Observación</th>
-            <th style="width:8rem;">Acciones</th>
+            <th style="width: 8rem;">Acciones</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row>
           <tr>
-            <td>{ row.nombre || '—' }</td>
-            <td>{ row.observacion || '—' }</td>
+            <td>{{ row?.nombre || row?.nombreProveedor || row?.nombreArticuloProveedor || row?.numeroDocumento || row?.codigoSolicitud || '—' }}</td>
+            <td>{{ row?.observacion || '—' }}</td>
             <td>
               <div class="imp-inline-actions">
                 <button pButton type="button" icon="pi pi-pencil" [text]="true" size="small"></button>
@@ -58,7 +58,7 @@
     [closable]="false"
     [style]="{ width: 'min(900px, 96vw)' }"
     styleClass="imp-form-dialog"
-    header="Comparador de solicitud">
+    header="Artículos prospecto">
     <form [formGroup]="form" class="imp-section-stack">
       <div class="imp-field">
         <label>Nombre *</label>
@@ -70,7 +70,7 @@
 
       <div class="imp-field">
         <label>Observación</label>
-        <textarea pTextarea rows="3" formControlName="observacion"></textarea>
+        <textarea pInputTextarea rows="3" formControlName="observacion"></textarea>
       </div>
     </form>
 

@@ -1,39 +1,49 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
-import { TableModule } from 'primeng/table';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { Dialog } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule  } from 'primeng/textarea';
 import { ConfirmationService } from 'primeng/api';
+import { TableModule } from 'primeng/table';
 import { NotifyService } from 'src/app/core/services/notify.service';
 
 @Component({
-  selector: 'app-importacion-proveedores',
+  selector: 'app-importacion-solicitudes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TableModule, ButtonModule, InputTextModule, Dialog, ConfirmDialogModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TableModule,
+    ButtonModule,
+    InputTextModule,
+    TextareaModule ,
+    DialogModule,
+    ConfirmDialogModule,
+  ],
   providers: [ConfirmationService],
-  templateUrl: './proveedores/importacion-proveedores.component.html',
-  styleUrl: './proveedores/importacion-proveedores.component.scss',
+  templateUrl: './importacion-solicitudes.component.html',
+  styleUrl: './importacion-solicitudes.component.scss',
 })
-export class ImportacionProveedoresComponent {
-  private fb = inject(FormBuilder);
-  private notify = inject(NotifyService);
-  private confirmation = inject(ConfirmationService);
+export class ImportacionSolicitudesComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly notify = inject(NotifyService);
+  private readonly confirmation = inject(ConfirmationService);
 
-  loading = signal(false);
-  dialogVisible = signal(false);
-  saving = signal(false);
+  readonly loading = signal(false);
+  readonly dialogVisible = signal(false);
+  readonly saving = signal(false);
+  readonly total = signal(0);
+  readonly items = signal<any[]>([]);
+  editingId: number | null = null;
   q = '';
   page = 0;
   size = 10;
-  total = signal(0);
-  items = signal<any[]>([]);
-  editingId: number | null = null;
 
-  form = this.fb.group({
+  readonly form = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     observacion: ['', [Validators.maxLength(1000)]],
   });
@@ -48,8 +58,8 @@ export class ImportacionProveedoresComponent {
   }
 
   onLazyLoad(event: any) {
-    this.page = event.first ? Math.floor(event.first / event.rows) : 0;
-    this.size = event.rows ?? this.size;
+    this.page = event?.first ? Math.floor(event.first / event.rows) : 0;
+    this.size = event?.rows ?? this.size;
     this.cargar();
   }
 

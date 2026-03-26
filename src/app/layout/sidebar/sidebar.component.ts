@@ -1,4 +1,4 @@
-import { Component, effect, inject,computed, signal } from '@angular/core';
+import { Component, effect, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { SidebarService, MenuItem } from '../../core/services/sidebar.service';
@@ -56,15 +56,19 @@ export class SidebarComponent {
         route: '/app/mapa/home',
       },
     ];
-    
-   if (this.auditoriaRed()) {
-    items.push({
-      label: 'Auditoría',
-      icon: 'pi pi-history',
-      route: '/app/adm/auditoria',
-    });
-  }
 
+    if (this.auditoriaRed()) {
+      items.push({
+        label: 'Auditoría',
+        icon: 'pi pi-history',
+        route: '/app/adm/auditoria',
+      });
+    }
+    items.push({
+      label: 'Importación',
+      icon: 'pi pi-history',
+      route: '/app/importacion/',
+    });
     return items;
   }
 

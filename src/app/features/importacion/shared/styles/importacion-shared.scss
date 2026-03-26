@@ -1,4 +1,6 @@
-:host { display: block; }
+:host {
+  display: block;
+}
 
 .imp-page {
   display: flex;
@@ -61,34 +63,9 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.imp-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.imp-card__header h3 {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #111827;
-}
-
 .imp-card__body {
   padding: 0.9rem 1rem 1rem;
 }
-
-.imp-grid {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.imp-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.imp-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.imp-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .imp-field {
   display: flex;
@@ -108,32 +85,10 @@
   color: #b91c1c;
 }
 
-.imp-field__hint {
-  font-size: 0.7rem;
-  color: #6b7280;
-}
-
 .imp-muted {
   color: #6b7280;
   font-size: 0.74rem;
 }
-
-.imp-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.18rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.71rem;
-  font-weight: 600;
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.imp-chip--success { background: #ecfdf5; color: #047857; }
-.imp-chip--warn { background: #fffbeb; color: #b45309; }
-.imp-chip--danger { background: #fef2f2; color: #b91c1c; }
-.imp-chip--primary { background: #fdf4f9; color: #7B0061; }
 
 .imp-inline-actions {
   display: flex;
@@ -146,15 +101,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-}
-
-.imp-empty {
-  border: 1px dashed #d1d5db;
-  border-radius: 0.8rem;
-  padding: 1rem;
-  background: #fafafa;
-  color: #6b7280;
-  text-align: center;
 }
 
 .imp-dialog-footer {
@@ -171,31 +117,6 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
-}
-
-.imp-summary-cards {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.imp-summary-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.85rem;
-  padding: 0.85rem 0.95rem;
-}
-
-.imp-summary-card__label {
-  font-size: 0.72rem;
-  color: #6b7280;
-}
-
-.imp-summary-card__value {
-  margin-top: 0.2rem;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #111827;
 }
 
 .compact-table .p-datatable-thead > tr > th {
@@ -217,21 +138,4 @@
 .imp-form-dialog .p-dialog-footer {
   padding-left: 1rem;
   padding-right: 1rem;
-}
-
-.w-15rem {
-  width: 15rem;
-}
-
-@media (max-width: 1024px) {
-  .imp-grid--2,
-  .imp-grid--3,
-  .imp-grid--4,
-  .imp-summary-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .w-15rem {
-    width: 100%;
-  }
 }
