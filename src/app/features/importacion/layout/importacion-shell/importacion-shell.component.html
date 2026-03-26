@@ -1,0 +1,18 @@
+<div class="imp-shell">
+  <div class="imp-shell__tabs">
+    <p-tabs [value]="activeIndex().toString()" (valueChange)="go(+$event)">
+      <p-tablist>
+        <p-tab *ngFor="let tab of tabs; let i = index" [value]="i.toString()">
+          <i [class]="tab.icon"></i>
+          <span>{{ tab.label }}</span>
+        </p-tab>
+      </p-tablist>
+    </p-tabs>
+  </div>
+
+  <div class="imp-shell__content">
+    <router-outlet></router-outlet>
+  </div>
+
+  <ngx-sonner-toaster position="top-right" richColors></ngx-sonner-toaster>
+</div>

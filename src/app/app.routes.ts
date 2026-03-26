@@ -88,6 +88,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('src/app/features/mapa/mapa.routes').then((m) => m.MAPA_ROUTES),
       },
+      {
+        path: 'importacion',
+        loadChildren: () =>
+          import('src/app/features/importacion/importacion.routes').then(
+            (m) => m.IMPORTACION_ROUTES
+          ),
+      },
     ],
   },
 
