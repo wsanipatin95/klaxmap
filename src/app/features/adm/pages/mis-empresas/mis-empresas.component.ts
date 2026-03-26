@@ -50,10 +50,7 @@ export class MisEmpresasComponent implements OnInit {
 
     items = signal<EmpresaUsuarioDto[]>([]);
 
-    // empresa actual
-    activeCompanyId = this.sessionStore.activeCompanyId;
-    activeCompanyName = this.sessionStore.activeCompanyName;
-
+   
     get usu(): number {
         return this.sessionStore.user()?.id ?? 0;
     }
@@ -103,10 +100,7 @@ export class MisEmpresasComponent implements OnInit {
         return base.filter((x) => this.empresaNombre(x).toLowerCase().includes(term));
     }
 
-    isAlreadyIn(row: EmpresaUsuarioDto) {
-        const id = this.rowIdEmpresa(row);
-        return !!id && id === (this.activeCompanyId() ?? '');
-    }
+    
 
     cargar() {
         if (!this.usu) return;
@@ -173,22 +167,14 @@ export class MisEmpresasComponent implements OnInit {
             return;
         }
 
-        if (this.isAlreadyIn(row)) {
-            this.notify.info('Ya estás dentro', 'Esta empresa ya está seleccionada.');
-            return;
-        }
+        
 
         if (this.entering()) return;
         this.entering.set(true);
 
         const companyName = this.empresaNombre(row);
 
-        // 1) setea empresa activa (modo empresa + tenant)
-        this.sessionStore.setActiveCompany({
-            companyId: idEmpresa,
-            schemaBase: 'public',
-            companyName,
-        });
+        
 
         // 2) refresca sesión por empresa (menus/privilegios bajo tenant)
         this.usuPrivRepo
@@ -209,7 +195,6 @@ export class MisEmpresasComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('menusEmpresa error:', err);
-                    this.sessionStore.clearActiveCompany();
                     this.notify.error(
                         'No se pudo entrar',
                         err?.message || 'Error al cargar permisos/menú de la empresa.'
@@ -220,7 +205,6 @@ export class MisEmpresasComponent implements OnInit {
     }
 
     salirDeEmpresa() {
-        this.sessionStore.clearActiveCompany();
         this.router.navigate(['/app/mis-empresas']);
     }
 

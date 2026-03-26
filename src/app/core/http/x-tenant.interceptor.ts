@@ -21,8 +21,7 @@ export const xTenantInterceptor: HttpInterceptorFn = (req, next) => {
   const defaultCompany = env.company ?? null;
   const defaultTenant = env.tenant ?? null;
 
-  const dynamicTenant = sessionStore.xTenant();
-  const tenantToSend = dynamicTenant ?? defaultTenant;
+  const tenantToSend = defaultTenant;
   const companyToSend = defaultCompany;
 
   if (req.headers.has('X-Company') && req.headers.has('X-Tenant')) {

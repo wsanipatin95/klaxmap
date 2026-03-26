@@ -36,13 +36,10 @@ export class SidebarComponent {
         return;
       }
 
-      if (hasDynamicMenu) {
-        const built = this.buildCompanyMenu(session.menusEmpresa ?? []);
-        this.menuItems.set(built);
-      } else {
+      
         const built = this.buildOrgMenu();
         this.menuItems.set(built);
-      }
+      
     });
   }
 

@@ -5,16 +5,6 @@
             <div class="subtitle">
                 Selecciona la empresa con la que vas a trabajar. El menú se ajusta según tus privilegios.
             </div>
-
-            @if (activeCompanyId()) {
-            <div class="current">
-                <span class="chip ok">Empresa actual:</span>
-                <span class="name">{{ activeCompanyName() || activeCompanyId() }}</span>
-
-                <button pButton type="button" class="p-button-text" icon="pi pi-sign-out" label="Salir de empresa"
-                    (click)="salirDeEmpresa()"></button>
-            </div>
-            }
         </div>
 
         <div class="right">
@@ -58,13 +48,6 @@ s
                         </span>
                     </td>
 
-                    <td style="text-align: right;">
-                        <button pButton type="button" class="btnEnter"
-                            [label]="isAlreadyIn(row) ? 'Ya seleccionado' : 'Entrar'"
-                            [icon]="isAlreadyIn(row) ? 'pi pi-lock' : 'pi pi-sign-in'"
-                            [disabled]="entering() || !isRowActive(row) || !isRowActiveEmpresa(row) || isAlreadyIn(row)"
-                            [loading]="entering() && !isAlreadyIn(row)" (click)="entrar(row)"></button>
-                    </td>
                 </tr>
             </ng-template>
 
