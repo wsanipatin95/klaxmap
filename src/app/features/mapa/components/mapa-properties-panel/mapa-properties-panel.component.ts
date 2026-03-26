@@ -17,11 +17,12 @@ import type {
 } from '../../data-access/mapa.models';
 import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
 import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
+import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
 @Component({
   selector: 'app-mapa-properties-panel',
   standalone: true,
-  imports: [CommonModule, MapaPropertiesTabsComponent],
+  imports: [CommonModule, MapaPropertiesTabsComponent, AuditoriaRegistroComponent],
   templateUrl: './mapa-properties-panel.component.html',
   styleUrl: './mapa-properties-panel.component.scss',
 })

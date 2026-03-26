@@ -2,6 +2,16 @@
   display: block;
 }
 
+.dialog-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.dialog-layout.is-edit {
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+  align-items: start;
+}
+
 .dialog-body {
   position: relative;
   display: flex;
@@ -12,6 +22,11 @@
 
 .dialog-body.is-saving {
   pointer-events: none;
+}
+
+.audit-side {
+  min-width: 0;
+  align-self: stretch;
 }
 
 .dialog-fieldset {
@@ -217,6 +232,12 @@ textarea.ng-invalid.ng-touched {
 .save-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .dialog-layout.is-edit {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {

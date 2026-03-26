@@ -10,6 +10,7 @@ import {
 import { DialogModule } from 'primeng/dialog';
 import type { MapaNodo, MapaNodoSaveRequest, MapaPatchRequest } from '../../data-access/mapa.models';
 import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
+import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
 type NodeDialogMode = 'create' | 'edit';
 type NodeTipo = MapaNodo['tipoNodo'];
@@ -27,7 +28,7 @@ interface NodeDialogFormValue {
 @Component({
   selector: 'app-mapa-node-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DialogModule, MapaConfirmDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule, MapaConfirmDialogComponent, AuditoriaRegistroComponent],
   templateUrl: './mapa-node-dialog.component.html',
   styleUrl: './mapa-node-dialog.component.scss',
 })

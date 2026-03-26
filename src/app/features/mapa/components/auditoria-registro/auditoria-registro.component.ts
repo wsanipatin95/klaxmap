@@ -2,7 +2,11 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { AuditoriaRepository } from 'src/app/features/adm/data-access/auditoria.repository';
-import type { AuditoriaGrupo, AuditoriaRegistroResponse } from 'src/app/features/adm/data-access/auditoria.models';
+import type {
+  AuditoriaCambio,
+  AuditoriaGrupo,
+  AuditoriaRegistroResponse,
+} from 'src/app/features/adm/data-access/auditoria.models';
 
 @Component({
   selector: 'app-auditoria-registro',
@@ -18,6 +22,7 @@ export class AuditoriaRegistroComponent implements OnChanges {
   @Input() idRegistro: string | number | null = null;
   @Input() titulo = 'Historial';
   @Input() subtitulo = 'Trazabilidad del registro';
+  @Input() compact = false;
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -56,8 +61,32 @@ export class AuditoriaRegistroComponent implements OnChanges {
     return item.grupoId;
   }
 
-  shortValue(value: string | null | undefined, max = 140): string {
+  trackCambio(_: number, item: AuditoriaCambio) {
+    return item.idSegAuditoria;
+  }
+
+  shortValue(value: string | null | undefined, max = 180): string {
     if (value == null || value === '') return '—';
     return value.length > max ? value.slice(0, max) + '…' : value;
+  }
+
+  prettyOperacion(value: string | null | undefined): string {
+    const op = String(value ?? '').toUpperCase();
+    if (op === 'INSERT') return 'Creación';
+    if (op === 'UPDATE') return 'Edición';
+    if (op === 'DELETE') return 'Eliminación';
+    return value || 'Movimiento';
+  }
+
+  grupoBadgeClass(value: string | null | undefined): string {
+    const op = String(value ?? '').toUpperCase();
+    if (op === 'INSERT') return 'is-insert';
+    if (op === 'UPDATE') return 'is-update';
+    if (op === 'DELETE') return 'is-delete';
+    return 'is-default';
+  }
+
+  hasUsefulChanges(grupo: AuditoriaGrupo): boolean {
+    return Array.isArray(grupo.cambios) && grupo.cambios.length > 0;
   }
 }

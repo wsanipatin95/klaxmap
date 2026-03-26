@@ -52,14 +52,31 @@
       </div>
 
       <div class="panel-body">
-        <app-mapa-properties-tabs
-          [elemento]="elemento"
-          [tipos]="tipos"
-          [nodos]="nodos"
-          [saving]="saving()"
-          (submitted)="guardar($event)"
-          (dirtyChange)="onDirtyStateChanged($event)"
-        />
+        <section class="panel-section">
+          <div class="section-head">
+            <h4>Datos del elemento</h4>
+            <p>Edita la información principal y guarda los cambios.</p>
+          </div>
+
+          <app-mapa-properties-tabs
+            [elemento]="elemento"
+            [tipos]="tipos"
+            [nodos]="nodos"
+            [saving]="saving()"
+            (submitted)="guardar($event)"
+            (dirtyChange)="onDirtyStateChanged($event)"
+          />
+        </section>
+
+        <section class="panel-section panel-section-audit">
+          <app-auditoria-registro
+            [tabla]="'kxt_geo_elemento'"
+            [idRegistro]="elemento.idGeoElemento"
+            [compact]="true"
+            titulo="Historial del elemento"
+            subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
+          />
+        </section>
       </div>
     </ng-container>
 
