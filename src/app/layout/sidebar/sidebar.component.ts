@@ -56,11 +56,11 @@ export class SidebarComponent {
 
     const items: MenuItem[] = [
       { label: 'Principal', isDivider: true },
-      {
+     /* {
         label: 'Dashboard',
         icon: 'pi pi-home',
         route: '/app/dashboard',
-      },
+      },*/
 
       {
         label: 'MAPAS',

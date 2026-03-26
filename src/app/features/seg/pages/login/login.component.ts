@@ -76,7 +76,7 @@ export class LoginComponent {
 
     const { usuario, clave } = this.loginForm.getRawValue(); 
     const returnUrl =
-      this.route.snapshot.queryParamMap.get('returnUrl') || '/app/dashboard';
+      this.route.snapshot.queryParamMap.get('returnUrl') || '/app/mapa/home';
 
     this.authRepo
       .login({
