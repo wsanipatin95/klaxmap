@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject,computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { SidebarService, MenuItem } from '../../core/services/sidebar.service';
@@ -15,6 +15,10 @@ export class SidebarComponent {
   private router = inject(Router);
   private sessionStore = inject(SessionStore);
 
+  auditoriaRed = computed(() =>
+    this.sessionStore.hasCompanyPrivilege('ram_red_red')
+  );
+
   isCollapsed = this.sidebarService.isCollapsed;
   isMobileVisible = this.sidebarService.isMobileVisible;
   isMobile = this.sidebarService.isMobile;
@@ -28,58 +32,38 @@ export class SidebarComponent {
      */
     effect(() => {
       const session = this.sessionStore.session();
-      const hasDynamicMenu = this.sessionStore.hasDynamicCompanyMenu();
-      const role = this.sessionStore.orgRole();
 
       if (!session) {
         this.menuItems.set([]);
         return;
       }
 
-      
-        const built = this.buildOrgMenu();
-        this.menuItems.set(built);
-      
+
+      const built = this.buildOrgMenu();
+      this.menuItems.set(built);
+      this.sidebarService.setCollapsed(true);
     });
   }
 
   /** ============ BUILDERS ============ */
 
   private buildOrgMenu(): MenuItem[] {
-    const isAdmin = this.sessionStore.isOrgAdmin();
-    const canOrgModule = this.sessionStore.hasOrgPrivilege('acc_mod_organizacion');
-    const canSubscription = this.sessionStore.hasOrgPrivilege('acc_mod_suscripcion');
-
     const items: MenuItem[] = [
       { label: 'Principal', isDivider: true },
       {
         label: 'MAPAS',
-        icon: 'pi pi-building',
+        icon: 'pi pi-map',
         route: '/app/mapa/home',
       },
     ];
-
+    
+   if (this.auditoriaRed()) {
     items.push({
       label: 'Auditoría',
       icon: 'pi pi-history',
       route: '/app/adm/auditoria',
     });
-
-    if (isAdmin || canOrgModule) {
-      items.push({
-        label: 'Organización',
-        icon: 'pi pi-sitemap',
-        route: '/app/org',
-      });
-    }
-
-    if (isAdmin || canSubscription) {
-      items.push({
-        label: 'Suscripción',
-        icon: 'pi pi-credit-card',
-        route: '/app/fac',
-      });
-    }
+  }
 
     return items;
   }
@@ -194,10 +178,6 @@ export class SidebarComponent {
     if (this.isMobile()) {
       this.sidebarService.closeMobileSidebar();
       return;
-    }
-
-    if (route.startsWith('/app/mapa')) {
-      this.sidebarService.setCollapsed(true);
     }
   }
 

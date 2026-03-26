@@ -147,37 +147,37 @@
     <ng-container *ngIf="contextKind() === 'node' && contextNode() as node">
       <div class="context-title">{{ node.nodo }}</div>
 
-      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'carpeta' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'carpeta' }); closeContext()">
         Crear carpeta
       </button>
-      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'zona' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'zona' }); closeContext()">
         Crear zona
       </button>
-      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'sitio' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'sitio' }); closeContext()">
         Crear sitio
       </button>
-      <button type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'nodo_fisico' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="createNodeRequested.emit({ parent: node, tipo: 'nodo_fisico' }); closeContext()">
         Crear nodo físico
       </button>
 
       <div class="context-divider"></div>
 
-      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'point' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'point' }); closeContext()">
         Dibujar punto aquí
       </button>
-      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'linestring' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'linestring' }); closeContext()">
         Dibujar línea aquí
       </button>
-      <button type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'polygon' }); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'polygon' }); closeContext()">
         Dibujar polígono aquí
       </button>
 
       <div class="context-divider"></div>
 
-      <button type="button" (click)="editNodeRequested.emit(node); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="editNodeRequested.emit(node); closeContext()">
         Editar nodo
       </button>
-      <button type="button" class="danger" (click)="deleteNodeRequested.emit(node); closeContext()">
+      <button *ngIf="editarElemento()" type="button" class="danger" (click)="deleteNodeRequested.emit(node); closeContext()">
         Eliminar nodo
       </button>
     </ng-container>
@@ -191,13 +191,13 @@
       <button type="button" (click)="centerElementoRequested.emit(el); closeContext()">
         Centrar en mapa
       </button>
-      <button type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
+      <button  *ngIf="editarElemento()" type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
         Editar datos
       </button>
-      <button type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
         Editar forma
       </button>
-      <button type="button" class="danger" (click)="deleteElementoRequested.emit(el); closeContext()">
+      <button *ngIf="editarElemento()" type="button" class="danger" (click)="deleteElementoRequested.emit(el); closeContext()">
         Eliminar
       </button>
     </ng-container>

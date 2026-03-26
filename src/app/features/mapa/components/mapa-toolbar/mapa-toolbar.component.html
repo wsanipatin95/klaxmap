@@ -12,6 +12,7 @@
     </button>
 
     <button
+      *ngIf="editarElemento()"
       type="button"
       class="tool-btn"
       [class.active]="isActive('edit-geometry') || editSessionActive"
@@ -25,6 +26,7 @@
     <span class="tool-separator" aria-hidden="true"></span>
 
     <button
+      *ngIf="editarElemento()"
       type="button"
       class="tool-btn"
       [class.active]="isActive('draw-point')"
@@ -36,6 +38,7 @@
     </button>
 
     <button
+      *ngIf="editarElemento()"
       type="button"
       class="tool-btn"
       [class.active]="isActive('draw-line')"
@@ -47,6 +50,7 @@
     </button>
 
     <button
+      *ngIf="editarElemento()"
       type="button"
       class="tool-btn"
       [class.active]="isActive('draw-polygon')"
@@ -60,6 +64,7 @@
     <span class="tool-separator" aria-hidden="true"></span>
 
     <button
+     *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Tipos de elemento"
@@ -70,6 +75,7 @@
     </button>
 
     <button
+    *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Importar KML"
@@ -80,6 +86,7 @@
     </button>
 
     <button
+    *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Exportar KML"

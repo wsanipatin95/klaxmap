@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { MapaUiStore, MapaToolMode } from '../../store/mapa-ui.store';
+import { SessionStore } from '../../../seg/store/session.store';
 
 @Component({
   selector: 'app-mapa-toolbar',
@@ -12,6 +13,7 @@ import { MapaUiStore, MapaToolMode } from '../../store/mapa-ui.store';
 })
 export class MapaToolbarComponent {
   readonly ui = inject(MapaUiStore);
+  private sessionStore = inject(SessionStore);
 
   @Input() selectedName: string | null = null;
   @Input() totalElementos = 0;
@@ -30,6 +32,14 @@ export class MapaToolbarComponent {
   @Output() drawPointModeRequested = new EventEmitter<void>();
   @Output() drawLineModeRequested = new EventEmitter<void>();
   @Output() drawPolygonModeRequested = new EventEmitter<void>();
+
+  editarTipoElemento = computed(() =>
+    this.sessionStore.hasCompanyPrivilege('etm_red_red')
+  );
+
+  editarElemento = computed(() =>
+    this.sessionStore.hasCompanyPrivilege('eem_red_red')
+  );
 
   readonly help = computed(() => {
     const mode = this.ui.toolMode();

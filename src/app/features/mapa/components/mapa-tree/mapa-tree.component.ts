@@ -7,7 +7,7 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
-  signal,
+  signal, computed, inject
 } from '@angular/core';
 import type {
   MapaElemento,
@@ -22,7 +22,7 @@ import {
   isNodeHidden,
   sortNodes,
 } from '../../utils/mapa-visibility.utils';
-
+import { SessionStore } from '../../../seg/store/session.store';
 interface TreeNodeVm {
   node: MapaNodo;
   children: TreeNodeVm[];
@@ -102,6 +102,12 @@ export class MapaTreeComponent implements OnChanges {
   readonly contextKind = signal<ContextKind>(null);
   readonly contextNode = signal<MapaNodo | null>(null);
   readonly contextElemento = signal<MapaElemento | null>(null);
+
+  private sessionStore = inject(SessionStore);
+
+  editarElemento = computed(() =>
+    this.sessionStore.hasCompanyPrivilege('eem_red_red')
+  );
 
   tree: TreeNodeVm[] = [];
 
