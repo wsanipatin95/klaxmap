@@ -9,5 +9,12 @@ export const ADM_ROUTES: Routes = [
                 (m) => m.MisEmpresasComponent
             ),
     },
+    {
+        path: 'auditoria',
+        loadComponent: () =>
+            import('./pages/auditoria-supervisor/auditoria-supervisor.component').then(
+                (m) => m.AuditoriaSupervisorComponent
+            ),
+    },
     { path: '**', redirectTo: 'panel' },
 ];

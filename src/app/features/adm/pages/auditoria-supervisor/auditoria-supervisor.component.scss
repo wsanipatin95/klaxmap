@@ -1,0 +1,166 @@
+.auditoria-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.page-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-copy h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.page-copy p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+}
+
+.page-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.filters .filter-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  background: #fff;
+}
+
+.status-strip {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.status-chip {
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-chip.info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-chip.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.table-head h3 {
+  margin: 0;
+}
+
+.table-head p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.audit-table th,
+.audit-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.audit-table thead th {
+  background: #f8fafc;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.audit-table td small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+}
+
+.empty {
+  color: #64748b;
+  padding: 1rem 0;
+}
+
+.primary-btn,
+.ghost-btn {
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: #0f172a;
+  color: #fff;
+  border: 1px solid #0f172a;
+}
+
+.ghost-btn {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}

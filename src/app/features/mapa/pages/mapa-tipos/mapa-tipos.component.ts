@@ -10,11 +10,12 @@ import type {
 } from '../../data-access/mapa.models';
 import { MapaTipoFormComponent } from '../../components/mapa-tipo-form/mapa-tipo-form.component';
 import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog/mapa-confirm-dialog.component';
+import { AuditoriaRegistroComponent } from '../../components/auditoria-registro/auditoria-registro.component';
 
 @Component({
   selector: 'app-mapa-tipos',
   standalone: true,
-  imports: [CommonModule, MapaTipoFormComponent, MapaConfirmDialogComponent],
+  imports: [CommonModule, MapaTipoFormComponent, MapaConfirmDialogComponent, AuditoriaRegistroComponent],
   templateUrl: './mapa-tipos.component.html',
   styleUrl: './mapa-tipos.component.scss',
 })

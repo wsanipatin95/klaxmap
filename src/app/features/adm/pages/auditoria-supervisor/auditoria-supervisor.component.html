@@ -1,0 +1,172 @@
+<div class="auditoria-page">
+  <header class="page-topbar">
+    <div class="page-copy">
+      <h2>Auditoría</h2>
+      <p>Vista global para supervisor</p>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="ghost-btn" (click)="limpiar()" [disabled]="loading()">
+        Limpiar
+      </button>
+      <button type="button" class="primary-btn" (click)="buscar(true)" [disabled]="loading()">
+        {{ loading() ? 'Buscando...' : 'Buscar' }}
+      </button>
+    </div>
+  </header>
+
+  <section class="filters panel">
+    <div class="filter-grid">
+      <label class="field">
+        <span>Búsqueda</span>
+        <input
+          type="text"
+          [ngModel]="filtros().q"
+          (ngModelChange)="setFiltro('q', $event)"
+          placeholder="tabla, campo, antes, después..."
+        />
+      </label>
+
+      <label class="field">
+        <span>Usuario ID</span>
+        <input
+          type="number"
+          [ngModel]="filtros().usuario"
+          (ngModelChange)="setFiltro('usuario', $event === '' ? null : +$event)"
+          placeholder="Ej. 1"
+        />
+      </label>
+
+      <label class="field">
+        <span>Tabla</span>
+        <select
+          [ngModel]="filtros().tabla"
+          (ngModelChange)="setFiltro('tabla', $event)"
+        >
+          <option *ngFor="let op of tablaOptions" [ngValue]="op.value">
+            {{ op.label }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Operación</span>
+        <select
+          [ngModel]="filtros().operacion"
+          (ngModelChange)="setFiltro('operacion', $event)"
+        >
+          <option *ngFor="let op of operacionOptions" [ngValue]="op.value">
+            {{ op.label }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>ID registro</span>
+        <input
+          type="text"
+          [ngModel]="filtros().idRegistro"
+          (ngModelChange)="setFiltro('idRegistro', $event)"
+          placeholder="Ej. 25"
+        />
+      </label>
+
+      <label class="field">
+        <span>Fecha desde</span>
+        <input
+          type="date"
+          [ngModel]="filtros().fechaDesde"
+          (ngModelChange)="setFiltro('fechaDesde', $event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Fecha hasta</span>
+        <input
+          type="date"
+          [ngModel]="filtros().fechaHasta"
+          (ngModelChange)="setFiltro('fechaHasta', $event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Tamaño página</span>
+        <select
+          [ngModel]="filtros().size"
+          (ngModelChange)="setFiltro('size', +$event)"
+        >
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="status-strip" *ngIf="loading() || error()">
+    <div class="status-chip info" *ngIf="loading()">Cargando auditoría...</div>
+    <div class="status-chip error" *ngIf="error() as err">{{ err }}</div>
+  </section>
+
+  <section class="panel panel-table">
+    <div class="table-head">
+      <div>
+        <h3>Movimientos</h3>
+        <p>{{ totalElements() }} registro(s)</p>
+      </div>
+
+      <div class="pagination" *ngIf="totalPages() > 0">
+        <button type="button" class="ghost-btn" (click)="prevPage()" [disabled]="loading() || currentPage() <= 0">
+          Anterior
+        </button>
+        <span>Página {{ currentPage() + 1 }} de {{ totalPages() }}</span>
+        <button type="button" class="ghost-btn" (click)="nextPage()" [disabled]="loading() || currentPage() + 1 >= totalPages()">
+          Siguiente
+        </button>
+      </div>
+    </div>
+
+    <div class="empty" *ngIf="!loading() && items().length === 0">
+      No hay resultados.
+    </div>
+
+    <div class="table-wrap" *ngIf="items().length > 0">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Módulo</th>
+            <th>Entidad</th>
+            <th>Registro</th>
+            <th>Operación</th>
+            <th>Campo</th>
+            <th>Antes</th>
+            <th>Después</th>
+            <th>Resumen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of items(); trackBy: trackById">
+            <td>{{ item.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+            <td>
+              <strong>{{ item.usuarioLogin || ('Usuario ' + item.usuarioId) }}</strong>
+              <small *ngIf="item.usuarioId != null">#{{ item.usuarioId }}</small>
+            </td>
+            <td>{{ item.modulo }}</td>
+            <td>
+              <strong>{{ item.entidad }}</strong>
+              <small>{{ item.tablaLabel }}</small>
+            </td>
+            <td>{{ item.idRegistro }}</td>
+            <td>{{ item.operacionLabel }}</td>
+            <td>{{ item.campoLabel }}</td>
+            <td [title]="item.valorAnterior || ''">{{ shortValue(item.valorAnterior) }}</td>
+            <td [title]="item.valorNuevo || ''">{{ shortValue(item.valorNuevo) }}</td>
+            <td>{{ item.resumenHumano }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

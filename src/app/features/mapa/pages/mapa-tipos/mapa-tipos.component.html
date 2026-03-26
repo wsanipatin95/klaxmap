@@ -124,6 +124,15 @@
         />
       </div>
     </section>
+
+    <section class="panel">
+      <app-auditoria-registro
+        [tabla]="'kxt_geo_tipo_elemento'"
+        [idRegistro]="selected()?.idGeoTipoElemento ?? null"
+        titulo="Historial del tipo"
+        subtitulo="Cambios realizados sobre el tipo seleccionado"
+      />
+    </section>
   </div>
 
   <app-mapa-confirm-dialog #confirmDialog />

@@ -1,0 +1,71 @@
+<section class="audit-card">
+  <div class="audit-head">
+    <div>
+      <h3>{{ titulo }}</h3>
+      <p>{{ subtitulo }}</p>
+    </div>
+
+    <button
+      type="button"
+      class="ghost-btn"
+      (click)="cargar()"
+      [disabled]="loading() || !tabla || idRegistro == null"
+    >
+      {{ loading() ? 'Actualizando...' : 'Refrescar' }}
+    </button>
+  </div>
+
+  <div class="status-chip info" *ngIf="loading()">Cargando historial...</div>
+  <div class="status-chip error" *ngIf="error() as err">{{ err }}</div>
+
+  <div class="empty" *ngIf="!loading() && !error() && (idRegistro == null || idRegistro === '')">
+    Selecciona un registro para ver su auditoría.
+  </div>
+
+  <div class="empty" *ngIf="!loading() && !error() && data() && data()!.historial.length === 0">
+    No hay historial para este registro.
+  </div>
+
+  <div class="timeline" *ngIf="data() as audit">
+    <article class="timeline-item" *ngFor="let grupo of audit.historial; trackBy: trackGrupo">
+      <div class="timeline-dot"></div>
+
+      <div class="timeline-body">
+        <header class="timeline-head">
+          <div>
+            <h4>{{ grupo.resumenGeneral }}</h4>
+            <p>
+              {{ grupo.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}
+              · {{ grupo.usuarioLogin || ('Usuario ' + grupo.usuarioId) }}
+              · {{ grupo.operacionLabel }}
+            </p>
+          </div>
+          <span class="badge">{{ grupo.idRegistro }}</span>
+        </header>
+
+        <div class="timeline-meta">
+          <span>{{ grupo.tablaLabel }}</span>
+          <span>{{ grupo.modulo }}</span>
+          <span>{{ grupo.entidad }}</span>
+        </div>
+
+        <div class="changes">
+          <div class="change-row" *ngFor="let cambio of grupo.cambios">
+            <div class="change-field">{{ cambio.campoLabel }}</div>
+            <div class="change-values">
+              <div class="before">
+                <strong>Antes</strong>
+                <span [title]="cambio.valorAnterior || ''">{{ shortValue(cambio.valorAnterior) }}</span>
+              </div>
+              <div class="after">
+                <strong>Después</strong>
+                <span [title]="cambio.valorNuevo || ''">{{ shortValue(cambio.valorNuevo) }}</span>
+              </div>
+            </div>
+            <div class="change-summary">{{ cambio.resumenHumano }}</div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>

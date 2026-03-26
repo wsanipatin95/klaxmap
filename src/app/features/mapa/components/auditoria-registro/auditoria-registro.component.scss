@@ -1,0 +1,167 @@
+.audit-card {
+  display: grid;
+  gap: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.audit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.audit-head h3 {
+  margin: 0;
+}
+
+.audit-head p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+}
+
+.status-chip {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-chip.info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-chip.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.empty {
+  color: #64748b;
+}
+
+.timeline {
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.85rem;
+}
+
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: #0f172a;
+}
+
+.timeline-body {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.timeline-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.timeline-head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.timeline-head p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+}
+
+.timeline-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.changes {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.change-row {
+  display: grid;
+  gap: 0.6rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+}
+
+.change-field {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.change-values {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.before,
+.after {
+  display: grid;
+  gap: 0.25rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+}
+
+.before strong,
+.after strong {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.change-summary {
+  color: #334155;
+  font-size: 0.92rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ghost-btn {
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}

@@ -4,11 +4,12 @@ import { finalize } from 'rxjs/operators';
 import { MapaNodosRepository } from '../../data-access/nodo/mapa-nodos.repository';
 import type { MapaNodo, MapaNodoSaveRequest, MapaPatchRequest, PagedResponse } from '../../data-access/mapa.models';
 import { MapaNodoFormComponent } from '../../components/mapa-nodo-form/mapa-nodo-form.component';
+import { AuditoriaRegistroComponent } from '../../components/auditoria-registro/auditoria-registro.component';
 
 @Component({
   selector: 'app-mapa-nodos',
   standalone: true,
-  imports: [CommonModule, MapaNodoFormComponent],
+  imports: [CommonModule, MapaNodoFormComponent, AuditoriaRegistroComponent],
   templateUrl: './mapa-nodos.component.html',
   styleUrl: './mapa-nodos.component.scss',
 })
@@ -30,7 +31,17 @@ export class MapaNodosComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (data) => {
-          this.nodos.set(Array.isArray(data) ? data : (data as PagedResponse<MapaNodo>).content ?? []);
+          const items = Array.isArray(data)
+            ? data
+            : (data as PagedResponse<MapaNodo>).content ?? [];
+
+          this.nodos.set(items);
+
+          const current = this.selected();
+          if (current) {
+            const updated = items.find((x) => x.idRedNodo === current.idRedNodo) ?? null;
+            this.selected.set(updated);
+          }
         },
         error: (err) => {
           console.error(err);

@@ -68,7 +68,11 @@ export class SidebarComponent {
         route: '/app/mapa/home',
       },
     ];
-
+    items.push({
+      label: 'Auditoría',
+      icon: 'pi pi-history',
+      route: '/app/adm/auditoria',
+    });
     // ADMIN: siempre ve organización/suscripción.
     // MIEMBRO: solo si tiene privilegio (acc_mod_organizacion / acc_mod_suscripcion)
     if (isAdmin || canOrgModule) {

@@ -36,6 +36,15 @@
       Eliminar
     </button>
   </section>
+
+  <section class="panel panel-history">
+    <app-auditoria-registro
+      [tabla]="'kxt_red_nodo'"
+      [idRegistro]="selected()?.idRedNodo ?? null"
+      titulo="Historial del nodo"
+      subtitulo="Quién cambió, cuándo y qué cambió"
+    />
+  </section>
 </div>
 
 <p class="error" *ngIf="error() as err">{{ err }}</p>
