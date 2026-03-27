@@ -19,7 +19,11 @@ import { ImportacionEmptyStateComponent } from '../../components/empty-state/emp
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { ImportacionConfirmService } from '../../services/importacion-confirm.service';
 import { ImportacionOfertasRepository } from '../../data-access/ofertas.repository';
-import { OfertaProveedor, OfertaProveedorDocumento } from '../../data-access/ofertas.models';
+import {
+  OfertaProveedor,
+  OfertaProveedorDocumento,
+  OfertaProveedorGuardarRequest,
+} from '../../data-access/ofertas.models';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 
 @Component({
@@ -171,22 +175,41 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
       this.notify.warn('Oferta incompleta', 'Debes ingresar moneda y al menos una línea de detalle.');
       return;
     }
-    const payload = this.normalizePayload();
+
     this.saving.set(true);
+
     const request$ = this.editingId()
-      ? this.repo.editar({ idImpOfertaProveedor: this.editingId()!, cambios: payload })
-      : this.repo.crear(payload as any);
+      ? this.repo.editar({
+        idImpOfertaProveedor: this.editingId()!,
+        cambios: this.normalizeEditarPayload(),
+      })
+      : this.repo.crear(this.normalizeGuardarPayload());
+
     request$
       .pipe(
         switchMap((res) => {
-          const id = this.editingId() ?? Number((res.data as any)?.idImpOfertaProveedor);
+          const id =
+            this.editingId() ??
+            Number((res.data as { idImpOfertaProveedor?: number } | null)?.idImpOfertaProveedor);
+
           if (!id) return of(res);
-          return this.syncDocumentos(id).pipe(switchMap(() => of(res)));
+
+          return this.syncDocumentos(id).pipe(
+            map(() => res)
+          );
         }),
-        finalize(() => this.saving.set(false)),
+        finalize(() => this.saving.set(false))
       )
       .subscribe({
-        next: (res) => { this.notify.success(this.editingId() ? 'Oferta actualizada' : 'Oferta creada', res.mensaje); this.drawerVisible.set(false); this.dirty.set(false); this.cargar(); },
+        next: (res) => {
+          this.notify.success(
+            this.editingId() ? 'Oferta actualizada' : 'Oferta creada',
+            res.mensaje
+          );
+          this.drawerVisible.set(false);
+          this.dirty.set(false);
+          this.cargar();
+        },
         error: (err) => this.notify.error('No se pudo guardar', err?.message),
       });
   }
@@ -277,5 +300,51 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
     });
     const ops = [...removals, ...upserts];
     return ops.length ? forkJoin(ops) : of([]);
+  }
+  private normalizeGuardarPayload(): OfertaProveedorGuardarRequest {
+    const raw = this.form.getRawValue();
+    return {
+      tipoOferta: raw.tipoOferta ?? 'COTIZACION',
+      idImpProveedorProspectoFk: raw.idImpProveedorProspectoFk ?? null,
+      dniAdqProveedorFk: raw.dniAdqProveedorFk ?? null,
+      numeroDocumento: raw.numeroDocumento?.trim() || null,
+      numeroVersion: raw.numeroVersion ?? 1,
+      fechaOferta: raw.fechaOferta || null,
+      fechaVigenciaDesde: raw.fechaVigenciaDesde || null,
+      fechaVigenciaHasta: raw.fechaVigenciaHasta || null,
+      idMonMonedaFk: Number(raw.idMonMonedaFk),
+      incoterm: raw.incoterm?.trim() || null,
+      lugarEntrega: raw.lugarEntrega?.trim() || null,
+      formaPago: raw.formaPago?.trim() || null,
+      tiempoEntregaDias: raw.tiempoEntregaDias ?? null,
+      vigente: !!raw.vigente,
+      bloqueadaParaSondeo: !!raw.bloqueadaParaSondeo,
+      observacion: raw.observacion?.trim() || null,
+      detalles: raw.detalles,
+      packings: raw.packings,
+      packingResumenes: raw.packingResumenes,
+    };
+  }
+
+  private normalizeEditarPayload(): Partial<OfertaProveedor> {
+    const raw = this.form.getRawValue();
+    return {
+      tipoOferta: raw.tipoOferta ?? 'COTIZACION',
+      idImpProveedorProspectoFk: raw.idImpProveedorProspectoFk ?? null,
+      dniAdqProveedorFk: raw.dniAdqProveedorFk ?? null,
+      numeroDocumento: raw.numeroDocumento?.trim() || null,
+      numeroVersion: raw.numeroVersion ?? 1,
+      fechaOferta: raw.fechaOferta || null,
+      fechaVigenciaDesde: raw.fechaVigenciaDesde || null,
+      fechaVigenciaHasta: raw.fechaVigenciaHasta || null,
+      idMonMonedaFk: Number(raw.idMonMonedaFk),
+      incoterm: raw.incoterm?.trim() || null,
+      lugarEntrega: raw.lugarEntrega?.trim() || null,
+      formaPago: raw.formaPago?.trim() || null,
+      tiempoEntregaDias: raw.tiempoEntregaDias ?? null,
+      vigente: !!raw.vigente,
+      bloqueadaParaSondeo: !!raw.bloqueadaParaSondeo,
+      observacion: raw.observacion?.trim() || null,
+    };
   }
 }

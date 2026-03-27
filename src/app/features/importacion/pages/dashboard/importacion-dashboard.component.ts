@@ -6,6 +6,22 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ImportacionPageHeaderComponent } from '../../components/page-header/page-header.component';
 
+type DashboardCardSeverity =
+  | 'success'
+  | 'info'
+  | 'warn'
+  | 'danger'
+  | 'secondary'
+  | 'contrast';
+
+type DashboardCard = {
+  title: string;
+  subtitle: string;
+  route: string;
+  icon: string;
+  severity: DashboardCardSeverity;
+};
+
 @Component({
   selector: 'app-importacion-dashboard',
   standalone: true,
@@ -14,7 +30,7 @@ import { ImportacionPageHeaderComponent } from '../../components/page-header/pag
   styleUrl: './importacion-dashboard.component.scss',
 })
 export class ImportacionDashboardComponent {
-  cards = [
+  cards: DashboardCard[] = [
     {
       title: 'Proveedores prospecto',
       subtitle: 'Alta, edición, contactos y documentos del proveedor en etapa de exploración.',

@@ -3,7 +3,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, of, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
@@ -203,24 +203,41 @@ export class ImportacionArticulosComponent implements PendingChangesAware {
       this.notify.warn('Formulario incompleto', 'Completa proveedor prospecto y nombre del artículo.');
       return;
     }
+
     const payload = this.normalizePayload();
     this.saving.set(true);
+
     const request$ = this.editingId()
-      ? this.repo.editar({ idImpProveedorArticuloProspecto: this.editingId()!, cambios: payload })
+      ? this.repo.editar({
+        idImpProveedorArticuloProspecto: this.editingId()!,
+        cambios: payload,
+      })
       : this.repo.crear(payload);
 
     request$
       .pipe(
         switchMap((res) => {
-          const id = this.editingId() ?? Number((res.data as any)?.idImpProveedorArticuloProspecto);
-          if (!id) return of(res);
-          return this.syncDependientes(id).pipe(switchMap(() => this.runPostActions(id).pipe(switchMap(() => of(res)))));
+          const id =
+            this.editingId() ??
+            Number((res.data as { idImpProveedorArticuloProspecto?: number } | null)?.idImpProveedorArticuloProspecto);
+
+          if (!id) {
+            return of(res);
+          }
+
+          return this.syncDependientes(id).pipe(
+            switchMap(() => this.runPostActions(id)),
+            map(() => res)
+          );
         }),
-        finalize(() => this.saving.set(false)),
+        finalize(() => this.saving.set(false))
       )
       .subscribe({
         next: (res) => {
-          this.notify.success(this.editingId() ? 'Artículo actualizado' : 'Artículo creado', res.mensaje);
+          this.notify.success(
+            this.editingId() ? 'Artículo actualizado' : 'Artículo creado',
+            res.mensaje
+          );
           this.drawerVisible.set(false);
           this.dirty.set(false);
           this.cargar();
@@ -261,7 +278,7 @@ export class ImportacionArticulosComponent implements PendingChangesAware {
     return {
       idImpProveedorProspectoFk: Number(raw.idImpProveedorProspectoFk),
       codigoArticuloProveedor: raw.codigoArticuloProveedor?.trim() || null,
-      nombreArticuloProveedor: raw.nombreArticuloProveedor?.trim(),
+      nombreArticuloProveedor: String(raw.nombreArticuloProveedor ?? '').trim(),
       descripcionArticuloProveedor: raw.descripcionArticuloProveedor?.trim() || null,
       idActInventarioFk: raw.idActInventarioFk ?? null,
       idActInventarioUnidadFk: raw.idActInventarioUnidadFk ?? null,
@@ -277,7 +294,7 @@ export class ImportacionArticulosComponent implements PendingChangesAware {
       tamano: raw.tamano?.trim() || null,
       precioReferencial: raw.precioReferencial ?? null,
       idMonMonedaFk: raw.idMonMonedaFk ?? null,
-      estadoProspecto: raw.estadoProspecto || 'LEVANTADO',
+      estadoProspecto: raw.estadoProspecto ?? 'LEVANTADO',
       clasificacionConfirmada: !!raw.clasificacionConfirmada,
       idImpCodigoArancelarioFk: raw.idImpCodigoArancelarioFk ?? null,
       observacion: raw.observacion?.trim() || null,

@@ -258,26 +258,26 @@ export class ImportacionProveedoresComponent implements PendingChangesAware {
     this.dirty.set(true);
   }
 
-  private normalizePayload() {
-    const raw = this.form.getRawValue();
-    return {
-      nombreProveedor: raw.nombreProveedor?.trim(),
-      nombreComercial: raw.nombreComercial?.trim() || null,
-      identificacion: raw.identificacion?.trim() || null,
-      idCiuPaisFk: raw.idCiuPaisFk ?? null,
-      ciudad: raw.ciudad?.trim() || null,
-      direccion: raw.direccion?.trim() || null,
-      sitioWeb: raw.sitioWeb?.trim() || null,
-      correoPrincipal: raw.correoPrincipal?.trim() || null,
-      telefonoPrincipal: raw.telefonoPrincipal?.trim() || null,
-      whatsapp: raw.whatsapp?.trim() || null,
-      condicionesGenerales: raw.condicionesGenerales?.trim() || null,
-      estadoProspecto: raw.estadoProspecto || 'BORRADOR',
-      dniAdqProveedorFk: raw.dniAdqProveedorFk ?? null,
-      bloqueado: !!raw.bloqueado,
-      observacion: raw.observacion?.trim() || null,
-    };
-  }
+private normalizePayload() {
+  const raw = this.form.getRawValue();
+  return {
+    nombreProveedor: String(raw.nombreProveedor ?? '').trim(),
+    nombreComercial: raw.nombreComercial?.trim() || null,
+    identificacion: raw.identificacion?.trim() || null,
+    idCiuPaisFk: raw.idCiuPaisFk ?? null,
+    ciudad: raw.ciudad?.trim() || null,
+    direccion: raw.direccion?.trim() || null,
+    sitioWeb: raw.sitioWeb?.trim() || null,
+    correoPrincipal: raw.correoPrincipal?.trim() || null,
+    telefonoPrincipal: raw.telefonoPrincipal?.trim() || null,
+    whatsapp: raw.whatsapp?.trim() || null,
+    condicionesGenerales: raw.condicionesGenerales?.trim() || null,
+    estadoProspecto: raw.estadoProspecto ?? 'BORRADOR',
+    dniAdqProveedorFk: raw.dniAdqProveedorFk ?? null,
+    bloqueado: !!raw.bloqueado,
+    observacion: raw.observacion?.trim() || null,
+  };
+}
 
   private syncDependientes(idImpProveedorProspectoFk: number) {
     const contactoOps = this.buildContactoOps(idImpProveedorProspectoFk);

@@ -20,7 +20,11 @@ import { ImportacionEmptyStateComponent } from '../../components/empty-state/emp
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { ImportacionConfirmService } from '../../services/importacion-confirm.service';
 import { ImportacionSolicitudesRepository } from '../../data-access/solicitudes.repository';
-import { SolicitudGeneral, WorkflowValidacionCierre } from '../../data-access/solicitudes.models';
+import {
+  SolicitudGeneral,
+  SolicitudGeneralGuardarRequest,
+  WorkflowValidacionCierre,
+} from '../../data-access/solicitudes.models';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 
 @Component({
@@ -182,15 +186,30 @@ export class ImportacionSolicitudesComponent implements PendingChangesAware {
       this.notify.warn('Solicitud incompleta', 'Completa cabecera y al menos un detalle.');
       return;
     }
-    const payload = this.form.getRawValue();
+
     this.saving.set(true);
+
     const request$ = this.editingId()
-      ? this.repo.editar({ idImpSolicitudGeneral: this.editingId()!, cambios: payload })
-      : this.repo.crear(payload as any);
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: (res) => { this.notify.success(this.editingId() ? 'Solicitud actualizada' : 'Solicitud creada', res.mensaje); this.drawerVisible.set(false); this.dirty.set(false); this.cargar(); },
-      error: (err) => this.notify.error('No se pudo guardar', err?.message),
-    });
+      ? this.repo.editar({
+        idImpSolicitudGeneral: this.editingId()!,
+        cambios: this.normalizeEditarPayload(),
+      })
+      : this.repo.crear(this.normalizeGuardarPayload());
+
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (res) => {
+          this.notify.success(
+            this.editingId() ? 'Solicitud actualizada' : 'Solicitud creada',
+            res.mensaje
+          );
+          this.drawerVisible.set(false);
+          this.dirty.set(false);
+          this.cargar();
+        },
+        error: (err) => this.notify.error('No se pudo guardar', err?.message),
+      });
   }
 
   addDetalle() {
@@ -200,7 +219,7 @@ export class ImportacionSolicitudesComponent implements PendingChangesAware {
 
   cargarValidacion(id: number) {
     this.repo.validarCierre(id).subscribe({ next: (dto) => this.validacion.set(dto), error: (err) => this.notify.error('No se pudo validar cierre', err?.message) });
-    this.repo.resumen(id).subscribe({ next: (dto) => this.resumenRaw.set(dto), error: () => {} });
+    this.repo.resumen(id).subscribe({ next: (dto) => this.resumenRaw.set(dto), error: () => { } });
   }
 
   agregarOferta() {
@@ -246,5 +265,46 @@ export class ImportacionSolicitudesComponent implements PendingChangesAware {
       next: (res) => { this.notify.success('Versión creada', res.mensaje); this.cargar(); this.cargarValidacion(solicitud.idImpSolicitudGeneral!); },
       error: (err) => this.notify.error('No se pudo crear versión', err?.message),
     });
+  }
+  private normalizeGuardarPayload(): SolicitudGeneralGuardarRequest {
+    const raw = this.form.getRawValue();
+
+    return {
+      codigoSolicitud: String(raw.codigoSolicitud ?? '').trim(),
+      nombreSolicitud: String(raw.nombreSolicitud ?? '').trim(),
+      descripcion: raw.descripcion?.trim() || null,
+      versionSolicitud: raw.versionSolicitud ?? 1,
+      idImpSolicitudGeneralOrigenFk: raw.idImpSolicitudGeneralOrigenFk ?? null,
+      fechaSolicitud: raw.fechaSolicitud || null,
+      estadoSolicitud: raw.estadoSolicitud ?? 'BORRADOR',
+      observacion: raw.observacion?.trim() || null,
+      cerrada: !!raw.cerrada,
+      detalles: (raw.detalles ?? []).map((d: any) => ({
+        descripcionRequerida: String(d.descripcionRequerida ?? '').trim(),
+        cantidadRequerida: Number(d.cantidadRequerida ?? 0),
+        idActInventarioUnidadFk: String(d.idActInventarioUnidadFk ?? 'UN').trim(),
+        idActInventarioFk: d.idActInventarioFk ?? null,
+        colorRequerido: d.colorRequerido?.trim() || null,
+        tamanoRequerido: d.tamanoRequerido?.trim() || null,
+        especificacionTecnica: d.especificacionTecnica?.trim() || null,
+        observacion: d.observacion?.trim() || null,
+      })),
+    };
+  }
+
+  private normalizeEditarPayload(): Partial<SolicitudGeneral> {
+    const raw = this.form.getRawValue();
+
+    return {
+      codigoSolicitud: String(raw.codigoSolicitud ?? '').trim(),
+      nombreSolicitud: String(raw.nombreSolicitud ?? '').trim(),
+      descripcion: raw.descripcion?.trim() || null,
+      versionSolicitud: raw.versionSolicitud ?? 1,
+      idImpSolicitudGeneralOrigenFk: raw.idImpSolicitudGeneralOrigenFk ?? null,
+      fechaSolicitud: raw.fechaSolicitud || null,
+      estadoSolicitud: raw.estadoSolicitud ?? 'BORRADOR',
+      observacion: raw.observacion?.trim() || null,
+      cerrada: !!raw.cerrada,
+    };
   }
 }
