@@ -1,0 +1,29 @@
+.impPageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0.3rem 0 0;
+    color: #475569;
+    font-size: 0.875rem;
+    max-width: 60rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+}

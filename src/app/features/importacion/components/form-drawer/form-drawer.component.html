@@ -1,0 +1,29 @@
+<p-drawer
+  [visible]="visible"
+  [modal]="true"
+  [dismissible]="false"
+  [showCloseIcon]="false"
+  position="right"
+  [styleClass]="sizeClass"
+  (visibleChange)="visibleChange.emit($event)">
+  <ng-template pTemplate="header">
+    <div class="drawerHeader">
+      <div>
+        <h3>{{ title }}</h3>
+        <p>{{ subtitle }}</p>
+      </div>
+      <span class="dirtyChip" *ngIf="dirty">Cambios pendientes</span>
+    </div>
+  </ng-template>
+
+  <div class="drawerBody">
+    <ng-content></ng-content>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="drawerFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar" (click)="requestClose.emit()" [disabled]="saving"></button>
+      <button pButton type="button" label="Guardar" icon="pi pi-save" (click)="requestSave.emit()" [loading]="saving"></button>
+    </div>
+  </ng-template>
+</p-drawer>

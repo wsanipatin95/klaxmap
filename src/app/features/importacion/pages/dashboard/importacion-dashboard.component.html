@@ -1,0 +1,26 @@
+<app-importacion-page-header
+  title="Importación · Módulo IMP"
+  subtitle="Preimportación y consolidación de ofertas. Desde aquí se recorre el flujo completo: proveedor prospecto, artículo prospecto, oferta, solicitud, selección y ficha final.">
+</app-importacion-page-header>
+
+<div class="summaryBanner">
+  <div>
+    <strong>Orden recomendado de trabajo:</strong>
+    proveedor prospecto → artículo prospecto → oferta proveedor → solicitud general → workflow → ficha final.
+  </div>
+  <p-tag severity="contrast" value="Flujo oficial"></p-tag>
+</div>
+
+<div class="gridCards">
+  <p-card *ngFor="let card of cards">
+    <ng-template pTemplate="header">
+      <div class="cardHead">
+        <i [class]="card.icon"></i>
+        <p-tag [severity]="card.severity" value="Operativo"></p-tag>
+      </div>
+    </ng-template>
+    <h3>{{ card.title }}</h3>
+    <p>{{ card.subtitle }}</p>
+    <button pButton type="button" label="Abrir" icon="pi pi-arrow-right" [routerLink]="card.route"></button>
+  </p-card>
+</div>

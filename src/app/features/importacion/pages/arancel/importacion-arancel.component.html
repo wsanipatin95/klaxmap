@@ -1,0 +1,69 @@
+<app-importacion-page-header
+  title="Reglas arancelarias y requisitos"
+  subtitle="Gestión operativa de reglas regulatorias y requisitos por código arancelario.">
+</app-importacion-page-header>
+
+<div class="layoutSplit">
+  <div>
+    <div class="toolbarCard">
+      <div class="searchBox">
+        <i class="pi pi-search"></i>
+        <input pInputText [(ngModel)]="q" (keyup.enter)="cargar()" placeholder="Buscar por régimen, estado o base legal" />
+      </div>
+      <div class="toolbarActions">
+        <button pButton type="button" label="Buscar" icon="pi pi-search" severity="secondary" (click)="cargar()"></button>
+      </div>
+    </div>
+
+    <div class="contentCard" *ngIf="items().length; else emptyTpl">
+      <p-table [value]="items()" [loading]="loading()" responsiveLayout="scroll">
+        <ng-template pTemplate="header"><tr><th>Regla</th><th>Estado</th><th></th></tr></ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr [class.rowSelected]="seleccionada()?.idImpReglaArancelaria === row.idImpReglaArancelaria">
+            <td><div class="primaryCell">Código {{ row.idImpCodigoArancelarioFk }}</div><div class="secondaryCell">{{ row.regimenAduanero || '—' }} · prioridad {{ row.prioridad || 1 }}</div></td>
+            <td><p-tag [value]="row.estadoRegla || 'BORRADOR'" severity="info"></p-tag></td>
+            <td><button pButton type="button" icon="pi pi-eye" [text]="true" (click)="seleccionar(row)"></button></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <div class="stackedRows">
+    <p-card>
+      <ng-template pTemplate="title">Nueva regla</ng-template>
+      <form class="impForm" [formGroup]="form">
+        <div class="grid cols-2">
+          <label><span>ID código arancelario *</span><input pInputText formControlName="idImpCodigoArancelarioFk" /></label>
+          <label><span>Régimen</span><input pInputText formControlName="regimenAduanero" /></label>
+          <label><span>Acuerdo comercial</span><input pInputText formControlName="acuerdoComercial" /></label>
+          <label><span>Prioridad</span><input pInputText formControlName="prioridad" /></label>
+          <label><span>Ad valorem</span><input pInputText formControlName="adValoremPct" /></label>
+          <label><span>IVA</span><input pInputText formControlName="ivaPct" /></label>
+          <label><span>FODINFA</span><input pInputText formControlName="fodinfaPct" /></label>
+          <label><span>ICE</span><input pInputText formControlName="icePct" /></label>
+          <label><span>Estado</span><input pInputText formControlName="estadoRegla" /></label>
+        </div>
+        <label><span>Base legal</span><textarea pTextarea rows="2" formControlName="baseLegal"></textarea></label>
+        <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        <button pButton type="button" label="Guardar regla" icon="pi pi-save" (click)="guardar()"></button>
+      </form>
+    </p-card>
+
+    <p-card *ngIf="seleccionada() as regla">
+      <ng-template pTemplate="title">Requisitos de la regla</ng-template>
+      <ng-template pTemplate="subtitle">Regla #{{ regla.idImpReglaArancelaria }}</ng-template>
+      <div *ngIf="requisitos().length; else noReq" class="stackedRows">
+        <div class="miniCard" *ngFor="let req of requisitos()">
+          <div class="primaryCell">{{ req.nombreRequisito }}</div>
+          <div class="secondaryCell">{{ req.tipoRequisito || 'SIN TIPO' }} · {{ req.entidadControl || '—' }}</div>
+        </div>
+      </div>
+      <ng-template #noReq><div class="secondaryCell">La regla seleccionada no tiene requisitos activos.</div></ng-template>
+    </p-card>
+  </div>
+</div>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state title="No hay reglas arancelarias" subtitle="Crea una regla y luego adjunta requisitos arancelarios por autoridad o documento."></app-importacion-empty-state>
+</ng-template>

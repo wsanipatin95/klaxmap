@@ -1,0 +1,51 @@
+.summaryBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #fff, #fdf4f9);
+  border: 1px solid #f3c4e3;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  color: #334155;
+}
+
+.gridCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem 0;
+
+  i {
+    font-size: 1.25rem;
+    color: #7B0061;
+  }
+}
+
+:host ::ng-deep .p-card {
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
+}
+
+:host ::ng-deep .p-card-body {
+  padding-top: 0.5rem;
+}
+
+h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+p {
+  margin: 0 0 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}

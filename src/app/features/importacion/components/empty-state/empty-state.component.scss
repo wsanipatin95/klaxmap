@@ -1,0 +1,28 @@
+.impEmptyState {
+  min-height: 15rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 2rem 1.25rem;
+  background: white;
+
+  i {
+    font-size: 1.75rem;
+    color: #7B0061;
+    margin-bottom: 0.75rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0.35rem 0 0;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+}

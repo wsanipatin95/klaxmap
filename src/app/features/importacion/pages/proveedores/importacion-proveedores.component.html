@@ -1,0 +1,194 @@
+<p-confirmDialog></p-confirmDialog>
+
+<app-importacion-page-header
+  title="Proveedores prospecto"
+  subtitle="Registro comercial preliminar, contactos y documentos del proveedor que aún no se formaliza totalmente en ERP.">
+  <div header-actions>
+    <button pButton type="button" label="Nuevo proveedor" icon="pi pi-plus" (click)="nuevo()"></button>
+  </div>
+</app-importacion-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText [(ngModel)]="q" (keyup.enter)="cargar()" placeholder="Buscar por nombre, comercial, correo o identificación" />
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" label="Buscar" icon="pi pi-search" severity="secondary" (click)="cargar()"></button>
+    <button pButton type="button" label="Refrescar" icon="pi pi-refresh" [text]="true" (click)="cargar()"></button>
+  </div>
+</div>
+
+<div class="contentCard" *ngIf="items().length; else emptyTpl">
+  <p-table [value]="items()" [loading]="loading()" dataKey="idImpProveedorProspecto" responsiveLayout="scroll">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Proveedor</th>
+        <th>Contacto principal</th>
+        <th>Estado</th>
+        <th>Bloqueo</th>
+        <th style="width: 11rem; text-align: right">Acciones</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>
+          <div class="primaryCell">{{ row.nombreProveedor }}</div>
+          <div class="secondaryCell">{{ row.nombreComercial || 'Sin nombre comercial' }}</div>
+        </td>
+        <td>
+          <div class="primaryCell">{{ row.correoPrincipal || '—' }}</div>
+          <div class="secondaryCell">{{ row.telefonoPrincipal || '—' }}</div>
+        </td>
+        <td><p-tag [value]="row.estadoProspecto || 'BORRADOR'" severity="info"></p-tag></td>
+        <td><p-tag [value]="row.bloqueado ? 'Bloqueado' : 'Activo'" [severity]="row.bloqueado ? 'danger' : 'success'"></p-tag></td>
+        <td>
+          <div class="rowActions">
+            <button pButton type="button" icon="pi pi-pencil" [text]="true" (click)="editar(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" [text]="true" severity="danger" (click)="eliminar(row)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state
+    title="Aún no hay proveedores prospecto"
+    subtitle="Empieza registrando el proveedor con información comercial mínima y luego completa contactos y documentos.">
+  </app-importacion-empty-state>
+</ng-template>
+
+<app-importacion-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="Proveedor prospecto"
+  subtitle="Formulario compacto y operativo. Guarda primero la cabecera y luego se sincronizan contactos y documentos."
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()"
+  (visibleChange)="drawerVisible.set($event)">
+
+  <form class="impForm" [formGroup]="form">
+    <section>
+      <h4>Cabecera</h4>
+      <div class="grid cols-2">
+        <label>
+          <span>Nombre proveedor *</span>
+          <input pInputText formControlName="nombreProveedor" />
+        </label>
+        <label>
+          <span>Nombre comercial</span>
+          <input pInputText formControlName="nombreComercial" />
+        </label>
+        <label>
+          <span>Identificación</span>
+          <input pInputText formControlName="identificacion" />
+        </label>
+        <label>
+          <span>ID país</span>
+          <input pInputText formControlName="idCiuPaisFk" />
+        </label>
+        <label>
+          <span>Ciudad</span>
+          <input pInputText formControlName="ciudad" />
+        </label>
+        <label>
+          <span>Dirección</span>
+          <input pInputText formControlName="direccion" />
+        </label>
+        <label>
+          <span>Sitio web</span>
+          <input pInputText formControlName="sitioWeb" />
+        </label>
+        <label>
+          <span>Correo principal</span>
+          <input pInputText formControlName="correoPrincipal" />
+        </label>
+        <label>
+          <span>Teléfono principal</span>
+          <input pInputText formControlName="telefonoPrincipal" />
+        </label>
+        <label>
+          <span>Whatsapp</span>
+          <input pInputText formControlName="whatsapp" />
+        </label>
+        <label>
+          <span>Estado</span>
+          <input pInputText formControlName="estadoProspecto" />
+        </label>
+        <label>
+          <span>DNI proveedor ERP</span>
+          <input pInputText formControlName="dniAdqProveedorFk" />
+        </label>
+      </div>
+      <label class="toggleLine">
+        <span>Bloqueado</span>
+        <p-toggleswitch formControlName="bloqueado"></p-toggleswitch>
+      </label>
+      <label>
+        <span>Condiciones generales</span>
+        <textarea pTextarea rows="3" formControlName="condicionesGenerales"></textarea>
+      </label>
+      <label>
+        <span>Observación</span>
+        <textarea pTextarea rows="3" formControlName="observacion"></textarea>
+      </label>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead">
+        <h4>Contactos</h4>
+        <button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addContacto()"></button>
+      </div>
+      <div formArrayName="contactos" class="stackedRows">
+        <div class="miniCard" *ngFor="let fg of contactos.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead">
+            <strong>Contacto {{ i + 1 }}</strong>
+            <button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeContacto(i)"></button>
+          </div>
+          <div class="grid cols-2">
+            <label><span>Nombre *</span><input pInputText formControlName="nombreContacto" /></label>
+            <label><span>Cargo</span><input pInputText formControlName="cargo" /></label>
+            <label><span>Correo</span><input pInputText formControlName="correo" /></label>
+            <label><span>Teléfono</span><input pInputText formControlName="telefono" /></label>
+            <label><span>Whatsapp</span><input pInputText formControlName="whatsapp" /></label>
+            <label><span>Idioma</span><input pInputText formControlName="idioma" /></label>
+          </div>
+          <label class="toggleLine"><span>Principal</span><p-toggleswitch formControlName="principal"></p-toggleswitch></label>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead">
+        <h4>Documentos</h4>
+        <button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addDocumento()"></button>
+      </div>
+      <div formArrayName="documentos" class="stackedRows">
+        <div class="miniCard" *ngFor="let fg of documentos.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead">
+            <strong>Documento {{ i + 1 }}</strong>
+            <button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeDocumento(i)"></button>
+          </div>
+          <div class="grid cols-2">
+            <label><span>Tipo *</span><input pInputText formControlName="tipoDocumento" /></label>
+            <label><span>Nombre archivo</span><input pInputText formControlName="nombreArchivo" /></label>
+            <label><span>URL archivo</span><input pInputText formControlName="urlArchivo" /></label>
+            <label><span>Número documento</span><input pInputText formControlName="numeroDocumento" /></label>
+            <label><span>Fecha documento</span><input pInputText formControlName="fechaDocumento" placeholder="YYYY-MM-DD" /></label>
+            <label><span>Versión</span><input pInputText formControlName="versionDocumento" /></label>
+          </div>
+          <label class="toggleLine"><span>Vigente</span><p-toggleswitch formControlName="vigente"></p-toggleswitch></label>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+  </form>
+</app-importacion-form-drawer>

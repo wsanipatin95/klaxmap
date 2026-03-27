@@ -1,0 +1,182 @@
+<p-confirmDialog></p-confirmDialog>
+
+<app-importacion-page-header
+  title="Ofertas proveedor"
+  subtitle="Cotizaciones y proformas versionadas. La línea de detalle y el packing resumen se construyen desde este formulario compacto.">
+  <div header-actions>
+    <button pButton type="button" label="Nueva oferta" icon="pi pi-plus" (click)="nuevo()"></button>
+  </div>
+</app-importacion-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText [(ngModel)]="q" (keyup.enter)="cargar()" placeholder="Buscar por documento, tipo de oferta o incoterm" />
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" label="Buscar" icon="pi pi-search" severity="secondary" (click)="cargar()"></button>
+    <button pButton type="button" label="Refrescar" icon="pi pi-refresh" [text]="true" (click)="cargar()"></button>
+  </div>
+</div>
+
+<div class="contentCard" *ngIf="items().length; else emptyTpl">
+  <p-table [value]="items()" [loading]="loading()" dataKey="idImpOfertaProveedor" responsiveLayout="scroll">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Oferta</th>
+        <th>Proveedor</th>
+        <th>Estado</th>
+        <th>Vigencia</th>
+        <th style="width: 11rem; text-align: right">Acciones</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>
+          <div class="primaryCell">{{ row.tipoOferta }} · {{ row.numeroDocumento || 'Sin número' }}</div>
+          <div class="secondaryCell">Versión {{ row.numeroVersion || row.versionOferta || 1 }} · Moneda {{ row.idMonMonedaFk }}</div>
+        </td>
+        <td>
+          <div class="primaryCell">Prospecto {{ row.idImpProveedorProspectoFk || '—' }}</div>
+          <div class="secondaryCell">ERP {{ row.dniAdqProveedorFk || '—' }}</div>
+        </td>
+        <td><p-tag [value]="row.estadoOferta || 'VIGENTE'" [severity]="row.bloqueadaParaSondeo ? 'danger' : 'success'"></p-tag></td>
+        <td>
+          <div class="primaryCell">{{ row.fechaVigenciaDesde || '—' }}</div>
+          <div class="secondaryCell">hasta {{ row.fechaVigenciaHasta || '—' }}</div>
+        </td>
+        <td>
+          <div class="rowActions">
+            <button pButton type="button" icon="pi pi-pencil" [text]="true" (click)="editar(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" [text]="true" severity="danger" (click)="eliminar(row)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state
+    title="Aún no hay ofertas proveedor"
+    subtitle="Registra una cotización o proforma con al menos una línea y su resumen de packing.">
+  </app-importacion-empty-state>
+</ng-template>
+
+<app-importacion-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="Oferta proveedor"
+  subtitle="Cabecera comercial, líneas, packing y documentos de respaldo."
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()"
+  (visibleChange)="drawerVisible.set($event)">
+
+  <form class="impForm" [formGroup]="form">
+    <section>
+      <h4>Cabecera</h4>
+      <div class="grid cols-3">
+        <label><span>Tipo oferta *</span><input pInputText formControlName="tipoOferta" /></label>
+        <label><span>ID prospecto</span><input pInputText formControlName="idImpProveedorProspectoFk" /></label>
+        <label><span>DNI proveedor ERP</span><input pInputText formControlName="dniAdqProveedorFk" /></label>
+        <label><span>Número documento</span><input pInputText formControlName="numeroDocumento" /></label>
+        <label><span>Versión</span><input pInputText formControlName="numeroVersion" /></label>
+        <label><span>ID moneda *</span><input pInputText formControlName="idMonMonedaFk" /></label>
+        <label><span>Fecha oferta</span><input pInputText formControlName="fechaOferta" placeholder="YYYY-MM-DD" /></label>
+        <label><span>Vigencia desde</span><input pInputText formControlName="fechaVigenciaDesde" placeholder="YYYY-MM-DD" /></label>
+        <label><span>Vigencia hasta</span><input pInputText formControlName="fechaVigenciaHasta" placeholder="YYYY-MM-DD" /></label>
+        <label><span>Incoterm</span><input pInputText formControlName="incoterm" /></label>
+        <label><span>Lugar entrega</span><input pInputText formControlName="lugarEntrega" /></label>
+        <label><span>Forma pago</span><input pInputText formControlName="formaPago" /></label>
+        <label><span>Días entrega</span><input pInputText formControlName="tiempoEntregaDias" /></label>
+      </div>
+      <div class="grid cols-2">
+        <label class="toggleLine"><span>Vigente</span><p-toggleswitch formControlName="vigente"></p-toggleswitch></label>
+        <label class="toggleLine"><span>Bloqueada para sondeo</span><p-toggleswitch formControlName="bloqueadaParaSondeo"></p-toggleswitch></label>
+      </div>
+      <label><span>Observación</span><textarea pTextarea rows="3" formControlName="observacion"></textarea></label>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead"><h4>Detalles</h4><button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addDetalle()"></button></div>
+      <div class="stackedRows" formArrayName="detalles">
+        <div class="miniCard" *ngFor="let fg of detalles.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Detalle {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeDetalle(i)"></button></div>
+          <div class="grid cols-3">
+            <label><span>ID artículo prospecto</span><input pInputText formControlName="idImpArticuloProspectoFk" /></label>
+            <label><span>ID inventario</span><input pInputText formControlName="idActInventarioFk" /></label>
+            <label><span>Código proveedor</span><input pInputText formControlName="codigoArticuloProveedor" /></label>
+            <label><span>Descripción *</span><input pInputText formControlName="descripcionItem" /></label>
+            <label><span>Cantidad ofertada *</span><input pInputText formControlName="cantidadOfertada" /></label>
+            <label><span>Unidad *</span><input pInputText formControlName="idActInventarioUnidadFk" /></label>
+            <label><span>Precio unitario</span><input pInputText formControlName="precioUnitario" /></label>
+            <label><span>Descuento %</span><input pInputText formControlName="descuentoPct" /></label>
+            <label><span>Subtotal</span><input pInputText formControlName="subtotal" /></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead"><h4>Packing por detalle</h4><button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addPacking()"></button></div>
+      <div class="stackedRows" formArrayName="packings">
+        <div class="miniCard" *ngFor="let fg of packings.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Packing {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removePacking(i)"></button></div>
+          <div class="grid cols-3">
+            <label><span>Detalle index</span><input pInputText formControlName="detalleIndex" /></label>
+            <label><span>Tipo empaque</span><input pInputText formControlName="tipoEmpaque" /></label>
+            <label><span>Cantidad por empaque</span><input pInputText formControlName="cantidadPorEmpaque" /></label>
+            <label><span>Largo</span><input pInputText formControlName="largo" /></label>
+            <label><span>Ancho</span><input pInputText formControlName="ancho" /></label>
+            <label><span>Alto</span><input pInputText formControlName="alto" /></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead"><h4>Packing resumen</h4><button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addPackingResumen()"></button></div>
+      <div class="stackedRows" formArrayName="packingResumenes">
+        <div class="miniCard" *ngFor="let fg of packingResumenes.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Resumen {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removePackingResumen(i)"></button></div>
+          <div class="grid cols-3">
+            <label><span>Orden</span><input pInputText formControlName="ordenResumen" /></label>
+            <label><span>Tipo bulto</span><input pInputText formControlName="tipoBulto" /></label>
+            <label><span>Cantidad bultos</span><input pInputText formControlName="cantidadBultos" /></label>
+            <label><span>Largo cm</span><input pInputText formControlName="largoCm" /></label>
+            <label><span>Ancho cm</span><input pInputText formControlName="anchoCm" /></label>
+            <label><span>Alto cm</span><input pInputText formControlName="altoCm" /></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead"><h4>Documentos</h4><button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addDocumento()"></button></div>
+      <div class="stackedRows" formArrayName="documentos">
+        <div class="miniCard" *ngFor="let fg of documentos.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Documento {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeDocumento(i)"></button></div>
+          <div class="grid cols-2">
+            <label><span>Tipo *</span><input pInputText formControlName="tipoDocumento" /></label>
+            <label><span>Nombre archivo</span><input pInputText formControlName="nombreArchivo" /></label>
+            <label><span>URL</span><input pInputText formControlName="urlArchivo" /></label>
+            <label><span>Número documento</span><input pInputText formControlName="numeroDocumento" /></label>
+            <label><span>Fecha</span><input pInputText formControlName="fechaDocumento" placeholder="YYYY-MM-DD" /></label>
+            <label><span>Versión</span><input pInputText formControlName="versionDocumento" /></label>
+          </div>
+          <label class="toggleLine"><span>Vigente</span><p-toggleswitch formControlName="vigente"></p-toggleswitch></label>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+  </form>
+</app-importacion-form-drawer>

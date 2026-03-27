@@ -1,0 +1,40 @@
+<app-importacion-page-header title="Fichas proveedor final" subtitle="Consulta resumida de fichas generadas por el workflow de cierre de solicitudes."></app-importacion-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-hashtag"></i>
+    <input pInputText [(ngModel)]="idBusqueda" placeholder="ID ficha proveedor final" />
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" label="Consultar" icon="pi pi-search" (click)="buscar()" [loading]="loading()"></button>
+  </div>
+</div>
+
+<p-card *ngIf="ficha() as actual; else emptyTpl">
+  <ng-template pTemplate="title">Ficha #{{ actual.idImpFichaProveedorFinal }}</ng-template>
+  <ng-template pTemplate="subtitle">Solicitud {{ actual.idImpSolicitudGeneralFk }}</ng-template>
+
+  <div class="miniMetricGrid">
+    <div class="metric"><span>Proveedor ERP</span><strong>{{ actual.dniAdqProveedorFk || '—' }}</strong></div>
+    <div class="metric"><span>Prospecto</span><strong>{{ actual.idImpProveedorProspectoFk || '—' }}</strong></div>
+    <div class="metric"><span>Estado</span><strong>{{ actual.estadoFicha || '—' }}</strong></div>
+    <div class="metric"><span>Subtotal</span><strong>{{ actual.subtotalEstimado || 0 }}</strong></div>
+  </div>
+
+  <p-table [value]="actual.detalles" responsiveLayout="scroll">
+    <ng-template pTemplate="header"><tr><th>Artículo</th><th>Cantidad</th><th>Unidad</th><th>Precio</th><th>Subtotal</th></tr></ng-template>
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>{{ row.descripcionItem || row.idActInventarioFk }}</td>
+        <td>{{ row.cantidadFinal }}</td>
+        <td>{{ row.idActInventarioUnidadFk }}</td>
+        <td>{{ row.precioUnitarioFinal }}</td>
+        <td>{{ row.subtotalFinal }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state title="Sin ficha cargada" subtitle="Consulta una ficha final con su ID para revisar el agrupamiento final por proveedor."></app-importacion-empty-state>
+</ng-template>

@@ -1,0 +1,163 @@
+<p-confirmDialog></p-confirmDialog>
+
+<app-importacion-page-header
+  title="Artículos prospecto"
+  subtitle="Levantamiento técnico del artículo ofrecido por proveedor, con metadatos logísticos, visuales y de clasificación/homologación.">
+  <div header-actions>
+    <button pButton type="button" label="Nuevo artículo" icon="pi pi-plus" (click)="nuevo()"></button>
+  </div>
+</app-importacion-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText [(ngModel)]="q" (keyup.enter)="cargar()" placeholder="Buscar por código, nombre, marca, modelo o color" />
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" label="Buscar" icon="pi pi-search" severity="secondary" (click)="cargar()"></button>
+    <button pButton type="button" label="Refrescar" icon="pi pi-refresh" [text]="true" (click)="cargar()"></button>
+  </div>
+</div>
+
+<div class="contentCard" *ngIf="items().length; else emptyTpl">
+  <p-table [value]="items()" [loading]="loading()" dataKey="idImpProveedorArticuloProspecto" responsiveLayout="scroll">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Artículo</th>
+        <th>Proveedor</th>
+        <th>Homologación</th>
+        <th>Clasificación</th>
+        <th style="width: 11rem; text-align: right">Acciones</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>
+          <div class="primaryCell">{{ row.nombreArticuloProveedor }}</div>
+          <div class="secondaryCell">{{ row.codigoArticuloProveedor || 'Sin código' }} · {{ row.marca || 'Sin marca' }}</div>
+        </td>
+        <td>
+          <div class="primaryCell">Prospecto #{{ row.idImpProveedorProspectoFk }}</div>
+          <div class="secondaryCell">ERP: {{ row.idActInventarioFk || 'No homologado' }}</div>
+        </td>
+        <td><p-tag [severity]="row.idActInventarioFk ? 'success' : 'warn'" [value]="row.idActInventarioFk ? 'Vinculado ERP' : 'Pendiente'"></p-tag></td>
+        <td><p-tag [severity]="row.clasificacionConfirmada ? 'success' : 'info'" [value]="row.clasificacionConfirmada ? 'Confirmada' : 'Pendiente'"></p-tag></td>
+        <td>
+          <div class="rowActions">
+            <button pButton type="button" icon="pi pi-pencil" [text]="true" (click)="editar(row)"></button>
+            <button pButton type="button" icon="pi pi-trash" [text]="true" severity="danger" (click)="eliminar(row)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state
+    title="Aún no hay artículos prospecto"
+    subtitle="Registra primero el proveedor y luego levanta el artículo con atributos, imágenes y datos logísticos.">
+  </app-importacion-empty-state>
+</ng-template>
+
+<app-importacion-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="Artículo prospecto"
+  subtitle="Formulario compacto. Después de guardar se pueden disparar homologación y clasificación iniciales."
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()"
+  (visibleChange)="drawerVisible.set($event)">
+
+  <form class="impForm" [formGroup]="form">
+    <section>
+      <h4>General</h4>
+      <div class="grid cols-3">
+        <label><span>ID proveedor prospecto *</span><input pInputText formControlName="idImpProveedorProspectoFk" /></label>
+        <label><span>Código proveedor</span><input pInputText formControlName="codigoArticuloProveedor" /></label>
+        <label><span>Nombre artículo *</span><input pInputText formControlName="nombreArticuloProveedor" /></label>
+        <label><span>ID inventario ERP</span><input pInputText formControlName="idActInventarioFk" /></label>
+        <label><span>ID unidad ERP</span><input pInputText formControlName="idActInventarioUnidadFk" /></label>
+        <label><span>Estado</span><input pInputText formControlName="estadoProspecto" /></label>
+        <label><span>Marca</span><input pInputText formControlName="marca" /></label>
+        <label><span>Modelo</span><input pInputText formControlName="modelo" /></label>
+        <label><span>Color</span><input pInputText formControlName="color" /></label>
+        <label><span>Tamaño</span><input pInputText formControlName="tamano" /></label>
+        <label><span>ID país origen</span><input pInputText formControlName="idCiuPaisOrigenFk" /></label>
+        <label><span>ID código arancelario</span><input pInputText formControlName="idImpCodigoArancelarioFk" /></label>
+      </div>
+      <label><span>Descripción proveedor</span><textarea pTextarea rows="3" formControlName="descripcionArticuloProveedor"></textarea></label>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <h4>Logística y precio</h4>
+      <div class="grid cols-3">
+        <label><span>Factor conversión</span><input pInputText formControlName="factorConversion" /></label>
+        <label><span>Cantidad por empaque</span><input pInputText formControlName="cantidadPorEmpaque" /></label>
+        <label><span>Tipo empaque</span><input pInputText formControlName="tipoEmpaque" /></label>
+        <label><span>Peso unitario</span><input pInputText formControlName="pesoUnitario" /></label>
+        <label><span>CBM unitario</span><input pInputText formControlName="cbmUnitario" /></label>
+        <label><span>Precio referencial</span><input pInputText formControlName="precioReferencial" /></label>
+        <label><span>ID moneda</span><input pInputText formControlName="idMonMonedaFk" /></label>
+      </div>
+      <label class="toggleLine"><span>Clasificación confirmada</span><p-toggleswitch formControlName="clasificacionConfirmada"></p-toggleswitch></label>
+      <label><span>Observación</span><textarea pTextarea rows="3" formControlName="observacion"></textarea></label>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead">
+        <h4>Imágenes</h4>
+        <button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addImagen()"></button>
+      </div>
+      <div class="stackedRows" formArrayName="imagenes">
+        <div class="miniCard" *ngFor="let fg of imagenes.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Imagen {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeImagen(i)"></button></div>
+          <div class="grid cols-2">
+            <label><span>Nombre archivo</span><input pInputText formControlName="nombreArchivo" /></label>
+            <label><span>URL</span><input pInputText formControlName="urlArchivo" /></label>
+            <label><span>Mime type</span><input pInputText formControlName="mimeType" /></label>
+            <label><span>Orden</span><input pInputText formControlName="ordenVisual" /></label>
+          </div>
+          <label class="toggleLine"><span>Imagen principal</span><p-toggleswitch formControlName="imagenPrincipal"></p-toggleswitch></label>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead">
+        <h4>Atributos técnicos</h4>
+        <button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addAtributo()"></button>
+      </div>
+      <div class="stackedRows" formArrayName="atributos">
+        <div class="miniCard" *ngFor="let fg of atributos.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Atributo {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeAtributo(i)"></button></div>
+          <div class="grid cols-3">
+            <label><span>Nombre *</span><input pInputText formControlName="nombreAtributo" /></label>
+            <label><span>Valor</span><input pInputText formControlName="valorAtributo" /></label>
+            <label><span>Unidad</span><input pInputText formControlName="unidadAtributo" /></label>
+            <label><span>Orden</span><input pInputText formControlName="ordenVisual" /></label>
+          </div>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <h4>Acciones posteriores al guardado</h4>
+      <div class="grid cols-2">
+        <label class="toggleLine"><span>Crear homologación inicial</span><p-toggleswitch formControlName="homologarDespuesGuardar"></p-toggleswitch></label>
+        <label class="toggleLine"><span>Crear clasificación inicial</span><p-toggleswitch formControlName="clasificarDespuesGuardar"></p-toggleswitch></label>
+      </div>
+    </section>
+  </form>
+</app-importacion-form-drawer>

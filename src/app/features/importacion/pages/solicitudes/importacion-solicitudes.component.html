@@ -1,0 +1,185 @@
+<p-confirmDialog></p-confirmDialog>
+
+<app-importacion-page-header
+  title="Solicitudes generales"
+  subtitle="Consolidación de ofertas, selección por detalle y control operativo de cierre, reapertura y versionado.">
+  <div header-actions>
+    <button pButton type="button" label="Nueva solicitud" icon="pi pi-plus" (click)="nuevo()"></button>
+  </div>
+</app-importacion-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText [(ngModel)]="q" (keyup.enter)="cargar()" placeholder="Buscar por código o nombre de solicitud" />
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" label="Buscar" icon="pi pi-search" severity="secondary" (click)="cargar()"></button>
+    <button pButton type="button" label="Refrescar" icon="pi pi-refresh" [text]="true" (click)="cargar()"></button>
+  </div>
+</div>
+
+<div class="layoutSplit">
+  <div class="contentCard" *ngIf="items().length; else emptyTpl">
+    <p-table [value]="items()" [loading]="loading()" dataKey="idImpSolicitudGeneral" responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Solicitud</th>
+          <th>Versión</th>
+          <th>Estado</th>
+          <th style="width: 12rem; text-align: right">Acciones</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr [class.rowSelected]="seleccionada()?.idImpSolicitudGeneral === row.idImpSolicitudGeneral">
+          <td>
+            <div class="primaryCell">{{ row.codigoSolicitud }}</div>
+            <div class="secondaryCell">{{ row.nombreSolicitud }}</div>
+          </td>
+          <td><p-tag [value]="'V' + (row.versionSolicitud || 1)" severity="contrast"></p-tag></td>
+          <td><p-tag [value]="row.estadoSolicitud || 'BORRADOR'" [severity]="row.cerrada ? 'danger' : 'info'"></p-tag></td>
+          <td>
+            <div class="rowActions">
+              <button pButton type="button" icon="pi pi-eye" [text]="true" (click)="seleccionar(row)"></button>
+              <button pButton type="button" icon="pi pi-pencil" [text]="true" (click)="editar(row)"></button>
+              <button pButton type="button" icon="pi pi-trash" [text]="true" severity="danger" (click)="eliminar(row)"></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <div class="workflowPane" *ngIf="seleccionada() as actual">
+    <p-card>
+      <ng-template pTemplate="title">Workflow · {{ actual.codigoSolicitud }}</ng-template>
+      <ng-template pTemplate="subtitle">{{ actual.nombreSolicitud }}</ng-template>
+
+      <div class="stackedRows">
+        <div class="miniMetricGrid" *ngIf="validacion() as v">
+          <div class="metric"><span>Detalles</span><strong>{{ v.totalDetalles }}</strong></div>
+          <div class="metric"><span>Ofertas</span><strong>{{ v.totalOfertasRelacionadas }}</strong></div>
+          <div class="metric"><span>Selecciones</span><strong>{{ v.totalSelecciones }}</strong></div>
+          <div class="metric"><span>Puede cerrar</span><strong>{{ v.puedeCerrar ? 'Sí' : 'No' }}</strong></div>
+        </div>
+
+        <div class="workflowBlock">
+          <h4>Agregar oferta</h4>
+          <div class="inlineAction" [formGroup]="workflowAgregarOferta">
+            <input pInputText formControlName="idImpOfertaProveedorFk" placeholder="ID oferta proveedor" />
+            <button pButton type="button" label="Agregar" icon="pi pi-plus" (click)="agregarOferta()"></button>
+          </div>
+        </div>
+
+        <div class="workflowBlock">
+          <h4>Selección por detalle</h4>
+          <div class="grid cols-2" [formGroup]="workflowSeleccion">
+            <label><span>ID detalle solicitud</span><input pInputText formControlName="idImpSolicitudGeneralDetalleFk" /></label>
+            <label><span>ID oferta</span><input pInputText formControlName="idImpOfertaProveedorFk" /></label>
+            <label><span>ID detalle oferta</span><input pInputText formControlName="idImpOfertaProveedorDetalleFk" /></label>
+            <label><span>Cantidad final</span><input pInputText formControlName="cantidadFinal" /></label>
+            <label><span>Unidad final</span><input pInputText formControlName="idActInventarioUnidadFk" /></label>
+            <label><span>Precio final</span><input pInputText formControlName="precioUnitarioFinal" /></label>
+          </div>
+          <button pButton type="button" label="Guardar selección" icon="pi pi-check" (click)="seleccionarDetalle()"></button>
+        </div>
+
+        <div class="workflowBlock">
+          <h4>Acciones de cierre</h4>
+          <div class="grid cols-2" [formGroup]="workflowCerrar">
+            <label class="cols-full"><span>Observación cierre</span><textarea pTextarea rows="2" formControlName="observacionCierre"></textarea></label>
+          </div>
+          <button pButton type="button" label="Cerrar solicitud" icon="pi pi-lock" severity="danger" (click)="cerrarSolicitud()"></button>
+        </div>
+
+        <div class="workflowBlock">
+          <h4>Reapertura</h4>
+          <div class="grid cols-2" [formGroup]="workflowReabrir">
+            <label class="cols-full"><span>Motivo reapertura</span><textarea pTextarea rows="2" formControlName="motivoReapertura"></textarea></label>
+          </div>
+          <button pButton type="button" label="Reabrir" icon="pi pi-unlock" severity="warning" (click)="reabrirSolicitud()"></button>
+        </div>
+
+        <div class="workflowBlock">
+          <h4>Crear nueva versión</h4>
+          <div class="grid cols-2" [formGroup]="workflowCrearVersion">
+            <label class="toggleLine"><span>Copiar relaciones oferta</span><p-toggleswitch formControlName="copiarRelacionesOferta"></p-toggleswitch></label>
+            <label class="toggleLine"><span>Solo ofertas seleccionadas</span><p-toggleswitch formControlName="copiarSoloOfertasSeleccionadas"></p-toggleswitch></label>
+            <label class="toggleLine"><span>Copiar selecciones base</span><p-toggleswitch formControlName="copiarSeleccionesBase"></p-toggleswitch></label>
+            <label class="toggleLine"><span>Liberar ofertas bloqueadas</span><p-toggleswitch formControlName="liberarOfertasSeleccionadas"></p-toggleswitch></label>
+          </div>
+          <label [formGroup]="workflowCrearVersion"><span>Observación nueva versión</span><textarea pTextarea rows="2" formControlName="observacionNuevaVersion"></textarea></label>
+          <button pButton type="button" label="Crear versión" icon="pi pi-copy" severity="secondary" (click)="crearVersion()"></button>
+        </div>
+
+        <div class="workflowBlock" *ngIf="validacion() as v">
+          <h4>Inconsistencias</h4>
+          <div class="issueList" *ngIf="v.inconsistencias.length; else noIssues">
+            <div class="issue" *ngFor="let issue of v.inconsistencias">
+              <p-tag [severity]="issue.severidad === 'ERROR' ? 'danger' : 'warning'" [value]="issue.severidad"></p-tag>
+              <span>{{ issue.mensaje }}</span>
+            </div>
+          </div>
+          <ng-template #noIssues>
+            <div class="secondaryCell">Sin inconsistencias registradas.</div>
+          </ng-template>
+        </div>
+      </div>
+    </p-card>
+  </div>
+</div>
+
+<ng-template #emptyTpl>
+  <app-importacion-empty-state
+    title="Aún no hay solicitudes generales"
+    subtitle="Consolida varias ofertas dentro de una misma solicitud para comparar y seleccionar por detalle.">
+  </app-importacion-empty-state>
+</ng-template>
+
+<app-importacion-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="Solicitud general"
+  subtitle="Cabecera de sondeo y detalle requerido por artículo, color, tamaño y especificación."
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()"
+  (visibleChange)="drawerVisible.set($event)">
+
+  <form class="impForm" [formGroup]="form">
+    <section>
+      <h4>Cabecera</h4>
+      <div class="grid cols-2">
+        <label><span>Código *</span><input pInputText formControlName="codigoSolicitud" /></label>
+        <label><span>Nombre *</span><input pInputText formControlName="nombreSolicitud" /></label>
+        <label><span>Versión</span><input pInputText formControlName="versionSolicitud" /></label>
+        <label><span>Fecha solicitud</span><input pInputText formControlName="fechaSolicitud" placeholder="YYYY-MM-DD" /></label>
+        <label><span>Estado</span><input pInputText formControlName="estadoSolicitud" /></label>
+        <label class="toggleLine"><span>Cerrada</span><p-toggleswitch formControlName="cerrada"></p-toggleswitch></label>
+      </div>
+      <label><span>Descripción</span><textarea pTextarea rows="3" formControlName="descripcion"></textarea></label>
+      <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+    </section>
+
+    <p-divider></p-divider>
+
+    <section>
+      <div class="sectionHead"><h4>Detalles requeridos</h4><button pButton type="button" icon="pi pi-plus" label="Agregar" size="small" [text]="true" (click)="addDetalle()"></button></div>
+      <div class="stackedRows" formArrayName="detalles">
+        <div class="miniCard" *ngFor="let fg of detalles.controls; let i = index" [formGroupName]="i">
+          <div class="miniHead"><strong>Detalle {{ i + 1 }}</strong><button pButton type="button" icon="pi pi-times" severity="danger" [text]="true" size="small" (click)="removeDetalle(i)"></button></div>
+          <div class="grid cols-2">
+            <label><span>Descripción *</span><input pInputText formControlName="descripcionRequerida" /></label>
+            <label><span>Cantidad *</span><input pInputText formControlName="cantidadRequerida" /></label>
+            <label><span>Unidad *</span><input pInputText formControlName="idActInventarioUnidadFk" /></label>
+            <label><span>ID inventario</span><input pInputText formControlName="idActInventarioFk" /></label>
+            <label><span>Color requerido</span><input pInputText formControlName="colorRequerido" /></label>
+            <label><span>Tamaño requerido</span><input pInputText formControlName="tamanoRequerido" /></label>
+          </div>
+          <label><span>Especificación técnica</span><textarea pTextarea rows="2" formControlName="especificacionTecnica"></textarea></label>
+          <label><span>Observación</span><textarea pTextarea rows="2" formControlName="observacion"></textarea></label>
+        </div>
+      </div>
+    </section>
+  </form>
+</app-importacion-form-drawer>

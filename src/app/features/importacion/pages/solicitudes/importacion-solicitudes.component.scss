@@ -1,0 +1,57 @@
+@use '../shared-page';
+
+.layoutSplit {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 1rem;
+}
+
+.workflowPane {
+  display: grid;
+  gap: 1rem;
+}
+
+.workflowBlock {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.4rem;
+}
+
+.inlineAction {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.miniMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+  background: #f8fafc;
+  span { display: block; font-size: 0.75rem; color: #64748b; }
+  strong { display: block; margin-top: 0.25rem; font-size: 1rem; }
+}
+
+.issueList { display: grid; gap: 0.6rem; }
+.issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.8rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  span { font-size: 0.82rem; color: #7c2d12; }
+}
+
+.rowSelected td { background: #fdf4f9 !important; }
+
+@media (max-width: 1100px) {
+  .layoutSplit { grid-template-columns: 1fr; }
+}
