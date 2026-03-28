@@ -7,7 +7,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosWorkbenchShellComponent } from '../../components/workbench-shell/workbench-shell.component';
 import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
@@ -32,7 +31,6 @@ import { PendingChangesAware } from '../../guards/pending-changes.guard';
     InputTextModule,
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
-    VehiculosWorkbenchShellComponent,
     VehiculosFormDrawerComponent,
     VehiculosEmptyStateComponent,
   ],
