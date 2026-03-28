@@ -62,7 +62,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
     nombreItem: ['', Validators.required],
     categoria: ['GENERAL'],
     orden: [1],
-    obligatorio: [1],
+    obligatorio: [true],
   });
 
   assignForm = this.fb.group({
@@ -118,7 +118,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
 
   nuevo() {
     this.editingId.set(null);
-    this.form.reset({ nombreItem: '', categoria: 'GENERAL', orden: (this.checks().length || 0) + 1, obligatorio: 1 });
+    this.form.reset({ nombreItem: '', categoria: 'GENERAL', orden: (this.checks().length || 0) + 1, obligatorio: true });
     this.drawerVisible.set(true);
     this.dirty.set(false);
   }
@@ -129,7 +129,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
       nombreItem: item.nombreItem || '',
       categoria: item.categoria || 'GENERAL',
       orden: item.orden ?? 1,
-      obligatorio: item.obligatorio ?? 1,
+      obligatorio: this.toBoolean(item.obligatorio),
     });
     this.drawerVisible.set(true);
     this.dirty.set(false);
@@ -157,7 +157,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
       nombreItem: this.form.value.nombreItem?.trim() || '',
       categoria: this.form.value.categoria?.trim() || null,
       orden: Number(this.form.value.orden || 1),
-      obligatorio: Number(this.form.value.obligatorio || 0),
+      obligatorio: !!this.form.value.obligatorio,
     };
     this.saving.set(true);
     const request$ = this.editingId()
@@ -248,5 +248,16 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
   disponiblesParaAsignar() {
     const assignedIds = new Set(this.asignados().map((x) => x.idVehVehiculoCheckListFk));
     return this.checks().filter((x) => !assignedIds.has(x.idVehVehiculoCheckList));
+  }
+
+  esObligatorio(value: unknown) {
+    return this.toBoolean(value);
+  }
+
+  private toBoolean(value: unknown) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value === 1;
+    if (typeof value === 'string') return ['1', 'true', 'si', 'sí'].includes(value.toLowerCase());
+    return false;
   }
 }

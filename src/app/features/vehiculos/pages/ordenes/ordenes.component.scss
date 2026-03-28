@@ -12,3 +12,80 @@
 .tabBar {
   margin-top: 0.25rem;
 }
+
+.photoList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.photoCard {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.fotoThumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.fotoThumb--empty {
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.photoBody {
+  min-width: 0;
+}
+
+.uploadPreview {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  padding: 0.85rem;
+}
+
+.previewImage {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.toggleItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  cursor: pointer;
+
+  input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #7b0061;
+  }
+
+  span {
+    color: #334155;
+  }
+}

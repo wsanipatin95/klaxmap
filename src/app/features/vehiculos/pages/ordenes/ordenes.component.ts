@@ -16,7 +16,6 @@ import { OrdenResumenPanelComponent } from '../../components/orden-resumen-panel
 import { VehiculoVistaCanvasComponent } from '../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
-  CliVehiculo,
   VehOrdenTrabajo,
   VehOrdenTrabajoGuardarRequest,
   VehOrdenTrabajoTrabajo,
@@ -98,6 +97,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   dirty = signal(false);
   childDirty = signal(false);
   editingOrdenId = signal<number | null>(null);
+  fotoBase64 = signal<string | null>(null);
+  fotoPreview = signal<string | null>(null);
 
   form = this.fb.group({
     dni: [null as number | null, Validators.required],
@@ -148,9 +149,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     descripcion: ['', Validators.required],
     severidad: ['MEDIA'],
     estadoHallazgo: ['REPORTADO'],
-    requiereCambio: [1],
+    requiereCambio: [true],
     motivoCambio: [''],
-    aprobadoCliente: [0],
+    aprobadoCliente: [false],
     fechaAprobacion: [''],
     observaciones: [''],
     atributosJson: ['{}'],
@@ -180,7 +181,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   fotoForm = this.fb.group({
     etapa: ['ANTES'],
     descripcion: [''],
-    principal: [0],
+    principal: [false],
   });
 
   constructor() {
@@ -248,8 +249,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           });
           this.repo.listarVistas({ idVehTipoVehiculoFk: vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => {
-              this.vistas.set(r.items ?? []);
-              this.selectedVista.set((r.items ?? [])[0] ?? null);
+              const items = r.items ?? [];
+              this.vistas.set(items);
+              const currentVista = this.selectedVista();
+              const selectedVista = currentVista
+                ? items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ?? null
+                : (items[0] ?? null);
+              this.selectedVista.set(selectedVista);
             },
           });
         } else {
@@ -438,10 +444,14 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
     if (mode === 'checklist') this.checklistForm.reset({ idVehVehiculoCheckListVehiculoFk: null, estadoCheckList: 'PENDIENTE', observaciones: '' });
     if (mode === 'trabajo') this.trabajoForm.reset({ tipoTrabajo: 'DIAGNOSTICO', descripcionInicial: '', descripcionRealizada: '', resultado: '', estadoTrabajo: 'PENDIENTE', fechaInicio: '', fechaFin: '', motivo: '', observaciones: '' });
-    if (mode === 'hallazgo') this.hallazgoForm.reset({ idVehOrdenTrabajoTrabajoFk: null, tipoHallazgo: 'RECEPCION', categoria: 'GENERAL', descripcion: '', severidad: 'MEDIA', estadoHallazgo: 'REPORTADO', requiereCambio: 1, motivoCambio: '', aprobadoCliente: 0, fechaAprobacion: '', observaciones: '', atributosJson: '{}' });
+    if (mode === 'hallazgo') this.hallazgoForm.reset({ idVehOrdenTrabajoTrabajoFk: null, tipoHallazgo: 'RECEPCION', categoria: 'GENERAL', descripcion: '', severidad: 'MEDIA', estadoHallazgo: 'REPORTADO', requiereCambio: true, motivoCambio: '', aprobadoCliente: false, fechaAprobacion: '', observaciones: '', atributosJson: '{}' });
     if (mode === 'repuesto') this.repuestoForm.reset({ art: null, cantidad: 1, precioUnitario: 0, motivoCambio: '', detalleInstalacion: '', serieAnterior: '', serieNueva: '', observaciones: '' });
     if (mode === 'autorizacion') this.autorizacionForm.reset({ tipoAutorizacion: 'ADICIONAL', referenciaTabla: '', referenciaId: null, descripcion: '', estadoAutorizacion: 'PENDIENTE', fechaRespuesta: '', observaciones: '' });
-    if (mode === 'foto') this.fotoForm.reset({ etapa: 'ANTES', descripcion: '', principal: 0 });
+    if (mode === 'foto') {
+      this.fotoForm.reset({ etapa: 'ANTES', descripcion: '', principal: false });
+      this.fotoBase64.set(null);
+      this.fotoPreview.set(null);
+    }
   }
 
   cerrarChildDrawer = async () => {
@@ -510,9 +520,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         descripcion: this.hallazgoForm.value.descripcion?.trim() || '',
         severidad: this.hallazgoForm.value.severidad || null,
         estadoHallazgo: this.hallazgoForm.value.estadoHallazgo || null,
-        requiereCambio: Number(this.hallazgoForm.value.requiereCambio || 0),
+        requiereCambio: !!this.hallazgoForm.value.requiereCambio,
         motivoCambio: this.hallazgoForm.value.motivoCambio?.trim() || null,
-        aprobadoCliente: Number(this.hallazgoForm.value.aprobadoCliente || 0),
+        aprobadoCliente: !!this.hallazgoForm.value.aprobadoCliente,
         fechaAprobacion: this.toTimestamp(this.hallazgoForm.value.fechaAprobacion),
         observaciones: this.hallazgoForm.value.observaciones?.trim() || null,
         atributos: this.parseJson(this.hallazgoForm.value.atributosJson),
@@ -561,12 +571,17 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.notify.warn('Selecciona un hallazgo', 'La foto se registra sobre un hallazgo concreto.');
         return;
       }
+      if (!this.fotoBase64()) {
+        this.notify.warn('Archivo requerido', 'Selecciona una imagen para registrar la evidencia.');
+        return;
+      }
 
       const payload: VehOrdenTrabajoHallazgoFotoGuardarRequest = {
         idVehOrdenTrabajoHallazgoFk: hallazgo.idVehOrdenTrabajoHallazgo,
         etapa: this.fotoForm.value.etapa || null,
+        foto: this.fotoBase64() || null,
         descripcion: this.fotoForm.value.descripcion?.trim() || null,
-        principal: Number(this.fotoForm.value.principal || 0),
+        principal: !!this.fotoForm.value.principal,
       };
 
       request$ = this.repo.crearHallazgoFoto(payload);
@@ -619,8 +634,62 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     });
   }
 
+  onFotoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.notify.warn('Archivo inválido', 'Selecciona una imagen válida para la evidencia del hallazgo.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      this.fotoBase64.set(base64 || '');
+      this.fotoPreview.set(dataUrl || null);
+      this.childDirty.set(true);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  limpiarFotoSeleccionada() {
+    this.fotoBase64.set('');
+    this.fotoPreview.set(null);
+    this.childDirty.set(true);
+  }
+
   nombreChecklistRelacionado(idRel?: number | null) {
     return this.checklistOpciones().find((x) => x.idVehVehiculoCheckListVehiculo === idRel)?.idVehVehiculoCheckListFk || idRel || '-';
+  }
+
+  resolveBinarySrc(binary?: string | null) {
+    if (!binary) return null;
+    const value = String(binary).trim();
+    if (!value) return null;
+    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:')) {
+      return value;
+    }
+    return `data:${this.guessMimeType(value)};base64,${value}`;
+  }
+
+  esVerdadero(value: unknown) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value === 1;
+    if (typeof value === 'string') return ['1', 'true', 'si', 'sí'].includes(value.toLowerCase());
+    return false;
+  }
+
+  private guessMimeType(base64: string) {
+    if (base64.startsWith('/9j/')) return 'image/jpeg';
+    if (base64.startsWith('iVBOR')) return 'image/png';
+    if (base64.startsWith('R0lGOD')) return 'image/gif';
+    if (base64.startsWith('UklGR')) return 'image/webp';
+    if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
+    return 'image/png';
   }
 
   private parseJson(value?: string | null) {

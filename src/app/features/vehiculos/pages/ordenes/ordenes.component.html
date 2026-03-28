@@ -152,14 +152,23 @@
             <h4>Fotos / evidencias</h4>
             <span class="secondaryCell">{{ fotos().length }} registros</span>
           </div>
-          <div class="jiraLikeList" *ngIf="fotos().length; else noFotos">
-            <article class="jiraLikeRow compact" *ngFor="let foto of fotos()">
-              <div class="rowHeader">
-                <div>
-                  <div class="primaryCell">{{ foto.etapa || 'ETAPA' }}</div>
-                  <div class="secondaryCell">{{ foto.descripcion || 'Sin descripción' }}</div>
+          <div class="photoList" *ngIf="fotos().length; else noFotos">
+            <article class="photoCard" *ngFor="let foto of fotos()">
+              <ng-container *ngIf="resolveBinarySrc((foto.foto || foto.urlArchivo) ?? null) as fotoSrc; else noThumb">
+                <img class="fotoThumb" [src]="fotoSrc" [alt]="foto.descripcion || 'Foto hallazgo'">
+              </ng-container>
+              <ng-template #noThumb>
+                <div class="fotoThumb fotoThumb--empty">Sin imagen</div>
+              </ng-template>
+
+              <div class="photoBody">
+                <div class="rowHeader">
+                  <div>
+                    <div class="primaryCell">{{ foto.etapa || 'ETAPA' }}</div>
+                    <div class="secondaryCell">{{ foto.descripcion || 'Sin descripción' }}</div>
+                  </div>
+                  <p-tag [value]="esVerdadero(foto.principal) ? 'Principal' : 'Secundaria'" severity="secondary"></p-tag>
                 </div>
-                <p-tag [value]="foto.principal ? 'Principal' : 'Secundaria'" severity="secondary"></p-tag>
               </div>
             </article>
           </div>
@@ -235,7 +244,7 @@
 <ng-template #noRepuestos><app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos" subtitle="Agrega partes o consumibles relacionados a la orden."></app-vehiculos-empty-state></ng-template>
 <ng-template #noAutorizaciones><app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones" subtitle="Registra aprobaciones del cliente para cambios adicionales."></app-vehiculos-empty-state></ng-template>
 <ng-template #noFacturas><app-vehiculos-empty-state icon="pi pi-dollar" title="Sin facturas vinculadas" subtitle="Cuando se facture desde el flujo, aparecerán aquí las relaciones con la OT."></app-vehiculos-empty-state></ng-template>
-<ng-template #noFotos><app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias del hallazgo o usa el módulo de archivos si luego extiendes este flujo."></app-vehiculos-empty-state></ng-template>
+<ng-template #noFotos><app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias reales del hallazgo antes, durante o después del trabajo."></app-vehiculos-empty-state></ng-template>
 
 <app-vehiculos-form-drawer
   [visible]="drawerVisible()"
@@ -319,12 +328,18 @@
         <label><span>Categoría</span><input pInputText formControlName="categoria"></label>
         <label><span>Severidad</span><input pInputText formControlName="severidad"></label>
         <label><span>Estado</span><input pInputText formControlName="estadoHallazgo"></label>
-        <label><span>Requiere cambio (1/0)</span><input pInputText type="number" formControlName="requiereCambio"></label>
+        <label class="toggleItem">
+          <input type="checkbox" formControlName="requiereCambio">
+          <span>Requiere cambio</span>
+        </label>
       </div>
       <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
       <label><span>Motivo cambio</span><textarea pTextarea rows="3" formControlName="motivoCambio"></textarea></label>
       <div class="grid cols-2">
-        <label><span>Aprobado cliente (1/0)</span><input pInputText type="number" formControlName="aprobadoCliente"></label>
+        <label class="toggleItem">
+          <input type="checkbox" formControlName="aprobadoCliente">
+          <span>Aprobado por cliente</span>
+        </label>
         <label><span>Fecha aprobación</span><input type="date" formControlName="fechaAprobacion"></label>
       </div>
       <label><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
@@ -361,7 +376,15 @@
     <form class="vehForm" [formGroup]="fotoForm" *ngSwitchCase="'foto'">
       <label><span>Etapa</span><input pInputText formControlName="etapa"></label>
       <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
-      <label><span>Principal (1/0)</span><input pInputText type="number" formControlName="principal"></label>
+      <label><span>Archivo de evidencia</span><input type="file" accept="image/*" (change)="onFotoSelected($event)"></label>
+      <div class="uploadPreview" *ngIf="fotoPreview() as previewSrc">
+        <img class="previewImage" [src]="previewSrc" alt="Vista previa evidencia">
+        <button pButton type="button" size="small" severity="secondary" icon="pi pi-times" label="Quitar imagen" (click)="limpiarFotoSeleccionada()"></button>
+      </div>
+      <label class="toggleItem">
+        <input type="checkbox" formControlName="principal">
+        <span>Foto principal</span>
+      </label>
     </form>
   </div>
 </app-vehiculos-form-drawer>

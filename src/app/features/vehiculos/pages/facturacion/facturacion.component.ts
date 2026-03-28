@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Observable, forkJoin, finalize } from 'rxjs';
+import { Observable, finalize, forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -9,7 +9,6 @@ import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosWorkbenchShellComponent } from '../../components/workbench-shell/workbench-shell.component';
 import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
@@ -103,6 +102,11 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     idCntFormaPagoFk: [null as number | null],
     idBanDocBancoFk: [null as number | null],
     traCash: [''],
+    idBanBancoFk: [null as number | null],
+    idBanBancoSubFk: [null as number | null],
+    idTaxTarjetaDiferidoFk: [null as number | null],
+    idBanTarjetaFk: [null as number | null],
+    referenciaDatafast: [''],
     crearCajaSiNoExiste: [true],
     contabilizar: [true],
     idCntPlanFormaPagoFk: [null as number | null],
@@ -130,11 +134,24 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     idsVehOrdenTrabajoRepuesto: [''],
     observacionFactura: [''],
     tipoFacturacion: ['PARCIAL'],
+    dni: [null as number | null],
+    cen: [null as number | null],
     credito: [false],
     pagoInicial: [0],
     cuotas: [1],
     fechaEmisionIso: [''],
+    fechaPrimerVencimientoIso: [''],
+    idTaxCompAutFk: [1],
+    usarPrecioRepuesto: [true],
     idCntFormaPagoFk: [null as number | null],
+    idCntPlanFormaPagoFk: [null as number | null],
+    idBanDocBancoFk: [null as number | null],
+    idBanBancoFk: [null as number | null],
+    idBanBancoSubFk: [null as number | null],
+    idTaxTarjetaDiferidoFk: [null as number | null],
+    idBanTarjetaFk: [null as number | null],
+    referenciaDatafast: [''],
+    traCash: [''],
     crearRecibo: [true],
     contabilizarFactura: [true],
     contabilizarCobro: [true],
@@ -195,11 +212,99 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     this.drawerVisible.set(true);
     this.dirty.set(false);
 
-    if (mode === 'factura') this.facturaForm.reset({ idVehOrdenTrabajoFk: null, idsVehOrdenTrabajoRepuesto: '', tipoFacturacion: 'PARCIAL', observacion: '', dni: null, cen: null, idAdmPtoemi: null, credito: false, entrada: 0, cuotas: 1, fechaPrimerVencimiento: '', idTaxCompAutFk: 1, usarPrecioRepuesto: true });
-    if (mode === 'cobro') this.cobroForm.reset({ idFacVenta: this.selectedFactura()?.idFacVenta ?? null, valor: 0, fecha: '', cen: this.selectedFactura()?.cen ?? null, idAdmPtoemi: null, idFacCaja: null, concepto: '', idCntFormaPagoFk: null, idBanDocBancoFk: null, traCash: '', crearCajaSiNoExiste: true, contabilizar: true, idCntPlanFormaPagoFk: null, idCntTipoFk: 20 });
-    if (mode === 'caja') this.cajaForm.reset({ idAdmPtoemi: null, cen: null, saldoCaja: 0, comentario: 'Caja creada desde frontend vehicular.', estadoInicial: 'p' });
-    if (mode === 'contabilizar') this.contabilizarForm.reset({ idFacVenta: this.selectedFactura()?.idFacVenta ?? null, idCntTipoFk: 20, fechaContable: '', concepto: 'Factura vehicular' });
-    if (mode === 'workflow') this.workflowForm.reset({ idVehOrdenTrabajoFk: null, idAdmPtoemiFk: null, idsVehOrdenTrabajoRepuesto: '', observacionFactura: '', tipoFacturacion: 'PARCIAL', credito: false, pagoInicial: 0, cuotas: 1, fechaEmisionIso: '', idCntFormaPagoFk: null, crearRecibo: true, contabilizarFactura: true, contabilizarCobro: true, conceptoFactura: 'Factura vehicular', conceptoCobro: 'Cobro vehicular' });
+    if (mode === 'factura') {
+      this.facturaForm.reset({
+        idVehOrdenTrabajoFk: null,
+        idsVehOrdenTrabajoRepuesto: '',
+        tipoFacturacion: 'PARCIAL',
+        observacion: '',
+        dni: null,
+        cen: null,
+        idAdmPtoemi: null,
+        credito: false,
+        entrada: 0,
+        cuotas: 1,
+        fechaPrimerVencimiento: '',
+        idTaxCompAutFk: 1,
+        usarPrecioRepuesto: true,
+      });
+    }
+
+    if (mode === 'cobro') {
+      this.cobroForm.reset({
+        idFacVenta: this.selectedFactura()?.idFacVenta ?? null,
+        valor: 0,
+        fecha: '',
+        cen: this.selectedFactura()?.cen ?? null,
+        idAdmPtoemi: null,
+        idFacCaja: null,
+        concepto: '',
+        idCntFormaPagoFk: null,
+        idBanDocBancoFk: null,
+        traCash: '',
+        idBanBancoFk: null,
+        idBanBancoSubFk: null,
+        idTaxTarjetaDiferidoFk: null,
+        idBanTarjetaFk: null,
+        referenciaDatafast: '',
+        crearCajaSiNoExiste: true,
+        contabilizar: true,
+        idCntPlanFormaPagoFk: null,
+        idCntTipoFk: 20,
+      });
+    }
+
+    if (mode === 'caja') {
+      this.cajaForm.reset({
+        idAdmPtoemi: null,
+        cen: null,
+        saldoCaja: 0,
+        comentario: 'Caja creada desde frontend vehicular.',
+        estadoInicial: 'p',
+      });
+    }
+
+    if (mode === 'contabilizar') {
+      this.contabilizarForm.reset({
+        idFacVenta: this.selectedFactura()?.idFacVenta ?? null,
+        idCntTipoFk: 20,
+        fechaContable: '',
+        concepto: 'Factura vehicular',
+      });
+    }
+
+    if (mode === 'workflow') {
+      this.workflowForm.reset({
+        idVehOrdenTrabajoFk: null,
+        idAdmPtoemiFk: null,
+        idsVehOrdenTrabajoRepuesto: '',
+        observacionFactura: '',
+        tipoFacturacion: 'PARCIAL',
+        dni: null,
+        cen: null,
+        credito: false,
+        pagoInicial: 0,
+        cuotas: 1,
+        fechaEmisionIso: '',
+        fechaPrimerVencimientoIso: '',
+        idTaxCompAutFk: 1,
+        usarPrecioRepuesto: true,
+        idCntFormaPagoFk: null,
+        idCntPlanFormaPagoFk: null,
+        idBanDocBancoFk: null,
+        idBanBancoFk: null,
+        idBanBancoSubFk: null,
+        idTaxTarjetaDiferidoFk: null,
+        idBanTarjetaFk: null,
+        referenciaDatafast: '',
+        traCash: '',
+        crearRecibo: true,
+        contabilizarFactura: true,
+        contabilizarCobro: true,
+        conceptoFactura: 'Factura vehicular',
+        conceptoCobro: 'Cobro vehicular',
+      });
+    }
   }
 
   cerrarDrawer = async () => {
@@ -262,14 +367,18 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         idCntFormaPagoFk: this.cobroForm.value.idCntFormaPagoFk ?? null,
         idBanDocBancoFk: this.cobroForm.value.idBanDocBancoFk ?? null,
         traCash: this.cobroForm.value.traCash?.trim() || null,
+        idBanBancoFk: this.cobroForm.value.idBanBancoFk ?? null,
+        idBanBancoSubFk: this.cobroForm.value.idBanBancoSubFk ?? null,
+        idTaxTarjetaDiferidoFk: this.cobroForm.value.idTaxTarjetaDiferidoFk ?? null,
+        idBanTarjetaFk: this.cobroForm.value.idBanTarjetaFk ?? null,
+        referenciaDatafast: this.cobroForm.value.referenciaDatafast?.trim() || null,
         crearCajaSiNoExiste: !!this.cobroForm.value.crearCajaSiNoExiste,
         contabilizar: !!this.cobroForm.value.contabilizar,
         idCntPlanFormaPagoFk: this.cobroForm.value.idCntPlanFormaPagoFk ?? null,
         idCntTipoFk: this.cobroForm.value.idCntTipoFk ?? null,
       };
       request$ = this.repo.crearCobro(payload);
-    }
-    else if (mode === 'caja') {
+    } else if (mode === 'caja') {
       request$ = this.repo.asegurarCaja({
         idAdmPtoemi: this.cajaForm.value.idAdmPtoemi ?? null,
         cen: this.cajaForm.value.cen ?? null,
@@ -304,11 +413,24 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         idsVehOrdenTrabajoRepuesto: this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto),
         observacionFactura: this.workflowForm.value.observacionFactura?.trim() || null,
         tipoFacturacion: this.workflowForm.value.tipoFacturacion || null,
+        dni: this.workflowForm.value.dni ?? null,
+        cen: this.workflowForm.value.cen ?? null,
         credito: !!this.workflowForm.value.credito,
         pagoInicial: Number(this.workflowForm.value.pagoInicial || 0),
         cuotas: Number(this.workflowForm.value.cuotas || 1),
-        fechaEmisionIso: this.workflowForm.value.fechaEmisionIso ? `${this.workflowForm.value.fechaEmisionIso}T00:00:00-05:00` : null,
+        fechaEmisionIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaEmisionIso),
+        fechaPrimerVencimientoIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaPrimerVencimientoIso),
+        idTaxCompAutFk: this.workflowForm.value.idTaxCompAutFk ?? null,
+        usarPrecioRepuesto: !!this.workflowForm.value.usarPrecioRepuesto,
         idCntFormaPagoFk: this.workflowForm.value.idCntFormaPagoFk ?? null,
+        idCntPlanFormaPagoFk: this.workflowForm.value.idCntPlanFormaPagoFk ?? null,
+        idBanDocBancoFk: this.workflowForm.value.idBanDocBancoFk ?? null,
+        idBanBancoFk: this.workflowForm.value.idBanBancoFk ?? null,
+        idBanBancoSubFk: this.workflowForm.value.idBanBancoSubFk ?? null,
+        idTaxTarjetaDiferidoFk: this.workflowForm.value.idTaxTarjetaDiferidoFk ?? null,
+        idBanTarjetaFk: this.workflowForm.value.idBanTarjetaFk ?? null,
+        referenciaDatafast: this.workflowForm.value.referenciaDatafast?.trim() || null,
+        traCash: this.workflowForm.value.traCash?.trim() || null,
         crearRecibo: !!this.workflowForm.value.crearRecibo,
         contabilizarFactura: !!this.workflowForm.value.contabilizarFactura,
         contabilizarCobro: !!this.workflowForm.value.contabilizarCobro,
@@ -331,16 +453,26 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     });
   }
 
+  muestraCamposCobroWorkflow() {
+    return !!this.workflowForm.value.crearRecibo && Number(this.workflowForm.value.pagoInicial || 0) > 0;
+  }
+
   private toIdList(raw?: string | null): number[] | null {
     if (!raw || !raw.trim()) return null;
-    return raw
+    const ids = raw
       .split(',')
       .map((x) => Number(x.trim()))
       .filter((x) => !Number.isNaN(x) && x > 0);
+    return ids.length ? ids : null;
   }
 
   private toTimestamp(value?: string | null) {
     if (!value) return null;
     return value.includes('T') || value.includes(' ') ? value : `${value} 00:00:00`;
+  }
+
+  private toIsoStartOfDayWithOffset(value?: string | null) {
+    if (!value) return null;
+    return value.includes('T') ? value : `${value}T00:00:00-05:00`;
   }
 }

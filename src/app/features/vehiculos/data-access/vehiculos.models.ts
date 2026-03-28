@@ -1,6 +1,7 @@
 import { ListQuery, Paged } from './vehiculos.shared';
 
 export type JsonMap = Record<string, unknown>;
+export type BooleanLike = boolean | number | null;
 
 export interface VehTipoVehiculo {
   idVehTipoVehiculo: number;
@@ -17,6 +18,7 @@ export interface VehTipoVehiculoVista {
   idVehTipoVehiculoVista: number;
   idVehTipoVehiculoFk: number;
   vista?: string | null;
+  estructura?: string | null;
   orden?: number | null;
   observaciones?: string | null;
   atributos?: JsonMap | null;
@@ -31,7 +33,7 @@ export interface VehCheckList {
   nombreItem: string;
   categoria?: string | null;
   orden?: number | null;
-  obligatorio?: number | null;
+  obligatorio?: BooleanLike;
   usuGen?: number | null;
   fecGen?: string | null;
   usuFin?: number | null;
@@ -164,9 +166,9 @@ export interface VehOrdenTrabajoHallazgo {
   descripcion: string;
   severidad?: string | null;
   estadoHallazgo?: string | null;
-  requiereCambio?: number | null;
+  requiereCambio?: BooleanLike;
   motivoCambio?: string | null;
-  aprobadoCliente?: number | null;
+  aprobadoCliente?: BooleanLike;
   fechaAprobacion?: string | null;
   observaciones?: string | null;
   atributos?: JsonMap | null;
@@ -186,8 +188,9 @@ export interface VehOrdenTrabajoHallazgoFoto {
   idVehOrdenTrabajoHallazgoFoto: number;
   idVehOrdenTrabajoHallazgoFk: number;
   etapa?: string | null;
+  foto?: string | null;
   descripcion?: string | null;
-  principal?: number | null;
+  principal?: BooleanLike;
   urlArchivo?: string | null;
 }
 
@@ -353,6 +356,7 @@ export interface VehTipoVehiculoEditarRequest {
 export interface VehTipoVehiculoVistaGuardarRequest {
   idVehTipoVehiculoFk: number;
   vista?: string | null;
+  estructura?: string | null;
   orden?: number | null;
   observaciones?: string | null;
   atributos?: JsonMap | null;
@@ -365,7 +369,7 @@ export interface VehCheckListGuardarRequest {
   nombreItem: string;
   categoria?: string | null;
   orden?: number | null;
-  obligatorio?: number | null;
+  obligatorio?: BooleanLike;
 }
 export interface VehCheckListEditarRequest {
   idVehVehiculoCheckList: number;
@@ -499,9 +503,9 @@ export interface VehOrdenTrabajoHallazgoGuardarRequest {
   descripcion: string;
   severidad?: string | null;
   estadoHallazgo?: string | null;
-  requiereCambio?: number | null;
+  requiereCambio?: BooleanLike;
   motivoCambio?: string | null;
-  aprobadoCliente?: number | null;
+  aprobadoCliente?: BooleanLike;
   fechaAprobacion?: string | null;
   observaciones?: string | null;
   atributos?: JsonMap | null;
@@ -525,8 +529,9 @@ export interface VehOrdenTrabajoHallazgoMarcaEditarRequest {
 export interface VehOrdenTrabajoHallazgoFotoGuardarRequest {
   idVehOrdenTrabajoHallazgoFk: number;
   etapa?: string | null;
+  foto?: string | null;
   descripcion?: string | null;
-  principal?: number | null;
+  principal?: BooleanLike;
 }
 export interface VehOrdenTrabajoHallazgoFotoEditarRequest {
   idVehOrdenTrabajoHallazgoFoto: number;
@@ -633,11 +638,17 @@ export interface VehFacturacionWorkflowRequest {
   idsVehOrdenTrabajoRepuesto?: number[] | null;
   observacionFactura?: string | null;
   tipoFacturacion?: string | null;
+  dni?: number | null;
+  cen?: number | null;
   credito?: boolean | null;
   pagoInicial?: number | null;
   cuotas?: number | null;
   fechaEmisionIso?: string | null;
+  fechaPrimerVencimientoIso?: string | null;
+  idTaxCompAutFk?: number | null;
+  usarPrecioRepuesto?: boolean | null;
   idCntFormaPagoFk?: number | null;
+  idCntPlanFormaPagoFk?: number | null;
   idBanDocBancoFk?: number | null;
   idBanBancoFk?: number | null;
   idBanBancoSubFk?: number | null;

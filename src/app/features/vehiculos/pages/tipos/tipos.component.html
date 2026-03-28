@@ -55,6 +55,30 @@
         <div class="jsonBox">{{ selected()?.atributos | json }}</div>
       </section>
 
+      <section class="miniCard" *ngIf="selectedVista() as currentVista">
+        <div class="sectionHead">
+          <h4>Vista seleccionada</h4>
+          <p-tag [value]="currentVista.vista || 'Vista'" severity="secondary"></p-tag>
+        </div>
+
+        <div class="previewCard">
+          <ng-container *ngIf="resolveBinarySrc(currentVista.estructura) as vistaSrc; else noPreviewImage">
+            <img class="previewImage" [src]="vistaSrc" [alt]="currentVista.vista || 'Vista estructural'">
+          </ng-container>
+          <ng-template #noPreviewImage>
+            <div class="hintBox">
+              <strong>Sin imagen estructural</strong>
+              <span>Sube una imagen en la vista para usarla luego en el canvas de hallazgos.</span>
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="binaryMeta">
+          <div><strong>Orden:</strong> {{ currentVista.orden || '-' }}</div>
+          <div><strong>Obs.:</strong> {{ currentVista.observaciones || 'Sin observaciones' }}</div>
+        </div>
+      </section>
+
       <section class="miniCard">
         <div class="sectionHead">
           <h4>Vistas estructurales</h4>
@@ -62,15 +86,20 @@
         </div>
 
         <div class="jiraLikeList" *ngIf="vistas().length; else noVistas">
-          <article class="jiraLikeRow compact" *ngFor="let vista of vistas()">
+          <article
+            class="jiraLikeRow compact"
+            *ngFor="let vista of vistas()"
+            [class.selected]="selectedVista()?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
+            (click)="seleccionarVista(vista)">
             <div class="rowHeader">
               <div>
                 <div class="primaryCell">{{ vista.vista || 'Vista' }}</div>
                 <div class="secondaryCell">Orden {{ vista.orden || '-' }}</div>
               </div>
               <div class="rowMeta">
-                <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarVista(vista)"></button>
-                <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarVista(vista)"></button>
+                <p-tag [value]="vista.estructura ? 'Con imagen' : 'Sin imagen'" [severity]="vista.estructura ? 'success' : 'secondary'"></p-tag>
+                <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarVista(vista); $event.stopPropagation()"></button>
+                <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarVista(vista); $event.stopPropagation()"></button>
               </div>
             </div>
             <div class="secondaryCell">{{ vista.observaciones || 'Sin observaciones' }}</div>
@@ -127,7 +156,7 @@
   [saving]="saving()"
   sizeClass="appDrawer appDrawer--md"
   title="{{ editingVistaId() ? 'Editar vista' : 'Nueva vista' }}"
-  subtitle="Define el nombre, orden y atributos de cada superficie del vehículo."
+  subtitle="Define el nombre, orden, imagen estructural y atributos de cada superficie del vehículo."
   (visibleChange)="vistaDrawerVisible.set($event)"
   (requestClose)="cerrarVistaDrawer()"
   (requestSave)="submitVista()">
@@ -147,6 +176,16 @@
       <span>Observaciones</span>
       <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
     </label>
+
+    <label>
+      <span>Imagen estructural</span>
+      <input type="file" accept="image/*" (change)="onVistaStructureSelected($event)">
+    </label>
+
+    <div class="previewCard previewCard--inline" *ngIf="vistaStructurePreview() as previewSrc">
+      <img class="previewImage" [src]="previewSrc" alt="Vista estructural cargada">
+      <button pButton type="button" size="small" severity="secondary" icon="pi pi-times" label="Quitar imagen" (click)="limpiarVistaStructure()"></button>
+    </div>
 
     <label>
       <span>Atributos JSON</span>

@@ -25,6 +25,7 @@
             <div class="secondaryCell">{{ item.categoria || 'GENERAL' }} · Orden {{ item.orden || '-' }}</div>
           </div>
           <div class="rowMeta">
+            <p-tag [value]="esObligatorio(item.obligatorio) ? 'Obligatorio' : 'Opcional'" [severity]="esObligatorio(item.obligatorio) ? 'warn' : 'secondary'"></p-tag>
             <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editar(item)"></button>
             <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminar(item)"></button>
           </div>
@@ -96,7 +97,10 @@
       <label><span>Nombre</span><input pInputText formControlName="nombreItem"></label>
       <label><span>Categoría</span><input pInputText formControlName="categoria"></label>
       <label><span>Orden</span><input pInputText type="number" formControlName="orden"></label>
-      <label><span>Obligatorio (1/0)</span><input pInputText type="number" formControlName="obligatorio"></label>
+      <label class="toggleItem">
+        <input type="checkbox" formControlName="obligatorio">
+        <span>Obligatorio</span>
+      </label>
     </div>
   </form>
 </app-vehiculos-form-drawer>

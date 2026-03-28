@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin, of } from 'rxjs';
+import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
@@ -52,7 +52,6 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   private repo = inject(VehiculosRepository);
   private notify = inject(NotifyService);
   private confirm = inject(VehiculosConfirmService);
-  private destroyRef = inject(DestroyRef);
 
   q = '';
   loading = signal(false);
@@ -60,12 +59,15 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   tipos = signal<VehTipoVehiculo[]>([]);
   vistas = signal<VehTipoVehiculoVista[]>([]);
   selected = signal<VehTipoVehiculo | null>(null);
+  selectedVista = signal<VehTipoVehiculoVista | null>(null);
   drawerVisible = signal(false);
   vistaDrawerVisible = signal(false);
   dirty = signal(false);
   vistaDirty = signal(false);
   editingId = signal<number | null>(null);
   editingVistaId = signal<number | null>(null);
+  vistaStructureBase64 = signal<string | null>(null);
+  vistaStructurePreview = signal<string | null>(null);
 
   form = this.fb.group({
     art: [null as number | null],
@@ -112,7 +114,15 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   cargarVistas(idVehTipoVehiculoFk: number) {
     this.repo.listarVistas({ idVehTipoVehiculoFk }).subscribe({
-      next: (res) => this.vistas.set(res.items ?? []),
+      next: (res) => {
+        const items = res.items ?? [];
+        this.vistas.set(items);
+        const currentVista = this.selectedVista();
+        const selectedVista = currentVista
+          ? items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ?? null
+          : (items[0] ?? null);
+        this.selectedVista.set(selectedVista);
+      },
       error: (err) => this.notify.error('No se pudo cargar vistas', err?.message),
     });
   }
@@ -120,6 +130,10 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   seleccionar(item: VehTipoVehiculo) {
     this.selected.set(item);
     this.cargarVistas(item.idVehTipoVehiculo);
+  }
+
+  seleccionarVista(item: VehTipoVehiculoVista) {
+    this.selectedVista.set(item);
   }
 
   nuevo() {
@@ -148,6 +162,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         this.notify.success('Tipo eliminado', 'El registro fue eliminado correctamente.');
         if (this.selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo) {
           this.selected.set(null);
+          this.selectedVista.set(null);
           this.vistas.set([]);
         }
         this.cargar();
@@ -199,6 +214,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     }
     this.editingVistaId.set(null);
     this.vistaForm.reset({ vista: '', orden: (this.vistas().length || 0) + 1, observaciones: '', atributosJson: '{}' });
+    this.vistaStructureBase64.set(null);
+    this.vistaStructurePreview.set(null);
     this.vistaDrawerVisible.set(true);
     this.vistaDirty.set(false);
   }
@@ -211,6 +228,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       observaciones: item.observaciones ?? '',
       atributosJson: JSON.stringify(item.atributos ?? {}, null, 2),
     });
+    this.vistaStructureBase64.set(null);
+    this.vistaStructurePreview.set(this.resolveBinarySrc(item.estructura));
     this.vistaDrawerVisible.set(true);
     this.vistaDirty.set(false);
   }
@@ -247,6 +266,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       this.notify.warn('Formulario incompleto', 'La vista necesita un nombre.');
       return;
     }
+
     const payload: VehTipoVehiculoVistaGuardarRequest = {
       idVehTipoVehiculoFk: selected.idVehTipoVehiculo,
       vista: this.vistaForm.value.vista?.trim() || null,
@@ -254,6 +274,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       observaciones: this.vistaForm.value.observaciones?.trim() || null,
       atributos: this.parseJson(this.vistaForm.value.atributosJson),
     };
+
+    if (this.vistaStructureBase64() !== null) {
+      payload.estructura = this.vistaStructureBase64() || null;
+    }
+
     this.saving.set(true);
     const request$ = this.editingVistaId()
       ? this.repo.editarVista({ idVehTipoVehiculoVista: this.editingVistaId()!, cambios: payload })
@@ -268,6 +293,53 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       },
       error: (err) => this.notify.error('No se pudo guardar vista', err?.message),
     });
+  }
+
+  onVistaStructureSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.notify.warn('Archivo inválido', 'Selecciona una imagen válida para la estructura del vehículo.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      this.vistaStructureBase64.set(base64 || '');
+      this.vistaStructurePreview.set(dataUrl || null);
+      this.vistaDirty.set(true);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  limpiarVistaStructure() {
+    this.vistaStructureBase64.set('');
+    this.vistaStructurePreview.set(null);
+    this.vistaDirty.set(true);
+  }
+
+  resolveBinarySrc(binary?: string | null) {
+    if (!binary) return null;
+    const value = String(binary).trim();
+    if (!value) return null;
+    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:')) {
+      return value;
+    }
+    return `data:${this.guessMimeType(value)};base64,${value}`;
+  }
+
+  private guessMimeType(base64: string) {
+    if (base64.startsWith('/9j/')) return 'image/jpeg';
+    if (base64.startsWith('iVBOR')) return 'image/png';
+    if (base64.startsWith('R0lGOD')) return 'image/gif';
+    if (base64.startsWith('UklGR')) return 'image/webp';
+    if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
+    return 'image/png';
   }
 
   private parseJson(value?: string | null) {

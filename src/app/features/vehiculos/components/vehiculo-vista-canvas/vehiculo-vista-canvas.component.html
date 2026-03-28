@@ -5,19 +5,85 @@
   </div>
 
   <div class="surface" [class.surface--interactive]="interactive" (click)="onSurfaceClick($event)">
-    <div class="ghostVehicle">
-      <div class="ghostHeader">{{ vista?.vista || 'VISTA' }}</div>
-      <div class="ghostBody">
-        <div class="ghostOutline"></div>
-        <div class="ghostText">Área de marcado</div>
-      </div>
-    </div>
+    <ng-container *ngIf="resolveImageSrc(vista?.estructura) as src; else ghostTemplate">
+      <img class="surfaceImage" [src]="src" [alt]="vista?.vista || 'Vista estructural'">
+    </ng-container>
 
-    <div
-      class="marker"
-      *ngFor="let marca of marcas"
-      [ngStyle]="resolvePosition(marca)"
-      [style.background]="marca.color || '#cd327f'"
-      [title]="marca.observaciones || marca.tipoMarca || 'Marca'"></div>
+    <ng-template #ghostTemplate>
+      <div class="ghostVehicle">
+        <div class="ghostHeader">{{ vista?.vista || 'VISTA' }}</div>
+        <div class="ghostBody">
+          <div class="ghostOutline"></div>
+          <div class="ghostText">Área de marcado</div>
+        </div>
+      </div>
+    </ng-template>
+
+    <svg class="surfaceOverlay" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+      <ng-container *ngFor="let shape of renderShapes()">
+        <circle
+          *ngIf="shape['kind'] === 'point'"
+          class="svgPoint"
+          [attr.cx]="shape['cx']"
+          [attr.cy]="shape['cy']"
+          [attr.r]="shape['r']"
+          [attr.fill]="shape['color']"
+          [attr.stroke]="'#ffffff'"
+          [attr.stroke-width]="4">
+          <title>{{ shape['title'] }}</title>
+        </circle>
+
+        <line
+          *ngIf="shape['kind'] === 'line'"
+          class="svgStroke"
+          [attr.x1]="shape['x1']"
+          [attr.y1]="shape['y1']"
+          [attr.x2]="shape['x2']"
+          [attr.y2]="shape['y2']"
+          [attr.stroke]="shape['color']"
+          [attr.stroke-width]="10"
+          [attr.stroke-linecap]="'round'">
+          <title>{{ shape['title'] }}</title>
+        </line>
+
+        <rect
+          *ngIf="shape['kind'] === 'rect'"
+          class="svgOutline"
+          [attr.x]="shape['x']"
+          [attr.y]="shape['y']"
+          [attr.width]="shape['width']"
+          [attr.height]="shape['height']"
+          [attr.stroke]="shape['color']"
+          [attr.stroke-width]="8"
+          [attr.fill]="shape['color']"
+          [attr.fill-opacity]="0.14">
+          <title>{{ shape['title'] }}</title>
+        </rect>
+
+        <circle
+          *ngIf="shape['kind'] === 'circle'"
+          class="svgOutline"
+          [attr.cx]="shape['cx']"
+          [attr.cy]="shape['cy']"
+          [attr.r]="shape['r']"
+          [attr.stroke]="shape['color']"
+          [attr.stroke-width]="8"
+          [attr.fill]="shape['color']"
+          [attr.fill-opacity]="0.14">
+          <title>{{ shape['title'] }}</title>
+        </circle>
+
+        <polygon
+          *ngIf="shape['kind'] === 'polygon'"
+          class="svgOutline"
+          [attr.points]="shape['points']"
+          [attr.stroke]="shape['color']"
+          [attr.stroke-width]="8"
+          [attr.fill]="shape['color']"
+          [attr.fill-opacity]="0.16">
+          <title>{{ shape['title'] }}</title>
+        </polygon>
+      </ng-container>
+    </svg>
   </div>
 </div>
