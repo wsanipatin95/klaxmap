@@ -3,7 +3,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, of, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, of, switchMap, type Observable } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
@@ -178,16 +178,20 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
 
     this.saving.set(true);
 
-    const request$ = this.editingId()
-      ? this.repo.editar({
-        idImpOfertaProveedor: this.editingId()!,
-        cambios: this.normalizeEditarPayload(),
-      })
-      : this.repo.crear(this.normalizeGuardarPayload());
+    type SaveResult = { data: any; mensaje: string };
+
+    const request$: Observable<SaveResult> = (
+      this.editingId()
+        ? this.repo.editar({
+          idImpOfertaProveedor: this.editingId()!,
+          cambios: this.normalizeEditarPayload(),
+        })
+        : this.repo.crear(this.normalizeGuardarPayload())
+    ) as Observable<SaveResult>;
 
     request$
       .pipe(
-        switchMap((res) => {
+        switchMap((res: SaveResult) => {
           const id =
             this.editingId() ??
             Number((res.data as { idImpOfertaProveedor?: number } | null)?.idImpOfertaProveedor);
@@ -195,13 +199,13 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
           if (!id) return of(res);
 
           return this.syncDocumentos(id).pipe(
-            map(() => res)
+            map((): SaveResult => res)
           );
         }),
         finalize(() => this.saving.set(false))
       )
       .subscribe({
-        next: (res) => {
+        next: (res: SaveResult) => {
           this.notify.success(
             this.editingId() ? 'Oferta actualizada' : 'Oferta creada',
             res.mensaje
@@ -253,30 +257,7 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
   removePackingResumen(i: number) { this.packingResumenes.removeAt(i); this.dirty.set(true); }
   removeDocumento(i: number) { this.documentos.removeAt(i); this.dirty.set(true); }
 
-  private normalizePayload() {
-    const raw = this.form.getRawValue();
-    return {
-      tipoOferta: raw.tipoOferta,
-      idImpProveedorProspectoFk: raw.idImpProveedorProspectoFk ?? null,
-      dniAdqProveedorFk: raw.dniAdqProveedorFk ?? null,
-      numeroDocumento: raw.numeroDocumento?.trim() || null,
-      numeroVersion: raw.numeroVersion ?? 1,
-      fechaOferta: raw.fechaOferta || null,
-      fechaVigenciaDesde: raw.fechaVigenciaDesde || null,
-      fechaVigenciaHasta: raw.fechaVigenciaHasta || null,
-      idMonMonedaFk: Number(raw.idMonMonedaFk),
-      incoterm: raw.incoterm?.trim() || null,
-      lugarEntrega: raw.lugarEntrega?.trim() || null,
-      formaPago: raw.formaPago?.trim() || null,
-      tiempoEntregaDias: raw.tiempoEntregaDias ?? null,
-      vigente: !!raw.vigente,
-      bloqueadaParaSondeo: !!raw.bloqueadaParaSondeo,
-      observacion: raw.observacion?.trim() || null,
-      detalles: raw.detalles,
-      packings: raw.packings,
-      packingResumenes: raw.packingResumenes,
-    };
-  }
+
 
   private syncDocumentos(idImpOfertaProveedorFk: number) {
     const current = this.documentos.getRawValue();
@@ -301,8 +282,10 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
     const ops = [...removals, ...upserts];
     return ops.length ? forkJoin(ops) : of([]);
   }
+
   private normalizeGuardarPayload(): OfertaProveedorGuardarRequest {
     const raw = this.form.getRawValue();
+
     return {
       tipoOferta: raw.tipoOferta ?? 'COTIZACION',
       idImpProveedorProspectoFk: raw.idImpProveedorProspectoFk ?? null,
@@ -320,14 +303,59 @@ export class ImportacionOfertasComponent implements PendingChangesAware {
       vigente: !!raw.vigente,
       bloqueadaParaSondeo: !!raw.bloqueadaParaSondeo,
       observacion: raw.observacion?.trim() || null,
-      detalles: raw.detalles,
-      packings: raw.packings,
-      packingResumenes: raw.packingResumenes,
+
+      detalles: ((raw.detalles ?? []) as any[]).map((d) => ({
+        idImpArticuloProspectoFk: d.idImpArticuloProspectoFk ?? null,
+        idActInventarioFk: d.idActInventarioFk ?? null,
+        codigoArticuloProveedor: d.codigoArticuloProveedor?.trim() || null,
+        descripcionItem: String(d.descripcionItem ?? '').trim(),
+        color: d.color?.trim() || null,
+        tamano: d.tamano?.trim() || null,
+        cantidadMinima: d.cantidadMinima ?? null,
+        cantidadOfertada: Number(d.cantidadOfertada ?? 0),
+        idActInventarioUnidadFk: String(d.idActInventarioUnidadFk ?? 'UN').trim(),
+        precioUnitario: d.precioUnitario ?? null,
+        descuentoPct: d.descuentoPct ?? null,
+        subtotal: d.subtotal ?? null,
+        paisOrigenFk: d.paisOrigenFk ?? null,
+        pesoUnitario: d.pesoUnitario ?? null,
+        cbmUnitario: d.cbmUnitario ?? null,
+        idImpCodigoArancelarioFk: d.idImpCodigoArancelarioFk ?? null,
+        observacion: d.observacion?.trim() || null,
+      })),
+
+      packings: ((raw.packings ?? []) as any[]).map((p) => ({
+        idImpOfertaProveedorDetalleFk: p.idImpOfertaProveedorDetalleFk ?? null,
+        detalleIndex: p.detalleIndex ?? null,
+        tipoEmpaque: p.tipoEmpaque?.trim() || null,
+        cantidadPorEmpaque: p.cantidadPorEmpaque ?? null,
+        largo: p.largo ?? null,
+        ancho: p.ancho ?? null,
+        alto: p.alto ?? null,
+        cbm: p.cbm ?? null,
+        pesoBruto: p.pesoBruto ?? null,
+        pesoNeto: p.pesoNeto ?? null,
+        observacion: p.observacion?.trim() || null,
+      })),
+
+      packingResumenes: ((raw.packingResumenes ?? []) as any[]).map((r) => ({
+        ordenResumen: r.ordenResumen ?? null,
+        tipoBulto: r.tipoBulto?.trim() || null,
+        cantidadBultos: r.cantidadBultos ?? null,
+        largoCm: r.largoCm ?? null,
+        anchoCm: r.anchoCm ?? null,
+        altoCm: r.altoCm ?? null,
+        cbmTotal: r.cbmTotal ?? null,
+        pesoBrutoTotal: r.pesoBrutoTotal ?? null,
+        pesoNetoTotal: r.pesoNetoTotal ?? null,
+        observacion: r.observacion?.trim() || null,
+      })),
     };
   }
 
   private normalizeEditarPayload(): Partial<OfertaProveedor> {
     const raw = this.form.getRawValue();
+
     return {
       tipoOferta: raw.tipoOferta ?? 'COTIZACION',
       idImpProveedorProspectoFk: raw.idImpProveedorProspectoFk ?? null,

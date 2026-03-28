@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
   apiBaseUrl: '/klaxapi',
-  company: 'inno',
+  company: 'dumax',
   tenant: 'public',
 };
