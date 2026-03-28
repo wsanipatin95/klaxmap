@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angu
 import { finalize } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
@@ -29,6 +30,7 @@ import { PendingChangesAware } from '../../guards/pending-changes.guard';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
+    TagModule,
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
     VehiculosFormDrawerComponent,
