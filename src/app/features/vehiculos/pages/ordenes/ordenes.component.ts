@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { finalize, forkJoin, of } from 'rxjs';
+import { Observable, finalize, forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -457,10 +457,12 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   submitChild() {
     const orden = this.selectedOrden();
     if (!orden) return;
+
     const mode = this.childMode();
     if (!mode) return;
 
-    let request$ = of(null);
+    let request$: Observable<any>;
+
     if (mode === 'checklist') {
       if (this.checklistForm.invalid) {
         this.checklistForm.markAllAsTouched();
@@ -474,8 +476,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         observaciones: this.checklistForm.value.observaciones?.trim() || null,
       });
     }
-
-    if (mode === 'trabajo') {
+    else if (mode === 'trabajo') {
       if (this.trabajoForm.invalid) {
         this.trabajoForm.markAllAsTouched();
         this.notify.warn('Formulario incompleto', 'Tipo y descripción inicial son obligatorios.');
@@ -495,8 +496,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       };
       request$ = this.repo.crearOrdenTrabajo(payload);
     }
-
-    if (mode === 'hallazgo') {
+    else if (mode === 'hallazgo') {
       if (this.hallazgoForm.invalid) {
         this.hallazgoForm.markAllAsTouched();
         this.notify.warn('Formulario incompleto', 'La descripción del hallazgo es obligatoria.');
@@ -519,8 +519,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       };
       request$ = this.repo.crearHallazgo(payload);
     }
-
-    if (mode === 'repuesto') {
+    else if (mode === 'repuesto') {
       if (this.repuestoForm.invalid) {
         this.repuestoForm.markAllAsTouched();
         this.notify.warn('Formulario incompleto', 'Artículo, cantidad y precio son obligatorios.');
@@ -539,8 +538,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       };
       request$ = this.repo.crearRepuesto(payload);
     }
-
-    if (mode === 'autorizacion') {
+    else if (mode === 'autorizacion') {
       if (this.autorizacionForm.invalid) {
         this.autorizacionForm.markAllAsTouched();
         this.notify.warn('Formulario incompleto', 'La descripción de la autorización es obligatoria.');
@@ -557,20 +555,20 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         observaciones: this.autorizacionForm.value.observaciones?.trim() || null,
       };
       request$ = this.repo.crearAutorizacion(payload);
-    }
-
-    if (mode === 'foto') {
+    } else {
       const hallazgo = this.selectedHallazgo();
       if (!hallazgo) {
         this.notify.warn('Selecciona un hallazgo', 'La foto se registra sobre un hallazgo concreto.');
         return;
       }
+
       const payload: VehOrdenTrabajoHallazgoFotoGuardarRequest = {
         idVehOrdenTrabajoHallazgoFk: hallazgo.idVehOrdenTrabajoHallazgo,
         etapa: this.fotoForm.value.etapa || null,
         descripcion: this.fotoForm.value.descripcion?.trim() || null,
         principal: Number(this.fotoForm.value.principal || 0),
       };
+
       request$ = this.repo.crearHallazgoFoto(payload);
     }
 

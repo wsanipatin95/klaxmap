@@ -91,6 +91,10 @@ export const routes: Routes = [
       {
         path: 'importacion',
         loadChildren: () => import('src/app/features/importacion/importacion.routes').then((m) => m.IMPORTACION_ROUTES),
+      }, {
+        path: 'vehiculos',
+        loadChildren: () =>
+          import('src/app/features/vehiculos/vehiculos.routes').then((m) => m.VEHICULOS_ROUTES),
       },
     ],
   },

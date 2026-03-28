@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { forkJoin } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { Observable, forkJoin, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -45,7 +44,6 @@ type DrawerMode = 'workflow' | 'factura' | 'cobro' | 'caja' | 'contabilizar' | n
     TagModule,
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
-    VehiculosWorkbenchShellComponent,
     VehiculosFormDrawerComponent,
     VehiculosEmptyStateComponent,
   ],
@@ -219,7 +217,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     if (!mode) return;
 
     this.saving.set(true);
-    let request$;
+    let request$: Observable<any>;
 
     if (mode === 'factura') {
       if (this.facturaForm.invalid) {
@@ -228,6 +226,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         this.notify.warn('Formulario incompleto', 'Debes indicar la OT.');
         return;
       }
+
       const payload: VehFacturaCrearRequest = {
         idVehOrdenTrabajoFk: Number(this.facturaForm.value.idVehOrdenTrabajoFk),
         idsVehOrdenTrabajoRepuesto: this.toIdList(this.facturaForm.value.idsVehOrdenTrabajoRepuesto),
@@ -243,10 +242,9 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         idTaxCompAutFk: this.facturaForm.value.idTaxCompAutFk ?? null,
         usarPrecioRepuesto: !!this.facturaForm.value.usarPrecioRepuesto,
       };
-      request$ = this.repo.crearFactura(payload);
-    }
 
-    if (mode === 'cobro') {
+      request$ = this.repo.crearFactura(payload);
+    } else if (mode === 'cobro') {
       if (this.cobroForm.invalid) {
         this.cobroForm.markAllAsTouched();
         this.saving.set(false);
@@ -271,8 +269,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
       };
       request$ = this.repo.crearCobro(payload);
     }
-
-    if (mode === 'caja') {
+    else if (mode === 'caja') {
       request$ = this.repo.asegurarCaja({
         idAdmPtoemi: this.cajaForm.value.idAdmPtoemi ?? null,
         cen: this.cajaForm.value.cen ?? null,
@@ -280,9 +277,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         comentario: this.cajaForm.value.comentario?.trim() || null,
         estadoInicial: this.cajaForm.value.estadoInicial?.trim() || null,
       });
-    }
-
-    if (mode === 'contabilizar') {
+    } else if (mode === 'contabilizar') {
       if (this.contabilizarForm.invalid) {
         this.contabilizarForm.markAllAsTouched();
         this.saving.set(false);
@@ -296,9 +291,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         concepto: this.contabilizarForm.value.concepto?.trim() || null,
       };
       request$ = this.repo.contabilizarFactura(payload);
-    }
-
-    if (mode === 'workflow') {
+    } else {
       if (this.workflowForm.invalid) {
         this.workflowForm.markAllAsTouched();
         this.saving.set(false);
