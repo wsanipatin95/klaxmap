@@ -1,0 +1,47 @@
+@use '../shared-page';
+
+small {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.recentCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+  background: #f8fafc;
+  display: grid;
+  gap: 0.35rem;
+
+  span {
+    font-size: 0.76rem;
+    color: #64748b;
+  }
+
+  strong {
+    color: #0f172a;
+    font-size: 0.96rem;
+  }
+}
+
+.loadingState {
+  min-height: 12rem;
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .recentGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,7 +10,7 @@ import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { xTenantInterceptor } from './core/http/x-tenant.interceptor';
 import { routes } from './app.routes';
 import MyPreset from '../mypreset';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from 'src/environments/environment';
 
 export const appConfig: ApplicationConfig = {
@@ -43,5 +43,6 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     MessageService,
+    ConfirmationService,
   ],
 };

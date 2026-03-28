@@ -1,0 +1,125 @@
+<app-vehiculos-page-header
+  title="Checklist por tipo"
+  subtitle="Catálogo de ítems de revisión y asignación por tipo de vehículo. Esta pantalla separa el ítem maestro de su relación con cada tipo.">
+  <button pButton type="button" icon="pi pi-plus" label="Nuevo ítem" (click)="nuevo()"></button>
+</app-vehiculos-page-header>
+
+<div class="split2">
+  <section class="contentCard">
+    <div class="sectionHead">
+      <h4>Ítems checklist</h4>
+      <div class="toolbarActions">
+        <div class="searchBox">
+          <i class="pi pi-search"></i>
+          <input pInputText [(ngModel)]="q" placeholder="Buscar ítems..." (keyup.enter)="cargar()">
+        </div>
+        <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
+      </div>
+    </div>
+
+    <div class="jiraLikeList" *ngIf="checks().length; else noChecks">
+      <article class="jiraLikeRow compact" *ngFor="let item of checks()">
+        <div class="rowHeader">
+          <div>
+            <div class="primaryCell">{{ item.nombreItem }}</div>
+            <div class="secondaryCell">{{ item.categoria || 'GENERAL' }} · Orden {{ item.orden || '-' }}</div>
+          </div>
+          <div class="rowMeta">
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editar(item)"></button>
+            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminar(item)"></button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="contentCard">
+    <div class="sectionHead">
+      <h4>Asignación por tipo</h4>
+      <button pButton type="button" icon="pi pi-link" size="small" label="Asignar" (click)="nuevaAsignacion()"></button>
+    </div>
+
+    <div class="jiraLikeList miniTypes" *ngIf="tipos().length; else noTipos">
+      <article
+        class="jiraLikeRow compact"
+        *ngFor="let tipo of tipos()"
+        [class.selected]="selectedTipo()?.idVehTipoVehiculo === tipo.idVehTipoVehiculo"
+        (click)="seleccionarTipo(tipo)">
+        <div class="primaryCell">{{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}</div>
+        <div class="secondaryCell">ID {{ tipo.idVehTipoVehiculo }}</div>
+      </article>
+    </div>
+
+    <section class="miniCard" *ngIf="selectedTipo()">
+      <div class="sectionHead">
+        <h4>{{ selectedTipo()?.tipoVehiculo }}</h4>
+        <span class="secondaryCell">{{ asignados().length }} items</span>
+      </div>
+
+      <div class="jiraLikeList" *ngIf="asignados().length; else noAsignados">
+        <article class="jiraLikeRow compact" *ngFor="let rel of asignados()">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ nombreCheck(rel.idVehVehiculoCheckListFk) }}</div>
+              <div class="secondaryCell">Rel #{{ rel.idVehVehiculoCheckListVehiculo }}</div>
+            </div>
+            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarAsignacion(rel)"></button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
+</div>
+
+<ng-template #noChecks>
+  <app-vehiculos-empty-state icon="pi pi-list-check" title="Sin ítems checklist" subtitle="Crea el catálogo base de revisión del vehículo."></app-vehiculos-empty-state>
+</ng-template>
+<ng-template #noTipos>
+  <app-vehiculos-empty-state icon="pi pi-directions-alt" title="Sin tipos" subtitle="Debes crear tipos de vehículo antes de asignar ítems."></app-vehiculos-empty-state>
+</ng-template>
+<ng-template #noAsignados>
+  <app-vehiculos-empty-state icon="pi pi-link" title="Sin asignaciones" subtitle="Asocia ítems checklist al tipo seleccionado para usarlo en recepción."></app-vehiculos-empty-state>
+</ng-template>
+
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  sizeClass="appDrawer appDrawer--md"
+  title="{{ editingId() ? 'Editar ítem checklist' : 'Nuevo ítem checklist' }}"
+  subtitle="Define nombre, categoría, orden y obligatoriedad."
+  (visibleChange)="drawerVisible.set($event)"
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()">
+  <form class="vehForm" [formGroup]="form">
+    <div class="grid cols-2">
+      <label><span>Nombre</span><input pInputText formControlName="nombreItem"></label>
+      <label><span>Categoría</span><input pInputText formControlName="categoria"></label>
+      <label><span>Orden</span><input pInputText type="number" formControlName="orden"></label>
+      <label><span>Obligatorio (1/0)</span><input pInputText type="number" formControlName="obligatorio"></label>
+    </div>
+  </form>
+</app-vehiculos-form-drawer>
+
+<app-vehiculos-form-drawer
+  [visible]="assignDrawerVisible()"
+  [dirty]="assignDirty()"
+  [saving]="saving()"
+  sizeClass="appDrawer appDrawer--sm"
+  title="Asignar checklist"
+  subtitle="Relaciona un ítem del catálogo con el tipo de vehículo seleccionado."
+  (visibleChange)="assignDrawerVisible.set($event)"
+  (requestClose)="cerrarAsignacionDrawer()"
+  (requestSave)="submitAsignacion()">
+  <form class="vehForm" [formGroup]="assignForm">
+    <label>
+      <span>ID checklist</span>
+      <select formControlName="idVehVehiculoCheckListFk">
+        <option [ngValue]="null">Selecciona un ítem</option>
+        <option *ngFor="let item of disponiblesParaAsignar()" [ngValue]="item.idVehVehiculoCheckList">
+          {{ item.nombreItem }} ({{ item.categoria || 'GENERAL' }})
+        </option>
+      </select>
+    </label>
+  </form>
+</app-vehiculos-form-drawer>

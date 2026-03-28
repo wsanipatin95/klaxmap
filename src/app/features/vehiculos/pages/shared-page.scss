@@ -1,0 +1,240 @@
+:host {
+  display: block;
+}
+
+.toolbarCard,
+.contentCard,
+.sideCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.toolbarCard {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.searchBox {
+  min-width: 24rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.65rem;
+  padding: 0 0.75rem;
+  background: #fff;
+
+  i { color: #64748b; }
+  input { width: 100%; border: 0 !important; box-shadow: none !important; background: transparent; }
+}
+
+.toolbarActions,
+.rowActions,
+.sectionHead,
+.miniHead,
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbarActions,
+.rowActions { justify-content: flex-end; }
+.sectionHead,
+.miniHead { justify-content: space-between; }
+.tabBar { flex-wrap: wrap; }
+
+.tabButton {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+
+  &.active {
+    background: #fdf4f9;
+    color: #7B0061;
+    border-color: #f3aad6;
+  }
+}
+
+.primaryCell {
+  font-weight: 600;
+  color: #0f172a;
+}
+.secondaryCell {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.vehForm,
+.miniCard,
+.stackedRows,
+section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.grid {
+  display: grid;
+  gap: 0.75rem 0.9rem;
+}
+.grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  span {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #475569;
+  }
+}
+
+input[pInputText], textarea[pTextarea], input[type="date"], select {
+  width: 100%;
+}
+
+input[type="date"], select {
+  border: 1px solid #dbe2ea;
+  border-radius: 0.55rem;
+  min-height: 2.2rem;
+  padding: 0 0.75rem;
+  font-size: 0.84rem;
+  background: #fff;
+}
+
+.toggleLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #edf2f7;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.miniCard {
+  border: 1px solid #edf2f7;
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+  background: #fcfcfd;
+}
+
+section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+  background: #f8fafc;
+
+  span { display: block; font-size: 0.75rem; color: #64748b; }
+  strong { display: block; margin-top: 0.25rem; font-size: 1rem; color: #0f172a; }
+}
+
+.jiraLikeList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.jiraLikeRow {
+  border: 1px solid #edf2f7;
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  display: grid;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: #d8dee7;
+    background: #fcfcfd;
+  }
+
+  &.selected {
+    border-color: #f3aad6;
+    background: #fdf4f9;
+  }
+}
+
+.rowHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.rowMeta {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.split2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 1rem;
+}
+
+:host ::ng-deep {
+  .p-inputtext,
+  .p-inputtextarea,
+  .p-select,
+  .p-inputnumber-input,
+  .p-datepicker-input {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+    font-size: 0.84rem;
+  }
+
+  .p-datatable .p-datatable-thead > tr > th,
+  .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.7rem 0.75rem;
+    font-size: 0.84rem;
+  }
+
+  .p-datatable .p-datatable-tbody > tr.rowSelected > td {
+    background: #fdf4f9 !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .split2 { grid-template-columns: 1fr; }
+  .metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 860px) {
+  .toolbarCard { flex-direction: column; align-items: stretch; }
+  .searchBox { min-width: auto; }
+  .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; }
+  .metricGrid { grid-template-columns: 1fr; }
+}
+
+.cols-full { grid-column: 1 / -1; }

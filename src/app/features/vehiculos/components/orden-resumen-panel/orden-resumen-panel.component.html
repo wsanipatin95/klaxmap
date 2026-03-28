@@ -1,0 +1,41 @@
+<div class="summary" *ngIf="orden; else noData">
+  <div class="top">
+    <div>
+      <strong>OT #{{ orden.idVehOrdenTrabajo }}</strong>
+      <p>{{ orden.tipoServicio || 'Sin tipo de servicio' }}</p>
+    </div>
+    <p-tag [value]="orden.estadoOrden || 'SIN ESTADO'" [severity]="severity(orden.estadoOrden)"></p-tag>
+  </div>
+
+  <div class="grid">
+    <div><span>Cliente</span><strong>{{ orden.dni }}</strong></div>
+    <div><span>Vehículo</span><strong>{{ orden.idCliVehiculoFk }}</strong></div>
+    <div><span>Ingreso</span><strong>{{ orden.fechaIngreso || '-' }}</strong></div>
+    <div><span>Prometida</span><strong>{{ orden.fechaPrometida || '-' }}</strong></div>
+    <div><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso ?? '-' }}</strong></div>
+    <div><span>Técnico</span><strong>{{ orden.responsableTecnico ?? '-' }}</strong></div>
+  </div>
+
+  <section>
+    <h5>Reporte del cliente</h5>
+    <p>{{ orden.fallaReportada || 'Sin falla reportada' }}</p>
+    <p class="muted">{{ orden.ruidosReportados || 'Sin ruidos reportados' }}</p>
+  </section>
+
+  <section>
+    <h5>Condición de ingreso</h5>
+    <p>{{ orden.condicionIngreso || 'Sin condición registrada' }}</p>
+  </section>
+
+  <section>
+    <h5>Diagnóstico general</h5>
+    <p>{{ orden.diagnosticoGeneral || 'Sin diagnóstico registrado' }}</p>
+  </section>
+</div>
+
+<ng-template #noData>
+  <div class="empty">
+    <i class="pi pi-file"></i>
+    <span>Selecciona una orden para ver el resumen.</span>
+  </div>
+</ng-template>

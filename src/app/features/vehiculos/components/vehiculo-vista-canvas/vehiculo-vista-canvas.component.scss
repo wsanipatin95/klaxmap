@@ -1,0 +1,73 @@
+.vistaCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.vistaHead {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #eef2f7;
+  strong { display: block; color: #0f172a; }
+  span { display: block; margin-top: 0.25rem; font-size: 0.78rem; color: #64748b; }
+}
+
+.surface {
+  position: relative;
+  min-height: 18rem;
+  background:
+    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 0;
+  cursor: default;
+}
+
+.surface--interactive {
+  cursor: crosshair;
+}
+
+.ghostVehicle {
+  position: absolute;
+  inset: 0.8rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.9rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: rgba(255,255,255,0.55);
+}
+
+.ghostHeader {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7B0061;
+  letter-spacing: 0.08em;
+}
+
+.ghostBody {
+  display: grid;
+  place-items: center;
+  gap: 0.4rem;
+}
+
+.ghostOutline {
+  width: min(74%, 26rem);
+  height: 8rem;
+  border: 2px solid #94a3b8;
+  border-radius: 2rem 2rem 1.2rem 1.2rem;
+  opacity: 0.5;
+}
+
+.ghostText {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(15,23,42,0.08);
+}

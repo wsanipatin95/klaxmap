@@ -1,0 +1,156 @@
+<app-vehiculos-page-header
+  title="Tipos de vehículo"
+  subtitle="Catálogo maestro de tipos y vistas. La pantalla mantiene densidad alta y lectura rápida: lista a la izquierda, detalle a la derecha y drawers compactos para edición.">
+  <button pButton type="button" icon="pi pi-plus" label="Nuevo tipo" (click)="nuevo()"></button>
+</app-vehiculos-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar tipo, art o atributos..." (keyup.enter)="cargar()">
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-filter-slash" label="Limpiar" (click)="q=''; cargar()"></button>
+    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button>
+  </div>
+</div>
+
+<app-vehiculos-workbench-shell
+  title="Catálogo"
+  subtitle="Selecciona un tipo para revisar sus vistas estructurales."
+  selectionTitle="Detalle del tipo">
+  <div main>
+    <ng-container *ngIf="tipos().length; else noTipos">
+      <div class="jiraLikeList">
+        <article
+          class="jiraLikeRow"
+          *ngFor="let item of tipos()"
+          [class.selected]="selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo"
+          (click)="seleccionar(item)">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ item.tipoVehiculo || ('Tipo #' + item.idVehTipoVehiculo) }}</div>
+              <div class="secondaryCell">ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</div>
+            </div>
+            <div class="rowMeta">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editar(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminar(item); $event.stopPropagation()"></button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </ng-container>
+  </div>
+
+  <div aside>
+    <ng-container *ngIf="selected(); else noSelection">
+      <section class="miniCard">
+        <div class="sectionHead">
+          <div>
+            <h4>{{ selected()?.tipoVehiculo }}</h4>
+            <p class="secondaryCell">ID {{ selected()?.idVehTipoVehiculo }} · Art {{ selected()?.art || '-' }}</p>
+          </div>
+          <button pButton type="button" icon="pi pi-plus" size="small" label="Vista" (click)="nuevaVista()"></button>
+        </div>
+        <div class="jsonBox">{{ selected()?.atributos | json }}</div>
+      </section>
+
+      <section class="miniCard">
+        <div class="sectionHead">
+          <h4>Vistas estructurales</h4>
+          <p-tag [value]="(vistas().length || 0) + ' vistas'" severity="secondary"></p-tag>
+        </div>
+
+        <div class="jiraLikeList" *ngIf="vistas().length; else noVistas">
+          <article class="jiraLikeRow compact" *ngFor="let vista of vistas()">
+            <div class="rowHeader">
+              <div>
+                <div class="primaryCell">{{ vista.vista || 'Vista' }}</div>
+                <div class="secondaryCell">Orden {{ vista.orden || '-' }}</div>
+              </div>
+              <div class="rowMeta">
+                <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarVista(vista)"></button>
+                <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarVista(vista)"></button>
+              </div>
+            </div>
+            <div class="secondaryCell">{{ vista.observaciones || 'Sin observaciones' }}</div>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</app-vehiculos-workbench-shell>
+
+<ng-template #noTipos>
+  <app-vehiculos-empty-state icon="pi pi-box" title="Sin tipos creados" subtitle="Crea el catálogo base para empezar a registrar vehículos y vistas."></app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noSelection>
+  <app-vehiculos-empty-state icon="pi pi-directions" title="Selecciona un tipo" subtitle="A la derecha verás el detalle y las vistas asociadas al tipo elegido."></app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noVistas>
+  <app-vehiculos-empty-state icon="pi pi-image" title="Sin vistas" subtitle="Agrega frente, atrás, laterales o vistas especiales para marcar hallazgos."></app-vehiculos-empty-state>
+</ng-template>
+
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="{{ editingId() ? 'Editar tipo' : 'Nuevo tipo' }}"
+  subtitle="Catálogo compacto orientado a recepción, marcación visual y checklist por tipo."
+  (visibleChange)="drawerVisible.set($event)"
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()">
+  <form class="vehForm" [formGroup]="form">
+    <div class="grid cols-2">
+      <label>
+        <span>Art inventario</span>
+        <input pInputText type="number" formControlName="art">
+      </label>
+      <label>
+        <span>Tipo vehículo</span>
+        <input pInputText formControlName="tipoVehiculo" placeholder="MOTO, AUTO, TRICICLO_ELECTRICO">
+      </label>
+    </div>
+
+    <label>
+      <span>Atributos JSON</span>
+      <textarea pTextarea rows="10" formControlName="atributosJson" placeholder='{"vistaDefecto":"LATERAL_DER","usaBateria":true}'></textarea>
+    </label>
+  </form>
+</app-vehiculos-form-drawer>
+
+<app-vehiculos-form-drawer
+  [visible]="vistaDrawerVisible()"
+  [dirty]="vistaDirty()"
+  [saving]="saving()"
+  sizeClass="appDrawer appDrawer--md"
+  title="{{ editingVistaId() ? 'Editar vista' : 'Nueva vista' }}"
+  subtitle="Define el nombre, orden y atributos de cada superficie del vehículo."
+  (visibleChange)="vistaDrawerVisible.set($event)"
+  (requestClose)="cerrarVistaDrawer()"
+  (requestSave)="submitVista()">
+  <form class="vehForm" [formGroup]="vistaForm">
+    <div class="grid cols-2">
+      <label>
+        <span>Vista</span>
+        <input pInputText formControlName="vista" placeholder="FRENTE, ATRAS, LATERAL_IZQ...">
+      </label>
+      <label>
+        <span>Orden</span>
+        <input pInputText type="number" formControlName="orden">
+      </label>
+    </div>
+
+    <label>
+      <span>Observaciones</span>
+      <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+    </label>
+
+    <label>
+      <span>Atributos JSON</span>
+      <textarea pTextarea rows="8" formControlName="atributosJson" placeholder='{"aspectRatio":"16:9","usaMarcacionLibre":true}'></textarea>
+    </label>
+  </form>
+</app-vehiculos-form-drawer>

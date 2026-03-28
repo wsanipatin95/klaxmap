@@ -1,0 +1,29 @@
+<div class="workbench" [class.workbench--compact]="compact">
+  <section class="workbenchMain">
+    <div class="workbenchMainHeader">
+      <div>
+        <h3>{{ title }}</h3>
+        <p>{{ subtitle }}</p>
+      </div>
+      <div class="actions">
+        <ng-content select="[main-actions]"></ng-content>
+      </div>
+    </div>
+
+    <div class="workbenchMainBody">
+      <ng-content select="[main]"></ng-content>
+    </div>
+  </section>
+
+  <aside class="workbenchAside">
+    <div class="workbenchAsideHeader">
+      <h4>{{ selectionTitle }}</h4>
+      <div class="actions">
+        <ng-content select="[aside-actions]"></ng-content>
+      </div>
+    </div>
+    <div class="workbenchAsideBody">
+      <ng-content select="[aside]"></ng-content>
+    </div>
+  </aside>
+</div>

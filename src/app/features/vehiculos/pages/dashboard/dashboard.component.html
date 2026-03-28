@@ -1,0 +1,44 @@
+<app-vehiculos-page-header
+  title="Vehículos y taller"
+  subtitle="Vista general del módulo. Diseño compacto, escritorio y orientado a operación continua, siguiendo la densidad visual usada por el proyecto y la referencia estilo Jira.">
+  <button pButton type="button" icon="pi pi-refresh" label="Recargar" (click)="cargar()" [loading]="loading()"></button>
+  <a pButton type="button" href="/app/vehiculos/ordenes" label="Ir a órdenes"></a>
+</app-vehiculos-page-header>
+
+<div class="metricGrid" *ngIf="!loading(); else loadingBlock">
+  <article class="metric" *ngFor="let metric of metrics()">
+    <span>{{ metric.label }}</span>
+    <strong>{{ metric.value }}</strong>
+    <small>{{ metric.hint }}</small>
+  </article>
+</div>
+
+<section class="contentCard" *ngIf="!loading()">
+  <div class="sectionHead">
+    <h4>Actividad reciente</h4>
+    <p-tag value="Live" severity="contrast"></p-tag>
+  </div>
+
+  <div class="recentGrid" *ngIf="recientes().length; else noData">
+    <article class="recentCard" *ngFor="let item of recientes()">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.value }}</strong>
+      <p-tag *ngIf="item.chip" [value]="item.chip" severity="secondary"></p-tag>
+    </article>
+  </div>
+</section>
+
+<ng-template #loadingBlock>
+  <section class="contentCard loadingState">
+    <i class="pi pi-spin pi-spinner"></i>
+    <span>Cargando indicadores...</span>
+  </section>
+</ng-template>
+
+<ng-template #noData>
+  <app-vehiculos-empty-state
+    icon="pi pi-chart-bar"
+    title="Sin actividad todavía"
+    subtitle="Cuando empieces a crear órdenes, facturas y cobros, aquí verás el resumen operativo.">
+  </app-vehiculos-empty-state>
+</ng-template>

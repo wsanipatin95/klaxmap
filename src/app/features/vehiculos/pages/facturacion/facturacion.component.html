@@ -1,0 +1,266 @@
+<app-vehiculos-page-header
+  title="Facturación y cobros"
+  subtitle="Centro financiero del módulo. Combina catálogo de artículos, facturas, cobros, cajas y el workflow único para ejecutar todo en una sola llamada.">
+  <button pButton type="button" icon="pi pi-play" label="Workflow integral" (click)="abrirDrawer('workflow')"></button>
+  <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-file" label="Factura manual" (click)="abrirDrawer('factura')"></button>
+</app-vehiculos-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar artículos, facturas, cobros o caja..." (keyup.enter)="cargar()">
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" severity="secondary" [text]="true" label="Caja" (click)="abrirDrawer('caja')"></button>
+    <button pButton type="button" severity="secondary" [text]="true" label="Cobro" (click)="abrirDrawer('cobro')"></button>
+    <button pButton type="button" severity="secondary" [text]="true" label="Contabilizar" (click)="abrirDrawer('contabilizar')"></button>
+    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button>
+  </div>
+</div>
+
+<div class="contentCard">
+  <div class="tabBar">
+    <button class="tabButton" [class.active]="activeTab()==='workflow'" (click)="activeTab.set('workflow')">Workflow</button>
+    <button class="tabButton" [class.active]="activeTab()==='facturas'" (click)="activeTab.set('facturas')">Facturas</button>
+    <button class="tabButton" [class.active]="activeTab()==='cobros'" (click)="activeTab.set('cobros')">Cobros</button>
+    <button class="tabButton" [class.active]="activeTab()==='cajas'" (click)="activeTab.set('cajas')">Cajas</button>
+    <button class="tabButton" [class.active]="activeTab()==='articulos'" (click)="activeTab.set('articulos')">Artículos</button>
+  </div>
+</div>
+
+<div class="split2">
+  <section class="contentCard" *ngIf="activeTab()==='workflow'">
+    <div class="sectionHead">
+      <h4>Resultado del workflow</h4>
+      <button pButton type="button" icon="pi pi-play" size="small" label="Ejecutar" (click)="abrirDrawer('workflow')"></button>
+    </div>
+
+    <div class="metricGrid" *ngIf="workflowResultado(); else noWorkflow">
+      <article class="metric">
+        <span>Factura</span>
+        <strong>{{ workflowResultado()?.idFacVenta || '-' }}</strong>
+      </article>
+      <article class="metric">
+        <span>Cobro</span>
+        <strong>{{ workflowResultado()?.idFacVentaCobro || '-' }}</strong>
+      </article>
+      <article class="metric">
+        <span>Total</span>
+        <strong>{{ workflowResultado()?.total || 0 }}</strong>
+      </article>
+      <article class="metric">
+        <span>Saldo</span>
+        <strong>{{ workflowResultado()?.saldoPendiente || 0 }}</strong>
+      </article>
+    </div>
+
+    <section class="miniCard" *ngIf="workflowResultado()">
+      <div class="sectionHead">
+        <h4>Detalles facturados</h4>
+        <p-tag [value]="(workflowResultado()?.detallesFacturados?.length || 0) + ' líneas'" severity="secondary"></p-tag>
+      </div>
+      <div class="jiraLikeList">
+        <article class="jiraLikeRow compact" *ngFor="let item of workflowResultado()?.detallesFacturados || []">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">Art {{ item['art'] }} · Det #{{ item['idFacVentaDet'] }}</div>
+              <div class="secondaryCell">{{ item['detalle'] }}</div>
+            </div>
+            <div class="secondaryCell">{{ item['cantidad'] }} x {{ item['valuni'] }}</div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <section class="contentCard" *ngIf="activeTab()==='facturas'">
+    <div class="sectionHead">
+      <h4>Facturas</h4>
+      <button pButton type="button" icon="pi pi-plus" size="small" label="Crear" (click)="abrirDrawer('factura')"></button>
+    </div>
+    <div class="jiraLikeList" *ngIf="facturas().length; else noFacturas">
+      <article class="jiraLikeRow compact" *ngFor="let item of facturas()" (click)="seleccionarFactura(item)">
+        <div class="rowHeader">
+          <div>
+            <div class="primaryCell">FAC #{{ item.idFacVenta }}</div>
+            <div class="secondaryCell">Sec {{ item.secuencial || '-' }} · Cliente {{ item.dni || '-' }}</div>
+          </div>
+          <p-tag [value]="item.sriEstado || 'P'" severity="secondary"></p-tag>
+        </div>
+        <div class="secondaryCell">Total {{ item.total || 0 }} · Deuda {{ item.cxcDeuda || 0 }}</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="contentCard" *ngIf="activeTab()==='cobros'">
+    <div class="sectionHead">
+      <h4>Cobros</h4>
+      <button pButton type="button" icon="pi pi-plus" size="small" label="Crear" (click)="abrirDrawer('cobro')"></button>
+    </div>
+    <div class="jiraLikeList" *ngIf="cobros().length; else noCobros">
+      <article class="jiraLikeRow compact" *ngFor="let item of cobros()" (click)="seleccionarCobro(item)">
+        <div class="rowHeader">
+          <div>
+            <div class="primaryCell">COB #{{ item.idFacVentaCobro }}</div>
+            <div class="secondaryCell">{{ item.fecha || '-' }} · Caja {{ item.idFacArqueoCajaFk || '-' }}</div>
+          </div>
+          <p-tag [value]="(item.valor || 0).toString()" severity="success"></p-tag>
+        </div>
+        <div class="secondaryCell">{{ item.concepto || 'Sin concepto' }}</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="contentCard" *ngIf="activeTab()==='cajas'">
+    <div class="sectionHead">
+      <h4>Cajas</h4>
+      <button pButton type="button" icon="pi pi-plus" size="small" label="Asegurar" (click)="abrirDrawer('caja')"></button>
+    </div>
+    <div class="jiraLikeList" *ngIf="cajas().length; else noCajas">
+      <article class="jiraLikeRow compact" *ngFor="let item of cajas()">
+        <div class="rowHeader">
+          <div>
+            <div class="primaryCell">Caja #{{ item.idFacCaja }}</div>
+            <div class="secondaryCell">Pto {{ item.idAdmPtoemiFk || '-' }} · {{ item.cajaFec || '-' }}</div>
+          </div>
+          <p-tag [value]="item.estado || 'p'" severity="secondary"></p-tag>
+        </div>
+        <div class="secondaryCell">Saldo {{ item.saldoCaja || 0 }} · Arqueo {{ item.arqueo || 0 }}</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="contentCard" *ngIf="activeTab()==='articulos'">
+    <div class="sectionHead">
+      <h4>Catálogo de artículos</h4>
+      <p-tag [value]="(articulos().length || 0) + ' artículos'" severity="secondary"></p-tag>
+    </div>
+    <div class="jiraLikeList" *ngIf="articulos().length; else noArticulos">
+      <article class="jiraLikeRow compact" *ngFor="let item of articulos()">
+        <div class="rowHeader">
+          <div>
+            <div class="primaryCell">{{ item.articulo }}</div>
+            <div class="secondaryCell">{{ item.artcod || '-' }} · IVA {{ item.porcentaje || 0 }}%</div>
+          </div>
+          <div class="secondaryCell">Costo {{ item.artcom || 0 }}</div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="contentCard">
+    <div class="sectionHead">
+      <h4>Detalle</h4>
+      <span class="secondaryCell">
+        {{ activeTab()==='facturas' ? 'Factura seleccionada' : activeTab()==='cobros' ? 'Cobro seleccionado' : 'Resumen' }}
+      </span>
+    </div>
+
+    <div class="jsonBox" *ngIf="activeTab()==='facturas'">
+      {{ facturaDetalle() | json }}
+    </div>
+
+    <div class="jsonBox" *ngIf="activeTab()==='cobros'">
+      {{ cobroDetalle() | json }}
+    </div>
+
+    <div class="jsonBox" *ngIf="activeTab()==='workflow'">
+      {{ workflowResultado() | json }}
+    </div>
+
+    <div class="jsonBox" *ngIf="activeTab()==='cajas'">
+      {{ cajas() | json }}
+    </div>
+
+    <div class="jsonBox" *ngIf="activeTab()==='articulos'">
+      {{ articulos().slice(0, 8) | json }}
+    </div>
+  </section>
+</div>
+
+<ng-template #noWorkflow><app-vehiculos-empty-state icon="pi pi-bolt" title="Sin ejecución todavía" subtitle="Ejecuta el workflow integral para asegurar caja, facturar, cobrar y contabilizar en un solo paso."></app-vehiculos-empty-state></ng-template>
+<ng-template #noFacturas><app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas" subtitle="Crea una factura manual o ejecuta el workflow integral."></app-vehiculos-empty-state></ng-template>
+<ng-template #noCobros><app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros" subtitle="Registra recibos o consumos asociados a facturas emitidas."></app-vehiculos-empty-state></ng-template>
+<ng-template #noCajas><app-vehiculos-empty-state icon="pi pi-shop" title="Sin cajas" subtitle="Asegura una caja virtual antes de cobrar."></app-vehiculos-empty-state></ng-template>
+<ng-template #noArticulos><app-vehiculos-empty-state icon="pi pi-box" title="Sin artículos" subtitle="El catálogo se alimenta del inventario disponible para facturación de repuestos."></app-vehiculos-empty-state></ng-template>
+
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="Operación financiera"
+  subtitle="Cada formulario usa el endpoint del backend correspondiente."
+  (visibleChange)="drawerVisible.set($event)"
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()">
+  <div [ngSwitch]="drawerMode()">
+    <form class="vehForm" [formGroup]="workflowForm" *ngSwitchCase="'workflow'">
+      <div class="grid cols-2">
+        <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
+        <label><span>ID punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemiFk"></label>
+        <label class="cols-full"><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
+        <label><span>Tipo facturación</span><input pInputText formControlName="tipoFacturacion"></label>
+        <label><span>Pago inicial</span><input pInputText type="number" formControlName="pagoInicial"></label>
+        <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
+        <label><span>Fecha emisión</span><input type="date" formControlName="fechaEmisionIso"></label>
+        <label><span>Forma pago</span><input pInputText type="number" formControlName="idCntFormaPagoFk"></label>
+      </div>
+      <label><span>Observación factura</span><textarea pTextarea rows="3" formControlName="observacionFactura"></textarea></label>
+      <div class="grid cols-2">
+        <label><span>Concepto factura</span><input pInputText formControlName="conceptoFactura"></label>
+        <label><span>Concepto cobro</span><input pInputText formControlName="conceptoCobro"></label>
+      </div>
+    </form>
+
+    <form class="vehForm" [formGroup]="facturaForm" *ngSwitchCase="'factura'">
+      <div class="grid cols-2">
+        <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
+        <label><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
+        <label><span>Tipo facturación</span><input pInputText formControlName="tipoFacturacion"></label>
+        <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
+        <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
+        <label><span>Punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
+        <label><span>Entrada</span><input pInputText type="number" formControlName="entrada"></label>
+        <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
+        <label><span>Fecha primer vencimiento</span><input type="date" formControlName="fechaPrimerVencimiento"></label>
+        <label><span>ID comp. aut.</span><input pInputText type="number" formControlName="idTaxCompAutFk"></label>
+      </div>
+      <label><span>Observación</span><textarea pTextarea rows="4" formControlName="observacion"></textarea></label>
+    </form>
+
+    <form class="vehForm" [formGroup]="cobroForm" *ngSwitchCase="'cobro'">
+      <div class="grid cols-2">
+        <label><span>ID factura</span><input pInputText type="number" formControlName="idFacVenta"></label>
+        <label><span>Valor</span><input pInputText type="number" formControlName="valor"></label>
+        <label><span>Fecha</span><input type="date" formControlName="fecha"></label>
+        <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
+        <label><span>ID punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
+        <label><span>ID caja</span><input pInputText type="number" formControlName="idFacCaja"></label>
+        <label><span>Forma pago</span><input pInputText type="number" formControlName="idCntFormaPagoFk"></label>
+        <label><span>ID doc banco</span><input pInputText type="number" formControlName="idBanDocBancoFk"></label>
+        <label><span>ID plan forma pago</span><input pInputText type="number" formControlName="idCntPlanFormaPagoFk"></label>
+        <label><span>ID tipo contable</span><input pInputText type="number" formControlName="idCntTipoFk"></label>
+      </div>
+      <label><span>Concepto</span><textarea pTextarea rows="3" formControlName="concepto"></textarea></label>
+    </form>
+
+    <form class="vehForm" [formGroup]="cajaForm" *ngSwitchCase="'caja'">
+      <div class="grid cols-2">
+        <label><span>ID punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
+        <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
+        <label><span>Saldo inicial</span><input pInputText type="number" formControlName="saldoCaja"></label>
+        <label><span>Estado inicial</span><input pInputText formControlName="estadoInicial"></label>
+      </div>
+      <label><span>Comentario</span><textarea pTextarea rows="4" formControlName="comentario"></textarea></label>
+    </form>
+
+    <form class="vehForm" [formGroup]="contabilizarForm" *ngSwitchCase="'contabilizar'">
+      <div class="grid cols-2">
+        <label><span>ID factura</span><input pInputText type="number" formControlName="idFacVenta"></label>
+        <label><span>ID tipo contable</span><input pInputText type="number" formControlName="idCntTipoFk"></label>
+        <label><span>Fecha contable</span><input type="date" formControlName="fechaContable"></label>
+      </div>
+      <label><span>Concepto</span><textarea pTextarea rows="3" formControlName="concepto"></textarea></label>
+    </form>
+  </div>
+</app-vehiculos-form-drawer>

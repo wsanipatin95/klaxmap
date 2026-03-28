@@ -1,0 +1,165 @@
+<app-vehiculos-page-header
+  title="Clientes y vehículos"
+  subtitle="Relación maestro-detalle de clientes y sus unidades. La operación diaria queda en una sola pantalla: lista, detalle y acciones rápidas.">
+  <button pButton type="button" icon="pi pi-user-plus" label="Nuevo cliente" (click)="nuevoCliente()"></button>
+</app-vehiculos-page-header>
+
+<div class="toolbarCard">
+  <div class="searchBox">
+    <i class="pi pi-search"></i>
+    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar por identificación, nombre o contacto..." (keyup.enter)="cargar()">
+  </div>
+  <div class="toolbarActions">
+    <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
+    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button>
+  </div>
+</div>
+
+<app-vehiculos-workbench-shell
+  title="Clientes"
+  subtitle="Selecciona un cliente para ver y operar sus vehículos."
+  selectionTitle="Cliente seleccionado">
+  <div main>
+    <ng-container *ngIf="clientes().length; else noClientes">
+      <div class="jiraLikeList">
+        <article
+          class="jiraLikeRow"
+          *ngFor="let cliente of clientes()"
+          [class.selected]="selectedCliente()?.ruc === cliente.ruc"
+          (click)="seleccionar(cliente)">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ cliente.nombre || cliente.ruc }}</div>
+              <div class="secondaryCell">{{ cliente.ruc }} · {{ cliente.movil || cliente.telefono || 'Sin contacto' }}</div>
+            </div>
+            <div class="rowMeta">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarCliente(cliente); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarCliente(cliente); $event.stopPropagation()"></button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </ng-container>
+  </div>
+
+  <div aside>
+    <ng-container *ngIf="selectedCliente(); else noSelection">
+      <section class="miniCard">
+        <div class="sectionHead">
+          <div>
+            <h4>{{ selectedCliente()?.nombre }}</h4>
+            <p class="secondaryCell">{{ selectedCliente()?.ruc }} · {{ selectedCliente()?.email || 'sin email' }}</p>
+          </div>
+          <button pButton type="button" icon="pi pi-car" size="small" label="Vehículo" (click)="nuevoVehiculo()"></button>
+        </div>
+
+        <div class="grid cols-2">
+          <div>
+            <span class="secondaryCell">Dirección</span>
+            <div class="primaryCell">{{ selectedCliente()?.direccion || '-' }}</div>
+          </div>
+          <div>
+            <span class="secondaryCell">Contacto</span>
+            <div class="primaryCell">{{ selectedCliente()?.movil || selectedCliente()?.telefono || '-' }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="miniCard">
+        <div class="sectionHead">
+          <h4>Vehículos del cliente</h4>
+          <span class="secondaryCell">{{ vehiculos().length }} registrados</span>
+        </div>
+
+        <div class="jiraLikeList" *ngIf="vehiculos().length; else noVehiculos">
+          <article class="jiraLikeRow compact" *ngFor="let vehiculo of vehiculos()">
+            <div class="rowHeader">
+              <div>
+                <div class="primaryCell">{{ vehiculo.marca }} {{ vehiculo.modelo }}</div>
+                <div class="secondaryCell">{{ vehiculo.placa || 'Sin placa' }} · Tipo {{ vehiculo.idVehTipoVehiculoFk }}</div>
+              </div>
+              <div class="rowMeta">
+                <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarVehiculo(vehiculo)"></button>
+                <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarVehiculo(vehiculo)"></button>
+              </div>
+            </div>
+            <div class="secondaryCell">{{ vehiculo.color || '-' }} · {{ vehiculo.kilometraje ?? 0 }} km</div>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</app-vehiculos-workbench-shell>
+
+<ng-template #noClientes>
+  <app-vehiculos-empty-state icon="pi pi-users" title="Sin clientes" subtitle="Crea clientes para registrar sus vehículos y emitir órdenes de trabajo."></app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noSelection>
+  <app-vehiculos-empty-state icon="pi pi-user" title="Selecciona un cliente" subtitle="Aquí verás sus datos rápidos y el listado de vehículos asociados."></app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noVehiculos>
+  <app-vehiculos-empty-state icon="pi pi-car" title="Sin vehículos" subtitle="Agrega la primera unidad del cliente para iniciar la operación de taller."></app-vehiculos-empty-state>
+</ng-template>
+
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  title="{{ editingDni() ? 'Editar cliente' : 'Nuevo cliente' }}"
+  subtitle="Formulario compacto de cliente. Campos esenciales arriba y metadata comercial abajo."
+  (visibleChange)="drawerVisible.set($event)"
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submitCliente()">
+  <form class="vehForm" [formGroup]="form">
+    <div class="grid cols-2">
+      <label><span>Identificación</span><input pInputText formControlName="ruc"></label>
+      <label><span>Nombre</span><input pInputText formControlName="nombre"></label>
+      <label><span>Dirección</span><input pInputText formControlName="direccion"></label>
+      <label><span>Email</span><input pInputText formControlName="email"></label>
+      <label><span>Móvil</span><input pInputText formControlName="movil"></label>
+      <label><span>Teléfono</span><input pInputText formControlName="telefono"></label>
+      <label><span>Tipo identificación</span><input pInputText formControlName="idTaxTipIdeFk"></label>
+      <label><span>Centro</span><input pInputText type="number" formControlName="cen"></label>
+      <label><span>Número precio</span><input pInputText type="number" formControlName="numeroPrecio"></label>
+      <label><span>% descuento</span><input pInputText type="number" formControlName="porcentajeDescuento"></label>
+    </div>
+    <label><span>Observación</span><textarea pTextarea rows="5" formControlName="observacion"></textarea></label>
+  </form>
+</app-vehiculos-form-drawer>
+
+<app-vehiculos-form-drawer
+  [visible]="vehiculoDrawerVisible()"
+  [dirty]="vehiculoDirty()"
+  [saving]="saving()"
+  title="{{ editingVehiculoId() ? 'Editar vehículo' : 'Nuevo vehículo' }}"
+  subtitle="Vehículo individual del cliente, con datos técnicos mínimos y atributos operativos."
+  (visibleChange)="vehiculoDrawerVisible.set($event)"
+  (requestClose)="cerrarVehiculoDrawer()"
+  (requestSave)="submitVehiculo()">
+  <form class="vehForm" [formGroup]="vehiculoForm">
+    <div class="grid cols-3">
+      <label><span>Tipo vehículo</span><input pInputText type="number" formControlName="idVehTipoVehiculoFk"></label>
+      <label><span>Placa</span><input pInputText formControlName="placa"></label>
+      <label><span>Año</span><input pInputText type="number" formControlName="anio"></label>
+      <label><span>Marca</span><input pInputText formControlName="marca"></label>
+      <label><span>Modelo</span><input pInputText formControlName="modelo"></label>
+      <label><span>Color</span><input pInputText formControlName="color"></label>
+      <label><span>Chasis</span><input pInputText formControlName="numeroChasis"></label>
+      <label><span>Motor</span><input pInputText formControlName="numeroMotor"></label>
+      <label><span>Cilindraje</span><input pInputText formControlName="cilindraje"></label>
+      <label><span>Combustible</span><input pInputText formControlName="combustible"></label>
+      <label><span>Transmisión</span><input pInputText formControlName="transmision"></label>
+      <label><span>Kilometraje</span><input pInputText type="number" formControlName="kilometraje"></label>
+      <label><span>Número ruedas</span><input pInputText type="number" formControlName="numeroRuedas"></label>
+      <label><span>Capacidad carga</span><input pInputText type="number" formControlName="capacidadCarga"></label>
+      <label><span>Tipo batería</span><input pInputText formControlName="tipoBateria"></label>
+      <label><span>Voltaje</span><input pInputText formControlName="voltajeBateria"></label>
+      <label><span>Amperaje</span><input pInputText formControlName="amperajeBateria"></label>
+      <label><span>Potencia motor</span><input pInputText formControlName="potenciaMotor"></label>
+      <label><span>Autonomía km</span><input pInputText type="number" formControlName="autonomiaKm"></label>
+    </div>
+    <label><span>Observaciones</span><textarea pTextarea rows="5" formControlName="observaciones"></textarea></label>
+  </form>
+</app-vehiculos-form-drawer>

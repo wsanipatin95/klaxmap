@@ -1,0 +1,23 @@
+<div class="vistaCard">
+  <div class="vistaHead">
+    <strong>{{ vista?.vista || 'Vista' }}</strong>
+    <span>{{ vista?.observaciones || 'Superficie para marcar hallazgos y daños.' }}</span>
+  </div>
+
+  <div class="surface" [class.surface--interactive]="interactive" (click)="onSurfaceClick($event)">
+    <div class="ghostVehicle">
+      <div class="ghostHeader">{{ vista?.vista || 'VISTA' }}</div>
+      <div class="ghostBody">
+        <div class="ghostOutline"></div>
+        <div class="ghostText">Área de marcado</div>
+      </div>
+    </div>
+
+    <div
+      class="marker"
+      *ngFor="let marca of marcas"
+      [ngStyle]="resolvePosition(marca)"
+      [style.background]="marca.color || '#cd327f'"
+      [title]="marca.observaciones || marca.tipoMarca || 'Marca'"></div>
+  </div>
+</div>
