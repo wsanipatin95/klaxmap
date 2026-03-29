@@ -1,129 +1,330 @@
-<app-vehiculos-page-header
-  title="Checklist por tipo"
-  subtitle="Catálogo de ítems de revisión y asignación por tipo de vehículo. Esta pantalla separa el ítem maestro de su relación con cada tipo.">
-  <button pButton type="button" icon="pi pi-plus" label="Nuevo ítem" (click)="nuevo()"></button>
-</app-vehiculos-page-header>
+<div class="checklists-page-shell">
+  <header class="page-topbar">
+    <div class="page-topbar-copy">
+      <h2>Checklists</h2>
+      <p>Catálogo base y asignación por tipo de vehículo</p>
+    </div>
 
-<div class="split2">
-  <section class="contentCard">
-    <div class="sectionHead">
-      <h4>Ítems checklist</h4>
-      <div class="toolbarActions">
-        <div class="searchBox">
-          <i class="pi pi-search"></i>
-          <input pInputText [(ngModel)]="q" placeholder="Buscar ítems..." (keyup.enter)="cargar()">
+    <div class="page-topbar-actions">
+      <button type="button" class="ghost-btn" (click)="irADashboard()">
+        Volver
+      </button>
+
+      <button
+        type="button"
+        class="ghost-btn"
+        (click)="cargarTodo()"
+        [disabled]="loading() || saving()"
+      >
+        {{ loading() ? 'Actualizando...' : 'Refrescar' }}
+      </button>
+
+      <button
+        type="button"
+        class="primary-btn"
+        (click)="nuevoChecklist()"
+        [disabled]="saving()"
+      >
+        Nuevo ítem
+      </button>
+    </div>
+  </header>
+
+  <div class="status-strip" *ngIf="loading() || saving() || success() || error() || hasPendingChanges()">
+    <div class="status-chip info" *ngIf="loading()">Cargando...</div>
+    <div class="status-chip info" *ngIf="saving()">Guardando...</div>
+    <div class="status-chip success" *ngIf="success()">{{ success() }}</div>
+    <div class="status-chip error" *ngIf="error()">{{ error() }}</div>
+    <div class="status-chip warning" *ngIf="hasPendingChanges()">Cambios sin guardar</div>
+  </div>
+
+  <div class="page-grid">
+    <aside class="panel panel-list">
+      <div class="panel-head panel-head--stack">
+        <div>
+          <h3>Listado</h3>
+          <p>{{ checks().length }} ítem(s)</p>
         </div>
-        <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
-      </div>
-    </div>
 
-    <div class="jiraLikeList" *ngIf="checks().length; else noChecks">
-      <article class="jiraLikeRow compact" *ngFor="let item of checks()">
-        <div class="rowHeader">
-          <div>
-            <div class="primaryCell">{{ item.nombreItem }}</div>
-            <div class="secondaryCell">{{ item.categoria || 'GENERAL' }} · Orden {{ item.orden || '-' }}</div>
+        <div class="search-inline">
+          <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input
+              pInputText
+              [ngModel]="q()"
+              (ngModelChange)="q.set($event)"
+              placeholder="Buscar checklist..."
+              (keyup.enter)="onSearchEnter()"
+            />
           </div>
-          <div class="rowMeta">
-            <p-tag [value]="esObligatorio(item.obligatorio) ? 'Obligatorio' : 'Opcional'" [severity]="esObligatorio(item.obligatorio) ? 'warn' : 'secondary'"></p-tag>
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editar(item)"></button>
-            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminar(item)"></button>
-          </div>
+
+          <button
+            type="button"
+            class="ghost-btn ghost-btn--sm"
+            (click)="clearSearch()"
+            [disabled]="!q()"
+          >
+            Limpiar
+          </button>
         </div>
-      </article>
-    </div>
-  </section>
-
-  <section class="contentCard">
-    <div class="sectionHead">
-      <h4>Asignación por tipo</h4>
-      <button pButton type="button" icon="pi pi-link" size="small" label="Asignar" (click)="nuevaAsignacion()"></button>
-    </div>
-
-    <div class="jiraLikeList miniTypes" *ngIf="tipos().length; else noTipos">
-      <article
-        class="jiraLikeRow compact"
-        *ngFor="let tipo of tipos()"
-        [class.selected]="selectedTipo()?.idVehTipoVehiculo === tipo.idVehTipoVehiculo"
-        (click)="seleccionarTipo(tipo)">
-        <div class="primaryCell">{{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}</div>
-        <div class="secondaryCell">ID {{ tipo.idVehTipoVehiculo }}</div>
-      </article>
-    </div>
-
-    <section class="miniCard" *ngIf="selectedTipo()">
-      <div class="sectionHead">
-        <h4>{{ selectedTipo()?.tipoVehiculo }}</h4>
-        <span class="secondaryCell">{{ asignados().length }} items</span>
       </div>
 
-      <div class="jiraLikeList" *ngIf="asignados().length; else noAsignados">
-        <article class="jiraLikeRow compact" *ngFor="let rel of asignados()">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ nombreCheck(rel.idVehVehiculoCheckListFk) }}</div>
-              <div class="secondaryCell">Rel #{{ rel.idVehVehiculoCheckListVehiculo }}</div>
+      <div class="empty" *ngIf="!loading() && checks().length === 0">
+        No hay ítems checklist.
+      </div>
+
+      <div class="list" *ngIf="checks().length > 0">
+        <button
+          type="button"
+          class="row"
+          *ngFor="let item of checks()"
+          [class.active]="selected()?.idVehVehiculoCheckList === item.idVehVehiculoCheckList && mode() === 'editar'"
+          (click)="seleccionarChecklist(item)"
+        >
+          <div class="row-copy">
+            <strong [title]="item.nombreItem">{{ item.nombreItem }}</strong>
+            <span>
+              {{ categoriaLabel(item) }} · Orden {{ item.orden ?? '-' }}
+            </span>
+          </div>
+
+          <div class="row-meta">
+            <span
+              class="badge"
+              [class.optional]="obligatoriedadLabel(item) === 'Opcional'"
+            >
+              {{ obligatoriedadLabel(item) }}
+            </span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <section class="panel panel-editor">
+      <div class="panel-head panel-head--editor">
+        <div>
+          <h3>{{ currentTitle() }}</h3>
+          <p>{{ currentSubtitle() }}</p>
+        </div>
+
+        <button
+          *ngIf="mode() === 'editar' && selected()"
+          type="button"
+          class="danger-btn"
+          (click)="eliminarChecklistActual()"
+          [disabled]="saving()"
+        >
+          Eliminar
+        </button>
+      </div>
+
+      <div class="editor-tabs" *ngIf="mode() === 'editar' && selected()">
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'edicion'"
+          (click)="setTab('edicion')"
+        >
+          Edición
+        </button>
+
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'asignaciones'"
+          (click)="setTab('asignaciones')"
+        >
+          Asignaciones
+        </button>
+      </div>
+
+      <div class="editor-body">
+        <section class="editor-view" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
+          <div class="editor-scroll">
+            <form class="veh-form" [formGroup]="form">
+              <div class="form-grid cols-2">
+                <label class="form-field cols-2">
+                  <span>Nombre del ítem</span>
+                  <input pInputText formControlName="nombreItem" placeholder="Ej. Espejos, frenos, batería..." />
+                  <small class="field-error" *ngIf="form.controls.nombreItem.invalid && form.controls.nombreItem.touched">
+                    El nombre es obligatorio.
+                  </small>
+                </label>
+
+                <label class="form-field">
+                  <span>Categoría</span>
+                  <input pInputText formControlName="categoria" placeholder="Ej. GENERAL, FRENOS, ELÉCTRICO..." />
+                </label>
+
+                <label class="form-field">
+                  <span>Orden</span>
+                  <input pInputText type="number" formControlName="orden" min="1" />
+                </label>
+
+                <label class="toggle-field cols-2">
+                  <input type="checkbox" formControlName="obligatorio" />
+                  <div>
+                    <strong>Obligatorio</strong>
+                    <p>Marca si este ítem debe revisarse siempre en recepción.</p>
+                  </div>
+                </label>
+              </div>
+
+              <div class="editor-actions">
+                <button
+                  type="button"
+                  class="ghost-btn"
+                  (click)="onMainFormCancel()"
+                  [disabled]="saving()"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  (click)="guardarChecklist()"
+                  [disabled]="saving()"
+                >
+                  {{ saving() ? 'Guardando...' : 'Guardar' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="editor-view" *ngIf="mode() === 'editar' && activeTab() === 'asignaciones' && selected() as sel">
+          <div class="editor-scroll">
+            <div class="assignment-block">
+              <div class="assignment-head">
+                <div>
+                  <h4>Asignar a tipos de vehículo</h4>
+                  <p>Relaciona el ítem <strong>{{ sel.nombreItem }}</strong> con uno o varios tipos.</p>
+                </div>
+              </div>
+
+              <form class="veh-form assign-form" [formGroup]="assignForm">
+                <div class="form-grid cols-2">
+                  <label class="form-field">
+                    <span>Tipo de vehículo</span>
+                    <select formControlName="idVehTipoVehiculoFk">
+                      <option [ngValue]="null">Selecciona un tipo</option>
+                      <option
+                        *ngFor="let tipo of tiposDisponiblesParaAsignar()"
+                        [ngValue]="tipo.idVehTipoVehiculo"
+                      >
+                        {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
+                      </option>
+                    </select>
+                    <small class="field-error" *ngIf="assignForm.controls.idVehTipoVehiculoFk.invalid && assignForm.controls.idVehTipoVehiculoFk.touched">
+                      Debes seleccionar un tipo.
+                    </small>
+                  </label>
+
+                  <div class="form-field form-field--actions">
+                    <span>&nbsp;</span>
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      (click)="guardarAsignacion()"
+                      [disabled]="saving() || tiposDisponiblesParaAsignar().length === 0"
+                    >
+                      {{ saving() ? 'Guardando...' : 'Asignar' }}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div class="subpanel">
+                <div class="subpanel-head">
+                  <h4>Tipos asignados</h4>
+                  <p>{{ asignaciones().length }} relación(es)</p>
+                </div>
+
+                <div class="empty" *ngIf="asignaciones().length === 0">
+                  Este ítem todavía no está asignado a ningún tipo.
+                </div>
+
+                <div class="list list--compact" *ngIf="asignaciones().length > 0">
+                  <div class="row row--readonly" *ngFor="let rel of asignaciones()">
+                    <div class="row-copy">
+                      <strong>{{ nombreTipo(rel.idVehTipoVehiculoFk) }}</strong>
+                      <span>Relación #{{ rel.idVehVehiculoCheckListVehiculo }}</span>
+                    </div>
+
+                    <div class="row-meta">
+                      <button
+                        type="button"
+                        class="danger-link"
+                        (click)="eliminarAsignacion(rel)"
+                        [disabled]="saving()"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="subpanel available-types" *ngIf="tiposDisponiblesParaAsignar().length === 0">
+                <div class="empty">
+                  Este ítem ya está relacionado con todos los tipos disponibles.
+                </div>
+              </div>
             </div>
-            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarAsignacion(rel)"></button>
           </div>
-        </article>
+        </section>
       </div>
     </section>
-  </section>
-</div>
+  </div>
 
-<ng-template #noChecks>
-  <app-vehiculos-empty-state icon="pi pi-list-check" title="Sin ítems checklist" subtitle="Crea el catálogo base de revisión del vehículo."></app-vehiculos-empty-state>
-</ng-template>
-<ng-template #noTipos>
-  <app-vehiculos-empty-state icon="pi pi-directions-alt" title="Sin tipos" subtitle="Debes crear tipos de vehículo antes de asignar ítems."></app-vehiculos-empty-state>
-</ng-template>
-<ng-template #noAsignados>
-  <app-vehiculos-empty-state icon="pi pi-link" title="Sin asignaciones" subtitle="Asocia ítems checklist al tipo seleccionado para usarlo en recepción."></app-vehiculos-empty-state>
-</ng-template>
+  <p-dialog
+    [visible]="confirmVisible()"
+    (visibleChange)="confirmVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '28rem' }"
+    [header]="confirmTitle()"
+    (onHide)="onConfirmHide()"
+  >
+    <div class="confirm-body">
+      <div class="confirm-icon" [ngClass]="confirmSeverityClass()">
+        {{ confirmIconSymbol() }}
+      </div>
 
-<app-vehiculos-form-drawer
-  [visible]="drawerVisible()"
-  [dirty]="dirty()"
-  [saving]="saving()"
-  sizeClass="appDrawer appDrawer--md"
-  title="{{ editingId() ? 'Editar ítem checklist' : 'Nuevo ítem checklist' }}"
-  subtitle="Define nombre, categoría, orden y obligatoriedad."
-  (visibleChange)="drawerVisible.set($event)"
-  (requestClose)="cerrarDrawer()"
-  (requestSave)="submit()">
-  <form class="vehForm" [formGroup]="form">
-    <div class="grid cols-2">
-      <label><span>Nombre</span><input pInputText formControlName="nombreItem"></label>
-      <label><span>Categoría</span><input pInputText formControlName="categoria"></label>
-      <label><span>Orden</span><input pInputText type="number" formControlName="orden"></label>
-      <label class="toggleItem">
-        <input type="checkbox" formControlName="obligatorio">
-        <span>Obligatorio</span>
-      </label>
+      <div class="confirm-content">
+        <div class="confirm-title">{{ confirmTitle() }}</div>
+        <p class="confirm-message">{{ confirmMessage() }}</p>
+      </div>
     </div>
-  </form>
-</app-vehiculos-form-drawer>
 
-<app-vehiculos-form-drawer
-  [visible]="assignDrawerVisible()"
-  [dirty]="assignDirty()"
-  [saving]="saving()"
-  sizeClass="appDrawer appDrawer--sm"
-  title="Asignar checklist"
-  subtitle="Relaciona un ítem del catálogo con el tipo de vehículo seleccionado."
-  (visibleChange)="assignDrawerVisible.set($event)"
-  (requestClose)="cerrarAsignacionDrawer()"
-  (requestSave)="submitAsignacion()">
-  <form class="vehForm" [formGroup]="assignForm">
-    <label>
-      <span>ID checklist</span>
-      <select formControlName="idVehVehiculoCheckListFk">
-        <option [ngValue]="null">Selecciona un ítem</option>
-        <option *ngFor="let item of disponiblesParaAsignar()" [ngValue]="item.idVehVehiculoCheckList">
-          {{ item.nombreItem }} ({{ item.categoria || 'GENERAL' }})
-        </option>
-      </select>
-    </label>
-  </form>
-</app-vehiculos-form-drawer>
+    <ng-template pTemplate="footer">
+      <div class="dialog-footer">
+        <button type="button" class="ghost-btn ghost-btn--sm" (click)="confirmCancel()">
+          {{ confirmCancelLabel() }}
+        </button>
+
+        <button
+          *ngIf="confirmAlternateLabel() as altLabel"
+          type="button"
+          class="alternate-btn"
+          (click)="confirmAlternate()"
+        >
+          {{ altLabel }}
+        </button>
+
+        <button
+          type="button"
+          class="confirm-btn"
+          [class.is-danger]="confirmSeverity() === 'danger'"
+          [class.is-warning]="confirmSeverity() === 'warning'"
+          [class.is-info]="confirmSeverity() === 'info'"
+          (click)="confirmAccept()"
+        >
+          {{ confirmConfirmLabel() }}
+        </button>
+      </div>
+    </ng-template>
+  </p-dialog>
+</div>
