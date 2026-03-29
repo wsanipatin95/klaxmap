@@ -1,11 +1,14 @@
 <p-drawer
   [visible]="visible"
-  [modal]="true"
-  [dismissible]="false"
-  [showCloseIcon]="false"
+  [modal]="modal"
+  [dismissible]="dismissible"
+  [showCloseIcon]="showCloseIcon"
+  [closeOnEscape]="closeOnEscape"
+  [blockScroll]="modal"
   position="right"
   [styleClass]="sizeClass"
-  (visibleChange)="visibleChange.emit($event)">
+  (visibleChange)="onVisibleChange($event)">
+
   <ng-template pTemplate="header">
     <div class="drawerHeader">
       <div>
@@ -22,8 +25,24 @@
 
   <ng-template pTemplate="footer">
     <div class="drawerFooter">
-      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar" (click)="requestClose.emit()" [disabled]="saving"></button>
-      <button pButton type="button" label="Guardar" icon="pi pi-save" (click)="requestSave.emit()" [loading]="saving"></button>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        label="Cancelar"
+        (click)="onRequestClose()"
+        [disabled]="saving">
+      </button>
+
+      <button
+        pButton
+        type="button"
+        label="Guardar"
+        icon="pi pi-save"
+        (click)="onRequestSave()"
+        [loading]="saving">
+      </button>
     </div>
   </ng-template>
 </p-drawer>

@@ -17,7 +17,29 @@ export class VehiculosFormDrawerComponent {
   @Input() dirty = false;
   @Input() saving = false;
   @Input() sizeClass = 'appDrawer appDrawer--lg';
+
+  /**
+   * Para UX tipo Jira / workbench:
+   * por defecto NO bloquea la pantalla completa.
+   */
+  @Input() modal = false;
+  @Input() dismissible = true;
+  @Input() showCloseIcon = true;
+  @Input() closeOnEscape = true;
+
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() requestClose = new EventEmitter<void>();
   @Output() requestSave = new EventEmitter<void>();
+
+  onVisibleChange(nextVisible: boolean) {
+    this.visibleChange.emit(nextVisible);
+  }
+
+  onRequestClose() {
+    this.requestClose.emit();
+  }
+
+  onRequestSave() {
+    this.requestSave.emit();
+  }
 }
