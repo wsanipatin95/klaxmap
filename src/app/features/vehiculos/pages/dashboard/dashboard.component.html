@@ -1,44 +1,274 @@
 <app-vehiculos-page-header
   title="Vehículos y taller"
-  subtitle="Vista general del módulo. Diseño compacto, escritorio y orientado a operación continua, siguiendo la densidad visual usada por el proyecto y la referencia estilo Jira.">
+  subtitle="Panel maestro del módulo. Desde aquí puedes crear checklist, crear tipos de vehículo y relacionarlos sin salir de la pantalla.">
   <button pButton type="button" icon="pi pi-refresh" label="Recargar" (click)="cargar()" [loading]="loading()"></button>
   <a pButton type="button" href="/app/vehiculos/ordenes" label="Ir a órdenes"></a>
 </app-vehiculos-page-header>
 
-<div class="metricGrid" *ngIf="!loading(); else loadingBlock">
-  <article class="metric" *ngFor="let metric of metrics()">
-    <span>{{ metric.label }}</span>
-    <strong>{{ metric.value }}</strong>
-    <small>{{ metric.hint }}</small>
-  </article>
+<div class="split2" *ngIf="!loading(); else loadingBlock">
+  <section class="stackedRows">
+    <section class="contentCard">
+      <div class="sectionHead">
+        <div>
+          <h4>Configuración rápida</h4>
+          <div class="secondaryCell">Primer paso del módulo: checklist, tipo y relación checklist-tipo.</div>
+        </div>
+        <p-tag value="Maestros" severity="contrast"></p-tag>
+      </div>
+
+      <div class="quickGrid">
+        <article class="quickAction" (click)="abrirDrawer('checklist')">
+          <div class="quickIcon"><i class="pi pi-check-square"></i></div>
+          <div>
+            <strong>Crear checklist</strong>
+            <p>Registra un nuevo ítem maestro de inspección o recepción.</p>
+          </div>
+        </article>
+
+        <article class="quickAction" (click)="abrirDrawer('tipo')">
+          <div class="quickIcon"><i class="pi pi-car"></i></div>
+          <div>
+            <strong>Crear tipo de vehículo</strong>
+            <p>Agrega el tipo maestro para luego asociar vistas, vehículos y checklist.</p>
+          </div>
+        </article>
+
+        <article class="quickAction" (click)="abrirDrawer('relacion')">
+          <div class="quickIcon"><i class="pi pi-link"></i></div>
+          <div>
+            <strong>Relacionar checklist con tipo</strong>
+            <p>Conecta el checklist correcto con el tipo correcto desde el dashboard.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="contentCard">
+      <div class="sectionHead">
+        <div>
+          <h4>Resumen maestro</h4>
+          <div class="secondaryCell">{{ relacionesPendientesTexto() }}</div>
+        </div>
+        <p-tag value="Live" severity="secondary"></p-tag>
+      </div>
+
+      <div class="metricGrid">
+        <article class="metric" *ngFor="let metric of metrics()">
+          <span>{{ metric.label }}</span>
+          <strong>{{ metric.value }}</strong>
+          <small>{{ metric.hint }}</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="contentCard">
+      <div class="sectionHead">
+        <h4>Actividad reciente</h4>
+        <p-tag value="Dashboard" severity="secondary"></p-tag>
+      </div>
+
+      <div class="recentGrid" *ngIf="recientes().length; else noRecentActivity">
+        <article class="recentCard" *ngFor="let item of recientes()">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p-tag *ngIf="item.chip" [value]="item.chip" severity="secondary"></p-tag>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <section class="stackedRows">
+    <section class="contentCard">
+      <div class="sectionHead">
+        <div>
+          <h4>Últimos tipos de vehículo</h4>
+          <div class="secondaryCell">{{ tipos().length }} registrados</div>
+        </div>
+        <button pButton type="button" icon="pi pi-plus" size="small" label="Nuevo tipo" (click)="abrirDrawer('tipo')"></button>
+      </div>
+
+      <div class="jiraLikeList" *ngIf="tiposRecientes().length; else noTipos">
+        <article class="jiraLikeRow compact" *ngFor="let item of tiposRecientes()">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ item.tipoVehiculo || 'Sin nombre' }}</div>
+              <div class="secondaryCell">ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</div>
+            </div>
+            <p-tag [value]="'Tipo'" severity="secondary"></p-tag>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="contentCard">
+      <div class="sectionHead">
+        <div>
+          <h4>Últimos checklist</h4>
+          <div class="secondaryCell">{{ checklists().length }} ítems maestros</div>
+        </div>
+        <button pButton type="button" icon="pi pi-plus" size="small" label="Nuevo checklist" (click)="abrirDrawer('checklist')"></button>
+      </div>
+
+      <div class="jiraLikeList" *ngIf="checklistsRecientes().length; else noChecklists">
+        <article class="jiraLikeRow compact" *ngFor="let item of checklistsRecientes()">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ item.nombreItem }}</div>
+              <div class="secondaryCell">{{ item.categoria || 'GENERAL' }} · Orden {{ item.orden || '-' }}</div>
+            </div>
+            <p-tag
+              [value]="esObligatorio(item.obligatorio) ? 'Obligatorio' : 'Opcional'"
+              [severity]="esObligatorio(item.obligatorio) ? 'warn' : 'secondary'">
+            </p-tag>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="contentCard">
+      <div class="sectionHead">
+        <div>
+          <h4>Últimas relaciones checklist-tipo</h4>
+          <div class="secondaryCell">{{ relaciones().length }} asociaciones registradas</div>
+        </div>
+        <button pButton type="button" icon="pi pi-link" size="small" label="Relacionar" (click)="abrirDrawer('relacion')"></button>
+      </div>
+
+      <div class="jiraLikeList" *ngIf="relacionesRecientes().length; else noRelaciones">
+        <article class="jiraLikeRow compact" *ngFor="let item of relacionesRecientes()">
+          <div class="rowHeader">
+            <div>
+              <div class="primaryCell">{{ nombreTipo(item.idVehTipoVehiculoFk) }}</div>
+              <div class="secondaryCell">{{ nombreChecklist(item.idVehVehiculoCheckListFk) }}</div>
+            </div>
+            <p-tag [value]="'Rel #' + item.idVehVehiculoCheckListVehiculo" severity="secondary"></p-tag>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
 </div>
 
-<section class="contentCard" *ngIf="!loading()">
-  <div class="sectionHead">
-    <h4>Actividad reciente</h4>
-    <p-tag value="Live" severity="contrast"></p-tag>
-  </div>
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="dirty()"
+  [saving]="saving()"
+  sizeClass="appDrawer appDrawer--md"
+  title="{{ drawerTitle() }}"
+  subtitle="{{ drawerSubtitle() }}"
+  (visibleChange)="drawerVisible.set($event)"
+  (requestClose)="cerrarDrawer()"
+  (requestSave)="submit()">
+  <div [ngSwitch]="drawerMode()">
+    <form class="vehForm" [formGroup]="tipoForm" *ngSwitchCase="'tipo'">
+      <section class="formSection">
+        <h4 class="formSectionTitle">Datos del tipo</h4>
+        <div class="grid cols-2">
+          <label>
+            <span>Tipo de vehículo</span>
+            <input pInputText formControlName="tipoVehiculo">
+          </label>
+          <label>
+            <span>Art</span>
+            <input pInputText type="number" formControlName="art">
+          </label>
+        </div>
+      </section>
 
-  <div class="recentGrid" *ngIf="recientes().length; else noData">
-    <article class="recentCard" *ngFor="let item of recientes()">
-      <span>{{ item.label }}</span>
-      <strong>{{ item.value }}</strong>
-      <p-tag *ngIf="item.chip" [value]="item.chip" severity="secondary"></p-tag>
-    </article>
+      <label>
+        <span>Atributos JSON</span>
+        <textarea pTextarea rows="7" formControlName="atributosJson"></textarea>
+      </label>
+    </form>
+
+    <form class="vehForm" [formGroup]="checklistForm" *ngSwitchCase="'checklist'">
+      <section class="formSection">
+        <h4 class="formSectionTitle">Datos del checklist</h4>
+        <div class="grid cols-2">
+          <label>
+            <span>Nombre del ítem</span>
+            <input pInputText formControlName="nombreItem">
+          </label>
+          <label>
+            <span>Categoría</span>
+            <input pInputText formControlName="categoria">
+          </label>
+          <label>
+            <span>Orden</span>
+            <input pInputText type="number" formControlName="orden">
+          </label>
+        </div>
+      </section>
+
+      <label class="toggleItem">
+        <input type="checkbox" formControlName="obligatorio">
+        <span>Ítem obligatorio</span>
+      </label>
+    </form>
+
+    <form class="vehForm" [formGroup]="relacionForm" *ngSwitchCase="'relacion'">
+      <section class="formSection">
+        <h4 class="formSectionTitle">Relacionar checklist con tipo</h4>
+
+        <label>
+          <span>Tipo de vehículo</span>
+          <select formControlName="idVehTipoVehiculoFk">
+            <option [ngValue]="null">Selecciona un tipo</option>
+            <option *ngFor="let tipo of tiposDisponiblesParaRelacion()" [ngValue]="tipo.idVehTipoVehiculo">
+              {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          <span>Checklist</span>
+          <select formControlName="idVehVehiculoCheckListFk">
+            <option [ngValue]="null">Selecciona un checklist</option>
+            <option *ngFor="let item of checklistsDisponiblesParaRelacion()" [ngValue]="item.idVehVehiculoCheckList">
+              {{ item.nombreItem }} · {{ item.categoria || 'GENERAL' }}
+            </option>
+          </select>
+        </label>
+      </section>
+    </form>
   </div>
-</section>
+</app-vehiculos-form-drawer>
 
 <ng-template #loadingBlock>
   <section class="contentCard loadingState">
     <i class="pi pi-spin pi-spinner"></i>
-    <span>Cargando indicadores...</span>
+    <span>Cargando dashboard maestro...</span>
   </section>
 </ng-template>
 
-<ng-template #noData>
+<ng-template #noRecentActivity>
   <app-vehiculos-empty-state
     icon="pi pi-chart-bar"
     title="Sin actividad todavía"
-    subtitle="Cuando empieces a crear órdenes, facturas y cobros, aquí verás el resumen operativo.">
+    subtitle="Cuando empieces a crear tipos, checklist y relaciones, aquí verás el resumen reciente.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noTipos>
+  <app-vehiculos-empty-state
+    icon="pi pi-car"
+    title="Sin tipos de vehículo"
+    subtitle="Crea el primer tipo maestro desde esta misma pantalla.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noChecklists>
+  <app-vehiculos-empty-state
+    icon="pi pi-check-square"
+    title="Sin checklist maestro"
+    subtitle="Crea el primer checklist de inspección desde el dashboard.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noRelaciones>
+  <app-vehiculos-empty-state
+    icon="pi pi-link"
+    title="Sin relaciones checklist-tipo"
+    subtitle="Relaciona los checklist con los tipos de vehículo para usar luego el flujo operativo.">
   </app-vehiculos-empty-state>
 </ng-template>
