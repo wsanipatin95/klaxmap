@@ -1,29 +1,43 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
+import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { finalize } from 'rxjs/operators';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { TagModule } from 'primeng/tag';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
-import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
-import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
-import { VehiculosWorkbenchShellComponent } from '../../components/workbench-shell/workbench-shell.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
+  VehArticuloCatalogo,
+  VehCheckList,
+  VehCheckListVehiculo,
   VehTipoVehiculo,
   VehTipoVehiculoGuardarRequest,
   VehTipoVehiculoVista,
   VehTipoVehiculoVistaGuardarRequest,
 } from '../../data-access/vehiculos.models';
-import { NotifyService } from 'src/app/core/services/notify.service';
-import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
+
+type TiposPanelTab = 'edicion' | 'vistas' | 'checklists';
+type ConfirmSeverity = 'danger' | 'warning' | 'info';
+
+type AtributoRowForm = FormGroup<{
+  key: FormControl<string>;
+  value: FormControl<string>;
+}>;
+
+type VistaAtributoRowForm = FormGroup<{
+  key: FormControl<string>;
+  value: FormControl<string>;
+}>;
 
 @Component({
   selector: 'app-vehiculos-tipos',
@@ -32,276 +46,823 @@ import { PendingChangesAware } from '../../guards/pending-changes.guard';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    ButtonModule,
-    TableModule,
+    DialogModule,
     InputTextModule,
-    TextareaModule,
     TagModule,
-    ConfirmDialogModule,
-    VehiculosPageHeaderComponent,
-    VehiculosFormDrawerComponent,
-    VehiculosEmptyStateComponent,
-    VehiculosWorkbenchShellComponent,
   ],
-  providers: [ConfirmationService],
   templateUrl: './tipos.component.html',
   styleUrl: './tipos.component.scss',
 })
 export class VehiculosTiposComponent implements PendingChangesAware {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
-  private notify = inject(NotifyService);
-  private confirm = inject(VehiculosConfirmService);
+  private router = inject(Router);
 
-  q = '';
-  loading = signal(false);
-  saving = signal(false);
-  tipos = signal<VehTipoVehiculo[]>([]);
-  vistas = signal<VehTipoVehiculoVista[]>([]);
-  selected = signal<VehTipoVehiculo | null>(null);
-  selectedVista = signal<VehTipoVehiculoVista | null>(null);
-  drawerVisible = signal(false);
-  vistaDrawerVisible = signal(false);
-  dirty = signal(false);
-  vistaDirty = signal(false);
-  editingId = signal<number | null>(null);
-  editingVistaId = signal<number | null>(null);
-  vistaStructureBase64 = signal<string | null>(null);
-  vistaStructurePreview = signal<string | null>(null);
+  readonly VEHICLE_TYPE_OPTIONS = [
+    'AUTO',
+    'MOTO',
+    'TRICICLO_ELECTRICO',
+    'BICICLETA_ELECTRICA',
+    'CAMIONETA',
+    'CAMION',
+    'SUV',
+    'BUS',
+    'FURGON',
+    'OTRO',
+  ];
 
-  form = this.fb.group({
-    art: [null as number | null],
-    tipoVehiculo: ['', Validators.required],
-    atributosJson: ['{}'],
+  readonly VISTA_OPTIONS = [
+    'FRENTE',
+    'ATRAS',
+    'LATERAL_IZQ',
+    'LATERAL_DER',
+    'SUPERIOR',
+    'INFERIOR',
+    'INTERIOR',
+    'TABLERO',
+    'MOTOR',
+    'BAUL',
+    'BATERIA',
+    'OTRA',
+  ];
+
+  readonly q = signal('');
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly success = signal<string | null>(null);
+
+  readonly tipos = signal<VehTipoVehiculo[]>([]);
+  readonly vistas = signal<VehTipoVehiculoVista[]>([]);
+  readonly checklistCatalogo = signal<VehCheckList[]>([]);
+  readonly checklistAsignado = signal<VehCheckListVehiculo[]>([]);
+  readonly articulos = signal<VehArticuloCatalogo[]>([]);
+
+  readonly selected = signal<VehTipoVehiculo | null>(null);
+  readonly selectedVista = signal<VehTipoVehiculoVista | null>(null);
+  readonly mode = signal<'crear' | 'editar'>('crear');
+  readonly activeTab = signal<TiposPanelTab>('edicion');
+
+  readonly formDirty = signal(false);
+  readonly vistaDirty = signal(false);
+  readonly hasPendingChanges = computed(() => this.formDirty() || this.vistaDirty());
+
+  readonly currentTitle = computed(() =>
+    this.mode() === 'crear' ? 'Nuevo tipo de vehículo' : 'Editar tipo de vehículo'
+  );
+
+  readonly currentSubtitle = computed(() => {
+    if (this.mode() === 'crear') {
+      return 'Configura el tipo, artículo, atributos, vistas y checklist asociado.';
+    }
+
+    const current = this.selected();
+    return current
+      ? `Editando: ${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}`
+      : 'Editar tipo de vehículo';
   });
 
-  vistaForm = this.fb.group({
-    vista: ['', Validators.required],
-    orden: [1],
-    observaciones: [''],
-    atributosJson: ['{}'],
+  readonly articuloQuery = signal('');
+  readonly articuloPanelOpen = signal(false);
+  readonly articuloLoading = signal(false);
+
+  readonly filteredArticulos = computed(() => {
+    const query = this.articuloQuery().trim().toLowerCase();
+    if (!query) {
+      return this.articulos().slice(0, 25);
+    }
+
+    return this.articulos()
+      .filter((item) => {
+        const codigo = String(item.artcod || '').toLowerCase();
+        const nombre = String(item.articulo || '').toLowerCase();
+        return codigo.includes(query) || nombre.includes(query);
+      })
+      .slice(0, 50);
+  });
+
+  readonly selectedArticulo = computed(() => {
+    const art = this.form.controls.art.value;
+    if (art == null) return null;
+    return this.articulos().find((x) => x.idActInventario === art) ?? null;
+  });
+
+  readonly checklistDisponibles = computed(() => {
+    const assignedIds = new Set(
+      this.checklistAsignado().map((x) => x.idVehVehiculoCheckListFk)
+    );
+    return this.checklistCatalogo()
+      .filter((x) => !assignedIds.has(x.idVehVehiculoCheckList))
+      .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  });
+
+  readonly checklistSearch = signal('');
+  readonly checklistDisponiblesFiltrados = computed(() => {
+    const query = this.checklistSearch().trim().toLowerCase();
+    const source = this.checklistDisponibles();
+
+    if (!query) return source;
+
+    return source.filter((item) => {
+      const nombre = String(item.nombreItem || '').toLowerCase();
+      const categoria = String(item.categoria || '').toLowerCase();
+      return nombre.includes(query) || categoria.includes(query);
+    });
+  });
+
+  readonly selectedChecklistToAssign = signal<number | null>(null);
+
+  readonly vistaDialogVisible = signal(false);
+  readonly vistaDialogMode = signal<'crear' | 'editar'>('crear');
+  readonly vistaStructureBase64 = signal<string | null>(null);
+  readonly vistaStructurePreview = signal<string | null>(null);
+
+  private suppressFormDirty = false;
+  private suppressVistaDirty = false;
+
+  readonly confirmVisible = signal(false);
+  readonly confirmTitle = signal('Confirmar');
+  readonly confirmMessage = signal('');
+  readonly confirmConfirmLabel = signal('Confirmar');
+  readonly confirmCancelLabel = signal('Cancelar');
+  readonly confirmAlternateLabel = signal<string | null>(null);
+  readonly confirmSeverity = signal<ConfirmSeverity>('warning');
+
+  private confirmAcceptCallback: (() => void) | null = null;
+  private confirmCancelCallback: (() => void) | null = null;
+  private confirmAlternateCallback: (() => void) | null = null;
+
+  readonly form = this.fb.group({
+    art: this.fb.control<number | null>(null),
+    tipoVehiculo: this.fb.control<string>('', { nonNullable: true, validators: [Validators.required] }),
+    atributos: this.fb.array<AtributoRowForm>([]),
+  });
+
+  readonly vistaForm = this.fb.group({
+    idVehTipoVehiculoVista: this.fb.control<number | null>(null),
+    vista: this.fb.control<string>('', { nonNullable: true, validators: [Validators.required] }),
+    orden: this.fb.control<number>(1, { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
+    observaciones: this.fb.control<string>('', { nonNullable: true }),
+    atributos: this.fb.array<VistaAtributoRowForm>([]),
   });
 
   constructor() {
-    this.cargar();
-    this.form.valueChanges.subscribe(() => this.dirty.set(true));
-    this.vistaForm.valueChanges.subscribe(() => this.vistaDirty.set(true));
+    this.form.valueChanges.subscribe(() => {
+      if (!this.suppressFormDirty) {
+        this.formDirty.set(true);
+      }
+    });
+
+    this.vistaForm.valueChanges.subscribe(() => {
+      if (!this.suppressVistaDirty) {
+        this.vistaDirty.set(true);
+      }
+    });
+
+    this.ensureAtLeastOneAtributoRow();
+    this.ensureAtLeastOneVistaAtributoRow();
+
+    this.cargarTodo();
+    this.cargarArticulos();
+    this.cargarChecklistCatalogo();
   }
 
   canDeactivate(): boolean | Promise<boolean> {
-    if (this.drawerVisible() && this.dirty()) return this.confirm.confirmDiscard();
-    if (this.vistaDrawerVisible() && this.vistaDirty()) return this.confirm.confirmDiscard();
-    return true;
+    if (!this.hasPendingChanges()) {
+      return true;
+    }
+
+    return this.requestDiscardConfirmation();
   }
 
-  cargar() {
+  get atributosFormArray(): FormArray<AtributoRowForm> {
+    return this.form.controls.atributos;
+  }
+
+  get vistaAtributosFormArray(): FormArray<VistaAtributoRowForm> {
+    return this.vistaForm.controls.atributos;
+  }
+
+  setTab(tab: TiposPanelTab): void {
+    this.activeTab.set(tab);
+  }
+
+  cargarTodo(): void {
+    this.cargarTipos();
+  }
+
+  cargarTipos(): void {
     this.loading.set(true);
-    this.repo.listarTipos(this.q, 0, 200, true)
+    this.error.set(null);
+
+    this.repo.listarTipos(this.q().trim(), 0, 500, true)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.tipos.set(res.items ?? []);
+          const items = res.items ?? [];
+          this.tipos.set(items);
+
           const current = this.selected();
-          if (current) {
-            const selected = (res.items ?? []).find((x) => x.idVehTipoVehiculo === current.idVehTipoVehiculo) ?? null;
-            this.selected.set(selected);
-            if (selected) this.cargarVistas(selected.idVehTipoVehiculo);
+          if (!current) return;
+
+          const updated =
+            items.find((x) => x.idVehTipoVehiculo === current.idVehTipoVehiculo) ?? null;
+
+          this.selected.set(updated);
+
+          if (!updated) {
+            this.mode.set('crear');
+            this.activeTab.set('edicion');
+            this.vistas.set([]);
+            this.checklistAsignado.set([]);
+            this.selectedVista.set(null);
+            this.resetMainFormForNew();
+          } else {
+            this.populateMainForm(updated);
+            this.cargarVistas(updated.idVehTipoVehiculo);
+            this.cargarChecklistAsignado(updated.idVehTipoVehiculo);
           }
         },
-        error: (err) => this.notify.error('No se pudo cargar tipos de vehículo', err?.message),
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo cargar tipos de vehículo.');
+        },
       });
   }
 
-  cargarVistas(idVehTipoVehiculoFk: number) {
-    this.repo.listarVistas({ idVehTipoVehiculoFk }).subscribe({
-      next: (res) => {
-        const items = res.items ?? [];
-        this.vistas.set(items);
-        const currentVista = this.selectedVista();
-        const selectedVista = currentVista
-          ? items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ?? null
-          : (items[0] ?? null);
-        this.selectedVista.set(selectedVista);
-      },
-      error: (err) => this.notify.error('No se pudo cargar vistas', err?.message),
+  cargarArticulos(): void {
+    this.articuloLoading.set(true);
+
+    this.repo.listarArticulos('', 0, 500, true)
+      .pipe(finalize(() => this.articuloLoading.set(false)))
+      .subscribe({
+        next: (res) => {
+          this.articulos.set(res.items ?? []);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo cargar el catálogo de artículos.');
+        },
+      });
+  }
+
+  cargarChecklistCatalogo(): void {
+    this.repo.listarChecklists()
+      .subscribe({
+        next: (res) => {
+          this.checklistCatalogo.set(res.items ?? []);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo cargar el catálogo de checklist.');
+        },
+      });
+  }
+
+  cargarVistas(idVehTipoVehiculoFk: number): void {
+    this.repo.listarVistas({ idVehTipoVehiculoFk })
+      .subscribe({
+        next: (res) => {
+          const items = res.items ?? [];
+          this.vistas.set(items);
+
+          const currentVista = this.selectedVista();
+          if (!currentVista) {
+            this.selectedVista.set(items[0] ?? null);
+            return;
+          }
+
+          const updated =
+            items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ?? null;
+
+          this.selectedVista.set(updated ?? items[0] ?? null);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo cargar las vistas del tipo.');
+        },
+      });
+  }
+
+  cargarChecklistAsignado(idVehTipoVehiculoFk: number): void {
+    this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk })
+      .subscribe({
+        next: (res) => {
+          this.checklistAsignado.set(res.items ?? []);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo cargar checklist asignado al tipo.');
+        },
+      });
+  }
+
+  onSearchEnter(): void {
+    this.cargarTipos();
+  }
+
+  clearSearch(): void {
+    if (!this.q()) return;
+    this.q.set('');
+    this.cargarTipos();
+  }
+
+  irADashboard(): void {
+    this.runWithDiscardGuard(() => {
+      this.router.navigate(['/app/vehiculos/dashboard']);
     });
   }
 
-  seleccionar(item: VehTipoVehiculo) {
-    this.selected.set(item);
-    this.cargarVistas(item.idVehTipoVehiculo);
-  }
-
-  seleccionarVista(item: VehTipoVehiculoVista) {
-    this.selectedVista.set(item);
-  }
-
-  nuevo() {
-    this.editingId.set(null);
-    this.form.reset({ art: null, tipoVehiculo: '', atributosJson: '{}' });
-    this.drawerVisible.set(true);
-    this.dirty.set(false);
-  }
-
-  editar(item: VehTipoVehiculo) {
-    this.editingId.set(item.idVehTipoVehiculo);
-    this.form.reset({
-      art: item.art ?? null,
-      tipoVehiculo: item.tipoVehiculo ?? '',
-      atributosJson: JSON.stringify(item.atributos ?? {}, null, 2),
-    });
-    this.drawerVisible.set(true);
-    this.dirty.set(false);
-  }
-
-  async eliminar(item: VehTipoVehiculo) {
-    const ok = await this.confirm.confirmDelete(item.tipoVehiculo || `el tipo #${item.idVehTipoVehiculo}`);
-    if (!ok) return;
-    this.repo.eliminarTipo(item.idVehTipoVehiculo).subscribe({
-      next: () => {
-        this.notify.success('Tipo eliminado', 'El registro fue eliminado correctamente.');
-        if (this.selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo) {
-          this.selected.set(null);
-          this.selectedVista.set(null);
-          this.vistas.set([]);
-        }
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo eliminar tipo', err?.message),
+  nuevoTipo(): void {
+    this.runWithDiscardGuard(() => {
+      this.selected.set(null);
+      this.selectedVista.set(null);
+      this.mode.set('crear');
+      this.activeTab.set('edicion');
+      this.vistas.set([]);
+      this.checklistAsignado.set([]);
+      this.success.set(null);
+      this.error.set(null);
+      this.resetMainFormForNew();
     });
   }
 
-  cerrarDrawer = async () => {
-    if (this.dirty()) {
-      const ok = await this.confirm.confirmDiscard();
-      if (!ok) return;
+  seleccionarTipo(item: VehTipoVehiculo): void {
+    if (
+      this.selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo &&
+      this.mode() === 'editar'
+    ) {
+      return;
     }
-    this.drawerVisible.set(false);
-    this.dirty.set(false);
-  };
 
-  submit() {
+    this.runWithDiscardGuard(() => {
+      this.selected.set(item);
+      this.mode.set('editar');
+      this.activeTab.set('edicion');
+      this.success.set(null);
+      this.error.set(null);
+      this.populateMainForm(item);
+      this.cargarVistas(item.idVehTipoVehiculo);
+      this.cargarChecklistAsignado(item.idVehTipoVehiculo);
+    });
+  }
+
+  guardarTipo(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.notify.warn('Formulario incompleto', 'Ingresa el nombre del tipo.');
+      this.error.set('Completa los campos obligatorios del tipo.');
+      this.success.set(null);
       return;
     }
+
     const payload: VehTipoVehiculoGuardarRequest = {
-      art: this.form.value.art ?? null,
-      tipoVehiculo: this.form.value.tipoVehiculo?.trim() || null,
-      atributos: this.parseJson(this.form.value.atributosJson),
+      art: this.form.controls.art.value,
+      tipoVehiculo: this.form.controls.tipoVehiculo.value?.trim() || null,
+      atributos: this.buildAtributosObject(this.atributosFormArray),
     };
+
+    this.error.set(null);
+    this.success.set(null);
     this.saving.set(true);
-    const request$ = this.editingId()
-      ? this.repo.editarTipo({ idVehTipoVehiculo: this.editingId()!, cambios: payload })
-      : this.repo.crearTipo(payload);
 
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => {
-        this.notify.success(this.editingId() ? 'Tipo actualizado' : 'Tipo creado', 'Registro guardado correctamente.');
-        this.drawerVisible.set(false);
-        this.dirty.set(false);
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo guardar tipo', err?.message),
-    });
-  }
+    if (this.mode() === 'crear') {
+      this.repo.crearTipo(payload)
+        .pipe(finalize(() => this.saving.set(false)))
+        .subscribe({
+          next: (res: any) => {
+            const newId =
+              res?.idVehTipoVehiculo ??
+              res?.data?.idVehTipoVehiculo ??
+              null;
 
-  nuevaVista() {
-    if (!this.selected()) {
-      this.notify.warn('Selecciona un tipo', 'Debes seleccionar un tipo antes de crear vistas.');
+            this.success.set('Tipo de vehículo creado.');
+            this.formDirty.set(false);
+            this.cargarTipos();
+
+            if (newId) {
+              const optimistic: VehTipoVehiculo = {
+                idVehTipoVehiculo: Number(newId),
+                art: payload.art ?? null,
+                tipoVehiculo: payload.tipoVehiculo ?? null,
+                atributos: payload.atributos ?? null,
+              };
+
+              this.selected.set(optimistic);
+              this.mode.set('editar');
+              this.activeTab.set('vistas');
+            } else {
+              this.mode.set('crear');
+              this.activeTab.set('edicion');
+            }
+          },
+          error: (err) => {
+            console.error(err);
+            this.error.set(err?.message || 'No se pudo crear el tipo de vehículo.');
+          },
+        });
+
       return;
     }
-    this.editingVistaId.set(null);
-    this.vistaForm.reset({ vista: '', orden: (this.vistas().length || 0) + 1, observaciones: '', atributosJson: '{}' });
-    this.vistaStructureBase64.set(null);
-    this.vistaStructurePreview.set(null);
-    this.vistaDrawerVisible.set(true);
-    this.vistaDirty.set(false);
-  }
 
-  editarVista(item: VehTipoVehiculoVista) {
-    this.editingVistaId.set(item.idVehTipoVehiculoVista);
-    this.vistaForm.reset({
-      vista: item.vista ?? '',
-      orden: item.orden ?? 1,
-      observaciones: item.observaciones ?? '',
-      atributosJson: JSON.stringify(item.atributos ?? {}, null, 2),
-    });
-    this.vistaStructureBase64.set(null);
-    this.vistaStructurePreview.set(this.resolveBinarySrc(item.estructura));
-    this.vistaDrawerVisible.set(true);
-    this.vistaDirty.set(false);
-  }
-
-  async eliminarVista(item: VehTipoVehiculoVista) {
-    const ok = await this.confirm.confirmDelete(item.vista || `la vista #${item.idVehTipoVehiculoVista}`);
-    if (!ok) return;
-    this.repo.eliminarVista(item.idVehTipoVehiculoVista).subscribe({
-      next: () => {
-        this.notify.success('Vista eliminada', 'La vista fue eliminada correctamente.');
-        if (this.selected()) this.cargarVistas(this.selected()!.idVehTipoVehiculo);
-      },
-      error: (err) => this.notify.error('No se pudo eliminar vista', err?.message),
-    });
-  }
-
-  cerrarVistaDrawer = async () => {
-    if (this.vistaDirty()) {
-      const ok = await this.confirm.confirmDiscard();
-      if (!ok) return;
+    const current = this.selected();
+    if (!current) {
+      this.saving.set(false);
+      this.error.set('No hay un tipo seleccionado.');
+      return;
     }
-    this.vistaDrawerVisible.set(false);
-    this.vistaDirty.set(false);
-  };
 
-  submitVista() {
+    this.repo.editarTipo({
+      idVehTipoVehiculo: current.idVehTipoVehiculo,
+      cambios: payload,
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.success.set('Tipo de vehículo actualizado.');
+          this.formDirty.set(false);
+          this.cargarTipos();
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo actualizar el tipo de vehículo.');
+        },
+      });
+  }
+
+  eliminarTipoActual(): void {
+    const current = this.selected();
+    if (!current) return;
+
+    this.openConfirm(
+      {
+        title: 'Eliminar tipo de vehículo',
+        message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".\n\nEsta acción no se puede deshacer.`,
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        severity: 'danger',
+      },
+      () => {
+        this.saving.set(true);
+        this.error.set(null);
+        this.success.set(null);
+
+        this.repo.eliminarTipo(current.idVehTipoVehiculo)
+          .pipe(finalize(() => this.saving.set(false)))
+          .subscribe({
+            next: () => {
+              this.success.set('Tipo de vehículo eliminado.');
+              this.selected.set(null);
+              this.selectedVista.set(null);
+              this.vistas.set([]);
+              this.checklistAsignado.set([]);
+              this.mode.set('crear');
+              this.activeTab.set('edicion');
+              this.formDirty.set(false);
+              this.vistaDirty.set(false);
+              this.resetMainFormForNew();
+              this.cargarTipos();
+            },
+            error: (err) => {
+              console.error(err);
+              this.error.set(err?.message || 'No se pudo eliminar el tipo de vehículo.');
+            },
+          });
+      }
+    );
+  }
+
+  onMainFormCancel(): void {
+    if (!this.formDirty()) {
+      if (this.mode() === 'editar' && this.selected()) {
+        this.populateMainForm(this.selected()!);
+      } else {
+        this.nuevoTipo();
+      }
+      return;
+    }
+
+    this.openConfirm(
+      {
+        title: 'Descartar cambios',
+        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        confirmLabel: 'Descartar',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.formDirty.set(false);
+
+        if (this.mode() === 'editar' && this.selected()) {
+          this.populateMainForm(this.selected()!);
+        } else {
+          this.nuevoTipo();
+        }
+      }
+    );
+  }
+
+  addAtributoRow(key = '', value = ''): void {
+    this.atributosFormArray.push(
+      this.fb.group({
+        key: this.fb.control(key, { nonNullable: true }),
+        value: this.fb.control(value, { nonNullable: true }),
+      })
+    );
+    this.formDirty.set(true);
+  }
+
+  removeAtributoRow(index: number): void {
+    if (this.atributosFormArray.length === 1) {
+      this.atributosFormArray.at(0).patchValue({ key: '', value: '' });
+      this.formDirty.set(true);
+      return;
+    }
+
+    this.atributosFormArray.removeAt(index);
+    this.formDirty.set(true);
+  }
+
+  addVistaAtributoRow(key = '', value = ''): void {
+    this.vistaAtributosFormArray.push(
+      this.fb.group({
+        key: this.fb.control(key, { nonNullable: true }),
+        value: this.fb.control(value, { nonNullable: true }),
+      })
+    );
+    this.vistaDirty.set(true);
+  }
+
+  removeVistaAtributoRow(index: number): void {
+    if (this.vistaAtributosFormArray.length === 1) {
+      this.vistaAtributosFormArray.at(0).patchValue({ key: '', value: '' });
+      this.vistaDirty.set(true);
+      return;
+    }
+
+    this.vistaAtributosFormArray.removeAt(index);
+    this.vistaDirty.set(true);
+  }
+
+  openArticuloPanel(): void {
+    this.articuloPanelOpen.set(true);
+  }
+
+  closeArticuloPanel(): void {
+    this.articuloPanelOpen.set(false);
+  }
+
+  clearArticuloSelection(): void {
+    this.form.controls.art.setValue(null);
+    this.formDirty.set(true);
+  }
+
+  seleccionarArticulo(item: VehArticuloCatalogo): void {
+    this.form.controls.art.setValue(item.idActInventario);
+    this.formDirty.set(true);
+    this.articuloPanelOpen.set(false);
+  }
+
+  checklistNombre(id: number): string {
+    return (
+      this.checklistCatalogo().find((x) => x.idVehVehiculoCheckList === id)?.nombreItem ||
+      `Checklist #${id}`
+    );
+  }
+
+  checklistCategoria(id: number): string {
+    return (
+      this.checklistCatalogo().find((x) => x.idVehVehiculoCheckList === id)?.categoria ||
+      'GENERAL'
+    );
+  }
+
+  agregarChecklistAlTipo(): void {
+    const current = this.selected();
+    const checklistId = this.selectedChecklistToAssign();
+
+    if (!current) {
+      this.error.set('Debes guardar o seleccionar un tipo antes de asignar checklist.');
+      return;
+    }
+
+    if (!checklistId) {
+      this.error.set('Selecciona un checklist disponible para agregar.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.repo.crearChecklistVehiculo({
+      idVehTipoVehiculoFk: current.idVehTipoVehiculo,
+      idVehVehiculoCheckListFk: checklistId,
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.success.set('Checklist asignado al tipo.');
+          this.selectedChecklistToAssign.set(null);
+          this.cargarChecklistAsignado(current.idVehTipoVehiculo);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo asignar el checklist al tipo.');
+        },
+      });
+  }
+
+  quitarChecklistDelTipo(rel: VehCheckListVehiculo): void {
+    const label = this.checklistNombre(rel.idVehVehiculoCheckListFk);
+
+    this.openConfirm(
+      {
+        title: 'Quitar checklist del tipo',
+        message: `Se quitará "${label}" de este tipo de vehículo.\n\nEsta acción no se puede deshacer.`,
+        confirmLabel: 'Quitar',
+        cancelLabel: 'Cancelar',
+        severity: 'danger',
+      },
+      () => {
+        const current = this.selected();
+        this.saving.set(true);
+        this.error.set(null);
+        this.success.set(null);
+
+        this.repo.eliminarChecklistVehiculo(rel.idVehVehiculoCheckListVehiculo)
+          .pipe(finalize(() => this.saving.set(false)))
+          .subscribe({
+            next: () => {
+              this.success.set('Checklist quitado del tipo.');
+              if (current) {
+                this.cargarChecklistAsignado(current.idVehTipoVehiculo);
+              }
+            },
+            error: (err) => {
+              console.error(err);
+              this.error.set(err?.message || 'No se pudo quitar el checklist del tipo.');
+            },
+          });
+      }
+    );
+  }
+
+  nuevaVista(): void {
     const selected = this.selected();
     if (!selected) {
-      this.notify.warn('Selecciona un tipo', 'Debes seleccionar un tipo antes de guardar una vista.');
+      this.error.set('Primero guarda o selecciona un tipo para agregar vistas.');
       return;
     }
+
+    this.vistaDialogMode.set('crear');
+    this.vistaDialogVisible.set(true);
+    this.selectedVista.set(null);
+    this.resetVistaFormForNew();
+  }
+
+  editarVista(vista: VehTipoVehiculoVista): void {
+    this.vistaDialogMode.set('editar');
+    this.vistaDialogVisible.set(true);
+    this.selectedVista.set(vista);
+    this.populateVistaForm(vista);
+  }
+
+  seleccionarVista(vista: VehTipoVehiculoVista): void {
+    this.selectedVista.set(vista);
+  }
+
+  guardarVista(): void {
+    const selected = this.selected();
+    if (!selected) {
+      this.error.set('No hay un tipo seleccionado para guardar la vista.');
+      return;
+    }
+
     if (this.vistaForm.invalid) {
       this.vistaForm.markAllAsTouched();
-      this.notify.warn('Formulario incompleto', 'La vista necesita un nombre.');
+      this.error.set('Completa los campos obligatorios de la vista.');
       return;
     }
 
     const payload: VehTipoVehiculoVistaGuardarRequest = {
       idVehTipoVehiculoFk: selected.idVehTipoVehiculo,
-      vista: this.vistaForm.value.vista?.trim() || null,
-      orden: Number(this.vistaForm.value.orden || 1),
-      observaciones: this.vistaForm.value.observaciones?.trim() || null,
-      atributos: this.parseJson(this.vistaForm.value.atributosJson),
+      vista: this.vistaForm.controls.vista.value?.trim() || null,
+      orden: Number(this.vistaForm.controls.orden.value || 1),
+      observaciones: this.vistaForm.controls.observaciones.value?.trim() || null,
+      estructura: this.vistaStructureBase64() !== null ? (this.vistaStructureBase64() || null) : undefined,
+      atributos: this.buildAtributosObject(this.vistaAtributosFormArray),
     };
 
-    if (this.vistaStructureBase64() !== null) {
-      payload.estructura = this.vistaStructureBase64() || null;
+    this.saving.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    if (this.vistaDialogMode() === 'crear') {
+      this.repo.crearVista(payload)
+        .pipe(finalize(() => this.saving.set(false)))
+        .subscribe({
+          next: () => {
+            this.success.set('Vista creada.');
+            this.vistaDirty.set(false);
+            this.vistaDialogVisible.set(false);
+            this.cargarVistas(selected.idVehTipoVehiculo);
+          },
+          error: (err) => {
+            console.error(err);
+            this.error.set(err?.message || 'No se pudo crear la vista.');
+          },
+        });
+
+      return;
     }
 
-    this.saving.set(true);
-    const request$ = this.editingVistaId()
-      ? this.repo.editarVista({ idVehTipoVehiculoVista: this.editingVistaId()!, cambios: payload })
-      : this.repo.crearVista(payload);
+    const currentVista = this.selectedVista();
+    if (!currentVista) {
+      this.saving.set(false);
+      this.error.set('No hay una vista seleccionada para editar.');
+      return;
+    }
 
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => {
-        this.notify.success(this.editingVistaId() ? 'Vista actualizada' : 'Vista creada', 'La vista fue guardada correctamente.');
-        this.vistaDrawerVisible.set(false);
-        this.vistaDirty.set(false);
-        this.cargarVistas(selected.idVehTipoVehiculo);
-      },
-      error: (err) => this.notify.error('No se pudo guardar vista', err?.message),
-    });
+    this.repo.editarVista({
+      idVehTipoVehiculoVista: currentVista.idVehTipoVehiculoVista,
+      cambios: payload,
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.success.set('Vista actualizada.');
+          this.vistaDirty.set(false);
+          this.vistaDialogVisible.set(false);
+          this.cargarVistas(selected.idVehTipoVehiculo);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo actualizar la vista.');
+        },
+      });
   }
 
-  onVistaStructureSelected(event: Event) {
+  eliminarVista(vista: VehTipoVehiculoVista): void {
+    this.openConfirm(
+      {
+        title: 'Eliminar vista',
+        message: `Se eliminará "${vista.vista || `Vista #${vista.idVehTipoVehiculoVista}`}".\n\nEsta acción no se puede deshacer.`,
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        severity: 'danger',
+      },
+      () => {
+        const selected = this.selected();
+        this.saving.set(true);
+        this.error.set(null);
+        this.success.set(null);
+
+        this.repo.eliminarVista(vista.idVehTipoVehiculoVista)
+          .pipe(finalize(() => this.saving.set(false)))
+          .subscribe({
+            next: () => {
+              this.success.set('Vista eliminada.');
+              if (selected) {
+                this.cargarVistas(selected.idVehTipoVehiculo);
+              }
+            },
+            error: (err) => {
+              console.error(err);
+              this.error.set(err?.message || 'No se pudo eliminar la vista.');
+            },
+          });
+      }
+    );
+  }
+
+  onVistaCancel(): void {
+    if (!this.vistaDirty()) {
+      this.vistaDialogVisible.set(false);
+      return;
+    }
+
+    this.openConfirm(
+      {
+        title: 'Descartar cambios',
+        message: 'Hay cambios sin guardar en la vista.\n\nSi continúas, se perderán.',
+        confirmLabel: 'Descartar',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.vistaDirty.set(false);
+        this.vistaDialogVisible.set(false);
+      }
+    );
+  }
+
+  onVistaStructureSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      this.notify.warn('Archivo inválido', 'Selecciona una imagen válida para la estructura del vehículo.');
+      this.error.set('Selecciona una imagen válida para la vista.');
       input.value = '';
       return;
     }
@@ -310,6 +871,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     reader.onload = () => {
       const dataUrl = String(reader.result || '');
       const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+
       this.vistaStructureBase64.set(base64 || '');
       this.vistaStructurePreview.set(dataUrl || null);
       this.vistaDirty.set(true);
@@ -317,33 +879,320 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     reader.readAsDataURL(file);
   }
 
-  limpiarVistaStructure() {
+  limpiarVistaStructure(): void {
     this.vistaStructureBase64.set('');
     this.vistaStructurePreview.set(null);
     this.vistaDirty.set(true);
   }
 
-  resolveBinarySrc(binary?: string | null) {
+  resolveBinarySrc(binary?: string | null): string | null {
     if (!binary) return null;
+
     const value = String(binary).trim();
     if (!value) return null;
-    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:')) {
+
+    if (
+      value.startsWith('data:') ||
+      value.startsWith('http://') ||
+      value.startsWith('https://') ||
+      value.startsWith('blob:')
+    ) {
       return value;
     }
+
     return `data:${this.guessMimeType(value)};base64,${value}`;
   }
 
-  private guessMimeType(base64: string) {
+  confirmSeverityClass(): string {
+    if (this.confirmSeverity() === 'danger') return 'is-danger';
+    if (this.confirmSeverity() === 'warning') return 'is-warning';
+    return 'is-info';
+  }
+
+  confirmIconSymbol(): string {
+    if (this.confirmSeverity() === 'danger') return '!';
+    if (this.confirmSeverity() === 'warning') return '!';
+    return 'i';
+  }
+
+  confirmAccept(): void {
+    const callback = this.confirmAcceptCallback;
+    this.closeConfirmInternal();
+    callback?.();
+  }
+
+  confirmCancel(): void {
+    const callback = this.confirmCancelCallback;
+    this.closeConfirmInternal();
+    callback?.();
+  }
+
+  confirmAlternate(): void {
+    const callback = this.confirmAlternateCallback;
+    this.closeConfirmInternal();
+    callback?.();
+  }
+
+  onConfirmHide(): void {
+    this.closeConfirmInternal(false);
+  }
+
+  private openConfirm(
+    config: {
+      title: string;
+      message: string;
+      confirmLabel?: string;
+      cancelLabel?: string;
+      alternateLabel?: string | null;
+      severity?: ConfirmSeverity;
+    },
+    onAccept?: () => void,
+    onCancel?: () => void,
+    onAlternate?: () => void
+  ): void {
+    this.confirmTitle.set(config.title);
+    this.confirmMessage.set(config.message);
+    this.confirmConfirmLabel.set(config.confirmLabel ?? 'Confirmar');
+    this.confirmCancelLabel.set(config.cancelLabel ?? 'Cancelar');
+    this.confirmAlternateLabel.set(config.alternateLabel ?? null);
+    this.confirmSeverity.set(config.severity ?? 'warning');
+    this.confirmAcceptCallback = onAccept ?? null;
+    this.confirmCancelCallback = onCancel ?? null;
+    this.confirmAlternateCallback = onAlternate ?? null;
+    this.confirmVisible.set(true);
+  }
+
+  private requestDiscardConfirmation(): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.openConfirm(
+        {
+          title: 'Descartar cambios',
+          message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+          confirmLabel: 'Descartar',
+          cancelLabel: 'Seguir editando',
+          severity: 'warning',
+        },
+        () => {
+          this.formDirty.set(false);
+          this.vistaDirty.set(false);
+          resolve(true);
+        },
+        () => resolve(false)
+      );
+    });
+  }
+
+  private closeConfirmInternal(resetCallbacks = true): void {
+    this.confirmVisible.set(false);
+
+    if (resetCallbacks) {
+      this.confirmAcceptCallback = null;
+      this.confirmCancelCallback = null;
+      this.confirmAlternateCallback = null;
+    }
+  }
+
+  private runWithDiscardGuard(action: () => void): void {
+    if (!this.hasPendingChanges()) {
+      action();
+      return;
+    }
+
+    this.openConfirm(
+      {
+        title: 'Descartar cambios',
+        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        confirmLabel: 'Descartar',
+        cancelLabel: 'Seguir editando',
+        severity: 'warning',
+      },
+      () => {
+        this.formDirty.set(false);
+        this.vistaDirty.set(false);
+        action();
+      }
+    );
+  }
+
+  private resetMainFormForNew(): void {
+    this.suppressFormDirty = true;
+
+    this.form.reset({
+      art: null,
+      tipoVehiculo: '',
+    });
+
+    this.atributosFormArray.clear();
+    this.atributosFormArray.push(this.createAtributoRow('', ''));
+
+    this.articuloQuery.set('');
+    this.articuloPanelOpen.set(false);
+    this.formDirty.set(false);
+
+    queueMicrotask(() => {
+      this.suppressFormDirty = false;
+    });
+  }
+
+  private populateMainForm(item: VehTipoVehiculo): void {
+    this.suppressFormDirty = true;
+
+    this.form.reset({
+      art: item.art ?? null,
+      tipoVehiculo: item.tipoVehiculo ?? '',
+    });
+
+    this.atributosFormArray.clear();
+
+    const entries = Object.entries(item.atributos ?? {});
+    if (entries.length === 0) {
+      this.atributosFormArray.push(this.createAtributoRow('', ''));
+    } else {
+      for (const [key, value] of entries) {
+        this.atributosFormArray.push(this.createAtributoRow(key, this.stringifyAtributoValue(value)));
+      }
+    }
+
+    this.formDirty.set(false);
+
+    queueMicrotask(() => {
+      this.suppressFormDirty = false;
+    });
+  }
+
+  private resetVistaFormForNew(): void {
+    this.suppressVistaDirty = true;
+
+    this.vistaForm.reset({
+      idVehTipoVehiculoVista: null,
+      vista: '',
+      orden: (this.vistas().length || 0) + 1,
+      observaciones: '',
+    });
+
+    this.vistaAtributosFormArray.clear();
+    this.vistaAtributosFormArray.push(this.createVistaAtributoRow('', ''));
+
+    this.vistaStructureBase64.set(null);
+    this.vistaStructurePreview.set(null);
+    this.vistaDirty.set(false);
+
+    queueMicrotask(() => {
+      this.suppressVistaDirty = false;
+    });
+  }
+
+  private populateVistaForm(vista: VehTipoVehiculoVista): void {
+    this.suppressVistaDirty = true;
+
+    this.vistaForm.reset({
+      idVehTipoVehiculoVista: vista.idVehTipoVehiculoVista,
+      vista: vista.vista ?? '',
+      orden: vista.orden ?? 1,
+      observaciones: vista.observaciones ?? '',
+    });
+
+    this.vistaAtributosFormArray.clear();
+
+    const entries = Object.entries(vista.atributos ?? {});
+    if (entries.length === 0) {
+      this.vistaAtributosFormArray.push(this.createVistaAtributoRow('', ''));
+    } else {
+      for (const [key, value] of entries) {
+        this.vistaAtributosFormArray.push(this.createVistaAtributoRow(key, this.stringifyAtributoValue(value)));
+      }
+    }
+
+    this.vistaStructureBase64.set(null);
+    this.vistaStructurePreview.set(this.resolveBinarySrc(vista.estructura));
+    this.vistaDirty.set(false);
+
+    queueMicrotask(() => {
+      this.suppressVistaDirty = false;
+    });
+  }
+
+  private createAtributoRow(key = '', value = ''): AtributoRowForm {
+    return this.fb.group({
+      key: this.fb.control(key, { nonNullable: true }),
+      value: this.fb.control(value, { nonNullable: true }),
+    });
+  }
+
+  private createVistaAtributoRow(key = '', value = ''): VistaAtributoRowForm {
+    return this.fb.group({
+      key: this.fb.control(key, { nonNullable: true }),
+      value: this.fb.control(value, { nonNullable: true }),
+    });
+  }
+
+  private ensureAtLeastOneAtributoRow(): void {
+    if (this.atributosFormArray.length === 0) {
+      this.atributosFormArray.push(this.createAtributoRow('', ''));
+    }
+  }
+
+  private ensureAtLeastOneVistaAtributoRow(): void {
+    if (this.vistaAtributosFormArray.length === 0) {
+      this.vistaAtributosFormArray.push(this.createVistaAtributoRow('', ''));
+    }
+  }
+
+  private buildAtributosObject(
+    formArray: FormArray<AtributoRowForm> | FormArray<VistaAtributoRowForm>
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    for (const row of formArray.controls) {
+      const key = String(row.controls.key.value || '').trim();
+      const rawValue = String(row.controls.value.value || '').trim();
+
+      if (!key) continue;
+      result[key] = this.parseAtributoValue(rawValue);
+    }
+
+    return result;
+  }
+
+  private parseAtributoValue(value: string): unknown {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (trimmed === 'null') return null;
+
+    if (!Number.isNaN(Number(trimmed)) && trimmed !== '') {
+      return Number(trimmed);
+    }
+
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return trimmed;
+      }
+    }
+
+    return trimmed;
+  }
+
+  private stringifyAtributoValue(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (value == null) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  }
+
+  private guessMimeType(base64: string): string {
     if (base64.startsWith('/9j/')) return 'image/jpeg';
     if (base64.startsWith('iVBOR')) return 'image/png';
     if (base64.startsWith('R0lGOD')) return 'image/gif';
     if (base64.startsWith('UklGR')) return 'image/webp';
     if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
     return 'image/png';
-  }
-
-  private parseJson(value?: string | null) {
-    if (!value || !value.trim()) return {};
-    try { return JSON.parse(value); } catch { return {}; }
   }
 }
