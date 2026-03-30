@@ -709,3 +709,9 @@ export interface VehiculosRouteMeta {
 }
 
 export type VehiculosListQuery = ListQuery;
+export interface SegUsuarioListadoItem {
+  idSegUsuario: number;
+  usuario: string;
+  idNomNominaFk?: number | null;
+  estado?: boolean | null;
+}

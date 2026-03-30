@@ -1,7 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  FormsModule,
+  ReactiveFormsModule,
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
 import { Observable, finalize, forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -19,6 +27,9 @@ import { VehiculoVistaCanvasComponent } from '../../components/vehiculo-vista-ca
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
   CliVehiculo,
+  SegUsuarioListadoItem,
+  VehArticuloCatalogo,
+  VehCheckListVehiculo,
   VehCliente,
   VehCobro,
   VehCobroCrearRequest,
@@ -44,8 +55,6 @@ import {
   VehOrdenTrabajoTrabajo,
   VehOrdenTrabajoTrabajoGuardarRequest,
   VehTipoVehiculoVista,
-  VehCheckListVehiculo,
-  VehArticuloCatalogo,
 } from '../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
@@ -75,6 +84,13 @@ type ComercialDrawerMode =
   | 'cobro'
   | 'contabilizar'
   | null;
+
+type UsuarioPickerTarget = 'recepcion' | 'tecnico' | null;
+
+type AtributoRowForm = FormGroup<{
+  key: FormControl<string>;
+  value: FormControl<string>;
+}>;
 
 @Component({
   selector: 'app-vehiculos-ordenes',
@@ -189,6 +205,15 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   clientePickerVisible = signal(false);
   clienteSeleccionado = signal<VehCliente | null>(null);
 
+  usuariosBuscar = signal('');
+  usuariosResultados = signal<SegUsuarioListadoItem[]>([]);
+  usuarioBuscando = signal(false);
+  usuarioPickerVisible = signal(false);
+  usuarioPickerTarget = signal<UsuarioPickerTarget>(null);
+
+  responsableRecepcionSeleccionado = signal<SegUsuarioListadoItem | null>(null);
+  responsableTecnicoSeleccionado = signal<SegUsuarioListadoItem | null>(null);
+
   vehiculosCliente = signal<CliVehiculo[]>([]);
   vehiculoSeleccionado = signal<CliVehiculo | null>(null);
 
@@ -224,7 +249,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     responsableRecepcion: [null as number | null],
     responsableTecnico: [null as number | null],
     observaciones: [''],
-    atributosJson: ['{}'],
   });
 
   checklistForm = this.fb.group({
@@ -257,7 +281,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     aprobadoCliente: [false],
     fechaAprobacion: [''],
     observaciones: [''],
-    atributosJson: ['{}'],
   });
 
   repuestoForm = this.fb.group({
@@ -363,6 +386,14 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     conceptoCobro: ['Cobro vehicular'],
   });
 
+  readonly atributosFormArray = this.fb.array<AtributoRowForm>([
+    this.createAtributoRow('', ''),
+  ]);
+
+  readonly hallazgoAtributosFormArray = this.fb.array<AtributoRowForm>([
+    this.createAtributoRow('', ''),
+  ]);
+
   readonly repuestoArticuloSeleccionado = computed(() => {
     const art = this.repuestoForm.controls.art.value;
     if (art == null) return null;
@@ -370,6 +401,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   });
 
   constructor() {
+    this.ensureAtLeastOneAtributoRow(this.atributosRows);
+    this.ensureAtLeastOneAtributoRow(this.hallazgoAtributosRows);
+
     this.form.valueChanges.subscribe(() => this.updateMainDirtyState());
     this.checklistForm.valueChanges.subscribe(() => this.updateChildDirtyState());
     this.trabajoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
@@ -384,6 +418,14 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.workflowForm.valueChanges.subscribe(() => this.updateComercialDirtyState());
 
     this.cargar();
+  }
+
+  get atributosRows(): FormArray<AtributoRowForm> {
+    return this.atributosFormArray;
+  }
+
+  get hallazgoAtributosRows(): FormArray<AtributoRowForm> {
+    return this.hallazgoAtributosFormArray;
   }
 
   canDeactivate(): boolean | Promise<boolean> {
@@ -457,6 +499,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
         const vehiculo = (vehiculos.items ?? []).find((x) => x.idCliVehiculo === item.idCliVehiculoFk);
         if (vehiculo) {
+          this.vehiculosCliente.set(vehiculos.items ?? []);
+          this.vehiculoSeleccionado.set(vehiculo);
+
           this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk: vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => this.checklistOpciones.set(r.items ?? []),
           });
@@ -500,6 +545,16 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.facturaDetalle.set(null);
           this.cobrosFactura.set([]);
         }
+
+        this.repo.listarClientes(String(item.dni ?? ''), 0, 20, false).subscribe({
+          next: (res) => {
+            const cli = (res.items ?? []).find((x) => Number(x.dni ?? x.ruc) === Number(item.dni)) ?? null;
+            this.clienteSeleccionado.set(cli);
+          },
+        });
+
+        this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
+        this.cargarUsuarioSeleccionado(item.responsableTecnico ?? null, 'tecnico');
       },
       error: (err) => this.notify.error('No se pudo cargar detalle de la orden', err?.message),
     });
@@ -554,9 +609,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.repo.listarClientes(q, 0, 20, false)
       .pipe(finalize(() => this.clienteBuscando.set(false)))
       .subscribe({
-        next: (res) => {
-          this.clientesResultados.set(res.items ?? []);
-        },
+        next: (res) => this.clientesResultados.set(res.items ?? []),
         error: (err) => this.notify.error('No se pudo buscar clientes', err?.message),
       });
   }
@@ -564,10 +617,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   abrirClientePicker() {
     this.clientePickerVisible.set(true);
     this.clientesResultados.set([]);
-  }
-
-  cerrarClientePicker() {
-    this.clientePickerVisible.set(false);
   }
 
   seleccionarClienteOrden(cliente: VehCliente) {
@@ -604,12 +653,66 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.updateMainDirtyState();
   }
 
+  abrirUsuarioPicker(target: UsuarioPickerTarget) {
+    this.usuarioPickerTarget.set(target);
+    this.usuarioPickerVisible.set(true);
+    this.usuariosBuscar.set('');
+    this.usuariosResultados.set([]);
+  }
+
+  buscarUsuarios() {
+    const q = this.usuariosBuscar().trim();
+    this.usuarioBuscando.set(true);
+
+    this.repo.listarUsuarios(q, 0, 20, false)
+      .pipe(finalize(() => this.usuarioBuscando.set(false)))
+      .subscribe({
+        next: (res: any) => this.usuariosResultados.set(res.items ?? []),
+        error: (err) => this.notify.error('No se pudieron cargar usuarios', err?.message),
+      });
+  }
+
+  seleccionarUsuarioResponsable(user: SegUsuarioListadoItem) {
+    const target = this.usuarioPickerTarget();
+
+    if (target === 'recepcion') {
+      this.form.controls.responsableRecepcion.setValue(user.idSegUsuario);
+      this.responsableRecepcionSeleccionado.set(user);
+    }
+
+    if (target === 'tecnico') {
+      this.form.controls.responsableTecnico.setValue(user.idSegUsuario);
+      this.responsableTecnicoSeleccionado.set(user);
+    }
+
+    this.usuarioPickerVisible.set(false);
+    this.usuarioPickerTarget.set(null);
+    this.updateMainDirtyState();
+  }
+
+  limpiarResponsable(target: UsuarioPickerTarget) {
+    if (target === 'recepcion') {
+      this.form.controls.responsableRecepcion.setValue(null);
+      this.responsableRecepcionSeleccionado.set(null);
+    }
+
+    if (target === 'tecnico') {
+      this.form.controls.responsableTecnico.setValue(null);
+      this.responsableTecnicoSeleccionado.set(null);
+    }
+
+    this.updateMainDirtyState();
+  }
+
   nuevo() {
     this.editingOrdenId.set(null);
     this.drawerVisible.set(true);
     this.clienteSeleccionado.set(null);
     this.vehiculoSeleccionado.set(null);
     this.vehiculosCliente.set([]);
+    this.responsableRecepcionSeleccionado.set(null);
+    this.responsableTecnicoSeleccionado.set(null);
+
     this.form.reset({
       dni: null,
       idCliVehiculoFk: null,
@@ -631,14 +734,16 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       responsableRecepcion: null,
       responsableTecnico: null,
       observaciones: '',
-      atributosJson: '{}',
     });
+
+    this.populateAtributosFormArray(this.atributosRows, {});
     this.refreshMainSnapshot();
   }
 
   editarOrden(item: VehOrdenTrabajo) {
     this.editingOrdenId.set(item.idVehOrdenTrabajo);
     this.drawerVisible.set(true);
+
     this.form.reset({
       dni: item.dni,
       idCliVehiculoFk: item.idCliVehiculoFk,
@@ -660,8 +765,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       responsableRecepcion: item.responsableRecepcion ?? null,
       responsableTecnico: item.responsableTecnico ?? null,
       observaciones: item.observaciones || '',
-      atributosJson: JSON.stringify(item.atributos ?? {}, null, 2),
     });
+
+    this.populateAtributosFormArray(this.atributosRows, item.atributos ?? {});
 
     this.repo.listarClientes(String(item.dni ?? ''), 0, 20, false).subscribe({
       next: (res) => {
@@ -671,6 +777,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     });
 
     this.buscarVehiculosCliente(item.dni ?? null);
+    this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
+    this.cargarUsuarioSeleccionado(item.responsableTecnico ?? null, 'tecnico');
     this.refreshMainSnapshot();
   }
 
@@ -729,7 +837,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       responsableRecepcion: raw.responsableRecepcion ?? null,
       responsableTecnico: raw.responsableTecnico ?? null,
       observaciones: raw.observaciones?.trim() || null,
-      atributos: this.parseJson(raw.atributosJson),
+      atributos: this.buildAtributosObject(this.atributosRows),
     };
 
     this.saving.set(true);
@@ -805,8 +913,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         aprobadoCliente: false,
         fechaAprobacion: '',
         observaciones: '',
-        atributosJson: '{}',
       });
+      this.populateAtributosFormArray(this.hallazgoAtributosRows, {});
     }
 
     if (mode === 'repuesto') {
@@ -964,7 +1072,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         aprobadoCliente: !!this.hallazgoForm.value.aprobadoCliente,
         fechaAprobacion: this.toTimestamp(this.hallazgoForm.value.fechaAprobacion),
         observaciones: this.hallazgoForm.value.observaciones?.trim() || null,
-        atributos: this.parseJson(this.hallazgoForm.value.atributosJson),
+        atributos: this.buildAtributosObject(this.hallazgoAtributosRows),
       };
       request$ = this.repo.crearHallazgo(payload);
     } else if (mode === 'repuesto') {
@@ -1350,7 +1458,30 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   nombreChecklistRelacionado(idRel?: number | null) {
-    return this.checklistOpciones().find((x) => x.idVehVehiculoCheckListVehiculo === idRel)?.idVehVehiculoCheckListFk || idRel || '-';
+    return this.checklistOpciones().find((x) => x.idVehVehiculoCheckListVehiculo === idRel)?.idVehVehiculoCheckListFk || '-';
+  }
+
+  vehiculoLabel(vehiculo?: CliVehiculo | null): string {
+    if (!vehiculo) return 'Vehículo seleccionado';
+    return [vehiculo.marca, vehiculo.modelo, vehiculo.placa].filter(Boolean).join(' · ');
+  }
+
+  ordenClienteNombre(item: VehOrdenTrabajo): string {
+    if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo && this.clienteSeleccionado()) {
+      return this.clienteSeleccionado()!.nombre || this.clienteSeleccionado()!.ruc;
+    }
+    return 'Cliente seleccionado';
+  }
+
+  ordenVehiculoNombre(item: VehOrdenTrabajo): string {
+    const veh = this.vehiculosCliente().find((x) => x.idCliVehiculo === item.idCliVehiculoFk);
+    return this.vehiculoLabel(veh);
+  }
+
+  articuloNombrePorId(art?: number | null): string {
+    if (!art) return 'Artículo';
+    const found = this.repuestoArticulos().find((x) => x.idActInventario === art);
+    return found ? `${found.artcod || found.idActInventario} · ${found.articulo}` : 'Artículo seleccionado';
   }
 
   childDrawerTitle() {
@@ -1440,12 +1571,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (!binary) return null;
     const value = String(binary).trim();
     if (!value) return null;
-    if (
-      value.startsWith('data:') ||
-      value.startsWith('http://') ||
-      value.startsWith('https://') ||
-      value.startsWith('blob:')
-    ) {
+    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:')) {
       return value;
     }
     return `data:${this.guessMimeType(value)};base64,${value}`;
@@ -1458,12 +1584,120 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     return false;
   }
 
+  addOrdenAtributoRow() {
+    this.atributosRows.push(this.createAtributoRow('', ''));
+    this.updateMainDirtyState();
+  }
+
+  removeOrdenAtributoRow(index: number) {
+    if (this.atributosRows.length === 1) {
+      this.atributosRows.at(0).patchValue({ key: '', value: '' });
+      this.updateMainDirtyState();
+      return;
+    }
+    this.atributosRows.removeAt(index);
+    this.updateMainDirtyState();
+  }
+
+  addHallazgoAtributoRow() {
+    this.hallazgoAtributosRows.push(this.createAtributoRow('', ''));
+    this.updateChildDirtyState();
+  }
+
+  removeHallazgoAtributoRow(index: number) {
+    if (this.hallazgoAtributosRows.length === 1) {
+      this.hallazgoAtributosRows.at(0).patchValue({ key: '', value: '' });
+      this.updateChildDirtyState();
+      return;
+    }
+    this.hallazgoAtributosRows.removeAt(index);
+    this.updateChildDirtyState();
+  }
+
+  private createAtributoRow(key = '', value = ''): AtributoRowForm {
+    return this.fb.group({
+      key: this.fb.control(key, { nonNullable: true }),
+      value: this.fb.control(value, { nonNullable: true }),
+    });
+  }
+
+  private ensureAtLeastOneAtributoRow(formArray: FormArray<AtributoRowForm>) {
+    if (formArray.length === 0) {
+      formArray.push(this.createAtributoRow('', ''));
+    }
+  }
+
+  private populateAtributosFormArray(formArray: FormArray<AtributoRowForm>, data?: Record<string, unknown> | null) {
+    formArray.clear();
+    const entries = Object.entries(data ?? {});
+    if (entries.length === 0) {
+      formArray.push(this.createAtributoRow('', ''));
+      return;
+    }
+    for (const [key, value] of entries) {
+      formArray.push(this.createAtributoRow(key, this.stringifyAtributoValue(value)));
+    }
+  }
+
+  private buildAtributosObject(formArray: FormArray<AtributoRowForm>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const row of formArray.controls) {
+      const key = String(row.controls.key.value || '').trim();
+      const rawValue = String(row.controls.value.value || '').trim();
+      if (!key) continue;
+      result[key] = this.parseAtributoValue(rawValue);
+    }
+    return result;
+  }
+
+  private parseAtributoValue(value: string): unknown {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (trimmed === 'null') return null;
+    if (!Number.isNaN(Number(trimmed))) return Number(trimmed);
+
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return trimmed;
+      }
+    }
+
+    return trimmed;
+  }
+
+  private stringifyAtributoValue(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (value == null) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  }
+
+  private cargarUsuarioSeleccionado(idSegUsuario: number | null | undefined, target: UsuarioPickerTarget) {
+    if (!idSegUsuario) {
+      if (target === 'recepcion') this.responsableRecepcionSeleccionado.set(null);
+      if (target === 'tecnico') this.responsableTecnicoSeleccionado.set(null);
+      return;
+    }
+
+    this.repo.listarUsuarios(String(idSegUsuario), 0, 20, false).subscribe({
+      next: (res: any) => {
+        const user = (res.items ?? []).find((x: SegUsuarioListadoItem) => x.idSegUsuario === idSegUsuario) ?? null;
+        if (target === 'recepcion') this.responsableRecepcionSeleccionado.set(user);
+        if (target === 'tecnico') this.responsableTecnicoSeleccionado.set(user);
+      },
+    });
+  }
+
   private toIdList(raw?: string | null): number[] | null {
     if (!raw || !raw.trim()) return null;
-    const ids = raw
-      .split(',')
-      .map((x) => Number(x.trim()))
-      .filter((x) => !Number.isNaN(x) && x > 0);
+    const ids = raw.split(',').map((x) => Number(x.trim())).filter((x) => !Number.isNaN(x) && x > 0);
     return ids.length ? ids : null;
   }
 
@@ -1474,11 +1708,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (base64.startsWith('UklGR')) return 'image/webp';
     if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
     return 'image/png';
-  }
-
-  private parseJson(value?: string | null) {
-    if (!value || !value.trim()) return {};
-    try { return JSON.parse(value); } catch { return {}; }
   }
 
   private toDate(value?: string | null) {
@@ -1500,8 +1729,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   private createMainSnapshot(): string {
     return JSON.stringify({
       ...this.form.getRawValue(),
-      cliente: this.clienteSeleccionado()?.dni ?? this.clienteSeleccionado()?.ruc ?? null,
-      vehiculo: this.vehiculoSeleccionado()?.idCliVehiculo ?? null,
+      cliente: this.clienteSeleccionado()?.nombre ?? this.clienteSeleccionado()?.ruc ?? null,
+      vehiculo: this.vehiculoSeleccionado()?.placa ?? this.vehiculoSeleccionado()?.modelo ?? null,
+      responsableRecepcionNombre: this.responsableRecepcionSeleccionado()?.usuario ?? null,
+      responsableTecnicoNombre: this.responsableTecnicoSeleccionado()?.usuario ?? null,
+      atributos: this.buildAtributosObject(this.atributosRows),
     });
   }
 
@@ -1511,6 +1743,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       checklist: this.checklistForm.getRawValue(),
       trabajo: this.trabajoForm.getRawValue(),
       hallazgo: this.hallazgoForm.getRawValue(),
+      hallazgoAtributos: this.buildAtributosObject(this.hallazgoAtributosRows),
       repuesto: this.repuestoForm.getRawValue(),
       autorizacion: this.autorizacionForm.getRawValue(),
       foto: this.fotoForm.getRawValue(),
@@ -1553,68 +1786,5 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private updateComercialDirtyState() {
     this.comercialDirty.set(this.createComercialSnapshot() !== this.initialComercialSnapshot);
-  }
-  readonly atributosFormArray = this.fb.array([
-    this.fb.group({
-      key: this.fb.control('', { nonNullable: true }),
-      value: this.fb.control('', { nonNullable: true }),
-    }),
-  ]);
-
-  addAtributoRow() {
-    this.atributosFormArray.push(
-      this.fb.group({
-        key: this.fb.control('', { nonNullable: true }),
-        value: this.fb.control('', { nonNullable: true }),
-      })
-    );
-    this.updateMainDirtyState();
-  }
-
-  removeAtributoRow(index: number) {
-    if (this.atributosFormArray.length === 1) {
-      this.atributosFormArray.at(0).patchValue({ key: '', value: '' });
-      this.updateMainDirtyState();
-      return;
-    }
-    this.atributosFormArray.removeAt(index);
-    this.updateMainDirtyState();
-  }
-
-  private buildAtributosObject(): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    for (const row of this.atributosFormArray.controls) {
-      const key = String(row.controls.key.value || '').trim();
-      const rawValue = String(row.controls.value.value || '').trim();
-
-      if (!key) continue;
-      result[key] = this.parseAtributoValue(rawValue);
-    }
-
-    return result;
-  }
-
-  private parseAtributoValue(value: string): unknown {
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-
-    if (trimmed === 'true') return true;
-    if (trimmed === 'false') return false;
-    if (trimmed === 'null') return null;
-    if (!Number.isNaN(Number(trimmed))) return Number(trimmed);
-
-    if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
-    ) {
-      try {
-        return JSON.parse(trimmed);
-      } catch {
-        return trimmed;
-      }
-    }
-
-    return trimmed;
   }
 }

@@ -38,6 +38,7 @@ import {
   VehTipoVehiculoGuardarRequest,
   VehTipoVehiculoVistaEditarRequest,
   VehTipoVehiculoVistaGuardarRequest,
+  SegUsuarioListadoItem
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
@@ -173,5 +174,8 @@ export class VehiculosRepository {
 
   facturarCobrarWorkflow(payload: VehFacturacionWorkflowRequest) {
     return this.api.facturarCobrarWorkflow(payload).pipe(map((r) => unwrapWithMsg(r)));
+  }
+  listarUsuarios(q = '', page = 0, size = 20, all = false) {
+    return this.api.listarUsuarios({ q, page, size, all }).pipe(map((r) => unwrapOrThrow(r)));
   }
 }

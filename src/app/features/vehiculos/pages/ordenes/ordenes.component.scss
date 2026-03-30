@@ -75,7 +75,7 @@ label {
   align-content: start;
 }
 
-label > span {
+label>span {
   font-size: 0.78rem;
   font-weight: 700;
   color: #475569;
@@ -96,6 +96,7 @@ textarea[pTextarea] {
 }
 
 :host ::ng-deep {
+
   .p-inputtext,
   .p-inputtextarea,
   .p-inputnumber-input {
@@ -380,6 +381,7 @@ input[type='date']:focus {
 }
 
 @media (max-width: 860px) {
+
   .grid.cols-2,
   .grid.cols-3 {
     grid-template-columns: 1fr;
@@ -393,5 +395,35 @@ input[type='date']:focus {
   .pickerInline {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+.attrTable {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.attrHead,
+.attrRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.attrHead {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  padding: 0 0.1rem;
+}
+
+@media (max-width: 860px) {
+  .attrHead {
+    display: none;
+  }
+
+  .attrRow {
+    grid-template-columns: 1fr;
   }
 }

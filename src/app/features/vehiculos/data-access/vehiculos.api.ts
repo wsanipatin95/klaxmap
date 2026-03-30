@@ -60,12 +60,14 @@ import {
   VehTipoVehiculoVista,
   VehTipoVehiculoVistaEditarRequest,
   VehTipoVehiculoVistaGuardarRequest,
+  SegUsuarioListadoItem
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
 export class VehiculosApi {
   private http = inject(HttpClient);
   private env = inject(ENVIRONMENT);
+  private userBaseUrl = `${this.env.apiBaseUrl}/api/erp`;
   private baseUrl = `${this.env.apiBaseUrl}/api/erp/klax/veh`;
 
   /* ===== Tipos ===== */
@@ -306,5 +308,11 @@ export class VehiculosApi {
   /* ===== Workflow ===== */
   facturarCobrarWorkflow(payload: VehFacturacionWorkflowRequest) {
     return this.http.post<ApiEnvelope<VehFacturacionWorkflowResultado>>(`${this.baseUrl}/workflow/facturar-cobrar`, payload);
+  }
+
+  listarUsuarios(query: ListQuery = {}) {
+    return this.http.get<ApiEnvelope<Paged<SegUsuarioListadoItem>>>(`${this.userBaseUrl}/usuario/usuarios`, {
+      params: buildListParams(query),
+    });
   }
 }
