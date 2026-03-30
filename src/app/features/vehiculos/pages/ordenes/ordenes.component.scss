@@ -1,16 +1,252 @@
 @use '../shared-page';
 
+:host {
+  display: block;
+}
+
+:host ::ng-deep {
+  .appDrawer .appDrawer__content {
+    padding: 0;
+  }
+
+  .appDrawer .appDrawer__body {
+    padding: 1rem 1rem 0.75rem;
+    background: #f8fafc;
+  }
+
+  .appDrawer .appDrawer__footer {
+    padding: 0.9rem 1rem 1rem;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+  }
+
+  .appDrawer .appDrawer__title {
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .appDrawer .appDrawer__subtitle {
+    color: #64748b;
+  }
+}
+
+.vehForm {
+  display: grid;
+  gap: 1rem;
+}
+
+.formSection {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.formSectionTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.grid {
+  display: grid;
+  gap: 0.9rem 1rem;
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cols-full {
+  grid-column: 1 / -1;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+}
+
+label > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+input[pInputText],
+textarea[pTextarea],
+input[type='date'],
+select {
+  width: 100%;
+}
+
+input[type='date'],
+select,
+input[pInputText],
+textarea[pTextarea] {
+  border-radius: 0.8rem;
+}
+
+:host ::ng-deep {
+  .p-inputtext,
+  .p-inputtextarea,
+  .p-inputnumber-input {
+    width: 100%;
+    min-height: 2.7rem;
+    border-radius: 0.8rem;
+    border-color: #dbe2ea;
+    font-size: 0.88rem;
+  }
+
+  textarea.p-inputtextarea {
+    min-height: 7rem;
+    resize: vertical;
+  }
+
+  .p-button {
+    border-radius: 0.8rem;
+    font-weight: 700;
+  }
+}
+
+input[type='date'],
+select {
+  min-height: 2.7rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.8rem;
+  padding: 0 0.85rem;
+  font-size: 0.88rem;
+  background: #fff;
+  color: #0f172a;
+}
+
+select:focus,
+input[type='date']:focus {
+  outline: none;
+  border-color: #d98bbb;
+  box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.08);
+}
+
+.pickerInline {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pickerSummary {
+  min-height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border-radius: 0.8rem;
+  border: 1px solid #dbe2ea;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.84rem;
+}
+
+.pickerSummary--empty {
+  color: #64748b;
+}
+
+.pickerDialog {
+  display: grid;
+  gap: 1rem;
+}
+
+.pickerToolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.pickerLoading {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.pickerList {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.pickerRow {
+  border: 1px solid #dbe2ea;
+  background: #fff;
+  border-radius: 0.95rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.pickerRow:hover {
+  border-color: #d98bbb;
+  background: #fff8fb;
+}
+
+.pickerRowCopy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.pickerRowCopy strong {
+  color: #334155;
+}
+
+.pickerRowCopy span {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.emptyInline {
+  color: #64748b;
+  font-size: 0.88rem;
+  padding: 0.5rem 0.1rem;
+}
+
+.toggleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.toggleItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.toggleItem input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #7b0061;
+}
+
+.toggleItem span {
+  color: #334155;
+  font-size: 0.84rem;
+}
+
 .canvasCard {
   padding: 0;
   overflow: hidden;
-}
-
-.compact {
-  padding: 0.65rem 0.75rem;
-}
-
-.tabBar {
-  margin-top: 0.25rem;
 }
 
 .contextRail {
@@ -79,46 +315,8 @@
   background: #fff;
 }
 
-.toggleItem {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.85rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-  background: #f8fafc;
-  cursor: pointer;
-
-  input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #7b0061;
-  }
-
-  span {
-    color: #334155;
-  }
-}
-
-.formSection {
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  background: #fff;
-  padding: 0.9rem;
-  margin-bottom: 0.9rem;
-}
-
-.formSectionTitle {
-  margin: 0 0 0.75rem;
-  font-size: 0.92rem;
-  color: #0f172a;
-}
-
-.toggleGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+.tabBar {
+  margin-top: 0.25rem;
 }
 
 .commercialGrid {
@@ -146,21 +344,25 @@
   background: #f8fafc;
   display: grid;
   gap: 0.25rem;
+}
 
-  span {
-    font-size: 0.76rem;
-    color: #64748b;
-  }
+.kvItem span {
+  font-size: 0.76rem;
+  color: #64748b;
+}
 
-  strong {
-    font-size: 0.96rem;
-    color: #0f172a;
-  }
+.kvItem strong {
+  font-size: 0.96rem;
+  color: #0f172a;
 }
 
 .workflowResultCard {
   border-color: #f3aad6;
   background: #fdf4f9;
+}
+
+.compact {
+  padding: 0.65rem 0.75rem;
 }
 
 @media (max-width: 1100px) {
@@ -170,5 +372,26 @@
 
   .kvGrid {
     grid-template-columns: 1fr;
+  }
+
+  .grid.cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .grid.cols-2,
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .pickerToolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pickerInline {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

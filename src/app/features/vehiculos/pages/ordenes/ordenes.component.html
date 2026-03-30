@@ -1,6 +1,7 @@
 <app-vehiculos-page-header
   title="Órdenes de trabajo"
   subtitle="Mesa operativa única del taller. Recepción, diagnóstico, hallazgos, repuestos, autorizaciones y comercial en la misma pantalla.">
+  <button pButton type="button" severity="secondary" icon="pi pi-arrow-left" label="Volver" (click)="volver()"></button>
   <button pButton type="button" icon="pi pi-plus" label="Nueva OT" (click)="nuevo()"></button>
 </app-vehiculos-page-header>
 
@@ -104,41 +105,17 @@
         </div>
 
         <div class="metricGrid">
-          <article class="metric">
-            <span>Checklist</span>
-            <strong>{{ checklist().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Trabajos</span>
-            <strong>{{ trabajos().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Hallazgos</span>
-            <strong>{{ hallazgos().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Repuestos</span>
-            <strong>{{ repuestos().length }}</strong>
-          </article>
+          <article class="metric"><span>Checklist</span><strong>{{ checklist().length }}</strong></article>
+          <article class="metric"><span>Trabajos</span><strong>{{ trabajos().length }}</strong></article>
+          <article class="metric"><span>Hallazgos</span><strong>{{ hallazgos().length }}</strong></article>
+          <article class="metric"><span>Repuestos</span><strong>{{ repuestos().length }}</strong></article>
         </div>
 
         <div class="metricGrid">
-          <article class="metric">
-            <span>Pendientes de facturar</span>
-            <strong>{{ repuestosPendientesCount() }}</strong>
-          </article>
-          <article class="metric">
-            <span>Facturas de la orden</span>
-            <strong>{{ facturasOt().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Cobros factura seleccionada</span>
-            <strong>{{ cobrosFactura().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Autorizaciones</span>
-            <strong>{{ autorizaciones().length }}</strong>
-          </article>
+          <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+          <article class="metric"><span>Facturas de la orden</span><strong>{{ facturasOt().length }}</strong></article>
+          <article class="metric"><span>Cobros factura seleccionada</span><strong>{{ cobrosFactura().length }}</strong></article>
+          <article class="metric"><span>Autorizaciones</span><strong>{{ autorizaciones().length }}</strong></article>
         </div>
       </section>
 
@@ -327,22 +304,10 @@
         </div>
 
         <div class="metricGrid">
-          <article class="metric">
-            <span>Repuestos OT</span>
-            <strong>{{ repuestos().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Pendientes de facturar</span>
-            <strong>{{ repuestosPendientesCount() }}</strong>
-          </article>
-          <article class="metric">
-            <span>Facturas de la OT</span>
-            <strong>{{ facturasOt().length }}</strong>
-          </article>
-          <article class="metric">
-            <span>Cobros factura seleccionada</span>
-            <strong>{{ cobrosFactura().length }}</strong>
-          </article>
+          <article class="metric"><span>Repuestos OT</span><strong>{{ repuestos().length }}</strong></article>
+          <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+          <article class="metric"><span>Facturas de la OT</span><strong>{{ facturasOt().length }}</strong></article>
+          <article class="metric"><span>Cobros factura seleccionada</span><strong>{{ cobrosFactura().length }}</strong></article>
         </div>
 
         <div class="grid cols-2 commercialGrid">
@@ -403,30 +368,12 @@
               </div>
 
               <div class="kvGrid">
-                <article class="kvItem">
-                  <span>Número</span>
-                  <strong>{{ facturaActual.estab || '-' }}-{{ facturaActual.ptoemi || '-' }}-{{ facturaActual.secuencial || facturaActual.idFacVenta }}</strong>
-                </article>
-                <article class="kvItem">
-                  <span>Total</span>
-                  <strong>{{ facturaActual.total || 0 }}</strong>
-                </article>
-                <article class="kvItem">
-                  <span>Entrada</span>
-                  <strong>{{ facturaActual.entrada || 0 }}</strong>
-                </article>
-                <article class="kvItem">
-                  <span>Saldo</span>
-                  <strong>{{ facturaActual.cxcDeuda || 0 }}</strong>
-                </article>
-                <article class="kvItem">
-                  <span>Base imponible</span>
-                  <strong>{{ facturaActual.baseImponible || 0 }}</strong>
-                </article>
-                <article class="kvItem">
-                  <span>IVA</span>
-                  <strong>{{ facturaActual.iva || 0 }}</strong>
-                </article>
+                <article class="kvItem"><span>Número</span><strong>{{ facturaActual.estab || '-' }}-{{ facturaActual.ptoemi || '-' }}-{{ facturaActual.secuencial || facturaActual.idFacVenta }}</strong></article>
+                <article class="kvItem"><span>Total</span><strong>{{ facturaActual.total || 0 }}</strong></article>
+                <article class="kvItem"><span>Entrada</span><strong>{{ facturaActual.entrada || 0 }}</strong></article>
+                <article class="kvItem"><span>Saldo</span><strong>{{ facturaActual.cxcDeuda || 0 }}</strong></article>
+                <article class="kvItem"><span>Base imponible</span><strong>{{ facturaActual.baseImponible || 0 }}</strong></article>
+                <article class="kvItem"><span>IVA</span><strong>{{ facturaActual.iva || 0 }}</strong></article>
               </div>
 
               <section class="miniCard innerCard">
@@ -499,41 +446,17 @@
           </div>
 
           <div class="metricGrid">
-            <article class="metric">
-              <span>ID factura</span>
-              <strong>{{ workflow.idFacVenta || '-' }}</strong>
-            </article>
-            <article class="metric">
-              <span>Total</span>
-              <strong>{{ workflow.total || 0 }}</strong>
-            </article>
-            <article class="metric">
-              <span>Pago inicial</span>
-              <strong>{{ workflow.pagoInicial || 0 }}</strong>
-            </article>
-            <article class="metric">
-              <span>Saldo pendiente</span>
-              <strong>{{ workflow.saldoPendiente || 0 }}</strong>
-            </article>
+            <article class="metric"><span>ID factura</span><strong>{{ workflow.idFacVenta || '-' }}</strong></article>
+            <article class="metric"><span>Total</span><strong>{{ workflow.total || 0 }}</strong></article>
+            <article class="metric"><span>Pago inicial</span><strong>{{ workflow.pagoInicial || 0 }}</strong></article>
+            <article class="metric"><span>Saldo pendiente</span><strong>{{ workflow.saldoPendiente || 0 }}</strong></article>
           </div>
 
           <div class="metricGrid">
-            <article class="metric">
-              <span>ID cobro</span>
-              <strong>{{ workflow.idFacVentaCobro || '-' }}</strong>
-            </article>
-            <article class="metric">
-              <span>Tra factura</span>
-              <strong>{{ workflow.traFactura || '-' }}</strong>
-            </article>
-            <article class="metric">
-              <span>Tra cobro</span>
-              <strong>{{ workflow.traCobro || '-' }}</strong>
-            </article>
-            <article class="metric">
-              <span>Estado sugerido OT</span>
-              <strong>{{ workflow.estadoOrdenSugerido || '-' }}</strong>
-            </article>
+            <article class="metric"><span>ID cobro</span><strong>{{ workflow.idFacVentaCobro || '-' }}</strong></article>
+            <article class="metric"><span>Tra factura</span><strong>{{ workflow.traFactura || '-' }}</strong></article>
+            <article class="metric"><span>Tra cobro</span><strong>{{ workflow.traCobro || '-' }}</strong></article>
+            <article class="metric"><span>Estado sugerido OT</span><strong>{{ workflow.estadoOrdenSugerido || '-' }}</strong></article>
           </div>
 
           <section class="miniCard innerCard" *ngIf="workflowDetalles().length">
@@ -577,91 +500,47 @@
 </ng-template>
 
 <ng-template #noChecklist>
-  <app-vehiculos-empty-state
-    icon="pi pi-check-square"
-    title="Sin checklist"
-    subtitle="Agrega los ítems de recepción aplicados a esta orden.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist" subtitle="Agrega los ítems de recepción aplicados a esta orden."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noTrabajos>
-  <app-vehiculos-empty-state
-    icon="pi pi-cog"
-    title="Sin trabajos"
-    subtitle="Registra las tareas ejecutadas por el técnico.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajos" subtitle="Registra las tareas ejecutadas por el técnico."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noHallazgos>
-  <app-vehiculos-empty-state
-    icon="pi pi-exclamation-circle"
-    title="Sin hallazgos"
-    subtitle="Registra daños, fallas o novedades encontradas en la revisión.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-exclamation-circle" title="Sin hallazgos" subtitle="Registra daños, fallas o novedades encontradas en la revisión."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noRepuestos>
-  <app-vehiculos-empty-state
-    icon="pi pi-box"
-    title="Sin repuestos"
-    subtitle="Agrega partes o consumibles relacionados a la orden.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos" subtitle="Agrega partes o consumibles relacionados a la orden."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noAutorizaciones>
-  <app-vehiculos-empty-state
-    icon="pi pi-verified"
-    title="Sin autorizaciones"
-    subtitle="Registra aprobaciones del cliente para cambios adicionales.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones" subtitle="Registra aprobaciones del cliente para cambios adicionales."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFotos>
-  <app-vehiculos-empty-state
-    icon="pi pi-camera"
-    title="Sin fotos"
-    subtitle="Registra evidencias reales del hallazgo antes, durante o después del trabajo.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias reales del hallazgo antes, durante o después del trabajo."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturasOt>
-  <app-vehiculos-empty-state
-    icon="pi pi-file"
-    title="Sin facturas de la OT"
-    subtitle="Desde aquí mismo puedes lanzar el workflow integral o crear una factura manual.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas de la OT" subtitle="Desde aquí mismo puedes lanzar el workflow integral o crear una factura manual."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaSeleccionada>
-  <app-vehiculos-empty-state
-    icon="pi pi-dollar"
-    title="Selecciona una factura"
-    subtitle="A la derecha verás detalle, plan CxC y cobros sin salir del contexto de la orden.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-dollar" title="Selecciona una factura" subtitle="A la derecha verás detalle, plan CxC y cobros sin salir del contexto de la orden."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaItems>
-  <app-vehiculos-empty-state
-    icon="pi pi-list"
-    title="Sin detalle facturado"
-    subtitle="No se encontraron líneas de detalle para esta factura.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado" subtitle="No se encontraron líneas de detalle para esta factura."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCxc>
-  <app-vehiculos-empty-state
-    icon="pi pi-calendar"
-    title="Sin plan CxC"
-    subtitle="Esta factura no registra cuotas pendientes.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-calendar" title="Sin plan CxC" subtitle="Esta factura no registra cuotas pendientes."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCobros>
-  <app-vehiculos-empty-state
-    icon="pi pi-wallet"
-    title="Sin cobros"
-    subtitle="Todavía no existen cobros registrados para la factura seleccionada.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros" subtitle="Todavía no existen cobros registrados para la factura seleccionada."></app-vehiculos-empty-state>
 </ng-template>
 
 <app-vehiculos-form-drawer
@@ -669,34 +548,150 @@
   [dirty]="dirty()"
   [saving]="saving()"
   title="{{ editingOrdenId() ? 'Editar orden de trabajo' : 'Nueva orden de trabajo' }}"
-  subtitle="Cabecera de la OT. Mantén el formulario compacto y con los datos operativos primero."
+  subtitle="Cabecera de la OT. Selecciona cliente y vehículo, y luego completa los datos operativos."
   (visibleChange)="drawerVisible.set($event)"
   (requestClose)="cerrarDrawer()"
   (requestSave)="submitOrden()">
+
   <form class="vehForm" [formGroup]="form">
-    <div class="grid cols-3">
-      <label><span>DNI cliente</span><input pInputText type="number" formControlName="dni"></label>
-      <label><span>ID vehículo cliente</span><input pInputText type="number" formControlName="idCliVehiculoFk"></label>
-      <label><span>Tipo servicio</span><input pInputText formControlName="tipoServicio"></label>
-      <label><span>Estado orden</span><input pInputText formControlName="estadoOrden"></label>
-      <label><span>Fecha ingreso</span><input type="date" formControlName="fechaIngreso"></label>
-      <label><span>Fecha prometida</span><input type="date" formControlName="fechaPrometida"></label>
-      <label><span>Kilometraje</span><input pInputText type="number" formControlName="kilometrajeIngreso"></label>
-      <label><span>Nivel combustible</span><input pInputText formControlName="nivelCombustible"></label>
-      <label><span>Nivel batería</span><input pInputText formControlName="nivelBateria"></label>
-      <label class="cols-full"><span>Falla reportada</span><textarea pTextarea rows="3" formControlName="fallaReportada"></textarea></label>
-      <label class="cols-full"><span>Síntomas reportados</span><textarea pTextarea rows="2" formControlName="sintomasReportados"></textarea></label>
-      <label class="cols-full"><span>Ruidos reportados</span><textarea pTextarea rows="2" formControlName="ruidosReportados"></textarea></label>
-      <label class="cols-full"><span>Detalle cliente</span><textarea pTextarea rows="3" formControlName="detalleCliente"></textarea></label>
-      <label class="cols-full"><span>Accesorios entregados</span><textarea pTextarea rows="2" formControlName="accesoriosEntregados"></textarea></label>
-      <label class="cols-full"><span>Condición ingreso</span><textarea pTextarea rows="3" formControlName="condicionIngreso"></textarea></label>
-      <label class="cols-full"><span>Diagnóstico general</span><textarea pTextarea rows="3" formControlName="diagnosticoGeneral"></textarea></label>
-      <label class="cols-full"><span>Recomendación general</span><textarea pTextarea rows="3" formControlName="recomendacionGeneral"></textarea></label>
-      <label><span>Responsable recepción</span><input pInputText type="number" formControlName="responsableRecepcion"></label>
-      <label><span>Responsable técnico</span><input pInputText type="number" formControlName="responsableTecnico"></label>
-      <label class="cols-full"><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
-      <label class="cols-full"><span>Atributos JSON</span><textarea pTextarea rows="6" formControlName="atributosJson"></textarea></label>
-    </div>
+    <section class="formSection">
+      <h4 class="formSectionTitle">Cliente y vehículo</h4>
+
+      <div class="grid cols-2">
+        <label class="cols-full">
+          <span>Cliente</span>
+          <div class="pickerInline">
+            <button pButton type="button" severity="secondary" label="Buscar cliente" (click)="abrirClientePicker()"></button>
+            <div class="pickerSummary" *ngIf="clienteSeleccionado() as cli; else noCliSel">
+              {{ cli.nombre || cli.ruc }} · {{ cli.ruc }}
+            </div>
+            <ng-template #noCliSel>
+              <div class="pickerSummary pickerSummary--empty">No hay cliente seleccionado</div>
+            </ng-template>
+          </div>
+        </label>
+
+        <label>
+          <span>DNI cliente</span>
+          <input pInputText type="number" formControlName="dni" readonly>
+        </label>
+
+        <label>
+          <span>Vehículo del cliente</span>
+          <select [formControl]="form.controls.idCliVehiculoFk" (ngModelChange)="onVehiculoSeleccionado($event)">
+            <option [ngValue]="null">Selecciona un vehículo</option>
+            <option *ngFor="let veh of vehiculosCliente()" [ngValue]="veh.idCliVehiculo">
+              {{ veh.marca }} {{ veh.modelo }} · {{ veh.placa || 'Sin placa' }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="formSection">
+      <h4 class="formSectionTitle">Datos operativos</h4>
+
+      <div class="grid cols-3">
+        <label>
+          <span>Tipo servicio</span>
+          <select formControlName="tipoServicio">
+            <option *ngFor="let option of TIPO_SERVICIO_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Estado orden</span>
+          <select formControlName="estadoOrden">
+            <option *ngFor="let option of ESTADO_ORDEN_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Kilometraje</span>
+          <input pInputText type="number" formControlName="kilometrajeIngreso">
+        </label>
+
+        <label>
+          <span>Fecha ingreso</span>
+          <input type="date" formControlName="fechaIngreso">
+        </label>
+
+        <label>
+          <span>Fecha prometida</span>
+          <input type="date" formControlName="fechaPrometida">
+        </label>
+
+        <label>
+          <span>Nivel combustible</span>
+          <input pInputText formControlName="nivelCombustible">
+        </label>
+
+        <label>
+          <span>Nivel batería</span>
+          <input pInputText formControlName="nivelBateria">
+        </label>
+
+        <label>
+          <span>Responsable recepción</span>
+          <input pInputText type="number" formControlName="responsableRecepcion">
+        </label>
+
+        <label>
+          <span>Responsable técnico</span>
+          <input pInputText type="number" formControlName="responsableTecnico">
+        </label>
+
+        <label class="cols-full">
+          <span>Falla reportada</span>
+          <textarea pTextarea rows="3" formControlName="fallaReportada"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Síntomas reportados</span>
+          <textarea pTextarea rows="2" formControlName="sintomasReportados"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Ruidos reportados</span>
+          <textarea pTextarea rows="2" formControlName="ruidosReportados"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Detalle cliente</span>
+          <textarea pTextarea rows="3" formControlName="detalleCliente"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Accesorios entregados</span>
+          <textarea pTextarea rows="2" formControlName="accesoriosEntregados"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Condición ingreso</span>
+          <textarea pTextarea rows="3" formControlName="condicionIngreso"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Diagnóstico general</span>
+          <textarea pTextarea rows="3" formControlName="diagnosticoGeneral"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Recomendación general</span>
+          <textarea pTextarea rows="3" formControlName="recomendacionGeneral"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Observaciones</span>
+          <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
+        </label>
+
+        <label class="cols-full">
+          <span>Atributos JSON</span>
+          <textarea pTextarea rows="6" formControlName="atributosJson"></textarea>
+        </label>
+      </div>
+    </section>
   </form>
 </app-vehiculos-form-drawer>
 
@@ -721,17 +716,32 @@
           </option>
         </select>
       </label>
-      <label><span>Estado</span><input pInputText formControlName="estadoCheckList"></label>
+      <label>
+        <span>Estado</span>
+        <select formControlName="estadoCheckList">
+          <option *ngFor="let option of ESTADO_CHECKLIST_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </label>
       <label><span>Observaciones</span><textarea pTextarea rows="4" formControlName="observaciones"></textarea></label>
     </form>
 
     <form class="vehForm" [formGroup]="trabajoForm" *ngSwitchCase="'trabajo'">
-      <label><span>Tipo trabajo</span><input pInputText formControlName="tipoTrabajo"></label>
+      <label>
+        <span>Tipo trabajo</span>
+        <select formControlName="tipoTrabajo">
+          <option *ngFor="let option of TIPO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </label>
       <label><span>Descripción inicial</span><textarea pTextarea rows="4" formControlName="descripcionInicial"></textarea></label>
       <label><span>Descripción realizada</span><textarea pTextarea rows="4" formControlName="descripcionRealizada"></textarea></label>
       <div class="grid cols-2">
         <label><span>Resultado</span><input pInputText formControlName="resultado"></label>
-        <label><span>Estado</span><input pInputText formControlName="estadoTrabajo"></label>
+        <label>
+          <span>Estado</span>
+          <select formControlName="estadoTrabajo">
+            <option *ngFor="let option of ESTADO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
         <label><span>Fecha inicio</span><input type="date" formControlName="fechaInicio"></label>
         <label><span>Fecha fin</span><input type="date" formControlName="fechaFin"></label>
       </div>
@@ -742,10 +752,30 @@
     <form class="vehForm" [formGroup]="hallazgoForm" *ngSwitchCase="'hallazgo'">
       <div class="grid cols-2">
         <label><span>ID trabajo relacionado</span><input pInputText type="number" formControlName="idVehOrdenTrabajoTrabajoFk"></label>
-        <label><span>Tipo hallazgo</span><input pInputText formControlName="tipoHallazgo"></label>
-        <label><span>Categoría</span><input pInputText formControlName="categoria"></label>
-        <label><span>Severidad</span><input pInputText formControlName="severidad"></label>
-        <label><span>Estado</span><input pInputText formControlName="estadoHallazgo"></label>
+        <label>
+          <span>Tipo hallazgo</span>
+          <select formControlName="tipoHallazgo">
+            <option *ngFor="let option of TIPO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Categoría</span>
+          <select formControlName="categoria">
+            <option *ngFor="let option of CATEGORIA_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Severidad</span>
+          <select formControlName="severidad">
+            <option *ngFor="let option of SEVERIDAD_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Estado</span>
+          <select formControlName="estadoHallazgo">
+            <option *ngFor="let option of ESTADO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
         <label class="toggleItem">
           <input type="checkbox" formControlName="requiereCambio">
           <span>Requiere cambio</span>
@@ -765,8 +795,21 @@
     </form>
 
     <form class="vehForm" [formGroup]="repuestoForm" *ngSwitchCase="'repuesto'">
+      <label>
+        <span>Artículo inventario</span>
+        <div class="pickerInline">
+          <button pButton type="button" severity="secondary" label="Buscar artículo" (click)="abrirRepuestoArticuloPicker()"></button>
+          <div class="pickerSummary" *ngIf="repuestoArticuloSeleccionado() as art; else noArtSel">
+            {{ art.artcod || ('ART ' + art.idActInventario) }} · {{ art.articulo }}
+          </div>
+          <ng-template #noArtSel>
+            <div class="pickerSummary pickerSummary--empty">No hay artículo seleccionado</div>
+          </ng-template>
+        </div>
+      </label>
+
       <div class="grid cols-2">
-        <label><span>Art</span><input pInputText type="number" formControlName="art"></label>
+        <label><span>Art</span><input pInputText type="number" formControlName="art" readonly></label>
         <label><span>Cantidad</span><input pInputText type="number" formControlName="cantidad"></label>
         <label><span>Precio unitario</span><input pInputText type="number" formControlName="precioUnitario"></label>
         <label><span>Motivo cambio</span><input pInputText formControlName="motivoCambio"></label>
@@ -781,8 +824,18 @@
 
     <form class="vehForm" [formGroup]="autorizacionForm" *ngSwitchCase="'autorizacion'">
       <div class="grid cols-2">
-        <label><span>Tipo autorización</span><input pInputText formControlName="tipoAutorizacion"></label>
-        <label><span>Estado</span><input pInputText formControlName="estadoAutorizacion"></label>
+        <label>
+          <span>Tipo autorización</span>
+          <select formControlName="tipoAutorizacion">
+            <option *ngFor="let option of TIPO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Estado</span>
+          <select formControlName="estadoAutorizacion">
+            <option *ngFor="let option of ESTADO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
+          </select>
+        </label>
         <label><span>Referencia tabla</span><input pInputText formControlName="referenciaTabla"></label>
         <label><span>Referencia ID</span><input pInputText type="number" formControlName="referenciaId"></label>
         <label><span>Fecha respuesta</span><input type="date" formControlName="fechaRespuesta"></label>
@@ -792,7 +845,12 @@
     </form>
 
     <form class="vehForm" [formGroup]="fotoForm" *ngSwitchCase="'foto'">
-      <label><span>Etapa</span><input pInputText formControlName="etapa"></label>
+      <label>
+        <span>Etapa</span>
+        <select formControlName="etapa">
+          <option *ngFor="let option of ETAPA_FOTO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </label>
       <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
       <label><span>Archivo de evidencia</span><input type="file" accept="image/*" (change)="onFotoSelected($event)"></label>
       <div class="uploadPreview" *ngIf="fotoPreview() as previewSrc">
@@ -834,7 +892,12 @@
           <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
           <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
           <label class="cols-full"><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
-          <label><span>Tipo facturación</span><input pInputText formControlName="tipoFacturacion"></label>
+          <label>
+            <span>Tipo facturación</span>
+            <select formControlName="tipoFacturacion">
+              <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
+            </select>
+          </label>
           <label><span>ID comp. aut.</span><input pInputText type="number" formControlName="idTaxCompAutFk"></label>
           <label><span>Pago inicial</span><input pInputText type="number" formControlName="pagoInicial"></label>
           <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
@@ -885,7 +948,12 @@
         <div class="grid cols-2">
           <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
           <label><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
-          <label><span>Tipo facturación</span><input pInputText formControlName="tipoFacturacion"></label>
+          <label>
+            <span>Tipo facturación</span>
+            <select formControlName="tipoFacturacion">
+              <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
+            </select>
+          </label>
           <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
           <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
           <label><span>Punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
@@ -944,3 +1012,89 @@
     </form>
   </div>
 </app-vehiculos-form-drawer>
+
+<p-dialog
+  [visible]="clientePickerVisible()"
+  (visibleChange)="clientePickerVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '56rem' }"
+  header="Seleccionar cliente">
+  <div class="pickerDialog">
+    <div class="pickerToolbar">
+      <div class="searchBox">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          [ngModel]="clientesBuscar()"
+          (ngModelChange)="clientesBuscar.set($event ?? '')"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Buscar por identificación o nombre..."
+          (keyup.enter)="buscarClientesOrden()">
+      </div>
+      <button pButton type="button" severity="secondary" label="Buscar" (click)="buscarClientesOrden()"></button>
+    </div>
+
+    <div class="pickerLoading" *ngIf="clienteBuscando()">Buscando clientes...</div>
+
+    <div class="pickerList" *ngIf="!clienteBuscando()">
+      <button
+        type="button"
+        class="pickerRow"
+        *ngFor="let cli of clientesResultados()"
+        (click)="seleccionarClienteOrden(cli)">
+        <div class="pickerRowCopy">
+          <strong>{{ cli.nombre || cli.ruc }}</strong>
+          <span>{{ cli.ruc }} · {{ cli.movil || cli.telefono || 'Sin contacto' }}</span>
+        </div>
+      </button>
+
+      <div class="emptyInline" *ngIf="clientesResultados().length === 0">
+        No hay clientes para mostrar.
+      </div>
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
+  [visible]="repuestoArticuloPickerVisible()"
+  (visibleChange)="repuestoArticuloPickerVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '56rem' }"
+  header="Seleccionar artículo">
+  <div class="pickerDialog">
+    <div class="pickerToolbar">
+      <div class="searchBox">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          [ngModel]="repuestoArticuloQuery()"
+          (ngModelChange)="onRepuestoArticuloQueryChange($event ?? '')"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Buscar por código o nombre...">
+      </div>
+    </div>
+
+    <div class="pickerLoading" *ngIf="repuestoArticuloLoading()">Buscando artículos...</div>
+
+    <div class="pickerList" *ngIf="!repuestoArticuloLoading()">
+      <button
+        type="button"
+        class="pickerRow"
+        *ngFor="let item of repuestoArticulos()"
+        (click)="seleccionarArticuloRepuesto(item)">
+        <div class="pickerRowCopy">
+          <strong>{{ item.artcod || ('ART ' + item.idActInventario) }}</strong>
+          <span>{{ item.articulo }}</span>
+        </div>
+      </button>
+
+      <div class="emptyInline" *ngIf="repuestoArticulos().length === 0">
+        No hay artículos para mostrar.
+      </div>
+    </div>
+  </div>
+</p-dialog>
