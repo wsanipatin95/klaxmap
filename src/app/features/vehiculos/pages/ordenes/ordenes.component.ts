@@ -1488,7 +1488,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private toTimestamp(value?: string | null) {
     if (!value) return null;
-    return value.includes('T') || value.includes(' ') ? value : `${value} 00:00:00`;
+    if (value.includes('T')) return value;
+    return `${value}T00:00:00-05:00`;
   }
 
   private toIsoStartOfDayWithOffset(value?: string | null) {
@@ -1552,5 +1553,68 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private updateComercialDirtyState() {
     this.comercialDirty.set(this.createComercialSnapshot() !== this.initialComercialSnapshot);
+  }
+  readonly atributosFormArray = this.fb.array([
+    this.fb.group({
+      key: this.fb.control('', { nonNullable: true }),
+      value: this.fb.control('', { nonNullable: true }),
+    }),
+  ]);
+
+  addAtributoRow() {
+    this.atributosFormArray.push(
+      this.fb.group({
+        key: this.fb.control('', { nonNullable: true }),
+        value: this.fb.control('', { nonNullable: true }),
+      })
+    );
+    this.updateMainDirtyState();
+  }
+
+  removeAtributoRow(index: number) {
+    if (this.atributosFormArray.length === 1) {
+      this.atributosFormArray.at(0).patchValue({ key: '', value: '' });
+      this.updateMainDirtyState();
+      return;
+    }
+    this.atributosFormArray.removeAt(index);
+    this.updateMainDirtyState();
+  }
+
+  private buildAtributosObject(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    for (const row of this.atributosFormArray.controls) {
+      const key = String(row.controls.key.value || '').trim();
+      const rawValue = String(row.controls.value.value || '').trim();
+
+      if (!key) continue;
+      result[key] = this.parseAtributoValue(rawValue);
+    }
+
+    return result;
+  }
+
+  private parseAtributoValue(value: string): unknown {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (trimmed === 'null') return null;
+    if (!Number.isNaN(Number(trimmed))) return Number(trimmed);
+
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return trimmed;
+      }
+    }
+
+    return trimmed;
   }
 }
