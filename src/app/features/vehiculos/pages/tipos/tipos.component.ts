@@ -57,7 +57,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
   private router = inject(Router);
-
+  private articuloSearchTimer: ReturnType<typeof setTimeout> | null = null;
   readonly VEHICLE_TYPE_OPTIONS = [
     'AUTO',
     'MOTO',
@@ -619,8 +619,42 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   }
 
   openArticuloPanel(): void {
-    this.articuloQuery.set('');
     this.articuloPanelOpen.set(true);
+    this.buscarArticulosRemoto(this.articuloQuery().trim());
+  }
+  buscarArticulosRemoto(query: string): void {
+    if (this.articuloSearchTimer) {
+      clearTimeout(this.articuloSearchTimer);
+    }
+
+    this.articuloSearchTimer = setTimeout(() => {
+      this.articuloLoading.set(true);
+
+      this.repo.listarArticulos(query, 0, 50, false)
+        .pipe(finalize(() => this.articuloLoading.set(false)))
+        .subscribe({
+          next: (res) => {
+            const items = res.items ?? [];
+            const selected = this.selectedArticulo();
+
+            if (selected && !items.some(x => x.idActInventario === selected.idActInventario)) {
+              this.articulos.set([selected, ...items]);
+            } else {
+              this.articulos.set(items);
+            }
+          },
+          error: (err) => {
+            console.error(err);
+            this.error.set(err?.message || 'No se pudo buscar artículos.');
+          },
+        });
+    }, 250);
+  }
+
+  onArticuloQueryChange(value: string): void {
+    const q = value ?? '';
+    this.articuloQuery.set(q);
+    this.buscarArticulosRemoto(q.trim());
   }
 
   closeArticuloPanel(): void {
