@@ -128,17 +128,19 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   readonly filteredArticulos = computed(() => {
     const query = this.articuloQuery().trim().toLowerCase();
+    const source = this.articulos();
+
     if (!query) {
-      return this.articulos().slice(0, 25);
+      return source.slice(0, 100);
     }
 
-    return this.articulos()
+    return source
       .filter((item) => {
         const codigo = String(item.artcod || '').toLowerCase();
         const nombre = String(item.articulo || '').toLowerCase();
         return codigo.includes(query) || nombre.includes(query);
       })
-      .slice(0, 50);
+      .slice(0, 200);
   });
 
   readonly selectedArticulo = computed(() => {
@@ -177,8 +179,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   readonly vistaStructureBase64 = signal<string | null>(null);
   readonly vistaStructurePreview = signal<string | null>(null);
 
-  private suppressFormDirty = false;
-  private suppressVistaDirty = false;
+  private initialMainSnapshot = '';
+  private initialVistaSnapshot = '';
 
   readonly confirmVisible = signal(false);
   readonly confirmTitle = signal('Confirmar');
@@ -194,33 +196,38 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   readonly form = this.fb.group({
     art: this.fb.control<number | null>(null),
-    tipoVehiculo: this.fb.control<string>('', { nonNullable: true, validators: [Validators.required] }),
+    tipoVehiculo: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     atributos: this.fb.array<AtributoRowForm>([]),
   });
 
   readonly vistaForm = this.fb.group({
     idVehTipoVehiculoVista: this.fb.control<number | null>(null),
-    vista: this.fb.control<string>('', { nonNullable: true, validators: [Validators.required] }),
-    orden: this.fb.control<number>(1, { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
+    vista: this.fb.control<string>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    orden: this.fb.control<number>(1, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(1)],
+    }),
     observaciones: this.fb.control<string>('', { nonNullable: true }),
     atributos: this.fb.array<VistaAtributoRowForm>([]),
   });
 
   constructor() {
+    this.ensureAtLeastOneAtributoRow();
+    this.ensureAtLeastOneVistaAtributoRow();
+
     this.form.valueChanges.subscribe(() => {
-      if (!this.suppressFormDirty) {
-        this.formDirty.set(true);
-      }
+      this.updateMainDirtyState();
     });
 
     this.vistaForm.valueChanges.subscribe(() => {
-      if (!this.suppressVistaDirty) {
-        this.vistaDirty.set(true);
-      }
+      this.updateVistaDirtyState();
     });
-
-    this.ensureAtLeastOneAtributoRow();
-    this.ensureAtLeastOneVistaAtributoRow();
 
     this.cargarTodo();
     this.cargarArticulos();
@@ -255,7 +262,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.loading.set(true);
     this.error.set(null);
 
-    this.repo.listarTipos(this.q().trim(), 0, 500, true)
+    this.repo
+      .listarTipos(this.q().trim(), 0, 500, true)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
@@ -293,11 +301,13 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   cargarArticulos(): void {
     this.articuloLoading.set(true);
 
-    this.repo.listarArticulos('', 0, 500, true)
+    this.repo
+      .listarArticulos('', 0, 500, true)
       .pipe(finalize(() => this.articuloLoading.set(false)))
       .subscribe({
         next: (res) => {
           this.articulos.set(res.items ?? []);
+          this.updateMainDirtyState();
         },
         error: (err) => {
           console.error(err);
@@ -307,54 +317,52 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   }
 
   cargarChecklistCatalogo(): void {
-    this.repo.listarChecklists()
-      .subscribe({
-        next: (res) => {
-          this.checklistCatalogo.set(res.items ?? []);
-        },
-        error: (err) => {
-          console.error(err);
-          this.error.set(err?.message || 'No se pudo cargar el catálogo de checklist.');
-        },
-      });
+    this.repo.listarChecklists().subscribe({
+      next: (res) => {
+        this.checklistCatalogo.set(res.items ?? []);
+      },
+      error: (err) => {
+        console.error(err);
+        this.error.set(err?.message || 'No se pudo cargar el catálogo de checklist.');
+      },
+    });
   }
 
   cargarVistas(idVehTipoVehiculoFk: number): void {
-    this.repo.listarVistas({ idVehTipoVehiculoFk })
-      .subscribe({
-        next: (res) => {
-          const items = res.items ?? [];
-          this.vistas.set(items);
+    this.repo.listarVistas({ idVehTipoVehiculoFk }).subscribe({
+      next: (res) => {
+        const items = res.items ?? [];
+        this.vistas.set(items);
 
-          const currentVista = this.selectedVista();
-          if (!currentVista) {
-            this.selectedVista.set(items[0] ?? null);
-            return;
-          }
+        const currentVista = this.selectedVista();
+        if (!currentVista) {
+          this.selectedVista.set(items[0] ?? null);
+          return;
+        }
 
-          const updated =
-            items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ?? null;
+        const updated =
+          items.find((x) => x.idVehTipoVehiculoVista === currentVista.idVehTipoVehiculoVista) ??
+          null;
 
-          this.selectedVista.set(updated ?? items[0] ?? null);
-        },
-        error: (err) => {
-          console.error(err);
-          this.error.set(err?.message || 'No se pudo cargar las vistas del tipo.');
-        },
-      });
+        this.selectedVista.set(updated ?? items[0] ?? null);
+      },
+      error: (err) => {
+        console.error(err);
+        this.error.set(err?.message || 'No se pudo cargar las vistas del tipo.');
+      },
+    });
   }
 
   cargarChecklistAsignado(idVehTipoVehiculoFk: number): void {
-    this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk })
-      .subscribe({
-        next: (res) => {
-          this.checklistAsignado.set(res.items ?? []);
-        },
-        error: (err) => {
-          console.error(err);
-          this.error.set(err?.message || 'No se pudo cargar checklist asignado al tipo.');
-        },
-      });
+    this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk }).subscribe({
+      next: (res) => {
+        this.checklistAsignado.set(res.items ?? []);
+      },
+      error: (err) => {
+        console.error(err);
+        this.error.set(err?.message || 'No se pudo cargar checklist asignado al tipo.');
+      },
+    });
   }
 
   onSearchEnter(): void {
@@ -426,14 +434,12 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.saving.set(true);
 
     if (this.mode() === 'crear') {
-      this.repo.crearTipo(payload)
+      this.repo
+        .crearTipo(payload)
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: (res: any) => {
-            const newId =
-              res?.idVehTipoVehiculo ??
-              res?.data?.idVehTipoVehiculo ??
-              null;
+            const newId = res?.idVehTipoVehiculo ?? res?.data?.idVehTipoVehiculo ?? null;
 
             this.success.set('Tipo de vehículo creado.');
             this.formDirty.set(false);
@@ -450,9 +456,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
               this.selected.set(optimistic);
               this.mode.set('editar');
               this.activeTab.set('vistas');
+              this.populateMainForm(optimistic);
             } else {
               this.mode.set('crear');
               this.activeTab.set('edicion');
+              this.refreshMainSnapshot();
             }
           },
           error: (err) => {
@@ -471,15 +479,23 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       return;
     }
 
-    this.repo.editarTipo({
-      idVehTipoVehiculo: current.idVehTipoVehiculo,
-      cambios: payload,
-    })
+    this.repo
+      .editarTipo({
+        idVehTipoVehiculo: current.idVehTipoVehiculo,
+        cambios: payload,
+      })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
           this.success.set('Tipo de vehículo actualizado.');
-          this.formDirty.set(false);
+          const updatedCurrent: VehTipoVehiculo = {
+            ...current,
+            art: payload.art ?? null,
+            tipoVehiculo: payload.tipoVehiculo ?? null,
+            atributos: payload.atributos ?? null,
+          };
+          this.selected.set(updatedCurrent);
+          this.populateMainForm(updatedCurrent);
           this.cargarTipos();
         },
         error: (err) => {
@@ -506,7 +522,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         this.error.set(null);
         this.success.set(null);
 
-        this.repo.eliminarTipo(current.idVehTipoVehiculo)
+        this.repo
+          .eliminarTipo(current.idVehTipoVehiculo)
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
@@ -550,12 +567,10 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         severity: 'warning',
       },
       () => {
-        this.formDirty.set(false);
-
         if (this.mode() === 'editar' && this.selected()) {
           this.populateMainForm(this.selected()!);
         } else {
-          this.nuevoTipo();
+          this.resetMainFormForNew();
         }
       }
     );
@@ -568,18 +583,18 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         value: this.fb.control(value, { nonNullable: true }),
       })
     );
-    this.formDirty.set(true);
+    this.updateMainDirtyState();
   }
 
   removeAtributoRow(index: number): void {
     if (this.atributosFormArray.length === 1) {
       this.atributosFormArray.at(0).patchValue({ key: '', value: '' });
-      this.formDirty.set(true);
+      this.updateMainDirtyState();
       return;
     }
 
     this.atributosFormArray.removeAt(index);
-    this.formDirty.set(true);
+    this.updateMainDirtyState();
   }
 
   addVistaAtributoRow(key = '', value = ''): void {
@@ -589,37 +604,46 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         value: this.fb.control(value, { nonNullable: true }),
       })
     );
-    this.vistaDirty.set(true);
+    this.updateVistaDirtyState();
   }
 
   removeVistaAtributoRow(index: number): void {
     if (this.vistaAtributosFormArray.length === 1) {
       this.vistaAtributosFormArray.at(0).patchValue({ key: '', value: '' });
-      this.vistaDirty.set(true);
+      this.updateVistaDirtyState();
       return;
     }
 
     this.vistaAtributosFormArray.removeAt(index);
-    this.vistaDirty.set(true);
+    this.updateVistaDirtyState();
   }
 
   openArticuloPanel(): void {
+    this.articuloQuery.set('');
     this.articuloPanelOpen.set(true);
   }
 
   closeArticuloPanel(): void {
     this.articuloPanelOpen.set(false);
+    this.articuloQuery.set('');
   }
 
   clearArticuloSelection(): void {
+    if (this.form.controls.art.value == null) return;
     this.form.controls.art.setValue(null);
-    this.formDirty.set(true);
+    this.updateMainDirtyState();
   }
 
   seleccionarArticulo(item: VehArticuloCatalogo): void {
+    const current = this.form.controls.art.value;
+    if (current === item.idActInventario) {
+      this.closeArticuloPanel();
+      return;
+    }
+
     this.form.controls.art.setValue(item.idActInventario);
-    this.formDirty.set(true);
-    this.articuloPanelOpen.set(false);
+    this.closeArticuloPanel();
+    this.updateMainDirtyState();
   }
 
   checklistNombre(id: number): string {
@@ -654,10 +678,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.error.set(null);
     this.success.set(null);
 
-    this.repo.crearChecklistVehiculo({
-      idVehTipoVehiculoFk: current.idVehTipoVehiculo,
-      idVehVehiculoCheckListFk: checklistId,
-    })
+    this.repo
+      .crearChecklistVehiculo({
+        idVehTipoVehiculoFk: current.idVehTipoVehiculo,
+        idVehVehiculoCheckListFk: checklistId,
+      })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
@@ -689,7 +714,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         this.error.set(null);
         this.success.set(null);
 
-        this.repo.eliminarChecklistVehiculo(rel.idVehVehiculoCheckListVehiculo)
+        this.repo
+          .eliminarChecklistVehiculo(rel.idVehVehiculoCheckListVehiculo)
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
@@ -749,7 +775,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       vista: this.vistaForm.controls.vista.value?.trim() || null,
       orden: Number(this.vistaForm.controls.orden.value || 1),
       observaciones: this.vistaForm.controls.observaciones.value?.trim() || null,
-      estructura: this.vistaStructureBase64() !== null ? (this.vistaStructureBase64() || null) : undefined,
+      estructura:
+        this.vistaStructureBase64() !== null ? this.vistaStructureBase64() || null : undefined,
       atributos: this.buildAtributosObject(this.vistaAtributosFormArray),
     };
 
@@ -758,13 +785,14 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.success.set(null);
 
     if (this.vistaDialogMode() === 'crear') {
-      this.repo.crearVista(payload)
+      this.repo
+        .crearVista(payload)
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
             this.success.set('Vista creada.');
-            this.vistaDirty.set(false);
             this.vistaDialogVisible.set(false);
+            this.resetVistaFormForNew();
             this.cargarVistas(selected.idVehTipoVehiculo);
           },
           error: (err) => {
@@ -783,16 +811,21 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       return;
     }
 
-    this.repo.editarVista({
-      idVehTipoVehiculoVista: currentVista.idVehTipoVehiculoVista,
-      cambios: payload,
-    })
+    this.repo
+      .editarVista({
+        idVehTipoVehiculoVista: currentVista.idVehTipoVehiculoVista,
+        cambios: payload,
+      })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
           this.success.set('Vista actualizada.');
-          this.vistaDirty.set(false);
           this.vistaDialogVisible.set(false);
+          this.populateVistaForm({
+            ...currentVista,
+            ...payload,
+            idVehTipoVehiculoVista: currentVista.idVehTipoVehiculoVista,
+          } as VehTipoVehiculoVista);
           this.cargarVistas(selected.idVehTipoVehiculo);
         },
         error: (err) => {
@@ -817,13 +850,19 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         this.error.set(null);
         this.success.set(null);
 
-        this.repo.eliminarVista(vista.idVehTipoVehiculoVista)
+        this.repo
+          .eliminarVista(vista.idVehTipoVehiculoVista)
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
               this.success.set('Vista eliminada.');
               if (selected) {
                 this.cargarVistas(selected.idVehTipoVehiculo);
+              }
+              if (
+                this.selectedVista()?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista
+              ) {
+                this.selectedVista.set(null);
               }
             },
             error: (err) => {
@@ -850,7 +889,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         severity: 'warning',
       },
       () => {
-        this.vistaDirty.set(false);
+        if (this.vistaDialogMode() === 'editar' && this.selectedVista()) {
+          this.populateVistaForm(this.selectedVista()!);
+        } else {
+          this.resetVistaFormForNew();
+        }
         this.vistaDialogVisible.set(false);
       }
     );
@@ -874,15 +917,20 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
       this.vistaStructureBase64.set(base64 || '');
       this.vistaStructurePreview.set(dataUrl || null);
-      this.vistaDirty.set(true);
+      this.updateVistaDirtyState();
     };
     reader.readAsDataURL(file);
   }
 
   limpiarVistaStructure(): void {
+    const alreadyEmpty =
+      (this.vistaStructureBase64() ?? null) === '' && (this.vistaStructurePreview() ?? null) === null;
+
+    if (alreadyEmpty) return;
+
     this.vistaStructureBase64.set('');
     this.vistaStructurePreview.set(null);
-    this.vistaDirty.set(true);
+    this.updateVistaDirtyState();
   }
 
   resolveBinarySrc(binary?: string | null): string | null {
@@ -1015,8 +1063,6 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   }
 
   private resetMainFormForNew(): void {
-    this.suppressFormDirty = true;
-
     this.form.reset({
       art: null,
       tipoVehiculo: '',
@@ -1027,16 +1073,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.articuloQuery.set('');
     this.articuloPanelOpen.set(false);
-    this.formDirty.set(false);
 
-    queueMicrotask(() => {
-      this.suppressFormDirty = false;
-    });
+    this.refreshMainSnapshot();
   }
 
   private populateMainForm(item: VehTipoVehiculo): void {
-    this.suppressFormDirty = true;
-
     this.form.reset({
       art: item.art ?? null,
       tipoVehiculo: item.tipoVehiculo ?? '',
@@ -1053,16 +1094,13 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       }
     }
 
-    this.formDirty.set(false);
+    this.articuloQuery.set('');
+    this.articuloPanelOpen.set(false);
 
-    queueMicrotask(() => {
-      this.suppressFormDirty = false;
-    });
+    this.refreshMainSnapshot();
   }
 
   private resetVistaFormForNew(): void {
-    this.suppressVistaDirty = true;
-
     this.vistaForm.reset({
       idVehTipoVehiculoVista: null,
       vista: '',
@@ -1075,16 +1113,11 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.vistaStructureBase64.set(null);
     this.vistaStructurePreview.set(null);
-    this.vistaDirty.set(false);
 
-    queueMicrotask(() => {
-      this.suppressVistaDirty = false;
-    });
+    this.refreshVistaSnapshot();
   }
 
   private populateVistaForm(vista: VehTipoVehiculoVista): void {
-    this.suppressVistaDirty = true;
-
     this.vistaForm.reset({
       idVehTipoVehiculoVista: vista.idVehTipoVehiculoVista,
       vista: vista.vista ?? '',
@@ -1099,17 +1132,16 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       this.vistaAtributosFormArray.push(this.createVistaAtributoRow('', ''));
     } else {
       for (const [key, value] of entries) {
-        this.vistaAtributosFormArray.push(this.createVistaAtributoRow(key, this.stringifyAtributoValue(value)));
+        this.vistaAtributosFormArray.push(
+          this.createVistaAtributoRow(key, this.stringifyAtributoValue(value))
+        );
       }
     }
 
     this.vistaStructureBase64.set(null);
     this.vistaStructurePreview.set(this.resolveBinarySrc(vista.estructura));
-    this.vistaDirty.set(false);
 
-    queueMicrotask(() => {
-      this.suppressVistaDirty = false;
-    });
+    this.refreshVistaSnapshot();
   }
 
   private createAtributoRow(key = '', value = ''): AtributoRowForm {
@@ -1194,5 +1226,42 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     if (base64.startsWith('UklGR')) return 'image/webp';
     if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
     return 'image/png';
+  }
+
+  private createMainSnapshot(): string {
+    return JSON.stringify({
+      art: this.form.controls.art.value ?? null,
+      tipoVehiculo: (this.form.controls.tipoVehiculo.value ?? '').trim(),
+      atributos: this.buildAtributosObject(this.atributosFormArray),
+    });
+  }
+
+  private createVistaSnapshot(): string {
+    return JSON.stringify({
+      idVehTipoVehiculoVista: this.vistaForm.controls.idVehTipoVehiculoVista.value ?? null,
+      vista: (this.vistaForm.controls.vista.value ?? '').trim(),
+      orden: Number(this.vistaForm.controls.orden.value || 1),
+      observaciones: (this.vistaForm.controls.observaciones.value ?? '').trim(),
+      atributos: this.buildAtributosObject(this.vistaAtributosFormArray),
+      estructura: this.vistaStructureBase64(),
+    });
+  }
+
+  private refreshMainSnapshot(): void {
+    this.initialMainSnapshot = this.createMainSnapshot();
+    this.formDirty.set(false);
+  }
+
+  private refreshVistaSnapshot(): void {
+    this.initialVistaSnapshot = this.createVistaSnapshot();
+    this.vistaDirty.set(false);
+  }
+
+  private updateMainDirtyState(): void {
+    this.formDirty.set(this.createMainSnapshot() !== this.initialMainSnapshot);
+  }
+
+  private updateVistaDirtyState(): void {
+    this.vistaDirty.set(this.createVistaSnapshot() !== this.initialVistaSnapshot);
   }
 }

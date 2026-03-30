@@ -39,8 +39,14 @@
         <div class="search-inline">
           <div class="search-box">
             <span class="search-icon">⌕</span>
-            <input pInputText [ngModel]="q()" (ngModelChange)="q.set($event ?? '')"
-              [ngModelOptions]="{ standalone: true }" placeholder="Buscar tipo..." (keyup.enter)="onSearchEnter()" />
+            <input
+              pInputText
+              [ngModel]="q()"
+              (ngModelChange)="q.set($event ?? '')"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Buscar tipo..."
+              (keyup.enter)="onSearchEnter()"
+            />
           </div>
 
           <button type="button" class="ghost-btn ghost-btn--sm" (click)="clearSearch()" [disabled]="!q()">
@@ -54,9 +60,13 @@
       </div>
 
       <div class="list" *ngIf="tipos().length > 0">
-        <button type="button" class="row" *ngFor="let item of tipos()"
+        <button
+          type="button"
+          class="row"
+          *ngFor="let item of tipos()"
           [class.active]="selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo && mode() === 'editar'"
-          (click)="seleccionarTipo(item)">
+          (click)="seleccionarTipo(item)"
+        >
           <div class="row-copy">
             <strong>{{ item.tipoVehiculo || ('Tipo #' + item.idVehTipoVehiculo) }}</strong>
             <span>ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</span>
@@ -78,25 +88,42 @@
           <p>{{ currentSubtitle() }}</p>
         </div>
 
-        <button *ngIf="mode() === 'editar' && selected()" type="button" class="danger-btn"
-          (click)="eliminarTipoActual()" [disabled]="saving()">
+        <button
+          *ngIf="mode() === 'editar' && selected()"
+          type="button"
+          class="danger-btn"
+          (click)="eliminarTipoActual()"
+          [disabled]="saving()"
+        >
           Eliminar
         </button>
       </div>
 
       <div class="editor-tabs" *ngIf="mode() === 'editar' && selected()">
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'edicion'"
-          (click)="setTab('edicion')">
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'edicion'"
+          (click)="setTab('edicion')"
+        >
           Edición
         </button>
 
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'vistas'"
-          (click)="setTab('vistas')">
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'vistas'"
+          (click)="setTab('vistas')"
+        >
           Vistas
         </button>
 
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'checklists'"
-          (click)="setTab('checklists')">
+        <button
+          type="button"
+          class="editor-tab-btn"
+          [class.active]="activeTab() === 'checklists'"
+          (click)="setTab('checklists')"
+        >
           Checklists
         </button>
       </div>
@@ -115,8 +142,7 @@
                       {{ option }}
                     </option>
                   </select>
-                  <small class="field-error"
-                    *ngIf="form.controls.tipoVehiculo.invalid && form.controls.tipoVehiculo.touched">
+                  <small class="field-error" *ngIf="form.controls.tipoVehiculo.invalid && form.controls.tipoVehiculo.touched">
                     Debes seleccionar un tipo de vehículo.
                   </small>
                 </label>
@@ -217,9 +243,13 @@
                 </div>
 
                 <div class="list list--compact" *ngIf="vistas().length > 0">
-                  <button type="button" class="row" *ngFor="let vista of vistas()"
+                  <button
+                    type="button"
+                    class="row"
+                    *ngFor="let vista of vistas()"
                     [class.active]="selectedVista()?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
-                    (click)="seleccionarVista(vista)">
+                    (click)="seleccionarVista(vista)"
+                  >
                     <div class="row-copy">
                       <strong>{{ vista.vista || 'Vista' }}</strong>
                       <span>Orden {{ vista.orden || '-' }} · {{ vista.observaciones || 'Sin observaciones' }}</span>
@@ -230,13 +260,19 @@
                         {{ vista.estructura ? 'Con imagen' : 'Sin imagen' }}
                       </span>
 
-                      <button type="button" class="ghost-btn ghost-btn--sm"
-                        (click)="editarVista(vista); $event.stopPropagation()">
+                      <button
+                        type="button"
+                        class="ghost-btn ghost-btn--sm"
+                        (click)="editarVista(vista); $event.stopPropagation()"
+                      >
                         Editar
                       </button>
 
-                      <button type="button" class="danger-link"
-                        (click)="eliminarVista(vista); $event.stopPropagation()">
+                      <button
+                        type="button"
+                        class="danger-link"
+                        (click)="eliminarVista(vista); $event.stopPropagation()"
+                      >
                         Eliminar
                       </button>
                     </div>
@@ -296,22 +332,35 @@
                 <div class="assign-toolbar">
                   <div class="search-box">
                     <span class="search-icon">⌕</span>
-                    <input pInputText [ngModel]="checklistSearch()" (ngModelChange)="checklistSearch.set($event ?? '')"
-                      [ngModelOptions]="{ standalone: true }" placeholder="Buscar checklist disponible..." />
+                    <input
+                      pInputText
+                      [ngModel]="checklistSearch()"
+                      (ngModelChange)="checklistSearch.set($event ?? '')"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Buscar checklist disponible..."
+                    />
                   </div>
 
-                  <select [ngModel]="selectedChecklistToAssign()"
+                  <select
+                    [ngModel]="selectedChecklistToAssign()"
                     (ngModelChange)="selectedChecklistToAssign.set($event ? +$event : null)"
-                    [ngModelOptions]="{ standalone: true }">
+                    [ngModelOptions]="{ standalone: true }"
+                  >
                     <option [ngValue]="null">Selecciona un checklist disponible</option>
-                    <option *ngFor="let item of checklistDisponiblesFiltrados()"
-                      [ngValue]="item.idVehVehiculoCheckList">
+                    <option
+                      *ngFor="let item of checklistDisponiblesFiltrados()"
+                      [ngValue]="item.idVehVehiculoCheckList"
+                    >
                       {{ item.nombreItem }} · {{ item.categoria || 'GENERAL' }}
                     </option>
                   </select>
 
-                  <button type="button" class="primary-btn" (click)="agregarChecklistAlTipo()"
-                    [disabled]="saving() || !selectedChecklistToAssign()">
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    (click)="agregarChecklistAlTipo()"
+                    [disabled]="saving() || !selectedChecklistToAssign()"
+                  >
                     Agregar
                   </button>
                 </div>
@@ -326,13 +375,18 @@
                       <strong>{{ checklistNombre(rel.idVehVehiculoCheckListFk) }}</strong>
                       <span>
                         {{ checklistCategoria(rel.idVehVehiculoCheckListFk) }} · Relación #{{
-                        rel.idVehVehiculoCheckListVehiculo }}
+                          rel.idVehVehiculoCheckListVehiculo
+                        }}
                       </span>
                     </div>
 
                     <div class="row-meta">
-                      <button type="button" class="danger-link" (click)="quitarChecklistDelTipo(rel)"
-                        [disabled]="saving()">
+                      <button
+                        type="button"
+                        class="danger-link"
+                        (click)="quitarChecklistDelTipo(rel)"
+                        [disabled]="saving()"
+                      >
                         Quitar
                       </button>
                     </div>
@@ -353,28 +407,47 @@
   </div>
 
   <!-- PANEL ARTICULOS -->
-  <p-dialog [visible]="articuloPanelOpen()" (visibleChange)="articuloPanelOpen.set($event)" [modal]="true"
-    [closable]="true" [dismissableMask]="true" [style]="{ width: '56rem' }" header="Seleccionar artículo">
+  <p-dialog
+    [visible]="articuloPanelOpen()"
+    (visibleChange)="articuloPanelOpen.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '56rem' }"
+    header="Seleccionar artículo"
+  >
     <div class="picker-dialog">
       <div class="picker-toolbar">
         <div class="search-box">
           <span class="search-icon">⌕</span>
-          <input pInputText [ngModel]="articuloQuery()" (ngModelChange)="articuloQuery.set($event ?? '')"
-            [ngModelOptions]="{ standalone: true }" placeholder="Buscar por código o nombre..." />
+          <input
+            pInputText
+            [ngModel]="articuloQuery()"
+            (ngModelChange)="articuloQuery.set($event ?? '')"
+            [ngModelOptions]="{ standalone: true }"
+            placeholder="Buscar por código o nombre..."
+          />
         </div>
       </div>
 
       <div class="picker-loading" *ngIf="articuloLoading()">Cargando artículos...</div>
 
       <div class="picker-list" *ngIf="!articuloLoading()">
-        <button type="button" class="picker-row" *ngFor="let item of filteredArticulos()"
-          (click)="seleccionarArticulo(item)">
+        <button
+          type="button"
+          class="picker-row"
+          *ngFor="let item of filteredArticulos()"
+          [class.active]="form.controls.art.value === item.idActInventario"
+          (click)="seleccionarArticulo(item)"
+        >
           <div class="picker-row-copy">
             <strong>{{ item.artcod || ('ART ' + item.idActInventario) }}</strong>
             <span>{{ item.articulo }}</span>
           </div>
+
           <div class="picker-row-meta">
             <span>{{ item.precio4 ?? item.artmay ?? item.artmen ?? '-' }}</span>
+            <span *ngIf="form.controls.art.value === item.idActInventario">Seleccionado</span>
           </div>
         </button>
 
@@ -386,9 +459,15 @@
   </p-dialog>
 
   <!-- DIALOG VISTA -->
-  <p-dialog [visible]="vistaDialogVisible()" (visibleChange)="vistaDialogVisible.set($event)" [modal]="true"
-    [closable]="true" [dismissableMask]="false" [style]="{ width: '70rem' }"
-    [header]="vistaDialogMode() === 'crear' ? 'Nueva vista' : 'Editar vista'">
+  <p-dialog
+    [visible]="vistaDialogVisible()"
+    (visibleChange)="vistaDialogVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="false"
+    [style]="{ width: '70rem' }"
+    [header]="vistaDialogMode() === 'crear' ? 'Nueva vista' : 'Editar vista'"
+  >
     <div class="vista-dialog">
       <div class="vista-dialog-grid">
         <section class="vista-panel">
@@ -421,8 +500,11 @@
 
               <label class="form-field cols-2">
                 <span>Observaciones</span>
-                <input pInputText [formControl]="vistaForm.controls.observaciones"
-                  placeholder="Describe la vista o su uso..." />
+                <input
+                  pInputText
+                  [formControl]="vistaForm.controls.observaciones"
+                  placeholder="Describe la vista o su uso..."
+                />
               </label>
 
               <section class="atributos-card cols-2">
@@ -469,8 +551,12 @@
           <div class="upload-box">
             <input type="file" accept="image/*" (change)="onVistaStructureSelected($event)" />
 
-            <button type="button" class="ghost-btn ghost-btn--sm" *ngIf="vistaStructurePreview()"
-              (click)="limpiarVistaStructure()">
+            <button
+              type="button"
+              class="ghost-btn ghost-btn--sm"
+              *ngIf="vistaStructurePreview()"
+              (click)="limpiarVistaStructure()"
+            >
               Quitar imagen
             </button>
           </div>
@@ -503,8 +589,16 @@
   </p-dialog>
 
   <!-- CONFIRM -->
-  <p-dialog [visible]="confirmVisible()" (visibleChange)="confirmVisible.set($event)" [modal]="true" [closable]="true"
-    [dismissableMask]="true" [style]="{ width: '28rem' }" [header]="confirmTitle()" (onHide)="onConfirmHide()">
+  <p-dialog
+    [visible]="confirmVisible()"
+    (visibleChange)="confirmVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '28rem' }"
+    [header]="confirmTitle()"
+    (onHide)="onConfirmHide()"
+  >
     <div class="confirm-body">
       <div class="confirm-icon" [ngClass]="confirmSeverityClass()">
         {{ confirmIconSymbol() }}
@@ -522,14 +616,23 @@
           {{ confirmCancelLabel() }}
         </button>
 
-        <button *ngIf="confirmAlternateLabel() as altLabel" type="button" class="alternate-btn"
-          (click)="confirmAlternate()">
+        <button
+          *ngIf="confirmAlternateLabel() as altLabel"
+          type="button"
+          class="alternate-btn"
+          (click)="confirmAlternate()"
+        >
           {{ altLabel }}
         </button>
 
-        <button type="button" class="confirm-btn" [class.is-danger]="confirmSeverity() === 'danger'"
-          [class.is-warning]="confirmSeverity() === 'warning'" [class.is-info]="confirmSeverity() === 'info'"
-          (click)="confirmAccept()">
+        <button
+          type="button"
+          class="confirm-btn"
+          [class.is-danger]="confirmSeverity() === 'danger'"
+          [class.is-warning]="confirmSeverity() === 'warning'"
+          [class.is-info]="confirmSeverity() === 'info'"
+          (click)="confirmAccept()"
+        >
           {{ confirmConfirmLabel() }}
         </button>
       </div>
