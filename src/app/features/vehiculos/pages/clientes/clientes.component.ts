@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -46,7 +47,7 @@ type ClienteLookupState = 'idle' | 'searching' | 'found' | 'not_found';
 export class VehiculosClientesComponent implements PendingChangesAware {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
-
+  private router = inject(Router);
   readonly IDENTIFICACION_OPTIONS = [
     { value: '04', label: 'RUC' },
     { value: '05', label: 'Cédula' },
@@ -178,7 +179,7 @@ export class VehiculosClientesComponent implements PendingChangesAware {
     this.loading.set(true);
     this.error.set(null);
 
-    this.repo.listarClientes(this.q().trim(), 0, 200, true)
+    this.repo.listarClientes(this.q().trim(), 0, 50, false)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
@@ -1057,5 +1058,17 @@ export class VehiculosClientesComponent implements PendingChangesAware {
   }
   clienteKey(cliente: VehCliente | null | undefined): number {
     return Number(cliente?.dni ?? cliente?.ruc ?? 0);
+  }
+  readonly clienteSearchResolved = computed(() =>
+    this.clienteLookupState() === 'found' || this.clienteLookupState() === 'not_found'
+  );
+
+  readonly disableClienteActionsInCreate = computed(() =>
+    this.mode() === 'crear' && !this.clienteSearchResolved()
+  );
+  volver(): void {
+    this.runWithDiscardGuard(() => {
+      this.router.navigate(['/app/vehiculos/dashboard']);
+    });
   }
 }

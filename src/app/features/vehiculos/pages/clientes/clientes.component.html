@@ -6,6 +6,10 @@
     </div>
 
     <div class="page-topbar-actions">
+      <button type="button" class="ghost-btn" (click)="volver()" [disabled]="saving()">
+        Volver
+      </button>
+
       <button type="button" class="ghost-btn" (click)="cargarTodo()" [disabled]="loading() || saving()">
         {{ loading() ? 'Actualizando...' : 'Refrescar' }}
       </button>
@@ -113,6 +117,24 @@
                   </div>
                 </label>
 
+                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'not_found' && mode() === 'crear'">
+                  <small class="field-hint">No existe un cliente con esa identificación. Puedes crear uno nuevo.</small>
+                </div>
+
+                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'found' && mode() === 'crear'">
+                  <div class="picker-row active" *ngIf="clienteEncontrado() as found">
+                    <div class="picker-row-copy">
+                      <strong>Ya existe un cliente</strong>
+                      <span>{{ found.nombre || found.ruc }} · {{ found.ruc }}</span>
+                    </div>
+                    <div class="picker-row-meta">
+                      <button type="button" class="ghost-btn ghost-btn--sm" (click)="cargarClienteEncontrado()">
+                        Cargar existente
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <label class="form-field">
                   <span>Tipo identificación</span>
                   <select [formControl]="form.controls.idTaxTipIdeFk">
@@ -166,24 +188,6 @@
                   <small class="field-hint">Buscando cliente existente...</small>
                 </div>
 
-                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'not_found' && mode() === 'crear'">
-                  <small class="field-hint">No existe un cliente con esa identificación. Puedes crear uno nuevo.</small>
-                </div>
-
-                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'found' && mode() === 'crear'">
-                  <div class="picker-row active" *ngIf="clienteEncontrado() as found">
-                    <div class="picker-row-copy">
-                      <strong>Ya existe un cliente</strong>
-                      <span>{{ found.nombre || found.ruc }} · {{ found.ruc }}</span>
-                    </div>
-                    <div class="picker-row-meta">
-                      <button type="button" class="ghost-btn ghost-btn--sm" (click)="cargarClienteEncontrado()">
-                        Cargar existente
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
                 <label class="form-field cols-2">
                   <span>Observación</span>
                   <textarea pTextarea rows="5" [formControl]="form.controls.observacion"></textarea>
@@ -191,11 +195,13 @@
               </div>
 
               <div class="editor-actions">
-                <button type="button" class="ghost-btn" (click)="cancelarCliente()" [disabled]="saving()">
+                <button type="button" class="ghost-btn" (click)="cancelarCliente()"
+                  [disabled]="saving() || disableClienteActionsInCreate()">
                   Cancelar
                 </button>
 
-                <button type="button" class="primary-btn" (click)="guardarCliente()" [disabled]="saving()">
+                <button type="button" class="primary-btn" (click)="guardarCliente()"
+                  [disabled]="saving() || disableClienteActionsInCreate()">
                   {{ saving() ? 'Guardando...' : 'Guardar' }}
                 </button>
               </div>
