@@ -54,8 +54,13 @@ import {
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
-import { OrdenDetailPanelComponent } from './components/orden-detail-panel/orden-detail-panel.component';
-import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
+import {
+  ChecklistBulkRow,
+  FotoWorkbenchSavePayload,
+  HallazgoWorkbenchSavePayload,
+  OrdenDetailPanelComponent,
+  TrabajoWorkbenchSavePayload,
+} from './components/orden-detail-panel/orden-detail-panel.component'; import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
 
 type ChildDrawerMode =
   | 'trabajo'
@@ -77,14 +82,7 @@ type AtributoRowForm = FormGroup<{
   key: FormControl<string>;
   value: FormControl<string>;
 }>;
-type ChecklistBulkRow = {
-  relationId: number;
-  label: string;
-  checked: boolean;
-  observaciones: string;
-  existingChecklistId: number | null;
-  changed: boolean;
-};
+
 @Component({
   selector: 'app-vehiculos-ordenes',
   standalone: true,
@@ -600,10 +598,18 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.selectedVista.set(null);
         }
 
-        const firstHallazgo = (hallazgos.items ?? [])[0] ?? null;
-        this.selectedHallazgo.set(firstHallazgo);
-        if (firstHallazgo) {
-          this.cargarHallazgoDetalle(firstHallazgo.idVehOrdenTrabajoHallazgo);
+        const hallazgosItems = hallazgos.items ?? [];
+        const currentHallazgoId = this.selectedHallazgo()?.idVehOrdenTrabajoHallazgo ?? null;
+
+        const selectedHallazgo =
+          (currentHallazgoId
+            ? hallazgosItems.find((x) => x.idVehOrdenTrabajoHallazgo === currentHallazgoId) ?? null
+            : null) ?? (hallazgosItems[0] ?? null);
+
+        this.selectedHallazgo.set(selectedHallazgo);
+
+        if (selectedHallazgo) {
+          this.cargarHallazgoDetalle(selectedHallazgo.idVehOrdenTrabajoHallazgo);
         } else {
           this.marcas.set([]);
           this.fotos.set([]);
@@ -1795,5 +1801,144 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         },
         error: (err) => this.notify.error('No se pudo guardar el checklist', err?.message),
       });
+  }
+
+  guardarTrabajoWorkbench(payload: TrabajoWorkbenchSavePayload) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
+
+    const base = {
+      tipoTrabajo: payload.tipoTrabajo || null,
+      descripcionInicial: payload.descripcionInicial?.trim() || null,
+      descripcionRealizada: payload.descripcionRealizada?.trim() || null,
+      resultado: payload.resultado?.trim() || null,
+      estadoTrabajo: payload.estadoTrabajo || null,
+      fechaInicio: payload.fechaInicio || null,
+      fechaFin: payload.fechaFin || null,
+      motivo: payload.motivo?.trim() || null,
+      observaciones: payload.observaciones?.trim() || null,
+    };
+
+    const request$ = payload.idVehOrdenTrabajoTrabajo
+      ? this.repo.editarOrdenTrabajo({
+        idVehOrdenTrabajoTrabajo: payload.idVehOrdenTrabajoTrabajo,
+        cambios: base,
+      })
+      : this.repo.crearOrdenTrabajo({
+        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+        ...base,
+      });
+
+    this.saving.set(true);
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success(
+            payload.idVehOrdenTrabajoTrabajo ? 'Trabajo actualizado' : 'Trabajo creado',
+            'La información del trabajo se guardó correctamente.',
+          );
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo guardar el trabajo', err?.message),
+      });
+  }
+
+  guardarHallazgoWorkbench(payload: HallazgoWorkbenchSavePayload) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
+
+    const base = {
+      idVehOrdenTrabajoTrabajoFk: payload.idVehOrdenTrabajoTrabajoFk ?? null,
+      tipoHallazgo: payload.tipoHallazgo || null,
+      categoria: payload.categoria || null,
+      descripcion: payload.descripcion?.trim() || '',
+      severidad: payload.severidad || null,
+      estadoHallazgo: payload.estadoHallazgo || null,
+      requiereCambio: !!payload.requiereCambio,
+      motivoCambio: payload.motivoCambio?.trim() || null,
+      aprobadoCliente: !!payload.aprobadoCliente,
+      fechaAprobacion: payload.fechaAprobacion || null,
+      observaciones: payload.observaciones?.trim() || null,
+    };
+
+    const request$ = payload.idVehOrdenTrabajoHallazgo
+      ? this.repo.editarHallazgo({
+        idVehOrdenTrabajoHallazgo: payload.idVehOrdenTrabajoHallazgo,
+        cambios: base,
+      })
+      : this.repo.crearHallazgo({
+        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+        ...base,
+      });
+
+    this.saving.set(true);
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success(
+            payload.idVehOrdenTrabajoHallazgo ? 'Hallazgo actualizado' : 'Hallazgo creado',
+            'La información del hallazgo se guardó correctamente.',
+          );
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo guardar el hallazgo', err?.message),
+      });
+  }
+
+  guardarFotoWorkbench(payload: FotoWorkbenchSavePayload) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.repo.crearHallazgoFoto({
+      idVehOrdenTrabajoHallazgoFk: payload.idVehOrdenTrabajoHallazgoFk,
+      etapa: payload.etapa || null,
+      foto: payload.foto,
+      descripcion: payload.descripcion?.trim() || null,
+      principal: !!payload.principal,
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Foto guardada', 'La evidencia fue registrada correctamente.');
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo guardar la foto', err?.message),
+      });
+  }
+
+  limpiarSeleccionHallazgoWorkbench() {
+    this.selectedHallazgo.set(null);
+    this.marcas.set([]);
+    this.fotos.set([]);
   }
 }

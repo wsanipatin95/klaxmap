@@ -72,13 +72,12 @@
       [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
       [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
       [articuloLabelMap]="articuloLabelMap()" (saveChecklist)="guardarChecklistMasivo($event)"
-      (openTrabajo)="abrirChild('trabajo')" (openHallazgo)="abrirChild('hallazgo')"
-      (openRepuesto)="abrirChild('repuesto')" (openAutorizacion)="abrirChild('autorizacion')"
-      (openFoto)="abrirChild('foto')" (openWorkflow)="abrirComercialDrawer('workflow')"
-      (openFactura)="abrirComercialDrawer('factura')" (openCobro)="abrirComercialDrawer('cobro')"
-      (openContabilizar)="abrirComercialDrawer('contabilizar')" (selectHallazgo)="seleccionarHallazgo($event)"
-      (selectVista)="seleccionarVista($event)" (selectFactura)="seleccionarFacturaOt($event)"
-      (pointMarked)="createMarcaDesdeCanvas($event)">
+      (saveTrabajo)="guardarTrabajoWorkbench($event)" (saveHallazgo)="guardarHallazgoWorkbench($event)"
+      (saveFoto)="guardarFotoWorkbench($event)" (selectHallazgo)="seleccionarHallazgo($event)"
+      (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()" (selectVista)="seleccionarVista($event)"
+      (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)"
+      (openWorkflow)="abrirComercialDrawer('workflow')" (openFactura)="abrirComercialDrawer('factura')"
+      (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')">
     </app-orden-detail-panel>
   </section>
 </div>

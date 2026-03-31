@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
+import { TextareaModule } from 'primeng/textarea';
 import { VehiculosEmptyStateComponent } from '../../../../components/empty-state/empty-state.component';
 import { VehiculoVistaCanvasComponent } from '../../../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import {
@@ -26,8 +27,7 @@ import {
 type OrdenDetailTab =
   | 'resumen'
   | 'checklist'
-  | 'trabajos'
-  | 'hallazgos'
+  | 'ejecucion'
   | 'repuestos'
   | 'autorizaciones'
   | 'comercial';
@@ -41,6 +41,42 @@ export type ChecklistBulkRow = {
   changed: boolean;
 };
 
+export type TrabajoWorkbenchSavePayload = {
+  idVehOrdenTrabajoTrabajo?: number | null;
+  tipoTrabajo: string;
+  descripcionInicial: string;
+  descripcionRealizada?: string | null;
+  resultado?: string | null;
+  estadoTrabajo?: string | null;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
+  motivo?: string | null;
+  observaciones?: string | null;
+};
+
+export type HallazgoWorkbenchSavePayload = {
+  idVehOrdenTrabajoHallazgo?: number | null;
+  idVehOrdenTrabajoTrabajoFk?: number | null;
+  tipoHallazgo: string;
+  categoria: string;
+  descripcion: string;
+  severidad: string;
+  estadoHallazgo: string;
+  requiereCambio: boolean;
+  motivoCambio?: string | null;
+  aprobadoCliente: boolean;
+  fechaAprobacion?: string | null;
+  observaciones?: string | null;
+};
+
+export type FotoWorkbenchSavePayload = {
+  idVehOrdenTrabajoHallazgoFk: number;
+  etapa: string;
+  descripcion?: string | null;
+  principal: boolean;
+  foto: string;
+};
+
 type ChecklistEditorRow = {
   relationId: number;
   label: string;
@@ -51,6 +87,39 @@ type ChecklistEditorRow = {
   originalObservaciones: string;
 };
 
+type TrabajoDraft = {
+  tipoTrabajo: string;
+  descripcionInicial: string;
+  descripcionRealizada: string;
+  resultado: string;
+  estadoTrabajo: string;
+  fechaInicio: string;
+  fechaFin: string;
+  motivo: string;
+  observaciones: string;
+};
+
+type HallazgoDraft = {
+  tipoHallazgo: string;
+  categoria: string;
+  descripcion: string;
+  severidad: string;
+  estadoHallazgo: string;
+  requiereCambio: boolean;
+  motivoCambio: string;
+  aprobadoCliente: boolean;
+  fechaAprobacion: string;
+  observaciones: string;
+};
+
+type FotoDraft = {
+  etapa: string;
+  descripcion: string;
+  principal: boolean;
+  fotoBase64: string | null;
+  fotoPreview: string | null;
+};
+
 @Component({
   selector: 'app-orden-detail-panel',
   standalone: true,
@@ -59,6 +128,7 @@ type ChecklistEditorRow = {
     FormsModule,
     ButtonModule,
     InputTextModule,
+    TextareaModule,
     TagModule,
     VehiculosEmptyStateComponent,
     VehiculoVistaCanvasComponent,
@@ -96,11 +166,9 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Input() articuloLabelMap: Record<number, string> = {};
 
   @Output() saveChecklist = new EventEmitter<ChecklistBulkRow[]>();
-  @Output() openTrabajo = new EventEmitter<void>();
-  @Output() openHallazgo = new EventEmitter<void>();
-  @Output() openRepuesto = new EventEmitter<void>();
-  @Output() openAutorizacion = new EventEmitter<void>();
-  @Output() openFoto = new EventEmitter<void>();
+  @Output() saveTrabajo = new EventEmitter<TrabajoWorkbenchSavePayload>();
+  @Output() saveHallazgo = new EventEmitter<HallazgoWorkbenchSavePayload>();
+  @Output() saveFoto = new EventEmitter<FotoWorkbenchSavePayload>();
 
   @Output() openWorkflow = new EventEmitter<void>();
   @Output() openFactura = new EventEmitter<void>();
@@ -108,16 +176,51 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Output() openContabilizar = new EventEmitter<void>();
 
   @Output() selectHallazgo = new EventEmitter<VehOrdenTrabajoHallazgo>();
+  @Output() clearHallazgoSelection = new EventEmitter<void>();
   @Output() selectVista = new EventEmitter<VehTipoVehiculoVista>();
   @Output() selectFactura = new EventEmitter<VehFactura>();
   @Output() pointMarked = new EventEmitter<{ x: number; y: number }>();
 
   activeTab = signal<OrdenDetailTab>('resumen');
+
   checklistRows = signal<ChecklistEditorRow[]>([]);
+
+  selectedTrabajoId: number | null = null;
+
+  editingTrabajoId: number | null = null;
+  editingHallazgoId: number | null = null;
+
+  trabajoDraft: TrabajoDraft = this.createEmptyTrabajoDraft();
+  hallazgoDraft: HallazgoDraft = this.createEmptyHallazgoDraft();
+  fotoDraft: FotoDraft = this.createEmptyFotoDraft();
+
+  private pendingResetKind: 'trabajo' | 'hallazgo' | 'foto' | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['checklist'] || changes['checklistOpciones'] || changes['checklistLabelMap']) {
       this.rebuildChecklistRows();
+    }
+
+    if (changes['trabajos'] || changes['selectedHallazgo']) {
+      this.reconcileSelectedTrabajo();
+    }
+
+    if (changes['trabajos'] && this.pendingResetKind === 'trabajo') {
+      this.cancelTrabajoDraft();
+      this.pendingResetKind = null;
+    }
+
+    if (changes['hallazgos']) {
+      if (this.pendingResetKind === 'hallazgo') {
+        this.cancelHallazgoDraft();
+        this.pendingResetKind = null;
+      }
+      this.reconcileSelectedTrabajo();
+    }
+
+    if (changes['fotos'] && this.pendingResetKind === 'foto') {
+      this.cancelFotoDraft();
+      this.pendingResetKind = null;
     }
   }
 
@@ -244,6 +347,209 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   trackByChecklistRow = (_index: number, row: ChecklistEditorRow) => row.relationId;
+  trackByTrabajo = (_index: number, item: VehOrdenTrabajoTrabajo) => item.idVehOrdenTrabajoTrabajo;
+  trackByHallazgo = (_index: number, item: VehOrdenTrabajoHallazgo) => item.idVehOrdenTrabajoHallazgo;
+  trackByVista = (_index: number, item: VehTipoVehiculoVista) => item.idVehTipoVehiculoVista;
+  trackByFoto = (_index: number, item: VehOrdenTrabajoHallazgoFoto) => item.idVehOrdenTrabajoHallazgoFoto;
+
+  trabajosListado(): VehOrdenTrabajoTrabajo[] {
+    return this.trabajos ?? [];
+  }
+
+  hallazgosDelTrabajoSeleccionado(): VehOrdenTrabajoHallazgo[] {
+    if (!this.trabajos.length) return [];
+    if (!this.selectedTrabajoId) return [];
+
+    return this.hallazgos.filter(
+      (item) => Number(item.idVehOrdenTrabajoTrabajoFk ?? 0) === Number(this.selectedTrabajoId ?? 0),
+    );
+  }
+
+  selectedHallazgoEnContexto(): VehOrdenTrabajoHallazgo | null {
+    const current = this.selectedHallazgo;
+    if (!current || !this.selectedTrabajoId) return null;
+
+    if (Number(current.idVehOrdenTrabajoTrabajoFk ?? 0) !== Number(this.selectedTrabajoId ?? 0)) {
+      return null;
+    }
+
+    return current;
+  }
+
+  seleccionarTrabajoWorkbench(item: VehOrdenTrabajoTrabajo) {
+    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajo;
+
+    const hallazgos = this.hallazgosDelTrabajoSeleccionado();
+    const currentHallazgo = this.selectedHallazgoEnContexto();
+
+    if (currentHallazgo) return;
+
+    if (hallazgos.length) {
+      this.selectHallazgo.emit(hallazgos[0]);
+      return;
+    }
+
+    this.clearHallazgoSelection.emit();
+  }
+
+  iniciarNuevoTrabajo() {
+    this.editingTrabajoId = null;
+    this.trabajoDraft = this.createEmptyTrabajoDraft();
+  }
+
+  editarTrabajo(item: VehOrdenTrabajoTrabajo) {
+    this.editingTrabajoId = item.idVehOrdenTrabajoTrabajo;
+    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajo;
+    this.trabajoDraft = {
+      tipoTrabajo: item.tipoTrabajo || 'DIAGNOSTICO',
+      descripcionInicial: item.descripcionInicial || '',
+      descripcionRealizada: item.descripcionRealizada || '',
+      resultado: item.resultado || '',
+      estadoTrabajo: item.estadoTrabajo || 'PENDIENTE',
+      fechaInicio: this.toDate(item.fechaInicio),
+      fechaFin: this.toDate(item.fechaFin),
+      motivo: item.motivo || '',
+      observaciones: item.observaciones || '',
+    };
+  }
+
+  guardarTrabajo() {
+    if (!this.trabajoDraft.descripcionInicial.trim()) return;
+
+    this.pendingResetKind = 'trabajo';
+    this.saveTrabajo.emit({
+      idVehOrdenTrabajoTrabajo: this.editingTrabajoId,
+      tipoTrabajo: this.trabajoDraft.tipoTrabajo,
+      descripcionInicial: this.trabajoDraft.descripcionInicial,
+      descripcionRealizada: this.trabajoDraft.descripcionRealizada || null,
+      resultado: this.trabajoDraft.resultado || null,
+      estadoTrabajo: this.trabajoDraft.estadoTrabajo,
+      fechaInicio: this.toTimestamp(this.trabajoDraft.fechaInicio),
+      fechaFin: this.toTimestamp(this.trabajoDraft.fechaFin),
+      motivo: this.trabajoDraft.motivo || null,
+      observaciones: this.trabajoDraft.observaciones || null,
+    });
+  }
+
+  cancelTrabajoDraft() {
+    this.editingTrabajoId = null;
+    this.trabajoDraft = this.createEmptyTrabajoDraft();
+  }
+
+  iniciarNuevoHallazgo() {
+    this.editingHallazgoId = null;
+    this.hallazgoDraft = this.createEmptyHallazgoDraft();
+  }
+
+  editarHallazgo(item: VehOrdenTrabajoHallazgo) {
+    this.editingHallazgoId = item.idVehOrdenTrabajoHallazgo;
+    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk ?? this.selectedTrabajoId;
+    this.selectHallazgo.emit(item);
+
+    this.hallazgoDraft = {
+      tipoHallazgo: item.tipoHallazgo || 'RECEPCION',
+      categoria: item.categoria || 'GENERAL',
+      descripcion: item.descripcion || '',
+      severidad: item.severidad || 'MEDIA',
+      estadoHallazgo: item.estadoHallazgo || 'REPORTADO',
+      requiereCambio: this.esVerdadero(item.requiereCambio),
+      motivoCambio: item.motivoCambio || '',
+      aprobadoCliente: this.esVerdadero(item.aprobadoCliente),
+      fechaAprobacion: this.toDate(item.fechaAprobacion),
+      observaciones: item.observaciones || '',
+    };
+  }
+
+  guardarHallazgo() {
+    if (!this.selectedTrabajoId) return;
+    if (!this.hallazgoDraft.descripcion.trim()) return;
+
+    this.pendingResetKind = 'hallazgo';
+    this.saveHallazgo.emit({
+      idVehOrdenTrabajoHallazgo: this.editingHallazgoId,
+      idVehOrdenTrabajoTrabajoFk: this.selectedTrabajoId,
+      tipoHallazgo: this.hallazgoDraft.tipoHallazgo,
+      categoria: this.hallazgoDraft.categoria,
+      descripcion: this.hallazgoDraft.descripcion,
+      severidad: this.hallazgoDraft.severidad,
+      estadoHallazgo: this.hallazgoDraft.estadoHallazgo,
+      requiereCambio: !!this.hallazgoDraft.requiereCambio,
+      motivoCambio: this.hallazgoDraft.motivoCambio || null,
+      aprobadoCliente: !!this.hallazgoDraft.aprobadoCliente,
+      fechaAprobacion: this.toTimestamp(this.hallazgoDraft.fechaAprobacion),
+      observaciones: this.hallazgoDraft.observaciones || null,
+    });
+  }
+
+  cancelHallazgoDraft() {
+    this.editingHallazgoId = null;
+    this.hallazgoDraft = this.createEmptyHallazgoDraft();
+  }
+
+  seleccionarHallazgoWorkbench(item: VehOrdenTrabajoHallazgo) {
+    if (item.idVehOrdenTrabajoTrabajoFk) {
+      this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk;
+    }
+    this.selectHallazgo.emit(item);
+  }
+
+  onFotoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      this.fotoDraft = {
+        ...this.fotoDraft,
+        fotoBase64: base64 || '',
+        fotoPreview: dataUrl || null,
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
+  guardarFoto() {
+    const hallazgo = this.selectedHallazgoEnContexto();
+    if (!hallazgo) return;
+    if (!this.fotoDraft.fotoBase64) return;
+
+    this.pendingResetKind = 'foto';
+    this.saveFoto.emit({
+      idVehOrdenTrabajoHallazgoFk: hallazgo.idVehOrdenTrabajoHallazgo,
+      etapa: this.fotoDraft.etapa,
+      descripcion: this.fotoDraft.descripcion || null,
+      principal: !!this.fotoDraft.principal,
+      foto: this.fotoDraft.fotoBase64,
+    });
+  }
+
+  cancelFotoDraft() {
+    this.fotoDraft = this.createEmptyFotoDraft();
+  }
+
+  private reconcileSelectedTrabajo() {
+    const currentTrabajoIds = new Set(this.trabajos.map((item) => item.idVehOrdenTrabajoTrabajo));
+    const hallazgoTrabajoId = this.selectedHallazgo?.idVehOrdenTrabajoTrabajoFk ?? null;
+
+    if (hallazgoTrabajoId && currentTrabajoIds.has(hallazgoTrabajoId)) {
+      this.selectedTrabajoId = hallazgoTrabajoId;
+      return;
+    }
+
+    if (this.selectedTrabajoId && currentTrabajoIds.has(this.selectedTrabajoId)) {
+      return;
+    }
+
+    this.selectedTrabajoId = this.trabajos[0]?.idVehOrdenTrabajoTrabajo ?? null;
+  }
 
   private rebuildChecklistRows() {
     const existingByRelation = new Map<number, VehOrdenTrabajoCheckList>();
@@ -269,6 +575,56 @@ export class OrdenDetailPanelComponent implements OnChanges {
     });
 
     this.checklistRows.set(rows);
+  }
+
+  private createEmptyTrabajoDraft(): TrabajoDraft {
+    return {
+      tipoTrabajo: 'DIAGNOSTICO',
+      descripcionInicial: '',
+      descripcionRealizada: '',
+      resultado: '',
+      estadoTrabajo: 'PENDIENTE',
+      fechaInicio: '',
+      fechaFin: '',
+      motivo: '',
+      observaciones: '',
+    };
+  }
+
+  private createEmptyHallazgoDraft(): HallazgoDraft {
+    return {
+      tipoHallazgo: 'RECEPCION',
+      categoria: 'GENERAL',
+      descripcion: '',
+      severidad: 'MEDIA',
+      estadoHallazgo: 'REPORTADO',
+      requiereCambio: true,
+      motivoCambio: '',
+      aprobadoCliente: false,
+      fechaAprobacion: '',
+      observaciones: '',
+    };
+  }
+
+  private createEmptyFotoDraft(): FotoDraft {
+    return {
+      etapa: 'ANTES',
+      descripcion: '',
+      principal: false,
+      fotoBase64: null,
+      fotoPreview: null,
+    };
+  }
+
+  private toDate(value?: string | null) {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+  }
+
+  private toTimestamp(value?: string | null) {
+    if (!value) return null;
+    if (String(value).includes('T')) return value;
+    return `${value}T00:00:00-05:00`;
   }
 
   private guessMimeType(base64: string) {
