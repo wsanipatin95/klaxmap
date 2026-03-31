@@ -128,11 +128,6 @@
   min-width: 0;
 }
 
-.panelCard--nested {
-  background: #f8fafc;
-  box-shadow: none;
-}
-
 .panelCard--execution {
   padding: 0.55rem;
 }
@@ -146,6 +141,17 @@
 
 .sectionHead--compact {
   align-items: center;
+}
+
+.sectionHead--withTabs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.sectionHead__titleBlock {
+  min-width: 0;
 }
 
 .sectionHead h4 {
@@ -169,6 +175,12 @@
 
 .actionWrap--compact :is(.p-button, button[pButton]) {
   min-height: 1.9rem;
+}
+
+.inlineTabs {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .metricGrid {
@@ -222,15 +234,6 @@
   font-size: 0.82rem;
   color: #0f172a;
   line-height: 1.2;
-}
-
-.grid {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.grid.cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .jiraLikeList,
@@ -355,9 +358,10 @@
   width: 100%;
 }
 
-.executionWorkbench {
+/* EJECUCION */
+.executionWorkbench--merged {
   display: grid;
-  grid-template-columns: minmax(15rem, 18rem) minmax(22rem, 1.1fr) minmax(22rem, 1fr);
+  grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
   gap: 0.55rem;
   min-width: 0;
   align-items: start;
@@ -368,6 +372,29 @@
   display: grid;
   gap: 0.5rem;
   align-content: start;
+}
+
+.execWorkspace {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.workbenchCard--full {
+  min-width: 0;
+}
+
+.executionContent {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.executionPane {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
 }
 
 .listCard--tight {
@@ -386,13 +413,16 @@
   max-height: 21rem;
 }
 
-.dualStack {
+/* HALLAZGOS */
+.hallazgoWorkbench {
   display: grid;
-  gap: 0.5rem;
+  grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
+  gap: 0.55rem;
+  min-width: 0;
+  align-items: start;
 }
 
-.splitPane,
-.compactPane {
+.hallazgoPane {
   min-width: 0;
   display: grid;
   gap: 0.5rem;
@@ -402,39 +432,38 @@
   padding: 0.55rem;
 }
 
-.markLayout,
-.evidenceLayout {
+.hallazgoPane--list {
+  align-content: start;
+}
+
+.hallazgoPane--editor {
+  align-content: start;
+}
+
+.subTabRail--inner {
+  margin-top: 0.2rem;
+}
+
+.hallazgoChildPanel {
   display: grid;
   gap: 0.5rem;
 }
 
-.selectionBanner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.childGrid {
+  display: grid;
+  grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
   gap: 0.55rem;
+  min-width: 0;
+}
+
+.childPane {
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.72rem;
-  background: #ffffff;
-  padding: 0.52rem 0.62rem;
-}
-
-.selectionBanner--compact {
-  padding: 0.46rem 0.58rem;
-}
-
-.selectionBanner__title {
-  font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.selectionBanner__copy {
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 0.78rem;
-  line-height: 1.15;
+  background: #fff;
+  padding: 0.55rem;
 }
 
 .canvasWrap {
@@ -447,10 +476,6 @@
 
 .canvasWrap--compact {
   min-height: 16rem;
-}
-
-.markRow {
-  cursor: default;
 }
 
 .markSwatch {
@@ -508,19 +533,6 @@
   display: flex;
   gap: 0.15rem;
   flex: 0 0 auto;
-}
-
-.commercialGrid {
-  align-items: start;
-}
-
-.commercialColumn {
-  min-width: 0;
-}
-
-.workflowResultCard {
-  border-color: #f3aad6;
-  background: #fdf4f9;
 }
 
 .editorGrid {
@@ -668,26 +680,22 @@
 .span-4  { grid-column: span 4; }
 .span-2  { grid-column: span 2; }
 
-@media (max-width: 1680px) {
-  .executionWorkbench {
-    grid-template-columns: minmax(14rem, 16rem) minmax(20rem, 1fr) minmax(20rem, 1fr);
-  }
-}
-
 @media (max-width: 1480px) {
-  .executionWorkbench {
+  .executionWorkbench--merged,
+  .hallazgoWorkbench,
+  .childGrid,
+  .sectionHead--withTabs {
     grid-template-columns: 1fr;
   }
 
-  .scrollList--compact {
-    max-height: 16rem;
+  .inlineTabs {
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 1200px) {
   .contextStrip,
-  .metricGrid,
-  .grid.cols-2 {
+  .metricGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -715,8 +723,7 @@
 
   .detailHero,
   .sectionHead,
-  .rowHeader,
-  .selectionBanner {
+  .rowHeader {
     flex-direction: column;
     align-items: stretch;
   }

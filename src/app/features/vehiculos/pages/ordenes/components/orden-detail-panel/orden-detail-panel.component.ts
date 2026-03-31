@@ -32,7 +32,8 @@ type OrdenDetailTab =
   | 'autorizaciones'
   | 'comercial';
 
-type ExecutionTab = 'detalle' | 'hallazgos' | 'marcas' | 'evidencias';
+type ExecutionTab = 'detalle' | 'hallazgos';
+type HallazgoInnerTab = 'marcas' | 'fotos';
 
 export type ChecklistBulkRow = {
   relationId: number;
@@ -185,6 +186,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   activeTab = signal<OrdenDetailTab>('resumen');
   executionTab = signal<ExecutionTab>('detalle');
+  hallazgoInnerTab = signal<HallazgoInnerTab>('marcas');
 
   checklistRows = signal<ChecklistEditorRow[]>([]);
 
@@ -309,6 +311,10 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   setExecutionTab(tab: ExecutionTab) {
     this.executionTab.set(tab);
+  }
+
+  setHallazgoInnerTab(tab: HallazgoInnerTab) {
+    this.hallazgoInnerTab.set(tab);
   }
 
   severityEstado(estado?: string | null) {
@@ -511,23 +517,26 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   seleccionarTrabajoWorkbench(item: VehOrdenTrabajoTrabajo) {
     this.loadTrabajoDraft(item);
+    this.executionTab.set('detalle');
 
     const hallazgos = this.hallazgos.filter(
       (hallazgo) => Number(hallazgo.idVehOrdenTrabajoTrabajoFk ?? 0) === Number(item.idVehOrdenTrabajoTrabajo),
     );
 
     const currentHallazgo = this.selectedHallazgoEnContexto();
-    if (!currentHallazgo && hallazgos.length) {
+    if (currentHallazgo) {
+      return;
+    }
+
+    if (hallazgos.length) {
       this.selectHallazgo.emit(hallazgos[0]);
       this.loadHallazgoDraft(hallazgos[0]);
+      this.hallazgoInnerTab.set('marcas');
+      return;
     }
 
-    if (!hallazgos.length) {
-      this.clearHallazgoSelection.emit();
-      this.loadHallazgoDraft(null);
-    }
-
-    this.executionTab.set('detalle');
+    this.clearHallazgoSelection.emit();
+    this.loadHallazgoDraft(null);
   }
 
   iniciarNuevoTrabajo() {
@@ -586,12 +595,14 @@ export class OrdenDetailPanelComponent implements OnChanges {
     this.hallazgoDraft = this.createEmptyHallazgoDraft();
     this.clearHallazgoSelection.emit();
     this.executionTab.set('hallazgos');
+    this.hallazgoInnerTab.set('marcas');
   }
 
   editarHallazgo(item: VehOrdenTrabajoHallazgo) {
     this.loadHallazgoDraft(item);
     this.selectHallazgo.emit(item);
     this.executionTab.set('hallazgos');
+    this.hallazgoInnerTab.set('marcas');
   }
 
   guardarHallazgo() {
@@ -646,6 +657,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
     }
 
     this.executionTab.set('hallazgos');
+    this.hallazgoInnerTab.set('marcas');
   }
 
   seleccionarFoto(item: VehOrdenTrabajoHallazgoFoto) {
@@ -661,7 +673,9 @@ export class OrdenDetailPanelComponent implements OnChanges {
       fotoBase64: null,
       fotoPreview: this.resolveBinarySrc((item.foto || (item as any).urlArchivo) ?? null),
     };
-    this.executionTab.set('evidencias');
+
+    this.executionTab.set('hallazgos');
+    this.hallazgoInnerTab.set('fotos');
   }
 
   onFotoSelected(event: Event) {
@@ -863,7 +877,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
     if (base64.startsWith('UklGR')) return 'image/webp';
     return 'image/png';
   }
-  
+
   fotoFechaGeneracion(foto: VehOrdenTrabajoHallazgoFoto | null | undefined): string | null {
     if (!foto) return null;
     return (foto as any).fecGen ?? null;
