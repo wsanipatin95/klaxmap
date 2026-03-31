@@ -92,7 +92,6 @@ type AtributoRowForm = FormGroup<{
     TagModule,
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
-    VehiculosFormDrawerComponent,
     VehiculosEmptyStateComponent,
     OrdenDetailPanelComponent,
     OrdenMainFormDrawerComponent,
@@ -426,6 +425,10 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   editarOrden(item: VehOrdenTrabajo) {
+    if (this.isOrdenAnulada(item)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y solo puede verse en modo consulta.');
+      return;
+    }
     this.editingOrden.set(item);
     this.drawerVisible.set(true);
   }
@@ -453,9 +456,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
     const request$ = this.editingOrden()
       ? this.repo.editarOrden({
-          idVehOrdenTrabajo: this.editingOrden()!.idVehOrdenTrabajo,
-          cambios: payload,
-        })
+        idVehOrdenTrabajo: this.editingOrden()!.idVehOrdenTrabajo,
+        cambios: payload,
+      })
       : this.repo.crearOrden(payload);
 
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
@@ -474,7 +477,17 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   async eliminarOrden(item: VehOrdenTrabajo) {
-    const ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
+    let ok = false;
+    try {
+      ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
+    } catch {
+      ok = false;
+    }
+
+    if (!ok && typeof window !== 'undefined') {
+      ok = window.confirm(`¿Deseas eliminar la orden #${item.idVehOrdenTrabajo}?`);
+    }
+
     if (!ok) return;
 
     this.repo.eliminarOrden(item.idVehOrdenTrabajo).subscribe({
@@ -701,6 +714,10 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   abrirChild(mode: Exclude<ChildDrawerMode, null>) {
     const orden = this.selectedOrden();
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
     if (!orden) {
       this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
       return;
@@ -958,6 +975,10 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   abrirComercialDrawer(mode: Exclude<ComercialDrawerMode, null>) {
     const orden = this.selectedOrden();
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite operaciones comerciales.');
+      return;
+    }
     if (!orden) {
       this.notify.warn('Selecciona una orden', 'Debes seleccionar una OT para continuar.');
       return;
@@ -1521,5 +1542,41 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private updateComercialDirtyState() {
     this.comercialDirty.set(this.createComercialSnapshot() !== this.initialComercialSnapshot);
+  }
+
+  isOrdenAnulada(item?: VehOrdenTrabajo | null): boolean {
+    return (item?.estadoOrden || '').toUpperCase() === 'ANULADO';
+  }
+
+  async anularOrden(item: VehOrdenTrabajo) {
+    if (this.isOrdenAnulada(item)) return;
+
+    let ok = false;
+    try {
+      ok = await this.confirm.confirmDelete(`anular la orden #${item.idVehOrdenTrabajo}`);
+    } catch {
+      ok = false;
+    }
+
+    if (!ok && typeof window !== 'undefined') {
+      ok = window.confirm(`¿Deseas anular la orden #${item.idVehOrdenTrabajo}?`);
+    }
+
+    if (!ok) return;
+
+    this.saving.set(true);
+    this.repo.editarOrden({
+      idVehOrdenTrabajo: item.idVehOrdenTrabajo,
+      cambios: { estadoOrden: 'ANULADO' },
+    }).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Orden anulada', 'La OT quedó anulada y bloqueada.');
+        if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+          this.selectedOrden.set({ ...item, estadoOrden: 'ANULADO' });
+        }
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
+    });
   }
 }

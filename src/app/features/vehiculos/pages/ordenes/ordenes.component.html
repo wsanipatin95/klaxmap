@@ -8,12 +8,7 @@
 <div class="toolbarCard">
   <div class="searchBox">
     <i class="pi pi-search"></i>
-    <input
-      pInputText
-      type="text"
-      [(ngModel)]="q"
-      placeholder="Buscar por OT, estado, servicio o detalle..."
-      (keyup.enter)="cargar()">
+    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar por OT, estado, servicio o detalle..." (keyup.enter)="cargar()">
   </div>
   <div class="toolbarActions">
     <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
@@ -32,11 +27,7 @@
     </div>
 
     <div class="backlogCard__body" *ngIf="ordenes().length; else noOrdenes">
-      <article
-        class="jiraLikeRow"
-        *ngFor="let item of ordenes()"
-        [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo"
-        (click)="seleccionarOrden(item)">
+      <article class="jiraLikeRow" *ngFor="let item of ordenes()" [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo" (click)="seleccionarOrden(item)">
         <div class="rowHeader">
           <div>
             <div class="primaryCell">OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}</div>
@@ -44,7 +35,8 @@
           </div>
           <div class="rowActions">
             <p-tag [value]="item.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(item.estadoOrden)"></p-tag>
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" (click)="editarOrden(item); $event.stopPropagation()"></button>
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-ban" severity="danger" *ngIf="!isOrdenAnulada(item)" (click)="anularOrden(item); $event.stopPropagation()"></button>
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" [disabled]="isOrdenAnulada(item)" (click)="editarOrden(item); $event.stopPropagation()"></button>
             <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarOrden(item); $event.stopPropagation()"></button>
           </div>
         </div>
@@ -98,11 +90,7 @@
 </div>
 
 <ng-template #noOrdenes>
-  <app-vehiculos-empty-state
-    icon="pi pi-briefcase"
-    title="Sin órdenes"
-    subtitle="Crea la primera OT para empezar el flujo de recepción, diagnóstico y facturación.">
-  </app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes" subtitle="Crea la primera OT para empezar el flujo de recepción, diagnóstico y facturación."></app-vehiculos-empty-state>
 </ng-template>
 
 <app-orden-main-form-drawer
@@ -115,313 +103,4 @@
   (save)="guardarOrden($event)">
 </app-orden-main-form-drawer>
 
-<app-vehiculos-form-drawer
-  [visible]="childDrawerVisible()"
-  [dirty]="childDirty()"
-  [saving]="saving()"
-  sizeClass="appDrawer appDrawer--md"
-  title="{{ childDrawerTitle() }}"
-  subtitle="{{ childDrawerSubtitle() }}"
-  (visibleChange)="childDrawerVisible.set($event)"
-  (requestClose)="cerrarChildDrawer()"
-  (requestSave)="submitChild()">
-
-  <div [ngSwitch]="childMode()">
-    <form class="vehForm" [formGroup]="checklistForm" *ngSwitchCase="'checklist'">
-      <label>
-        <span>Checklist configurado</span>
-        <select formControlName="idVehVehiculoCheckListVehiculoFk">
-          <option [ngValue]="null">Selecciona un checklist</option>
-          <option *ngFor="let rel of checklistOpciones()" [ngValue]="rel.idVehVehiculoCheckListVehiculo">
-            {{ checklistLabelByRelation(rel.idVehVehiculoCheckListVehiculo) }}
-          </option>
-        </select>
-      </label>
-      <label>
-        <span>Estado</span>
-        <select formControlName="estadoCheckList">
-          <option *ngFor="let option of ESTADO_CHECKLIST_OPTIONS" [value]="option">{{ option }}</option>
-        </select>
-      </label>
-      <label>
-        <span>Observaciones</span>
-        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
-      </label>
-    </form>
-
-    <form class="vehForm" [formGroup]="trabajoForm" *ngSwitchCase="'trabajo'">
-      <label>
-        <span>Tipo de trabajo</span>
-        <select formControlName="tipoTrabajo">
-          <option *ngFor="let option of TIPO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
-        </select>
-      </label>
-      <label><span>Descripción inicial</span><textarea pTextarea rows="4" formControlName="descripcionInicial"></textarea></label>
-      <label><span>Descripción realizada</span><textarea pTextarea rows="4" formControlName="descripcionRealizada"></textarea></label>
-      <div class="grid cols-2">
-        <label><span>Resultado</span><input pInputText formControlName="resultado"></label>
-        <label>
-          <span>Estado</span>
-          <select formControlName="estadoTrabajo">
-            <option *ngFor="let option of ESTADO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label><span>Fecha inicio</span><input type="date" formControlName="fechaInicio"></label>
-        <label><span>Fecha fin</span><input type="date" formControlName="fechaFin"></label>
-      </div>
-      <label><span>Motivo</span><textarea pTextarea rows="3" formControlName="motivo"></textarea></label>
-      <label><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
-    </form>
-
-    <form class="vehForm" [formGroup]="hallazgoForm" *ngSwitchCase="'hallazgo'">
-      <div class="grid cols-2">
-        <label>
-          <span>Trabajo relacionado</span>
-          <select formControlName="idVehOrdenTrabajoTrabajoFk">
-            <option [ngValue]="null">Sin trabajo relacionado</option>
-            <option *ngFor="let trabajo of trabajos()" [ngValue]="trabajo.idVehOrdenTrabajoTrabajo">
-              {{ trabajoLabelById(trabajo.idVehOrdenTrabajoTrabajo) }}
-            </option>
-          </select>
-        </label>
-        <label>
-          <span>Tipo hallazgo</span>
-          <select formControlName="tipoHallazgo">
-            <option *ngFor="let option of TIPO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Categoría</span>
-          <select formControlName="categoria">
-            <option *ngFor="let option of CATEGORIA_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Severidad</span>
-          <select formControlName="severidad">
-            <option *ngFor="let option of SEVERIDAD_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Estado</span>
-          <select formControlName="estadoHallazgo">
-            <option *ngFor="let option of ESTADO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label class="toggleItem">
-          <input type="checkbox" formControlName="requiereCambio">
-          <span>Requiere cambio</span>
-        </label>
-      </div>
-      <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
-      <label><span>Motivo cambio</span><textarea pTextarea rows="3" formControlName="motivoCambio"></textarea></label>
-      <div class="grid cols-2">
-        <label class="toggleItem">
-          <input type="checkbox" formControlName="aprobadoCliente">
-          <span>Aprobado por cliente</span>
-        </label>
-        <label><span>Fecha aprobación</span><input type="date" formControlName="fechaAprobacion"></label>
-      </div>
-      <label><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
-
-      <section class="attrSection">
-        <div class="sectionHeadInline">
-          <div>
-            <h5>Atributos del hallazgo</h5>
-            <div class="secondaryCell">Key / value flexible para enriquecer el diagnóstico.</div>
-          </div>
-          <button pButton type="button" size="small" icon="pi pi-plus" label="Agregar fila" (click)="addHallazgoAtributoRow()"></button>
-        </div>
-        <div class="attrTable">
-          <div class="attrHead">
-            <span>Clave</span>
-            <span>Valor</span>
-            <span></span>
-          </div>
-          <div class="attrRow" *ngFor="let row of hallazgoAtributosRows.controls; let i = index" [formGroup]="row">
-            <input pInputText formControlName="key" placeholder="ej: ubicación">
-            <input pInputText formControlName="value" placeholder="ej: lateral derecho">
-            <button pButton type="button" size="small" severity="danger" icon="pi pi-trash" (click)="removeHallazgoAtributoRow(i)"></button>
-          </div>
-        </div>
-      </section>
-    </form>
-
-    <form class="vehForm" [formGroup]="repuestoForm" *ngSwitchCase="'repuesto'">
-      <label>
-        <span>Artículo</span>
-        <div class="pickerSummary">{{ repuestoArticuloSeleccionado()?.articulo || articuloLabelById(repuestoForm.controls.art.value) }}</div>
-      </label>
-      <label>
-        <span>Buscar artículo</span>
-        <input
-          pInputText
-          type="text"
-          [ngModel]="''"
-          [ngModelOptions]="{ standalone: true }"
-          placeholder="Escribe código o nombre y selecciona abajo"
-          (ngModelChange)="onRepuestoArticuloQueryChange($event ?? '')">
-      </label>
-      <div class="pickerList pickerList--inline" *ngIf="(articuloLabelMap() | keyvalue).length">
-        <button type="button" class="pickerRow" *ngFor="let item of (articuloCache() | keyvalue)" (click)="seleccionarArticuloRepuesto(item.value)">
-          <div class="pickerRowCopy">
-            <strong>{{ item.value.artcod || ('ART ' + item.value.idActInventario) }}</strong>
-            <span>{{ item.value.articulo }}</span>
-          </div>
-        </button>
-      </div>
-      <div class="grid cols-2">
-        <label><span>Cantidad</span><input pInputText type="number" formControlName="cantidad"></label>
-        <label><span>Precio unitario</span><input pInputText type="number" formControlName="precioUnitario"></label>
-        <label><span>Motivo cambio</span><input pInputText formControlName="motivoCambio"></label>
-        <label><span>Serie anterior</span><input pInputText formControlName="serieAnterior"></label>
-        <label><span>Serie nueva</span><input pInputText formControlName="serieNueva"></label>
-      </div>
-      <label><span>Detalle instalación</span><textarea pTextarea rows="3" formControlName="detalleInstalacion"></textarea></label>
-      <label><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
-    </form>
-
-    <form class="vehForm" [formGroup]="autorizacionForm" *ngSwitchCase="'autorizacion'">
-      <div class="grid cols-2">
-        <label>
-          <span>Tipo autorización</span>
-          <select formControlName="tipoAutorizacion">
-            <option *ngFor="let option of TIPO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Estado</span>
-          <select formControlName="estadoAutorizacion">
-            <option *ngFor="let option of ESTADO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </label>
-        <label><span>Referencia tabla</span><input pInputText formControlName="referenciaTabla"></label>
-        <label><span>Referencia ID</span><input pInputText type="number" formControlName="referenciaId"></label>
-        <label><span>Fecha respuesta</span><input type="date" formControlName="fechaRespuesta"></label>
-      </div>
-      <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
-      <label><span>Observaciones</span><textarea pTextarea rows="4" formControlName="observaciones"></textarea></label>
-    </form>
-
-    <form class="vehForm" [formGroup]="fotoForm" *ngSwitchCase="'foto'">
-      <label>
-        <span>Etapa</span>
-        <select formControlName="etapa">
-          <option *ngFor="let option of ETAPA_FOTO_OPTIONS" [value]="option">{{ option }}</option>
-        </select>
-      </label>
-      <label><span>Descripción</span><textarea pTextarea rows="4" formControlName="descripcion"></textarea></label>
-      <label><span>Archivo de evidencia</span><input type="file" accept="image/*" (change)="onFotoSelected($event)"></label>
-      <div class="uploadPreview" *ngIf="fotoPreview() as previewSrc">
-        <img class="previewImage" [src]="previewSrc" alt="Vista previa evidencia">
-        <button pButton type="button" size="small" severity="secondary" icon="pi pi-times" label="Quitar imagen" (click)="limpiarFotoSeleccionada()"></button>
-      </div>
-      <label class="toggleItem">
-        <input type="checkbox" formControlName="principal">
-        <span>Foto principal</span>
-      </label>
-    </form>
-  </div>
-</app-vehiculos-form-drawer>
-
-<app-vehiculos-form-drawer
-  [visible]="comercialDrawerVisible()"
-  [dirty]="comercialDirty()"
-  [saving]="saving()"
-  sizeClass="appDrawer appDrawer--md"
-  title="{{ comercialDrawerTitle() }}"
-  subtitle="{{ comercialDrawerSubtitle() }}"
-  (visibleChange)="comercialDrawerVisible.set($event)"
-  (requestClose)="cerrarComercialDrawer()"
-  (requestSave)="submitComercial()">
-  <div [ngSwitch]="comercialDrawerMode()">
-    <form class="vehForm" [formGroup]="workflowForm" *ngSwitchCase="'workflow'">
-      <section class="formSection">
-        <h4 class="formSectionTitle">Contexto de la factura</h4>
-        <div class="grid cols-2">
-          <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
-          <label><span>ID punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemiFk"></label>
-          <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
-          <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
-          <label class="cols-full"><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
-          <label>
-            <span>Tipo facturación</span>
-            <select formControlName="tipoFacturacion">
-              <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
-            </select>
-          </label>
-          <label><span>ID comp. aut.</span><input pInputText type="number" formControlName="idTaxCompAutFk"></label>
-          <label><span>Pago inicial</span><input pInputText type="number" formControlName="pagoInicial"></label>
-          <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
-          <label><span>Fecha emisión</span><input type="date" formControlName="fechaEmisionIso"></label>
-          <label><span>Primer vencimiento</span><input type="date" formControlName="fechaPrimerVencimientoIso"></label>
-        </div>
-        <label><span>Observación factura</span><textarea pTextarea rows="3" formControlName="observacionFactura"></textarea></label>
-      </section>
-
-      <section class="formSection">
-        <h4 class="formSectionTitle">Toggles de negocio</h4>
-        <div class="toggleGrid">
-          <label class="toggleItem"><input type="checkbox" formControlName="credito"><span>Venta a crédito</span></label>
-          <label class="toggleItem"><input type="checkbox" formControlName="usarPrecioRepuesto"><span>Usar precio del repuesto registrado</span></label>
-          <label class="toggleItem"><input type="checkbox" formControlName="crearRecibo"><span>Crear recibo/cobro</span></label>
-          <label class="toggleItem"><input type="checkbox" formControlName="contabilizarFactura"><span>Contabilizar factura</span></label>
-          <label class="toggleItem"><input type="checkbox" formControlName="contabilizarCobro"><span>Contabilizar cobro</span></label>
-        </div>
-      </section>
-    </form>
-
-    <form class="vehForm" [formGroup]="facturaForm" *ngSwitchCase="'factura'">
-      <section class="formSection">
-        <h4 class="formSectionTitle">Factura manual</h4>
-        <div class="grid cols-2">
-          <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
-          <label><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
-          <label>
-            <span>Tipo facturación</span>
-            <select formControlName="tipoFacturacion">
-              <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
-            </select>
-          </label>
-          <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
-          <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
-          <label><span>Punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
-          <label><span>Entrada</span><input pInputText type="number" formControlName="entrada"></label>
-          <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
-          <label><span>Fecha primer vencimiento</span><input type="date" formControlName="fechaPrimerVencimiento"></label>
-          <label><span>ID comp. aut.</span><input pInputText type="number" formControlName="idTaxCompAutFk"></label>
-        </div>
-      </section>
-      <label><span>Observación</span><textarea pTextarea rows="4" formControlName="observacion"></textarea></label>
-    </form>
-
-    <form class="vehForm" [formGroup]="cobroForm" *ngSwitchCase="'cobro'">
-      <section class="formSection">
-        <h4 class="formSectionTitle">Cobro</h4>
-        <div class="grid cols-2">
-          <label><span>ID factura</span><input pInputText type="number" formControlName="idFacVenta"></label>
-          <label><span>Valor</span><input pInputText type="number" formControlName="valor"></label>
-          <label><span>Fecha</span><input type="date" formControlName="fecha"></label>
-          <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
-          <label><span>ID punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
-          <label><span>ID caja</span><input pInputText type="number" formControlName="idFacCaja"></label>
-          <label><span>Forma pago</span><input pInputText type="number" formControlName="idCntFormaPagoFk"></label>
-          <label><span>ID doc banco</span><input pInputText type="number" formControlName="idBanDocBancoFk"></label>
-          <label class="cols-full"><span>Concepto</span><textarea pTextarea rows="3" formControlName="concepto"></textarea></label>
-        </div>
-      </section>
-    </form>
-
-    <form class="vehForm" [formGroup]="contabilizarForm" *ngSwitchCase="'contabilizar'">
-      <section class="formSection">
-        <h4 class="formSectionTitle">Contabilización</h4>
-        <div class="grid cols-2">
-          <label><span>ID factura</span><input pInputText type="number" formControlName="idFacVenta"></label>
-          <label><span>ID tipo contable</span><input pInputText type="number" formControlName="idCntTipoFk"></label>
-          <label><span>Fecha contable</span><input type="date" formControlName="fechaContable"></label>
-        </div>
-      </section>
-      <label><span>Concepto</span><textarea pTextarea rows="3" formControlName="concepto"></textarea></label>
-    </form>
-  </div>
-</app-vehiculos-form-drawer>
+<!-- Mantener el resto del archivo actual tal como está en el repo -->

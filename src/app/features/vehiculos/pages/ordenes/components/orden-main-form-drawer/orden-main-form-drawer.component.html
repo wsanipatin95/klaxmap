@@ -18,38 +18,43 @@
 
   <form class="vehForm" [formGroup]="form">
     <section class="formSection" *ngIf="activeTab()==='clienteVehiculo'">
-      <h4 class="formSectionTitle">Cliente y vehículo</h4>
-      <div class="summaryGrid">
-        <article class="summaryCard">
-          <span>Cliente seleccionado</span>
-          <strong>{{ clienteLabel() }}</strong>
-        </article>
-        <article class="summaryCard">
-          <span>Vehículo seleccionado</span>
-          <strong>{{ vehiculoLabel() }}</strong>
-        </article>
+      <div class="sectionHeadInline">
+        <div>
+          <h4 class="formSectionTitle">Cliente y vehículo</h4>
+          <div class="secondaryCell" *ngIf="isEditing()">La OT ya existe. Cliente y vehículo quedan bloqueados.</div>
+        </div>
       </div>
 
-      <div class="pickerInline">
-        <button pButton type="button" severity="secondary" label="Buscar cliente" (click)="abrirClientePicker()"></button>
-        <div class="pickerSummary">{{ clienteLabel() }}</div>
-      </div>
-
-      <div class="grid cols-2">
-        <label>
+      <div class="selectorCard">
+        <div class="selectorCard__head">
           <span>Cliente</span>
-          <input pInputText type="text" [value]="clienteLabel()" readonly>
-        </label>
+          <div class="actionWrap">
+            <button pButton type="button" severity="secondary" icon="pi pi-search" label="Buscar" [disabled]="isSelectionLocked()" (click)="abrirClientePicker()"></button>
+            <button pButton type="button" [text]="true" icon="pi pi-plus" label="Crear cliente" [disabled]="isSelectionLocked()" (click)="abrirCrearCliente()"></button>
+          </div>
+        </div>
+        <div class="selectorCard__value">{{ clienteLabel() }}</div>
+      </div>
+
+      <div class="selectorCard">
+        <div class="selectorCard__head">
+          <span>Vehículo del cliente</span>
+          <div class="actionWrap">
+            <button pButton type="button" [text]="true" icon="pi pi-plus" label="Agregar vehículo" [disabled]="isSelectionLocked() || !form.controls.dni.value" (click)="abrirCrearVehiculo()"></button>
+          </div>
+        </div>
 
         <label>
-          <span>Vehículo del cliente</span>
-          <select [formControl]="form.controls.idCliVehiculoFk" (change)="onVehiculoSeleccionado(form.controls.idCliVehiculoFk.value)">
+          <span>Selecciona un vehículo</span>
+          <select [formControl]="form.controls.idCliVehiculoFk" [disabled]="isSelectionLocked()" (change)="onVehiculoSeleccionado(form.controls.idCliVehiculoFk.value)">
             <option [ngValue]="null">Selecciona un vehículo</option>
             <option *ngFor="let veh of vehiculosCliente()" [ngValue]="veh.idCliVehiculo">
-              {{ veh.marca }} {{ veh.modelo }} · {{ veh.placa || 'Sin placa' }}
+              {{ veh.marca }} · {{ veh.modelo }} · {{ veh.placa || 'Sin placa' }}
             </option>
           </select>
         </label>
+
+        <div class="selectorHelp">{{ vehiculoLabel() }}</div>
       </div>
     </section>
 
@@ -65,9 +70,7 @@
 
         <label>
           <span>Estado orden</span>
-          <select formControlName="estadoOrden">
-            <option *ngFor="let option of ESTADO_ORDEN_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
+          <input pInputText [value]="form.getRawValue().estadoOrden || 'RECIBIDO'" readonly>
         </label>
 
         <label>
@@ -110,35 +113,12 @@
     <section class="formSection" *ngIf="activeTab()==='diagnostico'">
       <h4 class="formSectionTitle">Falla y diagnóstico</h4>
       <div class="grid cols-2">
-        <label class="cols-full">
-          <span>Falla reportada</span>
-          <textarea pTextarea rows="4" formControlName="fallaReportada"></textarea>
-        </label>
-
-        <label class="cols-full">
-          <span>Síntomas reportados</span>
-          <textarea pTextarea rows="3" formControlName="sintomasReportados"></textarea>
-        </label>
-
-        <label class="cols-full">
-          <span>Ruidos reportados</span>
-          <textarea pTextarea rows="3" formControlName="ruidosReportados"></textarea>
-        </label>
-
-        <label class="cols-full">
-          <span>Detalle del cliente</span>
-          <textarea pTextarea rows="4" formControlName="detalleCliente"></textarea>
-        </label>
-
-        <label class="cols-full">
-          <span>Diagnóstico general</span>
-          <textarea pTextarea rows="4" formControlName="diagnosticoGeneral"></textarea>
-        </label>
-
-        <label class="cols-full">
-          <span>Recomendación general</span>
-          <textarea pTextarea rows="4" formControlName="recomendacionGeneral"></textarea>
-        </label>
+        <label class="cols-full"><span>Falla reportada</span><textarea pTextarea rows="4" formControlName="fallaReportada"></textarea></label>
+        <label class="cols-full"><span>Síntomas reportados</span><textarea pTextarea rows="3" formControlName="sintomasReportados"></textarea></label>
+        <label class="cols-full"><span>Ruidos reportados</span><textarea pTextarea rows="3" formControlName="ruidosReportados"></textarea></label>
+        <label class="cols-full"><span>Detalle del cliente</span><textarea pTextarea rows="4" formControlName="detalleCliente"></textarea></label>
+        <label class="cols-full"><span>Diagnóstico general</span><textarea pTextarea rows="4" formControlName="diagnosticoGeneral"></textarea></label>
+        <label class="cols-full"><span>Recomendación general</span><textarea pTextarea rows="4" formControlName="recomendacionGeneral"></textarea></label>
       </div>
     </section>
 
@@ -187,7 +167,6 @@
             <span>Valor</span>
             <span></span>
           </div>
-
           <div class="attrRow" *ngFor="let row of atributosRows.controls; let i = index" [formGroup]="row">
             <input pInputText formControlName="key" placeholder="ej: prioridad">
             <input pInputText formControlName="value" placeholder="ej: alta">
@@ -199,27 +178,15 @@
   </form>
 </app-vehiculos-form-drawer>
 
-<p-dialog
-  [visible]="clientePickerVisible()"
-  (visibleChange)="clientePickerVisible.set($event)"
-  [modal]="true"
-  [closable]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '56rem' }"
-  header="Seleccionar cliente">
+<p-dialog [visible]="clientePickerVisible()" (visibleChange)="clientePickerVisible.set($event)" [modal]="true" [closable]="true" [dismissableMask]="true" [style]="{ width: '56rem' }" header="Seleccionar cliente">
   <div class="pickerDialog">
     <div class="pickerToolbar">
       <div class="searchBox">
         <i class="pi pi-search"></i>
-        <input
-          pInputText
-          [ngModel]="clientesBuscar()"
-          (ngModelChange)="clientesBuscar.set($event ?? '')"
-          [ngModelOptions]="{ standalone: true }"
-          placeholder="Buscar por identificación o nombre..."
-          (keyup.enter)="buscarClientes()">
+        <input pInputText [ngModel]="clientesBuscar()" (ngModelChange)="clientesBuscar.set($event ?? '')" [ngModelOptions]="{ standalone: true }" placeholder="Buscar por identificación o nombre..." (keyup.enter)="buscarClientes()">
       </div>
       <button pButton type="button" severity="secondary" label="Buscar" (click)="buscarClientes()"></button>
+      <button pButton type="button" icon="pi pi-plus" label="Crear cliente" (click)="abrirCrearCliente()"></button>
     </div>
 
     <div class="pickerLoading" *ngIf="clienteBuscando()">Buscando clientes...</div>
@@ -232,30 +199,67 @@
         </div>
       </button>
 
-      <div class="emptyInline" *ngIf="clientesResultados().length === 0">No hay clientes para mostrar.</div>
+      <div class="emptyInline" *ngIf="clientesResultados().length === 0">
+        No se encontraron clientes. Puedes crearlo aquí mismo.
+      </div>
     </div>
   </div>
 </p-dialog>
 
-<p-dialog
-  [visible]="usuarioPickerVisible()"
-  (visibleChange)="usuarioPickerVisible.set($event)"
-  [modal]="true"
-  [closable]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '56rem' }"
-  header="Seleccionar usuario responsable">
+<p-dialog [visible]="clienteCreateVisible()" (visibleChange)="clienteCreateVisible.set($event)" [modal]="true" [closable]="true" [dismissableMask]="true" [style]="{ width: '48rem' }" header="Crear cliente">
+  <form class="vehForm" [formGroup]="clienteCreateForm">
+    <div class="grid cols-2">
+      <label><span>Identificación</span><input pInputText formControlName="ruc"></label>
+      <label><span>Nombre / razón social</span><input pInputText formControlName="nombre"></label>
+      <label><span>Celular</span><input pInputText formControlName="movil"></label>
+      <label><span>Teléfono</span><input pInputText formControlName="telefono"></label>
+      <label><span>Email</span><input pInputText formControlName="email"></label>
+      <label><span>Dirección</span><input pInputText formControlName="direccion"></label>
+      <label class="cols-full"><span>Observación</span><textarea pTextarea rows="3" formControlName="observacion"></textarea></label>
+    </div>
+    <div class="dialogFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar" (click)="clienteCreateVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Crear cliente" [loading]="clienteCreateSaving()" (click)="crearClienteInline()"></button>
+    </div>
+  </form>
+</p-dialog>
+
+<p-dialog [visible]="vehiculoCreateVisible()" (visibleChange)="vehiculoCreateVisible.set($event)" [modal]="true" [closable]="true" [dismissableMask]="true" [style]="{ width: '58rem' }" header="Agregar vehículo al cliente">
+  <form class="vehForm" [formGroup]="vehiculoCreateForm">
+    <div class="grid cols-2">
+      <label>
+        <span>Tipo de vehículo</span>
+        <select formControlName="idVehTipoVehiculoFk">
+          <option [ngValue]="null">Selecciona un tipo</option>
+          <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">{{ tipo.tipoVehiculo || ('Tipo ' + tipo.idVehTipoVehiculo) }}</option>
+        </select>
+      </label>
+      <label><span>Placa</span><input pInputText formControlName="placa"></label>
+      <label><span>Marca</span><input pInputText formControlName="marca"></label>
+      <label><span>Modelo</span><input pInputText formControlName="modelo"></label>
+      <label><span>Año</span><input pInputText type="number" formControlName="anio"></label>
+      <label><span>Color</span><input pInputText formControlName="color"></label>
+      <label><span>Número chasis</span><input pInputText formControlName="numeroChasis"></label>
+      <label><span>Número motor</span><input pInputText formControlName="numeroMotor"></label>
+      <label><span>Cilindraje</span><input pInputText formControlName="cilindraje"></label>
+      <label><span>Combustible</span><input pInputText formControlName="combustible"></label>
+      <label><span>Transmisión</span><input pInputText formControlName="transmision"></label>
+      <label><span>Kilometraje</span><input pInputText type="number" formControlName="kilometraje"></label>
+      <label class="cols-full"><span>Observaciones</span><textarea pTextarea rows="3" formControlName="observaciones"></textarea></label>
+    </div>
+    <div class="dialogFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar" (click)="vehiculoCreateVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Crear vehículo" [loading]="vehiculoCreateSaving()" (click)="crearVehiculoInline()"></button>
+    </div>
+  </form>
+</p-dialog>
+
+<p-dialog [visible]="usuarioPickerVisible()" (visibleChange)="usuarioPickerVisible.set($event)" [modal]="true" [closable]="true" [dismissableMask]="true" [style]="{ width: '56rem' }" header="Seleccionar usuario responsable">
   <div class="pickerDialog">
     <div class="pickerToolbar">
       <div class="searchBox">
         <i class="pi pi-search"></i>
-        <input
-          pInputText
-          [ngModel]="usuariosBuscar()"
-          (ngModelChange)="usuariosBuscar.set($event ?? '')"
-          [ngModelOptions]="{ standalone: true }"
-          placeholder="Buscar usuario..."
-          (keyup.enter)="buscarUsuarios()">
+        <input pInputText [ngModel]="usuariosBuscar()" (ngModelChange)="usuariosBuscar.set($event ?? '')" [ngModelOptions]="{ standalone: true }" placeholder="Buscar usuario..." (keyup.enter)="buscarUsuarios()">
       </div>
       <button pButton type="button" severity="secondary" label="Buscar" (click)="buscarUsuarios()"></button>
     </div>
@@ -269,7 +273,6 @@
           <span>ID {{ user.idSegUsuario }}</span>
         </div>
       </button>
-
       <div class="emptyInline" *ngIf="usuariosResultados().length === 0">No hay usuarios para mostrar.</div>
     </div>
   </div>
