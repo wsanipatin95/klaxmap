@@ -1,10 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { VehiculosEmptyStateComponent } from '../../../../components/empty-state/empty-state.component';
 import { VehiculoVistaCanvasComponent } from '../../../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import {
+  VehCheckListVehiculo,
   VehCobro,
   VehFactura,
   VehFacturacionWorkflowResultado,
@@ -29,12 +32,33 @@ type OrdenDetailTab =
   | 'autorizaciones'
   | 'comercial';
 
+export type ChecklistBulkRow = {
+  relationId: number;
+  label: string;
+  checked: boolean;
+  observaciones: string;
+  existingChecklistId: number | null;
+  changed: boolean;
+};
+
+type ChecklistEditorRow = {
+  relationId: number;
+  label: string;
+  checked: boolean;
+  observaciones: string;
+  existingChecklistId: number | null;
+  originalChecked: boolean;
+  originalObservaciones: string;
+};
+
 @Component({
   selector: 'app-orden-detail-panel',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ButtonModule,
+    InputTextModule,
     TagModule,
     VehiculosEmptyStateComponent,
     VehiculoVistaCanvasComponent,
@@ -42,7 +66,7 @@ type OrdenDetailTab =
   templateUrl: './orden-detail-panel.component.html',
   styleUrl: './orden-detail-panel.component.scss',
 })
-export class OrdenDetailPanelComponent {
+export class OrdenDetailPanelComponent implements OnChanges {
   @Input() orden: VehOrdenTrabajo | null = null;
   @Input() clienteNombre = 'Cliente';
   @Input() vehiculoNombre = 'Vehículo';
@@ -50,6 +74,7 @@ export class OrdenDetailPanelComponent {
   @Input() responsableTecnicoNombre = 'No asignado';
 
   @Input() checklist: VehOrdenTrabajoCheckList[] = [];
+  @Input() checklistOpciones: VehCheckListVehiculo[] = [];
   @Input() trabajos: VehOrdenTrabajoTrabajo[] = [];
   @Input() hallazgos: VehOrdenTrabajoHallazgo[] = [];
   @Input() selectedHallazgo: VehOrdenTrabajoHallazgo | null = null;
@@ -70,7 +95,7 @@ export class OrdenDetailPanelComponent {
   @Input() trabajoLabelMap: Record<number, string> = {};
   @Input() articuloLabelMap: Record<number, string> = {};
 
-  @Output() openChecklist = new EventEmitter<void>();
+  @Output() saveChecklist = new EventEmitter<ChecklistBulkRow[]>();
   @Output() openTrabajo = new EventEmitter<void>();
   @Output() openHallazgo = new EventEmitter<void>();
   @Output() openRepuesto = new EventEmitter<void>();
@@ -88,6 +113,13 @@ export class OrdenDetailPanelComponent {
   @Output() pointMarked = new EventEmitter<{ x: number; y: number }>();
 
   activeTab = signal<OrdenDetailTab>('resumen');
+  checklistRows = signal<ChecklistEditorRow[]>([]);
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['checklist'] || changes['checklistOpciones'] || changes['checklistLabelMap']) {
+      this.rebuildChecklistRows();
+    }
+  }
 
   setTab(tab: OrdenDetailTab) {
     this.activeTab.set(tab);
@@ -167,6 +199,76 @@ export class OrdenDetailPanelComponent {
     if (typeof value === 'number') return value === 1;
     if (typeof value === 'string') return ['1', 'true', 'si', 'sí'].includes(value.toLowerCase());
     return false;
+  }
+
+  allChecklistChecked(): boolean {
+    const rows = this.checklistRows();
+    return rows.length > 0 && rows.every((row) => row.checked);
+  }
+
+  onToggleAllChecklist(checked: boolean) {
+    const next = this.checklistRows().map((row) => ({
+      ...row,
+      checked,
+    }));
+    this.checklistRows.set(next);
+  }
+
+  onToggleChecklistRow(relationId: number, checked: boolean) {
+    const next = this.checklistRows().map((row) =>
+      row.relationId === relationId ? { ...row, checked } : row,
+    );
+    this.checklistRows.set(next);
+  }
+
+  onChecklistObservationChange(relationId: number, observaciones: string) {
+    const next = this.checklistRows().map((row) =>
+      row.relationId === relationId ? { ...row, observaciones } : row,
+    );
+    this.checklistRows.set(next);
+  }
+
+  saveChecklistTable() {
+    const payload: ChecklistBulkRow[] = this.checklistRows().map((row) => ({
+      relationId: row.relationId,
+      label: row.label,
+      checked: row.checked,
+      observaciones: row.observaciones,
+      existingChecklistId: row.existingChecklistId,
+      changed:
+        row.checked !== row.originalChecked ||
+        row.observaciones.trim() !== row.originalObservaciones.trim(),
+    }));
+
+    this.saveChecklist.emit(payload);
+  }
+
+  trackByChecklistRow = (_index: number, row: ChecklistEditorRow) => row.relationId;
+
+  private rebuildChecklistRows() {
+    const existingByRelation = new Map<number, VehOrdenTrabajoCheckList>();
+
+    for (const item of this.checklist) {
+      existingByRelation.set(item.idVehVehiculoCheckListVehiculoFk, item);
+    }
+
+    const rows: ChecklistEditorRow[] = (this.checklistOpciones ?? []).map((rel) => {
+      const existing = existingByRelation.get(rel.idVehVehiculoCheckListVehiculo);
+      const checked = (existing?.estadoCheckList || '').toUpperCase() === 'OK';
+      const observaciones = existing?.observaciones || '';
+
+      return {
+        relationId: rel.idVehVehiculoCheckListVehiculo,
+        label: this.checklistLabel(rel.idVehVehiculoCheckListVehiculo),
+        checked,
+        observaciones,
+        existingChecklistId: existing?.idVehOrdenTrabajoCheckList ?? null,
+        originalChecked: checked,
+        originalObservaciones: observaciones,
+      };
+    });
+
+    this.checklistRows.set(rows);
   }
 
   private guessMimeType(base64: string) {

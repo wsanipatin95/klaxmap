@@ -64,20 +64,21 @@
   <section class="workspaceCard">
     <app-orden-detail-panel [orden]="selectedOrden()" [clienteNombre]="clienteNombreSeleccionado()"
       [vehiculoNombre]="vehiculoNombreSeleccionado()" [responsableRecepcionNombre]="responsableRecepcionNombre()"
-      [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()" [trabajos]="trabajos()"
-      [hallazgos]="hallazgos()" [selectedHallazgo]="selectedHallazgo()" [marcas]="marcas()" [fotos]="fotos()"
-      [repuestos]="repuestos()" [autorizaciones]="autorizaciones()" [ordenFacturas]="ordenFacturas()"
-      [vistas]="vistas()" [selectedVista]="selectedVista()" [facturasOt]="facturasOt()"
-      [selectedFacturaOt]="selectedFacturaOt()" [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()"
-      [workflowResultado]="workflowResultado()" [checklistLabelMap]="checklistLabelMap()"
-      [trabajoLabelMap]="trabajoLabelMap()" [articuloLabelMap]="articuloLabelMap()"
-      (openChecklist)="abrirChild('checklist')" (openTrabajo)="abrirChild('trabajo')"
-      (openHallazgo)="abrirChild('hallazgo')" (openRepuesto)="abrirChild('repuesto')"
-      (openAutorizacion)="abrirChild('autorizacion')" (openFoto)="abrirChild('foto')"
-      (openWorkflow)="abrirComercialDrawer('workflow')" (openFactura)="abrirComercialDrawer('factura')"
-      (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')"
-      (selectHallazgo)="seleccionarHallazgo($event)" (selectVista)="seleccionarVista($event)"
-      (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)">
+      [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()"
+      [checklistOpciones]="checklistOpciones()" [trabajos]="trabajos()" [hallazgos]="hallazgos()"
+      [selectedHallazgo]="selectedHallazgo()" [marcas]="marcas()" [fotos]="fotos()" [repuestos]="repuestos()"
+      [autorizaciones]="autorizaciones()" [ordenFacturas]="ordenFacturas()" [vistas]="vistas()"
+      [selectedVista]="selectedVista()" [facturasOt]="facturasOt()" [selectedFacturaOt]="selectedFacturaOt()"
+      [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
+      [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
+      [articuloLabelMap]="articuloLabelMap()" (saveChecklist)="guardarChecklistMasivo($event)"
+      (openTrabajo)="abrirChild('trabajo')" (openHallazgo)="abrirChild('hallazgo')"
+      (openRepuesto)="abrirChild('repuesto')" (openAutorizacion)="abrirChild('autorizacion')"
+      (openFoto)="abrirChild('foto')" (openWorkflow)="abrirComercialDrawer('workflow')"
+      (openFactura)="abrirComercialDrawer('factura')" (openCobro)="abrirComercialDrawer('cobro')"
+      (openContabilizar)="abrirComercialDrawer('contabilizar')" (selectHallazgo)="seleccionarHallazgo($event)"
+      (selectVista)="seleccionarVista($event)" (selectFactura)="seleccionarFacturaOt($event)"
+      (pointMarked)="createMarcaDesdeCanvas($event)">
     </app-orden-detail-panel>
   </section>
 </div>

@@ -77,7 +77,14 @@ type AtributoRowForm = FormGroup<{
   key: FormControl<string>;
   value: FormControl<string>;
 }>;
-
+type ChecklistBulkRow = {
+  relationId: number;
+  label: string;
+  checked: boolean;
+  observaciones: string;
+  existingChecklistId: number | null;
+  changed: boolean;
+};
 @Component({
   selector: 'app-vehiculos-ordenes',
   standalone: true,
@@ -1722,6 +1729,71 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
           this.drawerVisible.set(true);
         },
+      });
+  }
+  guardarChecklistMasivo(rows: ChecklistBulkRow[]) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
+
+    const changes = rows.filter((row) => row.changed);
+
+    if (!changes.length) {
+      this.notify.warn('Sin cambios', 'No hay cambios pendientes por guardar en el checklist.');
+      return;
+    }
+
+    const operations = changes
+      .map((row) => {
+        const observaciones = row.observaciones?.trim() || null;
+        const estadoCheckList = row.checked ? 'OK' : 'PENDIENTE';
+
+        if (row.existingChecklistId) {
+          return this.repo.editarOrdenCheckList({
+            idVehOrdenTrabajoCheckList: row.existingChecklistId,
+            cambios: {
+              estadoCheckList,
+              observaciones,
+            },
+          });
+        }
+
+        if (!row.checked && !observaciones) {
+          return null;
+        }
+
+        return this.repo.crearOrdenCheckList({
+          idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+          idVehVehiculoCheckListVehiculoFk: row.relationId,
+          estadoCheckList,
+          observaciones,
+        });
+      })
+      .filter((op): op is Observable<any> => !!op);
+
+    if (!operations.length) {
+      this.notify.success('Checklist actualizado', 'No hubo registros nuevos que guardar.');
+      this.cargarDetalle(orden);
+      return;
+    }
+
+    this.saving.set(true);
+    forkJoin(operations)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Checklist guardado', 'Se actualizó el checklist de recepción.');
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo guardar el checklist', err?.message),
       });
   }
 }

@@ -39,12 +39,18 @@
     <section class="tabRail">
       <div class="tabRail__scroll">
         <button class="tabButton" [class.active]="activeTab()==='resumen'" (click)="setTab('resumen')">Resumen</button>
-        <button class="tabButton" [class.active]="activeTab()==='checklist'" (click)="setTab('checklist')">Checklist</button>
-        <button class="tabButton" [class.active]="activeTab()==='trabajos'" (click)="setTab('trabajos')">Trabajos</button>
-        <button class="tabButton" [class.active]="activeTab()==='hallazgos'" (click)="setTab('hallazgos')">Hallazgos</button>
-        <button class="tabButton" [class.active]="activeTab()==='repuestos'" (click)="setTab('repuestos')">Repuestos</button>
-        <button class="tabButton" [class.active]="activeTab()==='autorizaciones'" (click)="setTab('autorizaciones')">Autorizaciones</button>
-        <button class="tabButton" [class.active]="activeTab()==='comercial'" (click)="setTab('comercial')">Comercial</button>
+        <button class="tabButton" [class.active]="activeTab()==='checklist'"
+          (click)="setTab('checklist')">Checklist</button>
+        <button class="tabButton" [class.active]="activeTab()==='trabajos'"
+          (click)="setTab('trabajos')">Trabajos</button>
+        <button class="tabButton" [class.active]="activeTab()==='hallazgos'"
+          (click)="setTab('hallazgos')">Hallazgos</button>
+        <button class="tabButton" [class.active]="activeTab()==='repuestos'"
+          (click)="setTab('repuestos')">Repuestos</button>
+        <button class="tabButton" [class.active]="activeTab()==='autorizaciones'"
+          (click)="setTab('autorizaciones')">Autorizaciones</button>
+        <button class="tabButton" [class.active]="activeTab()==='comercial'"
+          (click)="setTab('comercial')">Comercial</button>
       </div>
     </section>
 
@@ -62,7 +68,8 @@
       </div>
 
       <div class="metricGrid">
-        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
+        </article>
         <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
         <article class="metric"><span>Autorizaciones</span><strong>{{ autorizaciones.length }}</strong></article>
@@ -72,34 +79,55 @@
         <article class="kvItem"><span>Ingreso</span><strong>{{ orden.fechaIngreso || '-' }}</strong></article>
         <article class="kvItem"><span>Promesa</span><strong>{{ orden.fechaPrometida || '-' }}</strong></article>
         <article class="kvItem"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong></article>
-        <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{ orden.nivelBateria || '-' }}</strong></article>
+        <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{
+            orden.nivelBateria || '-' }}</strong></article>
       </div>
     </section>
 
     <section class="panelCard" *ngIf="activeTab()==='checklist'">
-      <div class="sectionHead">
+      <div class="sectionHead sectionHead--compact">
         <h4>Checklist de recepción</h4>
-        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar" (click)="openChecklist.emit()"></button>
+        <button pButton type="button" icon="pi pi-save" size="small" label="Guardar"
+          [disabled]="!checklistRows().length" (click)="saveChecklistTable()">
+        </button>
       </div>
 
-      <div class="jiraLikeList" *ngIf="checklist.length; else noChecklist">
-        <article class="jiraLikeRow compact" *ngFor="let item of checklist">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ checklistLabel(item.idVehVehiculoCheckListVehiculoFk) }}</div>
-              <div class="secondaryCell">Registro {{ item.fecGen || item.idVehOrdenTrabajoCheckList }}</div>
-            </div>
-            <p-tag [value]="item.estadoCheckList || 'PENDIENTE'" severity="secondary"></p-tag>
+      <div class="checklistBoard" *ngIf="checklistRows().length; else noChecklist">
+        <div class="checklistHead">
+          <div class="checkCell checkCell--checkbox">
+            <input type="checkbox" [checked]="allChecklistChecked()"
+              (change)="onToggleAllChecklist($any($event.target).checked)">
           </div>
-          <div class="secondaryCell">{{ item.observaciones || 'Sin observaciones' }}</div>
-        </article>
+          <div class="checkCell checkCell--item">Checklist</div>
+          <div class="checkCell checkCell--obs">Observación</div>
+        </div>
+
+        <div class="checklistBody">
+          <div class="checklistRow" *ngFor="let row of checklistRows(); trackBy: trackByChecklistRow">
+            <div class="checkCell checkCell--checkbox">
+              <input type="checkbox" [checked]="row.checked"
+                (change)="onToggleChecklistRow(row.relationId, $any($event.target).checked)">
+            </div>
+
+            <div class="checkCell checkCell--item">
+              <strong>{{ row.label }}</strong>
+            </div>
+
+            <div class="checkCell checkCell--obs">
+              <input pInputText [ngModel]="row.observaciones" [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="onChecklistObservationChange(row.relationId, $event ?? '')"
+                placeholder="Observación opcional">
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="panelCard" *ngIf="activeTab()==='trabajos'">
       <div class="sectionHead">
         <h4>Trabajos</h4>
-        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar" (click)="openTrabajo.emit()"></button>
+        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar"
+          (click)="openTrabajo.emit()"></button>
       </div>
 
       <div class="jiraLikeList" *ngIf="trabajos.length; else noTrabajos">
@@ -120,15 +148,15 @@
       <div class="sectionHead">
         <h4>Hallazgos y evidencias</h4>
         <div class="actionWrap">
-          <button pButton type="button" icon="pi pi-plus" size="small" label="Hallazgo" (click)="openHallazgo.emit()"></button>
-          <button pButton type="button" icon="pi pi-camera" size="small" severity="secondary" label="Foto" (click)="openFoto.emit()"></button>
+          <button pButton type="button" icon="pi pi-plus" size="small" label="Hallazgo"
+            (click)="openHallazgo.emit()"></button>
+          <button pButton type="button" icon="pi pi-camera" size="small" severity="secondary" label="Foto"
+            (click)="openFoto.emit()"></button>
         </div>
       </div>
 
       <div class="jiraLikeList" *ngIf="hallazgos.length; else noHallazgos">
-        <article
-          class="jiraLikeRow compact"
-          *ngFor="let item of hallazgos"
+        <article class="jiraLikeRow compact" *ngFor="let item of hallazgos"
           [class.selected]="selectedHallazgo?.idVehOrdenTrabajoHallazgo === item.idVehOrdenTrabajoHallazgo"
           (click)="selectHallazgo.emit(item)">
           <div class="rowHeader">
@@ -136,10 +164,12 @@
               <div class="primaryCell">{{ item.descripcion }}</div>
               <div class="secondaryCell">
                 {{ item.tipoHallazgo || 'HALLAZGO' }} · {{ item.severidad || 'SIN SEVERIDAD' }}
-                <ng-container *ngIf="item.idVehOrdenTrabajoTrabajoFk"> · {{ trabajoLabel(item.idVehOrdenTrabajoTrabajoFk) }}</ng-container>
+                <ng-container *ngIf="item.idVehOrdenTrabajoTrabajoFk"> · {{
+                  trabajoLabel(item.idVehOrdenTrabajoTrabajoFk) }}</ng-container>
               </div>
             </div>
-            <p-tag [value]="item.estadoHallazgo || 'REPORTADO'" [severity]="severityEstado(item.estadoHallazgo)"></p-tag>
+            <p-tag [value]="item.estadoHallazgo || 'REPORTADO'"
+              [severity]="severityEstado(item.estadoHallazgo)"></p-tag>
           </div>
         </article>
       </div>
@@ -152,9 +182,7 @@
           </div>
 
           <div class="jiraLikeList" *ngIf="vistas.length; else noVistas">
-            <article
-              class="jiraLikeRow compact"
-              *ngFor="let vista of vistas"
+            <article class="jiraLikeRow compact" *ngFor="let vista of vistas"
               [class.selected]="selectedVista?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
               (click)="selectVista.emit(vista)">
               <div class="primaryCell">{{ vista.vista }}</div>
@@ -164,10 +192,7 @@
         </section>
 
         <section class="panelCard panelCard--nested canvasCard">
-          <app-vehiculo-vista-canvas
-            [vista]="selectedVista"
-            [marcas]="marcas"
-            [interactive]="true"
+          <app-vehiculo-vista-canvas [vista]="selectedVista" [marcas]="marcas" [interactive]="true"
             (pointMarked)="pointMarked.emit($event)">
           </app-vehiculo-vista-canvas>
         </section>
@@ -205,7 +230,8 @@
     <section class="panelCard" *ngIf="activeTab()==='repuestos'">
       <div class="sectionHead">
         <h4>Repuestos</h4>
-        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar" (click)="openRepuesto.emit()"></button>
+        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar"
+          (click)="openRepuesto.emit()"></button>
       </div>
 
       <div class="jiraLikeList" *ngIf="repuestos.length; else noRepuestos">
@@ -213,9 +239,11 @@
           <div class="rowHeader">
             <div>
               <div class="primaryCell">{{ articuloLabel(item.art) }}</div>
-              <div class="secondaryCell">{{ item.cantidad }} × {{ item.precioUnitario }} · {{ item.detalleInstalacion || item.motivoCambio || 'Sin detalle' }}</div>
+              <div class="secondaryCell">{{ item.cantidad }} × {{ item.precioUnitario }} · {{ item.detalleInstalacion ||
+                item.motivoCambio || 'Sin detalle' }}</div>
             </div>
-            <p-tag [value]="item.idFacVentaFk ? 'Facturado' : 'Pendiente'" [severity]="item.idFacVentaFk ? 'success' : 'warn'"></p-tag>
+            <p-tag [value]="item.idFacVentaFk ? 'Facturado' : 'Pendiente'"
+              [severity]="item.idFacVentaFk ? 'success' : 'warn'"></p-tag>
           </div>
         </article>
       </div>
@@ -224,7 +252,8 @@
     <section class="panelCard" *ngIf="activeTab()==='autorizaciones'">
       <div class="sectionHead">
         <h4>Autorizaciones</h4>
-        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar" (click)="openAutorizacion.emit()"></button>
+        <button pButton type="button" icon="pi pi-plus" size="small" label="Agregar"
+          (click)="openAutorizacion.emit()"></button>
       </div>
 
       <div class="jiraLikeList" *ngIf="autorizaciones.length; else noAutorizaciones">
@@ -232,9 +261,11 @@
           <div class="rowHeader">
             <div>
               <div class="primaryCell">{{ item.descripcion || item.tipoAutorizacion }}</div>
-              <div class="secondaryCell">{{ item.tipoAutorizacion || 'ADICIONAL' }} · {{ item.fechaRespuesta || '-' }}</div>
+              <div class="secondaryCell">{{ item.tipoAutorizacion || 'ADICIONAL' }} · {{ item.fechaRespuesta || '-' }}
+              </div>
             </div>
-            <p-tag [value]="item.estadoAutorizacion || 'PENDIENTE'" [severity]="severityEstado(item.estadoAutorizacion)"></p-tag>
+            <p-tag [value]="item.estadoAutorizacion || 'PENDIENTE'"
+              [severity]="severityEstado(item.estadoAutorizacion)"></p-tag>
           </div>
         </article>
       </div>
@@ -244,16 +275,21 @@
       <div class="sectionHead">
         <h4>Comercial</h4>
         <div class="actionWrap">
-          <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow" (click)="openWorkflow.emit()"></button>
-          <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura" (click)="openFactura.emit()"></button>
-          <button pButton type="button" icon="pi pi-wallet" size="small" severity="secondary" label="Cobro" [disabled]="!selectedFacturaOt" (click)="openCobro.emit()"></button>
-          <button pButton type="button" icon="pi pi-chart-line" size="small" severity="secondary" label="Contabilizar" [disabled]="!selectedFacturaOt" (click)="openContabilizar.emit()"></button>
+          <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow"
+            (click)="openWorkflow.emit()"></button>
+          <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura"
+            (click)="openFactura.emit()"></button>
+          <button pButton type="button" icon="pi pi-wallet" size="small" severity="secondary" label="Cobro"
+            [disabled]="!selectedFacturaOt" (click)="openCobro.emit()"></button>
+          <button pButton type="button" icon="pi pi-chart-line" size="small" severity="secondary" label="Contabilizar"
+            [disabled]="!selectedFacturaOt" (click)="openContabilizar.emit()"></button>
         </div>
       </div>
 
       <div class="metricGrid">
         <article class="metric"><span>Repuestos OT</span><strong>{{ repuestos.length }}</strong></article>
-        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
+        </article>
         <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
       </div>
@@ -266,9 +302,7 @@
           </div>
 
           <div class="jiraLikeList" *ngIf="facturasOt.length; else noFacturasOt">
-            <article
-              class="jiraLikeRow compact"
-              *ngFor="let factura of facturasOt"
+            <article class="jiraLikeRow compact" *ngFor="let factura of facturasOt"
               [class.selected]="selectedFacturaOt?.idFacVenta === factura.idFacVenta"
               (click)="selectFactura.emit(factura)">
               <div class="rowHeader">
@@ -309,7 +343,8 @@
                 <h4>Detalle de factura</h4>
                 <div class="secondaryCell">Número {{ facturaNumber(facturaActual) }}</div>
               </div>
-              <p-tag [value]="facturaActual.sriEstado || 'P'" [severity]="severityEstado(facturaActual.sriEstado)"></p-tag>
+              <p-tag [value]="facturaActual.sriEstado || 'P'"
+                [severity]="severityEstado(facturaActual.sriEstado)"></p-tag>
             </div>
 
             <div class="kvGrid">
@@ -317,8 +352,10 @@
               <article class="kvItem"><span>Entrada</span><strong>{{ facturaActual.entrada || 0 }}</strong></article>
               <article class="kvItem"><span>Saldo</span><strong>{{ facturaActual.cxcDeuda || 0 }}</strong></article>
               <article class="kvItem"><span>IVA</span><strong>{{ facturaActual.iva || 0 }}</strong></article>
-              <article class="kvItem"><span>Base imponible</span><strong>{{ facturaActual.baseImponible || 0 }}</strong></article>
-              <article class="kvItem"><span>Fecha emisión</span><strong>{{ facturaActual.fecEmi || '-' }}</strong></article>
+              <article class="kvItem"><span>Base imponible</span><strong>{{ facturaActual.baseImponible || 0 }}</strong>
+              </article>
+              <article class="kvItem"><span>Fecha emisión</span><strong>{{ facturaActual.fecEmi || '-' }}</strong>
+              </article>
             </div>
 
             <section class="panelCard panelCard--nested">
@@ -390,13 +427,17 @@
         <div class="metricGrid">
           <article class="metric"><span>Total</span><strong>{{ workflow.total || 0 }}</strong></article>
           <article class="metric"><span>Pago inicial</span><strong>{{ workflow.pagoInicial || 0 }}</strong></article>
-          <article class="metric"><span>Saldo pendiente</span><strong>{{ workflow.saldoPendiente || 0 }}</strong></article>
-          <article class="metric"><span>Estado sugerido OT</span><strong>{{ workflow.estadoOrdenSugerido || '-' }}</strong></article>
+          <article class="metric"><span>Saldo pendiente</span><strong>{{ workflow.saldoPendiente || 0 }}</strong>
+          </article>
+          <article class="metric"><span>Estado sugerido OT</span><strong>{{ workflow.estadoOrdenSugerido || '-'
+              }}</strong></article>
         </div>
 
         <div class="metricGrid metricGrid--secondary">
-          <article class="metric"><span>Factura generada</span><strong>{{ workflow.idFacVenta || '-' }}</strong></article>
-          <article class="metric"><span>Cobro generado</span><strong>{{ workflow.idFacVentaCobro || '-' }}</strong></article>
+          <article class="metric"><span>Factura generada</span><strong>{{ workflow.idFacVenta || '-' }}</strong>
+          </article>
+          <article class="metric"><span>Cobro generado</span><strong>{{ workflow.idFacVentaCobro || '-' }}</strong>
+          </article>
           <article class="metric"><span>Tra factura</span><strong>{{ workflow.traFactura || '-' }}</strong></article>
           <article class="metric"><span>Tra cobro</span><strong>{{ workflow.traCobro || '-' }}</strong></article>
         </div>
@@ -414,7 +455,8 @@
                   <div class="primaryCell">{{ articuloLabel(item['art']) }}</div>
                   <div class="secondaryCell">{{ item['detalle'] || 'Sin detalle' }}</div>
                 </div>
-                <div class="secondaryCell">{{ item['unidades'] ?? item['cantidad'] ?? 0 }} × {{ item['valuni'] ?? 0 }}</div>
+                <div class="secondaryCell">{{ item['unidades'] ?? item['cantidad'] ?? 0 }} × {{ item['valuni'] ?? 0 }}
+                </div>
               </div>
             </article>
           </div>
@@ -425,57 +467,67 @@
 </ng-container>
 
 <ng-template #noSelection>
-  <app-vehiculos-empty-state
-    icon="pi pi-receipt"
-    title="Selecciona una OT"
+  <app-vehiculos-empty-state icon="pi pi-receipt" title="Selecciona una OT"
     subtitle="Aquí verás la operación de la orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noChecklist>
-  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist" subtitle="Agrega ítems de recepción."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist"
+    subtitle="Agrega ítems de recepción."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noTrabajos>
-  <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajos" subtitle="Registra tareas del técnico."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajos"
+    subtitle="Registra tareas del técnico."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noHallazgos>
-  <app-vehiculos-empty-state icon="pi pi-exclamation-circle" title="Sin hallazgos" subtitle="Registra daños o fallas."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-exclamation-circle" title="Sin hallazgos"
+    subtitle="Registra daños o fallas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noVistas>
-  <app-vehiculos-empty-state icon="pi pi-images" title="Sin vistas" subtitle="No hay vistas configuradas."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-images" title="Sin vistas"
+    subtitle="No hay vistas configuradas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFotos>
-  <app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos"
+    subtitle="Registra evidencias."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noRepuestos>
-  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos" subtitle="Agrega partes o consumibles."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos"
+    subtitle="Agrega partes o consumibles."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noAutorizaciones>
-  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones" subtitle="Registra aprobaciones del cliente."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones"
+    subtitle="Registra aprobaciones del cliente."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturasOt>
-  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas de la OT" subtitle="Genera workflow o factura manual."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas de la OT"
+    subtitle="Genera workflow o factura manual."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaSeleccionada>
-  <app-vehiculos-empty-state icon="pi pi-dollar" title="Selecciona una factura" subtitle="Aquí verás detalle y cobros."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-dollar" title="Selecciona una factura"
+    subtitle="Aquí verás detalle y cobros."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaItems>
-  <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado" subtitle="No se encontraron líneas."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado"
+    subtitle="No se encontraron líneas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCxc>
-  <app-vehiculos-empty-state icon="pi pi-calendar" title="Sin plan CxC" subtitle="No hay cuotas pendientes."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-calendar" title="Sin plan CxC"
+    subtitle="No hay cuotas pendientes."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCobros>
-  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros" subtitle="No existen cobros registrados."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros"
+    subtitle="No existen cobros registrados."></app-vehiculos-empty-state>
 </ng-template>
