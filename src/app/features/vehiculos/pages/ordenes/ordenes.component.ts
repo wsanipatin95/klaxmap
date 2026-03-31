@@ -10,27 +10,23 @@ import {
   FormGroup,
   Validators,
 } from '@angular/forms';
-import { Observable, finalize, forkJoin } from 'rxjs';
+import { Observable, finalize, forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosWorkbenchShellComponent } from '../../components/workbench-shell/workbench-shell.component';
 import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
-import { OrdenResumenPanelComponent } from '../../components/orden-resumen-panel/orden-resumen-panel.component';
-import { VehiculoVistaCanvasComponent } from '../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
-  CliVehiculo,
   SegUsuarioListadoItem,
   VehArticuloCatalogo,
+  VehCheckList,
   VehCheckListVehiculo,
-  VehCliente,
   VehCobro,
   VehCobroCrearRequest,
   VehFactura,
@@ -59,15 +55,8 @@ import {
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
-
-type OrdenTab =
-  | 'resumen'
-  | 'checklist'
-  | 'trabajos'
-  | 'hallazgos'
-  | 'repuestos'
-  | 'autorizaciones'
-  | 'comercial';
+import { OrdenDetailPanelComponent } from './components/orden-detail-panel/orden-detail-panel.component';
+import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
 
 type ChildDrawerMode =
   | 'trabajo'
@@ -84,8 +73,6 @@ type ComercialDrawerMode =
   | 'cobro'
   | 'contabilizar'
   | null;
-
-type UsuarioPickerTarget = 'recepcion' | 'tecnico' | null;
 
 type AtributoRowForm = FormGroup<{
   key: FormControl<string>;
@@ -104,13 +91,11 @@ type AtributoRowForm = FormGroup<{
     TextareaModule,
     TagModule,
     ConfirmDialogModule,
-    DialogModule,
     VehiculosPageHeaderComponent,
-    VehiculosWorkbenchShellComponent,
     VehiculosFormDrawerComponent,
     VehiculosEmptyStateComponent,
-    OrdenResumenPanelComponent,
-    VehiculoVistaCanvasComponent,
+    OrdenDetailPanelComponent,
+    OrdenMainFormDrawerComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './ordenes.component.html',
@@ -122,28 +107,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   private notify = inject(NotifyService);
   private confirm = inject(VehiculosConfirmService);
   private router = inject(Router);
-
-  readonly TIPO_SERVICIO_OPTIONS = [
-    'REPARACION',
-    'MANTENIMIENTO',
-    'DIAGNOSTICO',
-    'GARANTIA',
-    'REVISION',
-    'INSPECCION',
-    'OTRO',
-  ];
-
-  readonly ESTADO_ORDEN_OPTIONS = [
-    'RECIBIDO',
-    'DIAGNOSTICO',
-    'EN_PROCESO',
-    'EN_ESPERA',
-    'PENDIENTE_APROBACION',
-    'LISTO',
-    'FACTURADO',
-    'ENTREGADO',
-    'ANULADO',
-  ];
 
   readonly ESTADO_CHECKLIST_OPTIONS = ['PENDIENTE', 'OK', 'NO_OK', 'N/A'];
   readonly TIPO_TRABAJO_OPTIONS = ['DIAGNOSTICO', 'REPARACION', 'MANTENIMIENTO', 'INSTALACION', 'PRUEBA', 'OTRO'];
@@ -160,13 +123,15 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   q = '';
   loading = signal(false);
   saving = signal(false);
-  activeTab = signal<OrdenTab>('resumen');
 
   ordenes = signal<VehOrdenTrabajo[]>([]);
   selectedOrden = signal<VehOrdenTrabajo | null>(null);
+  editingOrden = signal<VehOrdenTrabajo | null>(null);
 
   checklist = signal<VehOrdenTrabajoCheckList[]>([]);
   checklistOpciones = signal<VehCheckListVehiculo[]>([]);
+  checklistCatalogo = signal<VehCheckList[]>([]);
+
   trabajos = signal<VehOrdenTrabajoTrabajo[]>([]);
   hallazgos = signal<VehOrdenTrabajoHallazgo[]>([]);
   selectedHallazgo = signal<VehOrdenTrabajoHallazgo | null>(null);
@@ -195,61 +160,20 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   childDirty = signal(false);
   comercialDirty = signal(false);
 
-  editingOrdenId = signal<number | null>(null);
   fotoBase64 = signal<string | null>(null);
   fotoPreview = signal<string | null>(null);
-
-  clientesBuscar = signal('');
-  clientesResultados = signal<VehCliente[]>([]);
-  clienteBuscando = signal(false);
-  clientePickerVisible = signal(false);
-  clienteSeleccionado = signal<VehCliente | null>(null);
-
-  usuariosBuscar = signal('');
-  usuariosResultados = signal<SegUsuarioListadoItem[]>([]);
-  usuarioBuscando = signal(false);
-  usuarioPickerVisible = signal(false);
-  usuarioPickerTarget = signal<UsuarioPickerTarget>(null);
 
   responsableRecepcionSeleccionado = signal<SegUsuarioListadoItem | null>(null);
   responsableTecnicoSeleccionado = signal<SegUsuarioListadoItem | null>(null);
 
-  vehiculosCliente = signal<CliVehiculo[]>([]);
-  vehiculoSeleccionado = signal<CliVehiculo | null>(null);
+  clienteSeleccionadoNombre = signal('Cliente');
+  vehiculoSeleccionadoLabel = signal('Vehículo');
 
-  repuestoArticuloQuery = signal('');
-  repuestoArticulos = signal<VehArticuloCatalogo[]>([]);
-  repuestoArticuloLoading = signal(false);
-  repuestoArticuloPickerVisible = signal(false);
+  articuloCache = signal<Record<number, VehArticuloCatalogo>>({});
 
-  private articuloSearchTimer: ReturnType<typeof setTimeout> | null = null;
-
-  private initialMainSnapshot = '';
   private initialChildSnapshot = '';
   private initialComercialSnapshot = '';
-
-  form = this.fb.group({
-    dni: [null as number | null, Validators.required],
-    idCliVehiculoFk: [null as number | null, Validators.required],
-    tipoServicio: ['REPARACION', Validators.required],
-    estadoOrden: ['RECIBIDO', Validators.required],
-    fechaIngreso: [''],
-    fechaPrometida: [''],
-    kilometrajeIngreso: [null as number | null],
-    nivelCombustible: [''],
-    nivelBateria: [''],
-    fallaReportada: [''],
-    sintomasReportados: [''],
-    ruidosReportados: [''],
-    detalleCliente: [''],
-    accesoriosEntregados: [''],
-    condicionIngreso: [''],
-    diagnosticoGeneral: [''],
-    recomendacionGeneral: [''],
-    responsableRecepcion: [null as number | null],
-    responsableTecnico: [null as number | null],
-    observaciones: [''],
-  });
+  private articuloSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   checklistForm = this.fb.group({
     idVehVehiculoCheckListVehiculoFk: [null as number | null, Validators.required],
@@ -386,10 +310,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     conceptoCobro: ['Cobro vehicular'],
   });
 
-  readonly atributosFormArray = this.fb.array<AtributoRowForm>([
-    this.createAtributoRow('', ''),
-  ]);
-
   readonly hallazgoAtributosFormArray = this.fb.array<AtributoRowForm>([
     this.createAtributoRow('', ''),
   ]);
@@ -397,14 +317,44 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   readonly repuestoArticuloSeleccionado = computed(() => {
     const art = this.repuestoForm.controls.art.value;
     if (art == null) return null;
-    return this.repuestoArticulos().find((x) => x.idActInventario === art) ?? null;
+    return this.articuloCache()[art] ?? null;
+  });
+
+  readonly checklistLabelMap = computed<Record<number, string>>(() => {
+    const catalogo = this.checklistCatalogo();
+    const result: Record<number, string> = {};
+    for (const rel of this.checklistOpciones()) {
+      const item = catalogo.find((x) => x.idVehVehiculoCheckList === rel.idVehVehiculoCheckListFk);
+      result[rel.idVehVehiculoCheckListVehiculo] = item?.nombreItem || `Checklist ${rel.idVehVehiculoCheckListFk}`;
+    }
+    return result;
+  });
+
+  readonly trabajoLabelMap = computed<Record<number, string>>(() => {
+    const result: Record<number, string> = {};
+    for (const trabajo of this.trabajos()) {
+      result[trabajo.idVehOrdenTrabajoTrabajo] = [
+        trabajo.tipoTrabajo || 'TRABAJO',
+        trabajo.descripcionInicial || trabajo.descripcionRealizada || '',
+      ].filter(Boolean).join(' · ');
+    }
+    return result;
+  });
+
+  readonly articuloLabelMap = computed<Record<number, string>>(() => {
+    const cache = this.articuloCache();
+    const result: Record<number, string> = {};
+    for (const key of Object.keys(cache)) {
+      const id = Number(key);
+      const item = cache[id];
+      result[id] = [item.artcod || `ART-${item.idActInventario}`, item.articulo].filter(Boolean).join(' · ');
+    }
+    return result;
   });
 
   constructor() {
-    this.ensureAtLeastOneAtributoRow(this.atributosRows);
     this.ensureAtLeastOneAtributoRow(this.hallazgoAtributosRows);
 
-    this.form.valueChanges.subscribe(() => this.updateMainDirtyState());
     this.checklistForm.valueChanges.subscribe(() => this.updateChildDirtyState());
     this.trabajoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
     this.hallazgoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
@@ -418,10 +368,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.workflowForm.valueChanges.subscribe(() => this.updateComercialDirtyState());
 
     this.cargar();
-  }
-
-  get atributosRows(): FormArray<AtributoRowForm> {
-    return this.atributosFormArray;
+    this.cargarCatalogoChecklistSiHaceFalta();
   }
 
   get hallazgoAtributosRows(): FormArray<AtributoRowForm> {
@@ -451,12 +398,16 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.ordenes.set(res.items ?? []);
+          const items = res.items ?? [];
+          this.ordenes.set(items);
           const current = this.selectedOrden();
-          if (current) {
-            const found = (res.items ?? []).find((x) => x.idVehOrdenTrabajo === current.idVehOrdenTrabajo) ?? null;
-            this.selectedOrden.set(found);
-            if (found) this.cargarDetalle(found);
+          if (!current) return;
+          const found = items.find((x) => x.idVehOrdenTrabajo === current.idVehOrdenTrabajo) ?? null;
+          this.selectedOrden.set(found);
+          if (found) {
+            this.cargarDetalle(found);
+          } else {
+            this.resetDetalle();
           }
         },
         error: (err) => this.notify.error('No se pudieron cargar órdenes', err?.message),
@@ -468,6 +419,77 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.cargarDetalle(item);
   }
 
+  nuevo() {
+    this.editingOrden.set(null);
+    this.drawerVisible.set(true);
+    this.dirty.set(false);
+  }
+
+  editarOrden(item: VehOrdenTrabajo) {
+    this.editingOrden.set(item);
+    this.drawerVisible.set(true);
+  }
+
+  onMainDrawerDirtyChange(dirty: boolean) {
+    this.dirty.set(dirty);
+  }
+
+  onMainDrawerVisibleChange(visible: boolean) {
+    this.drawerVisible.set(visible);
+  }
+
+  cerrarDrawer = async () => {
+    if (this.dirty()) {
+      const ok = await this.confirm.confirmDiscard();
+      if (!ok) return;
+    }
+    this.drawerVisible.set(false);
+    this.dirty.set(false);
+    this.editingOrden.set(null);
+  };
+
+  guardarOrden(payload: VehOrdenTrabajoGuardarRequest) {
+    this.saving.set(true);
+
+    const request$ = this.editingOrden()
+      ? this.repo.editarOrden({
+          idVehOrdenTrabajo: this.editingOrden()!.idVehOrdenTrabajo,
+          cambios: payload,
+        })
+      : this.repo.crearOrden(payload);
+
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success(
+          this.editingOrden() ? 'Orden actualizada' : 'Orden creada',
+          'La orden fue guardada correctamente.',
+        );
+        this.drawerVisible.set(false);
+        this.dirty.set(false);
+        this.editingOrden.set(null);
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo guardar la orden', err?.message),
+    });
+  }
+
+  async eliminarOrden(item: VehOrdenTrabajo) {
+    const ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
+    if (!ok) return;
+
+    this.repo.eliminarOrden(item.idVehOrdenTrabajo).subscribe({
+      next: () => {
+        this.notify.success('Orden eliminada', 'La orden fue eliminada correctamente.');
+        if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+          this.selectedOrden.set(null);
+          this.resetDetalle();
+        }
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo eliminar la orden', err?.message),
+    });
+  }
+
   cargarDetalle(item: VehOrdenTrabajo) {
     forkJoin({
       checklist: this.repo.listarOrdenChecklists({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
@@ -477,7 +499,12 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       autorizaciones: this.repo.listarAutorizaciones({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
       facturasRelacion: this.repo.listarOrdenFacturas({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
       facturasOt: this.repo.listarFacturas('', 0, 100, true, { idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
-      vehiculos: this.repo.listarClientesVehiculo({ dni: item.dni }),
+      checklistOpciones: this.repo.listarClientesVehiculo({ dni: item.dni }).pipe(
+        map((vehiculos) => {
+          const vehiculo = (vehiculos.items ?? []).find((x) => x.idCliVehiculo === item.idCliVehiculoFk) ?? null;
+          return { vehiculos: vehiculos.items ?? [], vehiculo };
+        }),
+      ),
     }).subscribe({
       next: ({
         checklist,
@@ -487,7 +514,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         autorizaciones,
         facturasRelacion,
         facturasOt,
-        vehiculos,
+        checklistOpciones,
       }) => {
         this.checklist.set(checklist.items ?? []);
         this.trabajos.set(trabajos.items ?? []);
@@ -497,16 +524,16 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.ordenFacturas.set(facturasRelacion.items ?? []);
         this.facturasOt.set(facturasOt.items ?? []);
 
-        const vehiculo = (vehiculos.items ?? []).find((x) => x.idCliVehiculo === item.idCliVehiculoFk);
-        if (vehiculo) {
-          this.vehiculosCliente.set(vehiculos.items ?? []);
-          this.vehiculoSeleccionado.set(vehiculo);
+        this.hidratarArticulos((repuestos.items ?? []).map((x) => x.art));
 
-          this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk: vehiculo.idVehTipoVehiculoFk }).subscribe({
+        if (checklistOpciones.vehiculo) {
+          this.vehiculoSeleccionadoLabel.set([checklistOpciones.vehiculo.marca, checklistOpciones.vehiculo.modelo, checklistOpciones.vehiculo.placa].filter(Boolean).join(' · ') || 'Vehículo');
+          this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk: checklistOpciones.vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => this.checklistOpciones.set(r.items ?? []),
+            error: () => this.checklistOpciones.set([]),
           });
 
-          this.repo.listarVistas({ idVehTipoVehiculoFk: vehiculo.idVehTipoVehiculoFk }).subscribe({
+          this.repo.listarVistas({ idVehTipoVehiculoFk: checklistOpciones.vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => {
               const items = r.items ?? [];
               this.vistas.set(items);
@@ -516,8 +543,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
                 : (items[0] ?? null);
               this.selectedVista.set(selectedVista);
             },
+            error: () => {
+              this.vistas.set([]);
+              this.selectedVista.set(null);
+            },
           });
         } else {
+          this.vehiculoSeleccionadoLabel.set('Vehículo');
           this.checklistOpciones.set([]);
           this.vistas.set([]);
           this.selectedVista.set(null);
@@ -549,8 +581,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.repo.listarClientes(String(item.dni ?? ''), 0, 20, false).subscribe({
           next: (res) => {
             const cli = (res.items ?? []).find((x) => Number(x.dni ?? x.ruc) === Number(item.dni)) ?? null;
-            this.clienteSeleccionado.set(cli);
+            this.clienteSeleccionadoNombre.set(cli?.nombre || cli?.ruc || 'Cliente');
           },
+          error: () => this.clienteSeleccionadoNombre.set('Cliente'),
         });
 
         this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
@@ -558,6 +591,30 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       },
       error: (err) => this.notify.error('No se pudo cargar detalle de la orden', err?.message),
     });
+  }
+
+  resetDetalle() {
+    this.checklist.set([]);
+    this.checklistOpciones.set([]);
+    this.trabajos.set([]);
+    this.hallazgos.set([]);
+    this.selectedHallazgo.set(null);
+    this.marcas.set([]);
+    this.fotos.set([]);
+    this.repuestos.set([]);
+    this.autorizaciones.set([]);
+    this.ordenFacturas.set([]);
+    this.vistas.set([]);
+    this.selectedVista.set(null);
+    this.facturasOt.set([]);
+    this.selectedFacturaOt.set(null);
+    this.facturaDetalle.set(null);
+    this.cobrosFactura.set([]);
+    this.workflowResultado.set(null);
+    this.responsableRecepcionSeleccionado.set(null);
+    this.responsableTecnicoSeleccionado.set(null);
+    this.clienteSeleccionadoNombre.set('Cliente');
+    this.vehiculoSeleccionadoLabel.set('Vehículo');
   }
 
   cargarHallazgoDetalle(idVehOrdenTrabajoHallazgo: number) {
@@ -573,9 +630,17 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     });
   }
 
-  seleccionarFacturaOt(item: VehFactura, activarTab = true) {
+  seleccionarHallazgo(hallazgo: VehOrdenTrabajoHallazgo) {
+    this.selectedHallazgo.set(hallazgo);
+    this.cargarHallazgoDetalle(hallazgo.idVehOrdenTrabajoHallazgo);
+  }
+
+  seleccionarVista(vista: VehTipoVehiculoVista) {
+    this.selectedVista.set(vista);
+  }
+
+  seleccionarFacturaOt(item: VehFactura, _activar = true) {
     this.selectedFacturaOt.set(item);
-    if (activarTab) this.activeTab.set('comercial');
 
     forkJoin({
       detalle: this.repo.obtenerFactura(item.idFacVenta),
@@ -598,275 +663,41 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     return 'secondary';
   }
 
-  buscarClientesOrden() {
-    const q = this.clientesBuscar().trim();
-    if (!q) {
-      this.clientesResultados.set([]);
-      return;
-    }
-
-    this.clienteBuscando.set(true);
-    this.repo.listarClientes(q, 0, 20, false)
-      .pipe(finalize(() => this.clienteBuscando.set(false)))
-      .subscribe({
-        next: (res) => this.clientesResultados.set(res.items ?? []),
-        error: (err) => this.notify.error('No se pudo buscar clientes', err?.message),
-      });
+  clienteNombreSeleccionado(): string {
+    return this.clienteSeleccionadoNombre();
   }
 
-  abrirClientePicker() {
-    this.clientePickerVisible.set(true);
-    this.clientesResultados.set([]);
+  vehiculoNombreSeleccionado(): string {
+    return this.vehiculoSeleccionadoLabel();
   }
 
-  seleccionarClienteOrden(cliente: VehCliente) {
-    const dni = Number(cliente.dni ?? cliente.ruc);
-    this.clienteSeleccionado.set(cliente);
-    this.form.controls.dni.setValue(dni);
-    this.form.controls.idCliVehiculoFk.setValue(null);
-    this.vehiculoSeleccionado.set(null);
-    this.vehiculosCliente.set([]);
-    this.clientePickerVisible.set(false);
-    this.buscarVehiculosCliente(dni);
-    this.updateMainDirtyState();
+  responsableRecepcionNombre(): string {
+    return this.responsableRecepcionSeleccionado()?.usuario || 'No asignado';
   }
 
-  buscarVehiculosCliente(dni?: number | null) {
-    const clienteDni = Number(dni ?? this.form.controls.dni.value ?? 0);
-    if (!clienteDni) {
-      this.vehiculosCliente.set([]);
-      return;
-    }
-
-    this.repo.listarClientesVehiculo({ dni: clienteDni }).subscribe({
-      next: (res) => {
-        this.vehiculosCliente.set(res.items ?? []);
-      },
-      error: (err) => this.notify.error('No se pudieron cargar los vehículos del cliente', err?.message),
-    });
+  responsableTecnicoNombre(): string {
+    return this.responsableTecnicoSeleccionado()?.usuario || 'No asignado';
   }
 
-  onVehiculoSeleccionado(idCliVehiculo: number | null) {
-    const vehiculo = this.vehiculosCliente().find((x) => x.idCliVehiculo === Number(idCliVehiculo)) ?? null;
-    this.vehiculoSeleccionado.set(vehiculo);
-    this.form.controls.idCliVehiculoFk.setValue(idCliVehiculo);
-    this.updateMainDirtyState();
+  checklistLabelByRelation(idRel?: number | null): string {
+    if (!idRel) return 'Checklist';
+    return this.checklistLabelMap()[idRel] || 'Checklist configurado';
   }
 
-  abrirUsuarioPicker(target: UsuarioPickerTarget) {
-    this.usuarioPickerTarget.set(target);
-    this.usuarioPickerVisible.set(true);
-    this.usuariosBuscar.set('');
-    this.usuariosResultados.set([]);
+  trabajoLabelById(idTrabajo?: number | null): string {
+    if (!idTrabajo) return 'Trabajo no especificado';
+    return this.trabajoLabelMap()[idTrabajo] || 'Trabajo relacionado';
   }
 
-  buscarUsuarios() {
-    const q = this.usuariosBuscar().trim();
-    this.usuarioBuscando.set(true);
-
-    this.repo.listarUsuarios(q, 0, 20, false)
-      .pipe(finalize(() => this.usuarioBuscando.set(false)))
-      .subscribe({
-        next: (res: any) => this.usuariosResultados.set(res.items ?? []),
-        error: (err) => this.notify.error('No se pudieron cargar usuarios', err?.message),
-      });
+  articuloLabelById(art?: number | null): string {
+    if (!art) return 'Repuesto';
+    return this.articuloLabelMap()[art] || 'Repuesto de inventario';
   }
 
-  seleccionarUsuarioResponsable(user: SegUsuarioListadoItem) {
-    const target = this.usuarioPickerTarget();
-
-    if (target === 'recepcion') {
-      this.form.controls.responsableRecepcion.setValue(user.idSegUsuario);
-      this.responsableRecepcionSeleccionado.set(user);
-    }
-
-    if (target === 'tecnico') {
-      this.form.controls.responsableTecnico.setValue(user.idSegUsuario);
-      this.responsableTecnicoSeleccionado.set(user);
-    }
-
-    this.usuarioPickerVisible.set(false);
-    this.usuarioPickerTarget.set(null);
-    this.updateMainDirtyState();
+  facturaNumber(item?: VehFactura | null): string {
+    if (!item) return 'Factura';
+    return `${item.estab || '-'}-${item.ptoemi || '-'}-${item.secuencial || item.idFacVenta}`;
   }
-
-  limpiarResponsable(target: UsuarioPickerTarget) {
-    if (target === 'recepcion') {
-      this.form.controls.responsableRecepcion.setValue(null);
-      this.responsableRecepcionSeleccionado.set(null);
-    }
-
-    if (target === 'tecnico') {
-      this.form.controls.responsableTecnico.setValue(null);
-      this.responsableTecnicoSeleccionado.set(null);
-    }
-
-    this.updateMainDirtyState();
-  }
-
-  nuevo() {
-    this.editingOrdenId.set(null);
-    this.drawerVisible.set(true);
-    this.clienteSeleccionado.set(null);
-    this.vehiculoSeleccionado.set(null);
-    this.vehiculosCliente.set([]);
-    this.responsableRecepcionSeleccionado.set(null);
-    this.responsableTecnicoSeleccionado.set(null);
-
-    this.form.reset({
-      dni: null,
-      idCliVehiculoFk: null,
-      tipoServicio: 'REPARACION',
-      estadoOrden: 'RECIBIDO',
-      fechaIngreso: '',
-      fechaPrometida: '',
-      kilometrajeIngreso: null,
-      nivelCombustible: '',
-      nivelBateria: '',
-      fallaReportada: '',
-      sintomasReportados: '',
-      ruidosReportados: '',
-      detalleCliente: '',
-      accesoriosEntregados: '',
-      condicionIngreso: '',
-      diagnosticoGeneral: '',
-      recomendacionGeneral: '',
-      responsableRecepcion: null,
-      responsableTecnico: null,
-      observaciones: '',
-    });
-
-    this.populateAtributosFormArray(this.atributosRows, {});
-    this.refreshMainSnapshot();
-  }
-
-  editarOrden(item: VehOrdenTrabajo) {
-    this.editingOrdenId.set(item.idVehOrdenTrabajo);
-    this.drawerVisible.set(true);
-
-    this.form.reset({
-      dni: item.dni,
-      idCliVehiculoFk: item.idCliVehiculoFk,
-      tipoServicio: item.tipoServicio || 'REPARACION',
-      estadoOrden: item.estadoOrden || 'RECIBIDO',
-      fechaIngreso: this.toDate(item.fechaIngreso),
-      fechaPrometida: this.toDate(item.fechaPrometida),
-      kilometrajeIngreso: item.kilometrajeIngreso ?? null,
-      nivelCombustible: item.nivelCombustible || '',
-      nivelBateria: item.nivelBateria || '',
-      fallaReportada: item.fallaReportada || '',
-      sintomasReportados: item.sintomasReportados || '',
-      ruidosReportados: item.ruidosReportados || '',
-      detalleCliente: item.detalleCliente || '',
-      accesoriosEntregados: item.accesoriosEntregados || '',
-      condicionIngreso: item.condicionIngreso || '',
-      diagnosticoGeneral: item.diagnosticoGeneral || '',
-      recomendacionGeneral: item.recomendacionGeneral || '',
-      responsableRecepcion: item.responsableRecepcion ?? null,
-      responsableTecnico: item.responsableTecnico ?? null,
-      observaciones: item.observaciones || '',
-    });
-
-    this.populateAtributosFormArray(this.atributosRows, item.atributos ?? {});
-
-    this.repo.listarClientes(String(item.dni ?? ''), 0, 20, false).subscribe({
-      next: (res) => {
-        const cli = (res.items ?? []).find((x) => Number(x.dni ?? x.ruc) === Number(item.dni)) ?? null;
-        this.clienteSeleccionado.set(cli);
-      },
-    });
-
-    this.buscarVehiculosCliente(item.dni ?? null);
-    this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
-    this.cargarUsuarioSeleccionado(item.responsableTecnico ?? null, 'tecnico');
-    this.refreshMainSnapshot();
-  }
-
-  async eliminarOrden(item: VehOrdenTrabajo) {
-    const ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
-    if (!ok) return;
-
-    this.repo.eliminarOrden(item.idVehOrdenTrabajo).subscribe({
-      next: () => {
-        this.notify.success('Orden eliminada', 'La orden fue eliminada correctamente.');
-        if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-          this.selectedOrden.set(null);
-          this.checklist.set([]);
-          this.trabajos.set([]);
-          this.hallazgos.set([]);
-          this.repuestos.set([]);
-          this.autorizaciones.set([]);
-          this.ordenFacturas.set([]);
-          this.facturasOt.set([]);
-          this.selectedFacturaOt.set(null);
-          this.facturaDetalle.set(null);
-          this.cobrosFactura.set([]);
-        }
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo eliminar la orden', err?.message),
-    });
-  }
-
-  submitOrden() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.notify.warn('Formulario incompleto', 'Cliente, vehículo, tipo de servicio y estado son obligatorios.');
-      return;
-    }
-
-    const raw = this.form.getRawValue();
-    const payload: VehOrdenTrabajoGuardarRequest = {
-      dni: Number(raw.dni),
-      idCliVehiculoFk: Number(raw.idCliVehiculoFk),
-      tipoServicio: raw.tipoServicio || null,
-      estadoOrden: raw.estadoOrden || null,
-      fechaIngreso: this.toTimestamp(raw.fechaIngreso),
-      fechaPrometida: this.toTimestamp(raw.fechaPrometida),
-      kilometrajeIngreso: raw.kilometrajeIngreso ?? null,
-      nivelCombustible: raw.nivelCombustible?.trim() || null,
-      nivelBateria: raw.nivelBateria?.trim() || null,
-      fallaReportada: raw.fallaReportada?.trim() || null,
-      sintomasReportados: raw.sintomasReportados?.trim() || null,
-      ruidosReportados: raw.ruidosReportados?.trim() || null,
-      detalleCliente: raw.detalleCliente?.trim() || null,
-      accesoriosEntregados: raw.accesoriosEntregados?.trim() || null,
-      condicionIngreso: raw.condicionIngreso?.trim() || null,
-      diagnosticoGeneral: raw.diagnosticoGeneral?.trim() || null,
-      recomendacionGeneral: raw.recomendacionGeneral?.trim() || null,
-      responsableRecepcion: raw.responsableRecepcion ?? null,
-      responsableTecnico: raw.responsableTecnico ?? null,
-      observaciones: raw.observaciones?.trim() || null,
-      atributos: this.buildAtributosObject(this.atributosRows),
-    };
-
-    this.saving.set(true);
-    const request$ = this.editingOrdenId()
-      ? this.repo.editarOrden({ idVehOrdenTrabajo: this.editingOrdenId()!, cambios: payload })
-      : this.repo.crearOrden(payload);
-
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => {
-        this.notify.success(
-          this.editingOrdenId() ? 'Orden actualizada' : 'Orden creada',
-          'La orden fue guardada correctamente.',
-        );
-        this.drawerVisible.set(false);
-        this.refreshMainSnapshot();
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo guardar la orden', err?.message),
-    });
-  }
-
-  cerrarDrawer = async () => {
-    if (this.dirty()) {
-      const ok = await this.confirm.confirmDiscard();
-      if (!ok) return;
-    }
-    this.drawerVisible.set(false);
-    this.refreshMainSnapshot();
-  };
 
   abrirChild(mode: Exclude<ChildDrawerMode, null>) {
     const orden = this.selectedOrden();
@@ -928,8 +759,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         serieNueva: '',
         observaciones: '',
       });
-      this.repuestoArticulos.set([]);
-      this.repuestoArticuloQuery.set('');
     }
 
     if (mode === 'autorizacion') {
@@ -967,46 +796,27 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.refreshChildSnapshot();
   };
 
-  abrirRepuestoArticuloPicker() {
-    this.repuestoArticuloPickerVisible.set(true);
-    this.buscarArticulosRepuesto(this.repuestoArticuloQuery().trim());
-  }
-
   onRepuestoArticuloQueryChange(value: string) {
-    this.repuestoArticuloQuery.set(value ?? '');
-    this.buscarArticulosRepuesto(this.repuestoArticuloQuery().trim());
-  }
-
-  buscarArticulosRepuesto(query: string) {
+    const query = (value ?? '').trim();
     if (this.articuloSearchTimer) clearTimeout(this.articuloSearchTimer);
 
     this.articuloSearchTimer = setTimeout(() => {
-      this.repuestoArticuloLoading.set(true);
-      this.repo.listarArticulos(query, 0, 50, false)
-        .pipe(finalize(() => this.repuestoArticuloLoading.set(false)))
-        .subscribe({
-          next: (res) => {
-            const items = res.items ?? [];
-            const current = this.repuestoArticuloSeleccionado();
-            if (current && !items.some((x) => x.idActInventario === current.idActInventario)) {
-              this.repuestoArticulos.set([current, ...items]);
-            } else {
-              this.repuestoArticulos.set(items);
-            }
-          },
-          error: (err) => this.notify.error('No se pudo buscar artículos', err?.message),
-        });
+      this.repo.listarArticulos(query, 0, 30, false).subscribe({
+        next: (res) => {
+          const current = { ...this.articuloCache() };
+          for (const item of res.items ?? []) {
+            current[item.idActInventario] = item;
+          }
+          this.articuloCache.set(current);
+        },
+      });
     }, 250);
   }
 
   seleccionarArticuloRepuesto(item: VehArticuloCatalogo) {
     this.repuestoForm.controls.art.setValue(item.idActInventario);
-    this.repuestoArticuloPickerVisible.set(false);
-    this.updateChildDirtyState();
-  }
-
-  limpiarArticuloRepuesto() {
-    this.repuestoForm.controls.art.setValue(null);
+    const current = { ...this.articuloCache(), [item.idActInventario]: item };
+    this.articuloCache.set(current);
     this.updateChildDirtyState();
   }
 
@@ -1386,24 +1196,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.comercialDrawerVisible.set(false);
         this.comercialDrawerMode.set(null);
         this.refreshComercialSnapshot();
-        this.activeTab.set('comercial');
         this.cargarDetalle(orden);
       },
       error: (err: any) => this.notify.error('No se pudo ejecutar la operación', err?.message),
     });
   }
 
-  seleccionarHallazgo(h: VehOrdenTrabajoHallazgo) {
-    this.selectedHallazgo.set(h);
-    this.cargarHallazgoDetalle(h.idVehOrdenTrabajoHallazgo);
-    this.activeTab.set('hallazgos');
-  }
-
-  seleccionarVista(vista: VehTipoVehiculoVista) {
-    this.selectedVista.set(vista);
-  }
-
-  crearMarcaDesdeCanvas(point: { x: number; y: number }) {
+  createMarcaDesdeCanvas(point: { x: number; y: number }) {
     const hallazgo = this.selectedHallazgo();
     const vista = this.selectedVista();
     if (!hallazgo || !vista) {
@@ -1455,33 +1254,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.fotoBase64.set('');
     this.fotoPreview.set(null);
     this.updateChildDirtyState();
-  }
-
-  nombreChecklistRelacionado(idRel?: number | null) {
-    return this.checklistOpciones().find((x) => x.idVehVehiculoCheckListVehiculo === idRel)?.idVehVehiculoCheckListFk || '-';
-  }
-
-  vehiculoLabel(vehiculo?: CliVehiculo | null): string {
-    if (!vehiculo) return 'Vehículo seleccionado';
-    return [vehiculo.marca, vehiculo.modelo, vehiculo.placa].filter(Boolean).join(' · ');
-  }
-
-  ordenClienteNombre(item: VehOrdenTrabajo): string {
-    if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo && this.clienteSeleccionado()) {
-      return this.clienteSeleccionado()!.nombre || this.clienteSeleccionado()!.ruc;
-    }
-    return 'Cliente seleccionado';
-  }
-
-  ordenVehiculoNombre(item: VehOrdenTrabajo): string {
-    const veh = this.vehiculosCliente().find((x) => x.idCliVehiculo === item.idCliVehiculoFk);
-    return this.vehiculoLabel(veh);
-  }
-
-  articuloNombrePorId(art?: number | null): string {
-    if (!art) return 'Artículo';
-    const found = this.repuestoArticulos().find((x) => x.idActInventario === art);
-    return found ? `${found.artcod || found.idActInventario} · ${found.articulo}` : 'Artículo seleccionado';
   }
 
   childDrawerTitle() {
@@ -1538,10 +1310,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       .map((x) => x.idVehOrdenTrabajoRepuesto);
   }
 
-  tieneFacturaSeleccionada() {
-    return !!this.selectedFacturaOt();
-  }
-
   facturaActual(): any {
     const data = this.facturaDetalle() as any;
     return data?.factura ?? this.selectedFacturaOt() ?? null;
@@ -1567,38 +1335,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     return !!this.workflowForm.value.crearRecibo && Number(this.workflowForm.value.pagoInicial || 0) > 0;
   }
 
-  resolveBinarySrc(binary?: string | null) {
-    if (!binary) return null;
-    const value = String(binary).trim();
-    if (!value) return null;
-    if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:')) {
-      return value;
-    }
-    return `data:${this.guessMimeType(value)};base64,${value}`;
-  }
-
-  esVerdadero(value: unknown) {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value === 1;
-    if (typeof value === 'string') return ['1', 'true', 'si', 'sí'].includes(value.toLowerCase());
-    return false;
-  }
-
-  addOrdenAtributoRow() {
-    this.atributosRows.push(this.createAtributoRow('', ''));
-    this.updateMainDirtyState();
-  }
-
-  removeOrdenAtributoRow(index: number) {
-    if (this.atributosRows.length === 1) {
-      this.atributosRows.at(0).patchValue({ key: '', value: '' });
-      this.updateMainDirtyState();
-      return;
-    }
-    this.atributosRows.removeAt(index);
-    this.updateMainDirtyState();
-  }
-
   addHallazgoAtributoRow() {
     this.hallazgoAtributosRows.push(this.createAtributoRow('', ''));
     this.updateChildDirtyState();
@@ -1612,6 +1348,36 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     }
     this.hallazgoAtributosRows.removeAt(index);
     this.updateChildDirtyState();
+  }
+
+  private cargarCatalogoChecklistSiHaceFalta() {
+    if (this.checklistCatalogo().length) return;
+    this.repo.listarChecklists().subscribe({
+      next: (res) => this.checklistCatalogo.set(res.items ?? []),
+    });
+  }
+
+  private hidratarArticulos(ids: Array<number | null | undefined>) {
+    const pendientes = [...new Set(ids.filter((x): x is number => Number.isFinite(Number(x))))]
+      .filter((id) => !this.articuloCache()[id]);
+
+    if (!pendientes.length) return;
+
+    forkJoin(
+      pendientes.map((id) =>
+        this.repo.listarArticulos(String(id), 0, 25, false).pipe(
+          map((res) => (res.items ?? []).find((x) => x.idActInventario === id) ?? null),
+        ),
+      ),
+    ).subscribe({
+      next: (items) => {
+        const next = { ...this.articuloCache() };
+        for (const item of items) {
+          if (item) next[item.idActInventario] = item;
+        }
+        this.articuloCache.set(next);
+      },
+    });
   }
 
   private createAtributoRow(key = '', value = ''): AtributoRowForm {
@@ -1679,7 +1445,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     return String(value);
   }
 
-  private cargarUsuarioSeleccionado(idSegUsuario: number | null | undefined, target: UsuarioPickerTarget) {
+  private cargarUsuarioSeleccionado(idSegUsuario: number | null | undefined, target: 'recepcion' | 'tecnico') {
     if (!idSegUsuario) {
       if (target === 'recepcion') this.responsableRecepcionSeleccionado.set(null);
       if (target === 'tecnico') this.responsableTecnicoSeleccionado.set(null);
@@ -1697,22 +1463,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private toIdList(raw?: string | null): number[] | null {
     if (!raw || !raw.trim()) return null;
-    const ids = raw.split(',').map((x) => Number(x.trim())).filter((x) => !Number.isNaN(x) && x > 0);
+    const ids = raw
+      .split(',')
+      .map((x) => Number(x.trim()))
+      .filter((x) => !Number.isNaN(x) && x > 0);
     return ids.length ? ids : null;
-  }
-
-  private guessMimeType(base64: string) {
-    if (base64.startsWith('/9j/')) return 'image/jpeg';
-    if (base64.startsWith('iVBOR')) return 'image/png';
-    if (base64.startsWith('R0lGOD')) return 'image/gif';
-    if (base64.startsWith('UklGR')) return 'image/webp';
-    if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
-    return 'image/png';
-  }
-
-  private toDate(value?: string | null) {
-    if (!value) return '';
-    return String(value).slice(0, 10);
   }
 
   private toTimestamp(value?: string | null) {
@@ -1724,17 +1479,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   private toIsoStartOfDayWithOffset(value?: string | null) {
     if (!value) return null;
     return value.includes('T') ? value : `${value}T00:00:00-05:00`;
-  }
-
-  private createMainSnapshot(): string {
-    return JSON.stringify({
-      ...this.form.getRawValue(),
-      cliente: this.clienteSeleccionado()?.nombre ?? this.clienteSeleccionado()?.ruc ?? null,
-      vehiculo: this.vehiculoSeleccionado()?.placa ?? this.vehiculoSeleccionado()?.modelo ?? null,
-      responsableRecepcionNombre: this.responsableRecepcionSeleccionado()?.usuario ?? null,
-      responsableTecnicoNombre: this.responsableTecnicoSeleccionado()?.usuario ?? null,
-      atributos: this.buildAtributosObject(this.atributosRows),
-    });
   }
 
   private createChildSnapshot(): string {
@@ -1761,11 +1505,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     });
   }
 
-  private refreshMainSnapshot() {
-    this.initialMainSnapshot = this.createMainSnapshot();
-    this.dirty.set(false);
-  }
-
   private refreshChildSnapshot() {
     this.initialChildSnapshot = this.createChildSnapshot();
     this.childDirty.set(false);
@@ -1774,10 +1513,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   private refreshComercialSnapshot() {
     this.initialComercialSnapshot = this.createComercialSnapshot();
     this.comercialDirty.set(false);
-  }
-
-  private updateMainDirtyState() {
-    this.dirty.set(this.createMainSnapshot() !== this.initialMainSnapshot);
   }
 
   private updateChildDirtyState() {

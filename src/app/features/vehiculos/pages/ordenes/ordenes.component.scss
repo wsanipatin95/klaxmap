@@ -28,6 +28,126 @@
   .appDrawer .appDrawer__subtitle {
     color: #64748b;
   }
+
+  .p-button {
+    border-radius: 0.8rem;
+    font-weight: 700;
+  }
+
+  .p-inputtext,
+  .p-inputtextarea,
+  .p-inputnumber-input {
+    width: 100%;
+    min-height: 2.7rem;
+    border-radius: 0.8rem;
+    border-color: #dbe2ea;
+    font-size: 0.88rem;
+  }
+
+  textarea.p-inputtextarea {
+    min-height: 7rem;
+    resize: vertical;
+  }
+}
+
+.ordenesLayout {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.backlogCard,
+.workspaceCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.backlogCard {
+  position: sticky;
+  top: 0.5rem;
+}
+
+.backlogCard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.backlogCard__header h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.backlogCard__header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.backlogCard__body,
+.workspaceCard {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.backlogCard__body {
+  max-height: calc(100vh - 13rem);
+  overflow: auto;
+  padding: 1rem;
+}
+
+.workspaceCard {
+  padding: 1rem;
+  min-width: 0;
+}
+
+.jiraLikeRow {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.95rem;
+  background: #ffffff;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.jiraLikeRow:hover {
+  border-color: #d98bbb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.jiraLikeRow.selected {
+  border-color: #7b0061;
+  box-shadow: 0 10px 24px rgba(123, 0, 97, 0.12);
+}
+
+.rowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.primaryCell {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.secondaryCell {
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .vehForm {
@@ -61,10 +181,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.grid.cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .cols-full {
   grid-column: 1 / -1;
 }
@@ -75,7 +191,7 @@ label {
   align-content: start;
 }
 
-label>span {
+label > span {
   font-size: 0.78rem;
   font-weight: 700;
   color: #475569;
@@ -93,29 +209,6 @@ select,
 input[pInputText],
 textarea[pTextarea] {
   border-radius: 0.8rem;
-}
-
-:host ::ng-deep {
-
-  .p-inputtext,
-  .p-inputtextarea,
-  .p-inputnumber-input {
-    width: 100%;
-    min-height: 2.7rem;
-    border-radius: 0.8rem;
-    border-color: #dbe2ea;
-    font-size: 0.88rem;
-  }
-
-  textarea.p-inputtextarea {
-    min-height: 7rem;
-    resize: vertical;
-  }
-
-  .p-button {
-    border-radius: 0.8rem;
-    font-weight: 700;
-  }
 }
 
 input[type='date'],
@@ -136,11 +229,90 @@ input[type='date']:focus {
   box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.08);
 }
 
-.pickerInline {
+.toggleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.toggleItem {
   display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.toggleItem input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #7b0061;
+}
+
+.toggleItem span {
+  color: #334155;
+  font-size: 0.84rem;
+}
+
+.uploadPreview {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  padding: 0.85rem;
+}
+
+.previewImage {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.attrSection {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.sectionHeadInline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sectionHeadInline h5 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.attrTable {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.attrHead,
+.attrRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
-  flex-wrap: wrap;
+}
+
+.attrHead {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  padding: 0 0.1rem;
 }
 
 .pickerSummary {
@@ -155,31 +327,15 @@ input[type='date']:focus {
   font-size: 0.84rem;
 }
 
-.pickerSummary--empty {
-  color: #64748b;
-}
-
-.pickerDialog {
-  display: grid;
-  gap: 1rem;
-}
-
-.pickerToolbar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.pickerLoading {
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
 .pickerList {
   display: grid;
   gap: 0.75rem;
   max-height: 24rem;
   overflow: auto;
+}
+
+.pickerList--inline {
+  max-height: 15rem;
 }
 
 .pickerRow {
@@ -211,219 +367,31 @@ input[type='date']:focus {
   font-size: 0.82rem;
 }
 
-.emptyInline {
-  color: #64748b;
-  font-size: 0.88rem;
-  padding: 0.5rem 0.1rem;
-}
-
-.toggleGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 0.75rem;
-}
-
-.toggleItem {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.85rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  background: #f8fafc;
-  cursor: pointer;
-}
-
-.toggleItem input {
-  width: 1rem;
-  height: 1rem;
-  accent-color: #7b0061;
-}
-
-.toggleItem span {
-  color: #334155;
-  font-size: 0.84rem;
-}
-
-.canvasCard {
-  padding: 0;
-  overflow: hidden;
-}
-
-.contextRail {
-  background: #fff;
-}
-
-.actionWrap {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.photoList {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.photoCard {
-  display: grid;
-  grid-template-columns: 7rem 1fr;
-  gap: 0.85rem;
-  align-items: start;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  padding: 0.75rem;
-  background: #fff;
-}
-
-.fotoThumb {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-}
-
-.fotoThumb--empty {
-  display: grid;
-  place-items: center;
-  color: #64748b;
-  font-size: 0.8rem;
-}
-
-.photoBody {
-  min-width: 0;
-}
-
-.uploadPreview {
-  display: grid;
-  gap: 0.75rem;
-  margin: 0.75rem 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  background: #f8fafc;
-  padding: 0.85rem;
-}
-
-.previewImage {
-  display: block;
-  width: 100%;
-  max-height: 18rem;
-  object-fit: contain;
-  border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-}
-
-.tabBar {
-  margin-top: 0.25rem;
-}
-
-.commercialGrid {
-  align-items: start;
-}
-
-.commercialColumn {
-  min-width: 0;
-}
-
-.innerCard {
-  background: #fff;
-}
-
-.kvGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.kvItem {
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  padding: 0.8rem;
-  background: #f8fafc;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.kvItem span {
-  font-size: 0.76rem;
-  color: #64748b;
-}
-
-.kvItem strong {
-  font-size: 0.96rem;
-  color: #0f172a;
-}
-
-.workflowResultCard {
-  border-color: #f3aad6;
-  background: #fdf4f9;
-}
-
-.compact {
-  padding: 0.65rem 0.75rem;
-}
-
-@media (max-width: 1100px) {
-  .photoCard {
+@media (max-width: 1180px) {
+  .ordenesLayout {
     grid-template-columns: 1fr;
   }
 
-  .kvGrid {
-    grid-template-columns: 1fr;
+  .backlogCard {
+    position: static;
   }
 
-  .grid.cols-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .backlogCard__body {
+    max-height: none;
   }
 }
 
 @media (max-width: 860px) {
-
   .grid.cols-2,
-  .grid.cols-3 {
-    grid-template-columns: 1fr;
-  }
-
-  .pickerToolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pickerInline {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-.attrTable {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.attrHead,
-.attrRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.attrHead {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #64748b;
-  padding: 0 0.1rem;
-}
-
-@media (max-width: 860px) {
-  .attrHead {
-    display: none;
-  }
-
   .attrRow {
     grid-template-columns: 1fr;
+  }
+
+  .attrHead,
+  .sectionHeadInline,
+  .rowHeader,
+  .backlogCard__header {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

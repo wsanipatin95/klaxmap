@@ -1,0 +1,349 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.detailWorkspace {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.detailHero,
+.panelCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.detailHero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.15rem 1rem;
+}
+
+.detailHero__eyebrow {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7b0061;
+}
+
+.detailHero__copy h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.detailHero__copy p {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.contextGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.contextCard {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.95rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.contextCard span {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.contextCard strong {
+  color: #0f172a;
+  font-size: 0.93rem;
+}
+
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.tabRail {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0.98), rgba(248, 250, 252, 0.92));
+  border-radius: 1rem;
+  padding: 0.25rem 0;
+  backdrop-filter: blur(6px);
+}
+
+.tabRail__scroll {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.tabRail__scroll::-webkit-scrollbar {
+  height: 7px;
+}
+
+.tabRail__scroll::-webkit-scrollbar-thumb {
+  background: #d8dee7;
+  border-radius: 999px;
+}
+
+.tabButton {
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 0.72rem 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tabButton:hover {
+  border-color: #d98bbb;
+  color: #7b0061;
+}
+
+.tabButton.active {
+  background: #7b0061;
+  border-color: #7b0061;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(123, 0, 97, 0.18);
+}
+
+.panelCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  min-width: 0;
+}
+
+.panelCard--nested {
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionHead h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.secondaryCell {
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.actionWrap {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.metric {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.95rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.metric span {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.metric strong {
+  font-size: 1.12rem;
+  color: #0f172a;
+}
+
+.metricGrid--secondary .metric {
+  background: #fff7fb;
+}
+
+.kvGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kvItem {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kvItem span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.kvItem strong {
+  font-size: 0.96rem;
+  color: #0f172a;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.jiraLikeList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.jiraLikeRow {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.95rem;
+  background: #ffffff;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.jiraLikeRow:hover {
+  border-color: #d98bbb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.jiraLikeRow.selected {
+  border-color: #7b0061;
+  box-shadow: 0 10px 24px rgba(123, 0, 97, 0.12);
+}
+
+.compact {
+  padding: 0.8rem 0.9rem;
+}
+
+.rowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.primaryCell {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.canvasCard {
+  overflow: hidden;
+  padding: 0;
+}
+
+.photoList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.photoCard {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.fotoThumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.fotoThumb--empty {
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.photoBody {
+  min-width: 0;
+}
+
+.commercialGrid {
+  align-items: start;
+}
+
+.commercialColumn {
+  min-width: 0;
+}
+
+.workflowResultCard {
+  border-color: #f3aad6;
+  background: #fdf4f9;
+}
+
+@media (max-width: 1200px) {
+  .contextGrid,
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .grid.cols-2,
+  .kvGrid,
+  .contextGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .photoCard {
+    grid-template-columns: 1fr;
+  }
+
+  .detailHero,
+  .sectionHead,
+  .rowHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
