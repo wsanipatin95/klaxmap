@@ -146,3 +146,535 @@
   (save)="guardarOrden($event)"
   (saveAndClose)="guardarOrden($event, true)">
 </app-orden-main-form-drawer>
+
+<app-vehiculos-form-drawer
+  [visible]="childDrawerVisible()"
+  [dirty]="childDirty()"
+  [saving]="saving()"
+  [title]="childDrawerTitle()"
+  [subtitle]="childDrawerSubtitle()"
+  sizeClass="appDrawer appDrawer--lg"
+  (visibleChange)="$event ? childDrawerVisible.set(true) : cerrarChildDrawer()"
+  (requestClose)="cerrarChildDrawer()"
+  (requestSave)="submitChild()">
+
+  <form *ngIf="childMode() === 'checklist'" [formGroup]="checklistForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-12">
+        <label>Checklist relacionado</label>
+        <select formControlName="idVehVehiculoCheckListVehiculoFk">
+          <option [ngValue]="null">Selecciona un checklist</option>
+          <option *ngFor="let item of checklistOpciones()" [ngValue]="item.idVehVehiculoCheckListVehiculo">
+            {{ checklistLabelByRelation(item.idVehVehiculoCheckListVehiculo) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Estado</label>
+        <select formControlName="estadoCheckList">
+          <option *ngFor="let option of ESTADO_CHECKLIST_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="childMode() === 'trabajo'" [formGroup]="trabajoForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>Tipo trabajo</label>
+        <select formControlName="tipoTrabajo">
+          <option *ngFor="let option of TIPO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Estado</label>
+        <select formControlName="estadoTrabajo">
+          <option *ngFor="let option of ESTADO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-2">
+        <label>Inicio</label>
+        <input type="date" formControlName="fechaInicio">
+      </div>
+
+      <div class="drawerField span-2">
+        <label>Fin</label>
+        <input type="date" formControlName="fechaFin">
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Descripción inicial</label>
+        <textarea pTextarea rows="3" formControlName="descripcionInicial"></textarea>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Descripción realizada</label>
+        <textarea pTextarea rows="3" formControlName="descripcionRealizada"></textarea>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Resultado</label>
+        <textarea pTextarea rows="3" formControlName="resultado"></textarea>
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Motivo</label>
+        <input pInputText formControlName="motivo">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Observaciones</label>
+        <input pInputText formControlName="observaciones">
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="childMode() === 'hallazgo'" [formGroup]="hallazgoForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-6">
+        <label>Trabajo relacionado</label>
+        <select formControlName="idVehOrdenTrabajoTrabajoFk">
+          <option [ngValue]="null">Sin trabajo relacionado</option>
+          <option *ngFor="let item of trabajos()" [ngValue]="item.idVehOrdenTrabajoTrabajo">
+            {{ trabajoLabelById(item.idVehOrdenTrabajoTrabajo) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Tipo hallazgo</label>
+        <select formControlName="tipoHallazgo">
+          <option *ngFor="let option of TIPO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Categoría</label>
+        <select formControlName="categoria">
+          <option *ngFor="let option of CATEGORIA_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Descripción</label>
+        <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Severidad</label>
+        <select formControlName="severidad">
+          <option *ngFor="let option of SEVERIDAD_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Estado hallazgo</label>
+        <select formControlName="estadoHallazgo">
+          <option *ngFor="let option of ESTADO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Fecha aprobación</label>
+        <input type="date" formControlName="fechaAprobacion">
+      </div>
+
+      <div class="drawerField span-3 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="requiereCambio">
+          Requiere cambio
+        </label>
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="aprobadoCliente">
+          Aprobado cliente
+        </label>
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Motivo cambio</label>
+        <input pInputText formControlName="motivoCambio">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Observaciones</label>
+        <input pInputText formControlName="observaciones">
+      </div>
+    </div>
+
+    <div class="subSection">
+      <div class="subSection__head">
+        <h4>Atributos</h4>
+        <button pButton type="button" size="small" icon="pi pi-plus" label="Agregar" (click)="addHallazgoAtributoRow()"></button>
+      </div>
+
+      <div class="kvRows">
+        <div class="kvRow" *ngFor="let row of hallazgoAtributosRows.controls; let i = index" [formGroup]="row">
+          <input pInputText formControlName="key" placeholder="Clave">
+          <input pInputText formControlName="value" placeholder="Valor">
+          <button pButton type="button" size="small" severity="danger" icon="pi pi-trash" (click)="removeHallazgoAtributoRow(i)"></button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="childMode() === 'repuesto'" [formGroup]="repuestoForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>ID artículo</label>
+        <input pInputText type="number" formControlName="art" (input)="onRepuestoArticuloQueryChange(($any($event.target).value || '').toString())">
+        <small class="helperText" *ngIf="repuestoArticuloSeleccionado() as articulo">
+          {{ articulo.artcod || ('ART-' + articulo.idActInventario) }} · {{ articulo.articulo }}
+        </small>
+      </div>
+
+      <div class="drawerField span-2">
+        <label>Cantidad</label>
+        <input pInputText type="number" formControlName="cantidad">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Precio unitario</label>
+        <input pInputText type="number" formControlName="precioUnitario">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Motivo cambio</label>
+        <input pInputText formControlName="motivoCambio">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Detalle instalación</label>
+        <input pInputText formControlName="detalleInstalacion">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Serie anterior</label>
+        <input pInputText formControlName="serieAnterior">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Serie nueva</label>
+        <input pInputText formControlName="serieNueva">
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="childMode() === 'autorizacion'" [formGroup]="autorizacionForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>Tipo autorización</label>
+        <select formControlName="tipoAutorizacion">
+          <option *ngFor="let option of TIPO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Estado</label>
+        <select formControlName="estadoAutorizacion">
+          <option *ngFor="let option of ESTADO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Fecha respuesta</label>
+        <input type="date" formControlName="fechaRespuesta">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Referencia tabla</label>
+        <input pInputText formControlName="referenciaTabla">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Referencia ID</label>
+        <input pInputText type="number" formControlName="referenciaId">
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Descripción</label>
+        <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="childMode() === 'foto'" [formGroup]="fotoForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>Etapa</label>
+        <select formControlName="etapa">
+          <option *ngFor="let option of ETAPA_FOTO_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-8 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="principal">
+          Marcar como foto principal
+        </label>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Descripción</label>
+        <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Archivo imagen</label>
+        <input type="file" accept="image/*" (change)="onFotoSelected($event)">
+      </div>
+
+      <div class="drawerField span-12" *ngIf="fotoPreview() as preview">
+        <div class="previewCard">
+          <img [src]="preview" alt="Preview foto">
+          <button pButton type="button" severity="danger" [text]="true" label="Quitar imagen" (click)="limpiarFotoSeleccionada()"></button>
+        </div>
+      </div>
+    </div>
+  </form>
+</app-vehiculos-form-drawer>
+
+<app-vehiculos-form-drawer
+  [visible]="comercialDrawerVisible()"
+  [dirty]="comercialDirty()"
+  [saving]="saving()"
+  [title]="comercialDrawerTitle()"
+  [subtitle]="comercialDrawerSubtitle()"
+  sizeClass="appDrawer appDrawer--lg"
+  (visibleChange)="$event ? comercialDrawerVisible.set(true) : cerrarComercialDrawer()"
+  (requestClose)="cerrarComercialDrawer()"
+  (requestSave)="submitComercial()">
+
+  <form *ngIf="comercialDrawerMode() === 'workflow'" [formGroup]="workflowForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>ID orden</label>
+        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Tipo facturación</label>
+        <select formControlName="tipoFacturacion">
+          <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>DNI cliente</label>
+        <input pInputText type="number" formControlName="dni">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>IDs repuestos</label>
+        <input pInputText formControlName="idsVehOrdenTrabajoRepuesto" placeholder="1,2,3">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Observación factura</label>
+        <input pInputText formControlName="observacionFactura">
+      </div>
+
+      <div class="drawerField span-3 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="credito">
+          Crédito
+        </label>
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="usarPrecioRepuesto">
+          Usar precio repuesto
+        </label>
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Pago inicial</label>
+        <input pInputText type="number" formControlName="pagoInicial">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Cuotas</label>
+        <input pInputText type="number" formControlName="cuotas">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Fecha emisión</label>
+        <input type="date" formControlName="fechaEmisionIso">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Primer vencimiento</label>
+        <input type="date" formControlName="fechaPrimerVencimientoIso">
+      </div>
+
+      <div class="drawerField span-3 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="crearRecibo">
+          Crear recibo
+        </label>
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="contabilizarFactura">
+          Contabilizar factura
+        </label>
+      </div>
+
+      <div class="drawerField span-3 checkboxField" *ngIf="muestraCamposCobroWorkflow()">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="contabilizarCobro">
+          Contabilizar cobro
+        </label>
+      </div>
+
+      <div class="drawerField span-6" *ngIf="muestraCamposCobroWorkflow()">
+        <label>Concepto cobro</label>
+        <input pInputText formControlName="conceptoCobro">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Concepto factura</label>
+        <input pInputText formControlName="conceptoFactura">
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="comercialDrawerMode() === 'factura'" [formGroup]="facturaForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>ID orden</label>
+        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Tipo facturación</label>
+        <select formControlName="tipoFacturacion">
+          <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="drawerField span-4">
+        <label>DNI cliente</label>
+        <input pInputText type="number" formControlName="dni">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>IDs repuestos</label>
+        <input pInputText formControlName="idsVehOrdenTrabajoRepuesto" placeholder="1,2,3">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Entrada</label>
+        <input pInputText type="number" formControlName="entrada">
+      </div>
+
+      <div class="drawerField span-3">
+        <label>Cuotas</label>
+        <input pInputText type="number" formControlName="cuotas">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Primer vencimiento</label>
+        <input type="date" formControlName="fechaPrimerVencimiento">
+      </div>
+
+      <div class="drawerField span-4 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="credito">
+          Crédito
+        </label>
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="usarPrecioRepuesto">
+          Usar precio repuesto
+        </label>
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Observación</label>
+        <textarea pTextarea rows="3" formControlName="observacion"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="comercialDrawerMode() === 'cobro'" [formGroup]="cobroForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>ID factura</label>
+        <input pInputText type="number" formControlName="idFacVenta">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Valor</label>
+        <input pInputText type="number" formControlName="valor">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Fecha</label>
+        <input type="date" formControlName="fecha">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Concepto</label>
+        <input pInputText formControlName="concepto">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Tra cash</label>
+        <input pInputText formControlName="traCash">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Referencia datafast</label>
+        <input pInputText formControlName="referenciaDatafast">
+      </div>
+
+      <div class="drawerField span-6 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="crearCajaSiNoExiste">
+          Crear caja si no existe
+        </label>
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="contabilizar">
+          Contabilizar
+        </label>
+      </div>
+    </div>
+  </form>
+
+  <form *ngIf="comercialDrawerMode() === 'contabilizar'" [formGroup]="contabilizarForm" class="drawerForm">
+    <div class="drawerGrid">
+      <div class="drawerField span-4">
+        <label>ID factura</label>
+        <input pInputText type="number" formControlName="idFacVenta">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>ID tipo contable</label>
+        <input pInputText type="number" formControlName="idCntTipoFk">
+      </div>
+
+      <div class="drawerField span-4">
+        <label>Fecha contable</label>
+        <input type="date" formControlName="fechaContable">
+      </div>
+
+      <div class="drawerField span-12">
+        <label>Concepto</label>
+        <textarea pTextarea rows="3" formControlName="concepto"></textarea>
+      </div>
+    </div>
+  </form>
+</app-vehiculos-form-drawer>

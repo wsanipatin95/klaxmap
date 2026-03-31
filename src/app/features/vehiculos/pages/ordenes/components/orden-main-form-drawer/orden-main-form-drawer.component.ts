@@ -782,11 +782,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
 
   private createSnapshot(): string {
     return JSON.stringify({
-      ...this.form.getRawValue(),
-      cliente: this.clienteSeleccionado()?.nombre ?? this.clienteSeleccionado()?.ruc ?? null,
-      vehiculo: this.vehiculoSeleccionado()?.placa ?? this.vehiculoSeleccionado()?.modelo ?? null,
-      responsableRecepcionNombre: this.responsableRecepcionSeleccionado()?.usuario ?? null,
-      responsableTecnicoNombre: this.responsableTecnicoSeleccionado()?.usuario ?? null,
+      form: this.form.getRawValue(),
       atributos: this.buildAtributosObject(this.atributosRows),
     });
   }

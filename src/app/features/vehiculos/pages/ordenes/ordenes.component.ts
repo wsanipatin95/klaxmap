@@ -17,9 +17,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
+import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
   SegUsuarioListadoItem,
@@ -92,10 +92,10 @@ type AtributoRowForm = FormGroup<{
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
     VehiculosEmptyStateComponent,
+    VehiculosFormDrawerComponent,
     OrdenDetailPanelComponent,
     OrdenMainFormDrawerComponent,
   ],
-  providers: [ConfirmationService],
   templateUrl: './ordenes.component.html',
   styleUrl: './ordenes.component.scss',
 })
