@@ -10,39 +10,10 @@
   (requestSave)="submit()">
 
   <form class="denseForm" [formGroup]="form">
-    <section class="compactCard">
-      <div class="compactCard__head">
-        <div>
-          <h4>Cliente y operación base</h4>
-          <p>Todo en una sola vista, sin tabs y sin espacio sobrante.</p>
-        </div>
-
-        <button
-          pButton
-          type="button"
-          size="small"
-          severity="secondary"
-          icon="pi pi-search"
-          label="Buscar cliente"
-          (click)="abrirClientePicker()">
-        </button>
-      </div>
-
-      <div class="inlineSummary">
-        <article class="summaryPill">
-          <span class="summaryPill__label">Cliente</span>
-          <strong class="summaryPill__value">{{ clienteLabel() }}</strong>
-        </article>
-
-        <article class="summaryPill">
-          <span class="summaryPill__label">Vehículo</span>
-          <strong class="summaryPill__value">{{ vehiculoLabel() }}</strong>
-        </article>
-      </div>
-
-      <div class="denseGrid">
-        <div class="field span-7">
-          <span class="fieldLabel">Cliente</span>
+    <section class="compactCard compactCard--tight">
+      <div class="denseGrid denseGrid--top">
+        <div class="field span-5">
+          <span class="fieldLabel">Cliente <span class="requiredMark">*</span></span>
           <div class="inlineAction">
             <input pInputText [value]="clienteLabel()" readonly>
             <button
@@ -51,32 +22,52 @@
               size="small"
               severity="secondary"
               icon="pi pi-search"
+              [disabled]="isSelectionLocked()"
               (click)="abrirClientePicker()">
+            </button>
+            <button
+              pButton
+              type="button"
+              size="small"
+              icon="pi pi-plus"
+              [disabled]="isSelectionLocked()"
+              (click)="abrirCrearCliente()">
             </button>
           </div>
         </div>
 
         <div class="field span-5">
-          <span class="fieldLabel">Vehículo del cliente</span>
-          <select formControlName="idCliVehiculoFk" (change)="onVehiculoSeleccionado(form.controls.idCliVehiculoFk.value)">
-            <option [ngValue]="null">Selecciona un vehículo</option>
-            <option *ngFor="let veh of vehiculosCliente()" [ngValue]="veh.idCliVehiculo">
-              {{ veh.marca }} {{ veh.modelo }} · {{ veh.placa || 'Sin placa' }}
-            </option>
-          </select>
+          <span class="fieldLabel">Vehículo <span class="requiredMark">*</span></span>
+          <div class="inlineAction">
+            <select
+              formControlName="idCliVehiculoFk"
+              [disabled]="isSelectionLocked()"
+              (change)="onVehiculoSeleccionado(form.controls.idCliVehiculoFk.value)">
+              <option [ngValue]="null">Selecciona un vehículo</option>
+              <option *ngFor="let veh of vehiculosCliente()" [ngValue]="veh.idCliVehiculo">
+                {{ veh.marca }} {{ veh.modelo }} · {{ veh.placa || 'Sin placa' }}
+              </option>
+            </select>
+            <button
+              pButton
+              type="button"
+              size="small"
+              icon="pi pi-plus"
+              [disabled]="!canCreateVehiculo()"
+              (click)="abrirCrearVehiculo()">
+            </button>
+          </div>
+        </div>
+
+        <div class="field span-2">
+          <span class="fieldLabel">Estado OT</span>
+          <input pInputText [value]="form.getRawValue().estadoOrden || 'RECIBIDO'" readonly>
         </div>
 
         <div class="field span-3">
-          <span class="fieldLabel">Tipo servicio</span>
+          <span class="fieldLabel">Tipo servicio <span class="requiredMark">*</span></span>
           <select formControlName="tipoServicio">
             <option *ngFor="let option of TIPO_SERVICIO_OPTIONS" [value]="option">{{ option }}</option>
-          </select>
-        </div>
-
-        <div class="field span-3">
-          <span class="fieldLabel">Estado OT</span>
-          <select formControlName="estadoOrden">
-            <option *ngFor="let option of ESTADO_ORDEN_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
@@ -160,12 +151,7 @@
     </section>
 
     <section class="compactCard">
-      <div class="compactCard__head">
-        <div>
-          <h4>Recepción y diagnóstico</h4>
-          <p>Campos compactos y densos, estilo workbench.</p>
-        </div>
-      </div>
+      <h4 class="sectionTitle">Recepción y diagnóstico</h4>
 
       <div class="denseGrid">
         <div class="field span-6">
@@ -216,11 +202,8 @@
     </section>
 
     <section class="compactCard">
-      <div class="compactCard__head">
-        <div>
-          <h4>Caracteristicas adicionales</h4>
-        </div>
-
+      <div class="sectionHeadInline">
+        <h4 class="sectionTitle">Características adicionales</h4>
         <button
           pButton
           type="button"
@@ -283,6 +266,14 @@
         label="Buscar"
         (click)="buscarClientes()">
       </button>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="Nuevo cliente"
+        (click)="abrirCrearCliente()">
+      </button>
     </div>
 
     <div class="pickerLoading" *ngIf="clienteBuscando()">Buscando clientes...</div>
@@ -298,6 +289,147 @@
       <div class="emptyInline" *ngIf="clientesResultados().length === 0">No hay clientes para mostrar.</div>
     </div>
   </div>
+</p-dialog>
+
+<p-dialog
+  [visible]="clienteCreateVisible()"
+  (visibleChange)="clienteCreateVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '42rem' }"
+  header="Crear cliente">
+  <form class="dialogForm" [formGroup]="clienteCreateForm">
+    <div class="denseGrid denseGrid--dialog">
+      <div class="field span-4">
+        <span class="fieldLabel">Identificación <span class="requiredMark">*</span></span>
+        <input pInputText formControlName="ruc">
+      </div>
+
+      <div class="field span-8">
+        <span class="fieldLabel">Nombre <span class="requiredMark">*</span></span>
+        <input pInputText formControlName="nombre">
+      </div>
+
+      <div class="field span-12">
+        <span class="fieldLabel">Dirección</span>
+        <input pInputText formControlName="direccion">
+      </div>
+
+      <div class="field span-6">
+        <span class="fieldLabel">Email</span>
+        <input pInputText formControlName="email">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Móvil</span>
+        <input pInputText formControlName="movil">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Teléfono</span>
+        <input pInputText formControlName="telefono">
+      </div>
+
+      <div class="field span-12">
+        <span class="fieldLabel">Observación</span>
+        <textarea pTextarea rows="3" formControlName="observacion"></textarea>
+      </div>
+    </div>
+
+    <div class="dialogActions">
+      <button pButton type="button" severity="secondary" label="Cancelar" (click)="clienteCreateVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Crear cliente" [loading]="clienteCreateSaving()" (click)="crearClienteInline()"></button>
+    </div>
+  </form>
+</p-dialog>
+
+<p-dialog
+  [visible]="vehiculoCreateVisible()"
+  (visibleChange)="vehiculoCreateVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '50rem' }"
+  header="Crear vehículo">
+  <form class="dialogForm" [formGroup]="vehiculoCreateForm">
+    <div class="denseGrid denseGrid--dialog">
+      <div class="field span-4">
+        <span class="fieldLabel">Tipo vehículo <span class="requiredMark">*</span></span>
+        <select formControlName="idVehTipoVehiculoFk">
+          <option [ngValue]="null">Selecciona un tipo</option>
+          <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">
+            {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="field span-4">
+        <span class="fieldLabel">Placa <span class="requiredMark">*</span></span>
+        <input pInputText formControlName="placa">
+      </div>
+
+      <div class="field span-4">
+        <span class="fieldLabel">Marca <span class="requiredMark">*</span></span>
+        <input pInputText formControlName="marca">
+      </div>
+
+      <div class="field span-4">
+        <span class="fieldLabel">Modelo <span class="requiredMark">*</span></span>
+        <input pInputText formControlName="modelo">
+      </div>
+
+      <div class="field span-2">
+        <span class="fieldLabel">Año</span>
+        <input pInputText type="number" formControlName="anio">
+      </div>
+
+      <div class="field span-2">
+        <span class="fieldLabel">Color</span>
+        <input pInputText formControlName="color">
+      </div>
+
+      <div class="field span-4">
+        <span class="fieldLabel">Chasis</span>
+        <input pInputText formControlName="numeroChasis">
+      </div>
+
+      <div class="field span-4">
+        <span class="fieldLabel">Motor</span>
+        <input pInputText formControlName="numeroMotor">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Cilindraje</span>
+        <input pInputText formControlName="cilindraje">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Combustible</span>
+        <input pInputText formControlName="combustible">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Transmisión</span>
+        <input pInputText formControlName="transmision">
+      </div>
+
+      <div class="field span-3">
+        <span class="fieldLabel">Kilometraje</span>
+        <input pInputText type="number" formControlName="kilometraje">
+      </div>
+
+      <div class="field span-12">
+        <span class="fieldLabel">Observaciones</span>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+
+    <div class="dialogActions">
+      <button pButton type="button" severity="secondary" label="Cancelar" (click)="vehiculoCreateVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Crear vehículo" [loading]="vehiculoCreateSaving()" (click)="crearVehiculoInline()"></button>
+    </div>
+  </form>
 </p-dialog>
 
 <p-dialog

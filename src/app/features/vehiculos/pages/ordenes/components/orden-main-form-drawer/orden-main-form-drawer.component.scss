@@ -4,101 +4,75 @@
 
 .denseForm {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.55rem;
 }
 
 .compactCard {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.55rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.95rem;
+  border-radius: 0.9rem;
   background: #ffffff;
-  padding: 0.7rem 0.75rem;
+  padding: 0.65rem 0.7rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.compactCard__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.65rem;
+.compactCard--tight {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
-.compactCard__head h4 {
+.sectionTitle {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 800;
   color: #0f172a;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
-.compactCard__head p {
-  margin: 0.18rem 0 0;
-  font-size: 0.72rem;
-  color: #64748b;
-  line-height: 1.3;
-}
-
-.inlineSummary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.summaryPill {
-  min-width: 0;
+.sectionHeadInline {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.2rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: 0.8rem;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-}
-
-.summaryPill__label {
-  flex: 0 0 auto;
-  font-size: 0.67rem;
-  font-weight: 800;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.summaryPill__value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.79rem;
-  color: #0f172a;
-  font-weight: 700;
+  justify-content: space-between;
+  gap: 0.6rem;
 }
 
 .denseGrid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-flow: row dense;
-  gap: 0.55rem 0.7rem;
+  gap: 0.45rem 0.6rem;
+}
+
+.denseGrid--top {
+  align-items: end;
+}
+
+.denseGrid--dialog {
+  gap: 0.5rem 0.6rem;
 }
 
 .field {
   min-width: 0;
   display: grid;
-  gap: 0.28rem;
+  gap: 0.24rem;
   align-content: start;
 }
 
 .fieldLabel {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #475569;
-  line-height: 1.15;
+  line-height: 1.1;
+}
+
+.requiredMark {
+  color: #dc2626;
+  font-weight: 800;
 }
 
 .span-12 { grid-column: span 12; }
-.span-7 { grid-column: span 7; }
+.span-8 { grid-column: span 8; }
 .span-6 { grid-column: span 6; }
 .span-5 { grid-column: span 5; }
 .span-4 { grid-column: span 4; }
@@ -107,13 +81,14 @@
 
 .inlineAction {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.3rem;
   align-items: center;
   min-width: 0;
 }
 
 .inlineAction > .p-inputtext,
-.inlineAction > input[pInputText] {
+.inlineAction > input[pInputText],
+.inlineAction > select {
   flex: 1;
   min-width: 0;
 }
@@ -124,111 +99,61 @@
 
 .miniActions {
   display: inline-flex;
-  gap: 0.25rem;
+  gap: 0.2rem;
   align-items: center;
 }
 
 .attrTable {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 .attrHead,
 .attrRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.45rem;
+  gap: 0.4rem;
   align-items: center;
 }
 
 .attrHead {
   padding: 0 0.1rem;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: #64748b;
   font-weight: 700;
 }
 
-input[pInputText],
-textarea[pTextarea],
-input[type='date'],
-select {
-  width: 100%;
+.dialogForm {
+  display: grid;
+  gap: 0.7rem;
 }
 
-input[type='date'],
-select,
-input[pInputText],
-textarea[pTextarea] {
-  border-radius: 0.7rem;
-}
-
-:host ::ng-deep {
-  .p-inputtext,
-  .p-inputtextarea,
-  .p-inputnumber-input {
-    width: 100%;
-    min-height: 2.15rem;
-    border-radius: 0.7rem;
-    border-color: #dbe2ea;
-    font-size: 0.82rem;
-    padding-top: 0.35rem;
-    padding-bottom: 0.35rem;
-  }
-
-  textarea.p-inputtextarea {
-    min-height: 4.4rem;
-    resize: vertical;
-  }
-
-  .p-button {
-    border-radius: 0.7rem;
-    font-weight: 700;
-  }
-
-  .p-button.p-button-sm {
-    padding: 0.42rem 0.6rem;
-    font-size: 0.76rem;
-  }
-}
-
-input[type='date'],
-select {
-  min-height: 2.15rem;
-  border: 1px solid #dbe2ea;
-  border-radius: 0.7rem;
-  padding: 0 0.65rem;
-  font-size: 0.82rem;
-  background: #fff;
-  color: #0f172a;
-}
-
-select:focus,
-input[type='date']:focus {
-  outline: none;
-  border-color: #d98bbb;
-  box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.08);
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
 }
 
 .pickerDialog {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.75rem;
 }
 
 .pickerToolbar {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.55rem;
   align-items: center;
 }
 
 .searchBox {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  min-height: 2.35rem;
+  gap: 0.5rem;
+  min-height: 2.2rem;
   border: 1px solid #dbe2ea;
   border-radius: 0.75rem;
   background: #fff;
-  padding: 0 0.7rem;
+  padding: 0 0.65rem;
   flex: 1;
 }
 
@@ -244,12 +169,12 @@ input[type='date']:focus {
 
 .pickerLoading {
   color: #64748b;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
 
 .pickerList {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.5rem;
   max-height: 22rem;
   overflow: auto;
 }
@@ -258,7 +183,7 @@ input[type='date']:focus {
   border: 1px solid #dbe2ea;
   background: #fff;
   border-radius: 0.8rem;
-  padding: 0.7rem 0.8rem;
+  padding: 0.65rem 0.75rem;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease;
@@ -271,27 +196,88 @@ input[type='date']:focus {
 
 .pickerRowCopy {
   display: grid;
-  gap: 0.1rem;
+  gap: 0.08rem;
 }
 
 .pickerRowCopy strong {
   color: #334155;
-  font-size: 0.83rem;
+  font-size: 0.82rem;
 }
 
 .pickerRowCopy span {
   color: #64748b;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
 }
 
 .emptyInline {
   color: #64748b;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.1rem;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.1rem;
+}
+
+input[pInputText],
+textarea[pTextarea],
+input[type='date'],
+select {
+  width: 100%;
+}
+
+input[type='date'],
+select,
+input[pInputText],
+textarea[pTextarea] {
+  border-radius: 0.68rem;
+}
+
+:host ::ng-deep {
+  .p-inputtext,
+  .p-inputtextarea,
+  .p-inputnumber-input {
+    width: 100%;
+    min-height: 2.05rem;
+    border-radius: 0.68rem;
+    border-color: #dbe2ea;
+    font-size: 0.8rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+
+  textarea.p-inputtextarea {
+    min-height: 4rem;
+    resize: vertical;
+  }
+
+  .p-button {
+    border-radius: 0.68rem;
+    font-weight: 700;
+  }
+
+  .p-button.p-button-sm {
+    padding: 0.38rem 0.52rem;
+    font-size: 0.74rem;
+  }
+}
+
+input[type='date'],
+select {
+  min-height: 2.05rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.68rem;
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #0f172a;
+}
+
+select:focus,
+input[type='date']:focus {
+  outline: none;
+  border-color: #d98bbb;
+  box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.08);
 }
 
 @media (max-width: 1280px) {
-  .span-7,
+  .span-8,
   .span-6,
   .span-5,
   .span-4 {
@@ -305,12 +291,8 @@ input[type='date']:focus {
 }
 
 @media (max-width: 920px) {
-  .inlineSummary {
-    grid-template-columns: 1fr;
-  }
-
   .span-12,
-  .span-7,
+  .span-8,
   .span-6,
   .span-5,
   .span-4,
@@ -328,8 +310,9 @@ input[type='date']:focus {
   }
 
   .pickerToolbar,
-  .compactCard__head,
-  .inlineAction {
+  .sectionHeadInline,
+  .inlineAction,
+  .dialogActions {
     flex-direction: column;
     align-items: stretch;
   }

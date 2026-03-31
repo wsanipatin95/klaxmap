@@ -10,12 +10,16 @@ import { VehiculosFormDrawerComponent } from '../../../../components/form-drawer
 import { VehiculosRepository } from '../../../../data-access/vehiculos.repository';
 import {
   CliVehiculo,
+  CliVehiculoGuardarRequest,
   SegUsuarioListadoItem,
   VehCliente,
+  VehClienteGuardarRequest,
   VehOrdenTrabajo,
   VehOrdenTrabajoGuardarRequest,
+  VehTipoVehiculo,
 } from '../../../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
+import { VehiculosConfirmService } from '../../../../services/vehiculos-confirm.service';
 
 type UsuarioPickerTarget = 'recepcion' | 'tecnico' | null;
 
@@ -44,6 +48,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
   private notify = inject(NotifyService);
+  private confirm = inject(VehiculosConfirmService);
 
   @Input() visible = false;
   @Input() saving = false;
@@ -53,6 +58,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   @Output() requestClose = new EventEmitter<void>();
   @Output() dirtyChange = new EventEmitter<boolean>();
   @Output() save = new EventEmitter<VehOrdenTrabajoGuardarRequest>();
+  @Output() saveAndClose = new EventEmitter<VehOrdenTrabajoGuardarRequest>();
 
   readonly TIPO_SERVICIO_OPTIONS = [
     'REPARACION',
@@ -64,18 +70,6 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     'OTRO',
   ];
 
-  readonly ESTADO_ORDEN_OPTIONS = [
-    'RECIBIDO',
-    'DIAGNOSTICO',
-    'EN_PROCESO',
-    'EN_ESPERA',
-    'PENDIENTE_APROBACION',
-    'LISTO',
-    'FACTURADO',
-    'ENTREGADO',
-    'ANULADO',
-  ];
-
   dirty = signal(false);
 
   clientePickerVisible = signal(false);
@@ -83,6 +77,14 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   clientesResultados = signal<VehCliente[]>([]);
   clienteBuscando = signal(false);
   clienteSeleccionado = signal<VehCliente | null>(null);
+
+  clienteCreateVisible = signal(false);
+  clienteCreateSaving = signal(false);
+
+  vehiculoCreateVisible = signal(false);
+  vehiculoCreateSaving = signal(false);
+  tiposVehiculo = signal<VehTipoVehiculo[]>([]);
+  tiposVehiculoCargando = signal(false);
 
   vehiculosCliente = signal<CliVehiculo[]>([]);
   vehiculoSeleccionado = signal<CliVehiculo | null>(null);
@@ -101,7 +103,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     dni: [null as number | null, Validators.required],
     idCliVehiculoFk: [null as number | null, Validators.required],
     tipoServicio: ['REPARACION', Validators.required],
-    estadoOrden: ['RECIBIDO', Validators.required],
+    estadoOrden: [{ value: 'RECIBIDO', disabled: true }, Validators.required],
     fechaIngreso: [''],
     fechaPrometida: [''],
     kilometrajeIngreso: [null as number | null],
@@ -120,6 +122,32 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     observaciones: [''],
   });
 
+  clienteCreateForm = this.fb.group({
+    ruc: ['', Validators.required],
+    nombre: ['', Validators.required],
+    direccion: [''],
+    email: [''],
+    movil: [''],
+    telefono: [''],
+    observacion: [''],
+  });
+
+  vehiculoCreateForm = this.fb.group({
+    idVehTipoVehiculoFk: [null as number | null, Validators.required],
+    placa: ['', Validators.required],
+    marca: ['', Validators.required],
+    modelo: ['', Validators.required],
+    anio: [null as number | null],
+    color: [''],
+    numeroChasis: [''],
+    numeroMotor: [''],
+    cilindraje: [''],
+    combustible: [''],
+    transmision: [''],
+    kilometraje: [null as number | null],
+    observaciones: [''],
+  });
+
   readonly atributosFormArray = this.fb.array<AtributoRowForm>([
     this.createAtributoRow('', ''),
   ]);
@@ -131,7 +159,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['visible'] && this.visible) {
+    if ((changes['visible'] && this.visible) || (changes['orden'] && this.visible)) {
       this.hydrateFromInput();
     }
   }
@@ -140,35 +168,98 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     return this.atributosFormArray;
   }
 
+  isEditing(): boolean {
+    return !!this.orden?.idVehOrdenTrabajo;
+  }
+
+  isSelectionLocked(): boolean {
+    return this.isEditing();
+  }
+
+  canCreateVehiculo(): boolean {
+    return !this.isSelectionLocked() && !!this.form.controls.dni.value;
+  }
+
   title(): string {
-    return this.orden ? 'Editar orden de trabajo' : 'Nueva orden de trabajo';
+    return this.orden?.idVehOrdenTrabajo
+      ? `Editar orden #${this.orden.idVehOrdenTrabajo}`
+      : 'Nueva orden';
   }
 
   subtitle(): string {
-    return 'Formulario compacto en una sola vista: cliente, vehículo, recepción, diagnóstico, responsables y observaciones.';
+    return '';
   }
 
   onVisibleChange(next: boolean) {
-    this.visibleChange.emit(next);
+    if (next) {
+      this.visibleChange.emit(true);
+      return;
+    }
+    void this.onRequestClose();
   }
 
-  onRequestClose() {
-    this.requestClose.emit();
-  }
-
-  submit() {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.notify.warn('Formulario incompleto', 'Cliente, vehículo, tipo de servicio y estado son obligatorios.');
+  async onRequestClose() {
+    if (!this.dirty()) {
+      this.requestClose.emit();
       return;
     }
 
+    if (this.isEditing()) {
+      this.requestClose.emit();
+      return;
+    }
+
+    const action = await this.confirm.confirmSaveBeforeClose();
+    if (action === 'save') {
+      this.submit(true);
+    }
+  }
+
+  clienteLabel(): string {
+    const cli = this.clienteSeleccionado();
+    if (cli) {
+      return [cli.nombre || cli.ruc || `Cliente #${cli.idTaxDni ?? cli.dni ?? ''}`, cli.ruc].filter(Boolean).join(' · ');
+    }
+
+    const dni = this.form.controls.dni.value;
+    return dni ? `Cliente #${dni}` : 'Sin cliente';
+  }
+
+  vehiculoLabel(): string {
+    const veh = this.vehiculoSeleccionado();
+    if (veh) {
+      return [veh.marca, veh.modelo, veh.placa].filter(Boolean).join(' · ');
+    }
+
+    const idCliVehiculo = this.form.controls.idCliVehiculoFk.value;
+    return idCliVehiculo ? `Vehículo #${idCliVehiculo}` : 'Sin vehículo';
+  }
+
+  submit(closeAfterSave = false) {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.notify.warn('Formulario incompleto', 'Cliente, vehículo y tipo de servicio son obligatorios.');
+      return;
+    }
+
+    const payload = this.buildPayload();
+
+    if (closeAfterSave) {
+      this.saveAndClose.emit(payload);
+      return;
+    }
+
+    this.save.emit(payload);
+  }
+
+  private buildPayload(): VehOrdenTrabajoGuardarRequest {
     const raw = this.form.getRawValue();
-    const payload: VehOrdenTrabajoGuardarRequest = {
+
+    return {
       dni: Number(raw.dni),
       idCliVehiculoFk: Number(raw.idCliVehiculoFk),
-      tipoServicio: raw.tipoServicio || null,
-      estadoOrden: raw.estadoOrden || null,
+      tipoServicio: raw.tipoServicio || 'REPARACION',
+      estadoOrden: this.orden?.estadoOrden || raw.estadoOrden || 'RECIBIDO',
       fechaIngreso: this.toTimestamp(raw.fechaIngreso),
       fechaPrometida: this.toTimestamp(raw.fechaPrometida),
       kilometrajeIngreso: raw.kilometrajeIngreso ?? null,
@@ -187,8 +278,12 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       observaciones: raw.observaciones?.trim() || null,
       atributos: this.buildAtributosObject(this.atributosRows),
     };
+  }
 
-    this.save.emit(payload);
+  abrirClientePicker() {
+    if (this.isSelectionLocked()) return;
+    this.clientePickerVisible.set(true);
+    this.clientesResultados.set([]);
   }
 
   buscarClientes() {
@@ -207,12 +302,9 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       });
   }
 
-  abrirClientePicker() {
-    this.clientePickerVisible.set(true);
-    this.clientesResultados.set([]);
-  }
-
   seleccionarCliente(cliente: VehCliente) {
+    if (this.isSelectionLocked()) return;
+
     const dni = Number(cliente.dni ?? cliente.idTaxDni ?? cliente.ruc ?? 0);
     this.clienteSeleccionado.set(cliente);
     this.form.controls.dni.setValue(dni || null);
@@ -222,6 +314,60 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     this.clientePickerVisible.set(false);
     this.buscarVehiculosCliente(dni || null);
     this.updateDirtyState();
+  }
+
+  abrirCrearCliente() {
+    if (this.isSelectionLocked()) return;
+
+    this.clienteCreateForm.reset({
+      ruc: this.clientesBuscar() || '',
+      nombre: '',
+      direccion: '',
+      email: '',
+      movil: '',
+      telefono: '',
+      observacion: '',
+    });
+
+    this.clienteCreateVisible.set(true);
+  }
+
+  crearClienteInline() {
+    if (this.clienteCreateForm.invalid) {
+      this.clienteCreateForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.clienteCreateForm.getRawValue();
+    const payload: VehClienteGuardarRequest = {
+      ruc: raw.ruc?.trim() || '',
+      nombre: raw.nombre?.trim() || '',
+      direccion: raw.direccion?.trim() || null,
+      email: raw.email?.trim() || null,
+      movil: raw.movil?.trim() || null,
+      telefono: raw.telefono?.trim() || null,
+      observacion: raw.observacion?.trim() || null,
+    };
+
+    this.clienteCreateSaving.set(true);
+    this.repo.crearCliente(payload)
+      .pipe(finalize(() => this.clienteCreateSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Cliente creado', 'El cliente fue creado correctamente.');
+          this.clienteCreateVisible.set(false);
+
+          this.repo.listarClientes(payload.ruc, 0, 20, false).subscribe({
+            next: (res) => {
+              const cli = (res.items ?? []).find((x) => String(x.ruc || '').trim() === payload.ruc) ?? null;
+              if (cli) {
+                this.seleccionarCliente(cli);
+              }
+            },
+          });
+        },
+        error: (err) => this.notify.error('No se pudo crear el cliente', err?.message),
+      });
   }
 
   buscarVehiculosCliente(dni?: number | null, selectedVehicleId?: number | null) {
@@ -237,10 +383,16 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
         const items = res.items ?? [];
         this.vehiculosCliente.set(items);
 
-        if (selectedVehicleId) {
+        if (selectedVehicleId != null) {
           const vehiculo = items.find((x) => x.idCliVehiculo === Number(selectedVehicleId)) ?? null;
           this.vehiculoSeleccionado.set(vehiculo);
           this.form.controls.idCliVehiculoFk.setValue(selectedVehicleId);
+          return;
+        }
+
+        if (items.length === 1) {
+          this.vehiculoSeleccionado.set(items[0]);
+          this.form.controls.idCliVehiculoFk.setValue(items[0].idCliVehiculo);
           return;
         }
 
@@ -259,6 +411,83 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     this.vehiculoSeleccionado.set(vehiculo);
     this.form.controls.idCliVehiculoFk.setValue(idCliVehiculo);
     this.updateDirtyState();
+  }
+
+  abrirCrearVehiculo() {
+    if (!this.canCreateVehiculo()) {
+      this.notify.warn('Selecciona un cliente', 'Primero debes elegir o crear un cliente.');
+      return;
+    }
+
+    this.vehiculoCreateForm.reset({
+      idVehTipoVehiculoFk: null,
+      placa: '',
+      marca: '',
+      modelo: '',
+      anio: null,
+      color: '',
+      numeroChasis: '',
+      numeroMotor: '',
+      cilindraje: '',
+      combustible: '',
+      transmision: '',
+      kilometraje: null,
+      observaciones: '',
+    });
+
+    this.vehiculoCreateVisible.set(true);
+    this.cargarTiposVehiculo();
+  }
+
+  cargarTiposVehiculo() {
+    if (this.tiposVehiculo().length) return;
+
+    this.tiposVehiculoCargando.set(true);
+    this.repo.listarTipos('', 0, 100, true)
+      .pipe(finalize(() => this.tiposVehiculoCargando.set(false)))
+      .subscribe({
+        next: (res) => this.tiposVehiculo.set(res.items ?? []),
+        error: (err) => this.notify.error('No se pudieron cargar tipos de vehículo', err?.message),
+      });
+  }
+
+  crearVehiculoInline() {
+    if (this.vehiculoCreateForm.invalid || !this.form.controls.dni.value) {
+      this.vehiculoCreateForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.vehiculoCreateForm.getRawValue();
+    const payload: CliVehiculoGuardarRequest = {
+      dni: Number(this.form.controls.dni.value),
+      idVehTipoVehiculoFk: Number(raw.idVehTipoVehiculoFk),
+      placa: raw.placa?.trim() || null,
+      marca: raw.marca?.trim() || '',
+      modelo: raw.modelo?.trim() || '',
+      anio: raw.anio ?? null,
+      color: raw.color?.trim() || null,
+      numeroChasis: raw.numeroChasis?.trim() || null,
+      numeroMotor: raw.numeroMotor?.trim() || null,
+      cilindraje: raw.cilindraje?.trim() || null,
+      combustible: raw.combustible?.trim() || null,
+      transmision: raw.transmision?.trim() || null,
+      kilometraje: raw.kilometraje ?? null,
+      observaciones: raw.observaciones?.trim() || null,
+    };
+
+    this.vehiculoCreateSaving.set(true);
+    this.repo.crearClienteVehiculo(payload)
+      .pipe(finalize(() => this.vehiculoCreateSaving.set(false)))
+      .subscribe({
+        next: (res: any) => {
+          const nuevoId = Number(res?.data?.idCliVehiculo ?? 0) || null;
+
+          this.notify.success('Vehículo creado', 'El vehículo fue creado correctamente.');
+          this.vehiculoCreateVisible.set(false);
+          this.buscarVehiculosCliente(Number(this.form.controls.dni.value), nuevoId);
+        },
+        error: (err) => this.notify.error('No se pudo crear el vehículo', err?.message),
+      });
   }
 
   abrirUsuarioPicker(target: UsuarioPickerTarget) {
@@ -323,29 +552,8 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       this.updateDirtyState();
       return;
     }
-
     this.atributosRows.removeAt(index);
     this.updateDirtyState();
-  }
-
-  clienteLabel(): string {
-    const cli = this.clienteSeleccionado();
-    if (cli) {
-      return [cli.nombre || cli.ruc || `Cliente #${cli.idTaxDni ?? cli.dni ?? ''}`, cli.ruc].filter(Boolean).join(' · ');
-    }
-
-    const dni = this.form.controls.dni.value;
-    return dni ? `Cliente #${dni}` : 'No hay cliente seleccionado';
-  }
-
-  vehiculoLabel(): string {
-    const veh = this.vehiculoSeleccionado();
-    if (veh) {
-      return [veh.marca, veh.modelo, veh.placa].filter(Boolean).join(' · ');
-    }
-
-    const idCliVehiculo = this.form.controls.idCliVehiculoFk.value;
-    return idCliVehiculo ? `Vehículo #${idCliVehiculo}` : 'No hay vehículo seleccionado';
   }
 
   hydrateFromInput() {
@@ -377,6 +585,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       responsableTecnico: item.responsableTecnico ?? null,
       observaciones: item.observaciones || '',
     });
+    this.form.controls.estadoOrden.disable({ emitEvent: false });
 
     this.populateAtributosFormArray(this.atributosRows, item.atributos ?? {});
     this.hydrateClienteSeleccionado(item.dni ?? null);
@@ -395,6 +604,8 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
 
     this.clientePickerVisible.set(false);
     this.usuarioPickerVisible.set(false);
+    this.clienteCreateVisible.set(false);
+    this.vehiculoCreateVisible.set(false);
     this.clientesBuscar.set('');
     this.usuariosBuscar.set('');
     this.clientesResultados.set([]);
@@ -422,6 +633,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       responsableTecnico: null,
       observaciones: '',
     });
+    this.form.controls.estadoOrden.disable({ emitEvent: false });
 
     this.populateAtributosFormArray(this.atributosRows, {});
     this.refreshSnapshot();
@@ -483,7 +695,6 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   private populateAtributosFormArray(formArray: FormArray<AtributoRowForm>, data?: Record<string, unknown> | null) {
     formArray.clear();
     const entries = Object.entries(data ?? {});
-
     if (entries.length === 0) {
       formArray.push(this.createAtributoRow('', ''));
       return;

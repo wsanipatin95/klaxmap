@@ -1,18 +1,19 @@
-<app-vehiculos-page-header
-  title="Órdenes de trabajo"
+<app-vehiculos-page-header title="Órdenes de trabajo"
   subtitle="Workspace seccionado del taller. Backlog a la izquierda y operación completa de la OT a la derecha.">
   <button pButton type="button" severity="secondary" icon="pi pi-arrow-left" label="Volver" (click)="volver()"></button>
   <button pButton type="button" icon="pi pi-plus" label="Nueva OT" (click)="nuevo()"></button>
 </app-vehiculos-page-header>
-
+<p-confirmDialog></p-confirmDialog>
 <div class="toolbarCard">
   <div class="searchBox">
     <i class="pi pi-search"></i>
-    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar por OT, estado, servicio o detalle..." (keyup.enter)="cargar()">
+    <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar por OT, estado, servicio o detalle..."
+      (keyup.enter)="cargar()">
   </div>
   <div class="toolbarActions">
     <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
-    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button>
+    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()"
+      (click)="cargar()"></button>
   </div>
 </div>
 
@@ -27,70 +28,61 @@
     </div>
 
     <div class="backlogCard__body" *ngIf="ordenes().length; else noOrdenes">
-      <article class="jiraLikeRow" *ngFor="let item of ordenes()" [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo" (click)="seleccionarOrden(item)">
+      <article class="jiraLikeRow" *ngFor="let item of ordenes()"
+        [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo"
+        (click)="seleccionarOrden(item)">
         <div class="rowHeader">
           <div>
             <div class="primaryCell">OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}</div>
-            <div class="secondaryCell">{{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen || 'Sin fecha' }}</div>
+            <div class="secondaryCell">{{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen ||
+              'Sin fecha' }}</div>
           </div>
           <div class="rowActions">
             <p-tag [value]="item.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(item.estadoOrden)"></p-tag>
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-ban" severity="danger" *ngIf="!isOrdenAnulada(item)" (click)="anularOrden(item); $event.stopPropagation()"></button>
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" [disabled]="isOrdenAnulada(item)" (click)="editarOrden(item); $event.stopPropagation()"></button>
-            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" (click)="eliminarOrden(item); $event.stopPropagation()"></button>
+
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+              [disabled]="isOrdenAnulada(item)" (click)="editarOrden(item); $event.stopPropagation()">
+            </button>
+
+            <button pButton type="button" size="small" [text]="true" severity="warn" icon="pi pi-ban"
+              [disabled]="isOrdenAnulada(item)" (click)="anularOrden(item); $event.stopPropagation()">
+            </button>
+
+            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+              (click)="eliminarOrden(item); $event.stopPropagation()">
+            </button>
           </div>
         </div>
-        <div class="secondaryCell">{{ item.fallaReportada || item.detalleCliente || item.observaciones || 'Sin detalle operativo' }}</div>
+        <div class="secondaryCell">{{ item.fallaReportada || item.detalleCliente || item.observaciones || 'Sin detalle
+          operativo' }}</div>
       </article>
     </div>
   </section>
 
   <section class="workspaceCard">
-    <app-orden-detail-panel
-      [orden]="selectedOrden()"
-      [clienteNombre]="clienteNombreSeleccionado()"
-      [vehiculoNombre]="vehiculoNombreSeleccionado()"
-      [responsableRecepcionNombre]="responsableRecepcionNombre()"
-      [responsableTecnicoNombre]="responsableTecnicoNombre()"
-      [checklist]="checklist()"
-      [trabajos]="trabajos()"
-      [hallazgos]="hallazgos()"
-      [selectedHallazgo]="selectedHallazgo()"
-      [marcas]="marcas()"
-      [fotos]="fotos()"
-      [repuestos]="repuestos()"
-      [autorizaciones]="autorizaciones()"
-      [ordenFacturas]="ordenFacturas()"
-      [vistas]="vistas()"
-      [selectedVista]="selectedVista()"
-      [facturasOt]="facturasOt()"
-      [selectedFacturaOt]="selectedFacturaOt()"
-      [facturaDetalle]="facturaDetalle()"
-      [cobrosFactura]="cobrosFactura()"
-      [workflowResultado]="workflowResultado()"
-      [checklistLabelMap]="checklistLabelMap()"
-      [trabajoLabelMap]="trabajoLabelMap()"
-      [articuloLabelMap]="articuloLabelMap()"
-      (openChecklist)="abrirChild('checklist')"
-      (openTrabajo)="abrirChild('trabajo')"
-      (openHallazgo)="abrirChild('hallazgo')"
-      (openRepuesto)="abrirChild('repuesto')"
-      (openAutorizacion)="abrirChild('autorizacion')"
-      (openFoto)="abrirChild('foto')"
-      (openWorkflow)="abrirComercialDrawer('workflow')"
-      (openFactura)="abrirComercialDrawer('factura')"
-      (openCobro)="abrirComercialDrawer('cobro')"
-      (openContabilizar)="abrirComercialDrawer('contabilizar')"
-      (selectHallazgo)="seleccionarHallazgo($event)"
-      (selectVista)="seleccionarVista($event)"
-      (selectFactura)="seleccionarFacturaOt($event)"
-      (pointMarked)="createMarcaDesdeCanvas($event)">
+    <app-orden-detail-panel [orden]="selectedOrden()" [clienteNombre]="clienteNombreSeleccionado()"
+      [vehiculoNombre]="vehiculoNombreSeleccionado()" [responsableRecepcionNombre]="responsableRecepcionNombre()"
+      [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()" [trabajos]="trabajos()"
+      [hallazgos]="hallazgos()" [selectedHallazgo]="selectedHallazgo()" [marcas]="marcas()" [fotos]="fotos()"
+      [repuestos]="repuestos()" [autorizaciones]="autorizaciones()" [ordenFacturas]="ordenFacturas()"
+      [vistas]="vistas()" [selectedVista]="selectedVista()" [facturasOt]="facturasOt()"
+      [selectedFacturaOt]="selectedFacturaOt()" [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()"
+      [workflowResultado]="workflowResultado()" [checklistLabelMap]="checklistLabelMap()"
+      [trabajoLabelMap]="trabajoLabelMap()" [articuloLabelMap]="articuloLabelMap()"
+      (openChecklist)="abrirChild('checklist')" (openTrabajo)="abrirChild('trabajo')"
+      (openHallazgo)="abrirChild('hallazgo')" (openRepuesto)="abrirChild('repuesto')"
+      (openAutorizacion)="abrirChild('autorizacion')" (openFoto)="abrirChild('foto')"
+      (openWorkflow)="abrirComercialDrawer('workflow')" (openFactura)="abrirComercialDrawer('factura')"
+      (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')"
+      (selectHallazgo)="seleccionarHallazgo($event)" (selectVista)="seleccionarVista($event)"
+      (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)">
     </app-orden-detail-panel>
   </section>
 </div>
 
 <ng-template #noOrdenes>
-  <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes" subtitle="Crea la primera OT para empezar el flujo de recepción, diagnóstico y facturación."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes"
+    subtitle="Crea la primera OT para empezar el flujo de recepción, diagnóstico y facturación."></app-vehiculos-empty-state>
 </ng-template>
 
 <app-orden-main-form-drawer
@@ -100,7 +92,6 @@
   (visibleChange)="onMainDrawerVisibleChange($event)"
   (requestClose)="cerrarDrawer()"
   (dirtyChange)="onMainDrawerDirtyChange($event)"
-  (save)="guardarOrden($event)">
+  (save)="guardarOrden($event)"
+  (saveAndClose)="guardarOrden($event, true)">
 </app-orden-main-form-drawer>
-
-<!-- Mantener el resto del archivo actual tal como está en el repo -->

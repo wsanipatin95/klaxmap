@@ -19,7 +19,6 @@ import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
@@ -118,7 +117,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   readonly TIPO_AUTORIZACION_OPTIONS = ['ADICIONAL', 'CAMBIO_REPUESTO', 'SERVICIO_EXTRA', 'ENTREGA', 'OTRO'];
   readonly ESTADO_AUTORIZACION_OPTIONS = ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'ANULADO'];
   readonly TIPO_FACTURACION_OPTIONS = ['PARCIAL', 'TOTAL'];
-
+  private readonly MAIN_DRAWER_PAGE_SIZE = 50;
   q = '';
   loading = signal(false);
   saving = signal(false);
@@ -429,6 +428,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       this.notify.warn('Orden bloqueada', 'La OT está anulada y solo puede verse en modo consulta.');
       return;
     }
+
+    this.selectedOrden.set(item);
+    this.cargarDetalle(item);
     this.editingOrden.set(item);
     this.drawerVisible.set(true);
   }
@@ -437,21 +439,32 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.dirty.set(dirty);
   }
 
-  onMainDrawerVisibleChange(visible: boolean) {
-    this.drawerVisible.set(visible);
+  async onMainDrawerVisibleChange(visible: boolean) {
+    if (visible) {
+      this.drawerVisible.set(true);
+      return;
+    }
+
+    await this.cerrarDrawer();
   }
 
   cerrarDrawer = async () => {
-    if (this.dirty()) {
-      const ok = await this.confirm.confirmDiscard();
-      if (!ok) return;
+    if (!this.dirty()) {
+      this.finalizeMainDrawerClose();
+      return;
     }
-    this.drawerVisible.set(false);
-    this.dirty.set(false);
-    this.editingOrden.set(null);
+
+    if (!this.editingOrden()) {
+      return;
+    }
+
+    const ok = await this.confirm.confirmLeaveEdit();
+    if (!ok) return;
+
+    this.finalizeMainDrawerClose();
   };
 
-  guardarOrden(payload: VehOrdenTrabajoGuardarRequest) {
+  guardarOrden(payload: VehOrdenTrabajoGuardarRequest, closeAfterSave = false) {
     this.saving.set(true);
 
     const request$ = this.editingOrden()
@@ -461,23 +474,24 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       })
       : this.repo.crearOrden(payload);
 
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => {
-        this.notify.success(
-          this.editingOrden() ? 'Orden actualizada' : 'Orden creada',
-          'La orden fue guardada correctamente.',
-        );
-        this.drawerVisible.set(false);
-        this.dirty.set(false);
-        this.editingOrden.set(null);
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo guardar la orden', err?.message),
-    });
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (res: any) => {
+          const savedId = this.extractOrdenIdFromResponse(res);
+          const successTitle = this.editingOrden() ? 'Orden actualizada' : 'Orden creada';
+
+          this.notify.success(successTitle, res?.mensaje || 'La orden fue guardada correctamente.');
+          this.dirty.set(false);
+          this.refrescarOrdenGuardada(savedId, closeAfterSave);
+        },
+        error: (err) => this.notify.error('No se pudo guardar la orden', err?.message),
+      });
   }
 
   async eliminarOrden(item: VehOrdenTrabajo) {
     let ok = false;
+
     try {
       ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
     } catch {
@@ -490,17 +504,26 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
     if (!ok) return;
 
-    this.repo.eliminarOrden(item.idVehOrdenTrabajo).subscribe({
-      next: () => {
-        this.notify.success('Orden eliminada', 'La orden fue eliminada correctamente.');
-        if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-          this.selectedOrden.set(null);
-          this.resetDetalle();
-        }
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo eliminar la orden', err?.message),
-    });
+    this.saving.set(true);
+    this.repo.eliminarOrden(item.idVehOrdenTrabajo)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Orden eliminada', 'La orden fue eliminada correctamente.');
+
+          if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+            this.selectedOrden.set(null);
+            this.resetDetalle();
+          }
+
+          if (this.editingOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+            this.finalizeMainDrawerClose();
+          }
+
+          this.cargar();
+        },
+        error: (err) => this.notify.error('No se pudo eliminar la orden', err?.message),
+      });
   }
 
   cargarDetalle(item: VehOrdenTrabajo) {
@@ -1555,8 +1578,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (this.isOrdenAnulada(item)) return;
 
     let ok = false;
+
     try {
-      ok = await this.confirm.confirmDelete(`anular la orden #${item.idVehOrdenTrabajo}`);
+      ok = await this.confirm.confirmAnnul(`la orden #${item.idVehOrdenTrabajo}`);
     } catch {
       ok = false;
     }
@@ -1571,15 +1595,130 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.repo.editarOrden({
       idVehOrdenTrabajo: item.idVehOrdenTrabajo,
       cambios: { estadoOrden: 'ANULADO' },
-    }).pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => {
-        this.notify.success('Orden anulada', 'La OT quedó anulada y bloqueada.');
-        if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-          this.selectedOrden.set({ ...item, estadoOrden: 'ANULADO' });
-        }
-        this.cargar();
-      },
-      error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
-    });
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Orden anulada', 'La OT quedó anulada y bloqueada.');
+
+          if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+            const updated = { ...item, estadoOrden: 'ANULADO' };
+            this.selectedOrden.set(updated);
+            this.cargarDetalle(updated);
+          }
+
+          if (this.editingOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
+            this.editingOrden.set({ ...item, estadoOrden: 'ANULADO' });
+          }
+
+          this.cargar();
+        },
+        error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
+      });
+  }
+  private finalizeMainDrawerClose() {
+    this.drawerVisible.set(false);
+    this.dirty.set(false);
+    this.editingOrden.set(null);
+  }
+
+  private extractOrdenIdFromResponse(res: any): number | null {
+    const candidate =
+      res?.data?.idVehOrdenTrabajo ??
+      res?.data?.id ??
+      this.editingOrden()?.idVehOrdenTrabajo ??
+      null;
+
+    const parsed = Number(candidate ?? 0);
+    return parsed > 0 ? parsed : null;
+  }
+
+  private refrescarOrdenGuardada(savedId: number | null, closeAfterSave = false) {
+    this.loading.set(true);
+
+    this.repo.listarOrdenes(this.q, 0, this.MAIN_DRAWER_PAGE_SIZE, false)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (res) => {
+          const items = res.items ?? [];
+          this.ordenes.set(items);
+
+          const targetId =
+            savedId ??
+            this.editingOrden()?.idVehOrdenTrabajo ??
+            this.selectedOrden()?.idVehOrdenTrabajo ??
+            null;
+
+          let target = targetId
+            ? items.find((x) => x.idVehOrdenTrabajo === targetId) ?? null
+            : null;
+
+          if (!target && targetId) {
+            this.repo.listarOrdenes('', 0, this.MAIN_DRAWER_PAGE_SIZE, false).subscribe({
+              next: (fallbackRes) => {
+                const fallbackItems = fallbackRes.items ?? [];
+                this.ordenes.set(fallbackItems);
+
+                const fallbackTarget =
+                  fallbackItems.find((x) => x.idVehOrdenTrabajo === targetId) ?? null;
+
+                if (fallbackTarget) {
+                  this.selectedOrden.set(fallbackTarget);
+                  this.editingOrden.set(fallbackTarget);
+                  this.cargarDetalle(fallbackTarget);
+                }
+
+                this.dirty.set(false);
+
+                if (closeAfterSave) {
+                  this.finalizeMainDrawerClose();
+                  return;
+                }
+
+                this.drawerVisible.set(true);
+              },
+              error: (err) => {
+                this.notify.error('La orden se guardó, pero no se pudo refrescar la vista', err?.message);
+                this.dirty.set(false);
+
+                if (closeAfterSave) {
+                  this.finalizeMainDrawerClose();
+                  return;
+                }
+
+                this.drawerVisible.set(true);
+              },
+            });
+
+            return;
+          }
+
+          if (target) {
+            this.selectedOrden.set(target);
+            this.editingOrden.set(target);
+            this.cargarDetalle(target);
+          }
+
+          this.dirty.set(false);
+
+          if (closeAfterSave) {
+            this.finalizeMainDrawerClose();
+            return;
+          }
+
+          this.drawerVisible.set(true);
+        },
+        error: (err) => {
+          this.notify.error('La orden se guardó, pero no se pudo refrescar la vista', err?.message);
+          this.dirty.set(false);
+
+          if (closeAfterSave) {
+            this.finalizeMainDrawerClose();
+            return;
+          }
+
+          this.drawerVisible.set(true);
+        },
+      });
   }
 }
