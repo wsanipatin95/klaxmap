@@ -591,12 +591,15 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.cobrosFactura.set([]);
         }
 
-        this.repo.listarClientes(String(item.dni ?? ''), 0, 20, false).subscribe({
+        this.repo.listarClientes('', 0, 200, true).subscribe({
           next: (res) => {
-            const cli = (res.items ?? []).find((x) => Number(x.dni ?? x.ruc) === Number(item.dni)) ?? null;
-            this.clienteSeleccionadoNombre.set(cli?.nombre || cli?.ruc || 'Cliente');
+            const cli = (res.items ?? []).find(
+              (x) => Number((x as any).dni ?? (x as any).idTaxDni ?? (x as any).ruc ?? 0) === Number(item.dni ?? 0),
+            ) ?? null;
+
+            this.clienteSeleccionadoNombre.set(cli?.nombre || cli?.ruc || `Cliente #${item.dni}`);
           },
-          error: () => this.clienteSeleccionadoNombre.set('Cliente'),
+          error: () => this.clienteSeleccionadoNombre.set(`Cliente #${item.dni}`),
         });
 
         this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
