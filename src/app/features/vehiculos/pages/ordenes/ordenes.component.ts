@@ -490,16 +490,18 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   async eliminarOrden(item: VehOrdenTrabajo) {
+    if (this.isOrdenAnulada(item)) {
+      this.notify.warn('Acción no permitida', 'Una OT anulada ya no se puede eliminar.');
+      return;
+    }
+
     let ok = false;
 
     try {
       ok = await this.confirm.confirmDelete(`la orden #${item.idVehOrdenTrabajo}`);
     } catch {
-      ok = false;
-    }
-
-    if (!ok && typeof window !== 'undefined') {
-      ok = window.confirm(`¿Deseas eliminar la orden #${item.idVehOrdenTrabajo}?`);
+      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
+      return;
     }
 
     if (!ok) return;
@@ -1575,18 +1577,18 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   async anularOrden(item: VehOrdenTrabajo) {
-    if (this.isOrdenAnulada(item)) return;
+    if (this.isOrdenAnulada(item)) {
+      this.notify.warn('Orden ya anulada', 'La OT ya está anulada.');
+      return;
+    }
 
     let ok = false;
 
     try {
       ok = await this.confirm.confirmAnnul(`la orden #${item.idVehOrdenTrabajo}`);
     } catch {
-      ok = false;
-    }
-
-    if (!ok && typeof window !== 'undefined') {
-      ok = window.confirm(`¿Deseas anular la orden #${item.idVehOrdenTrabajo}?`);
+      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
+      return;
     }
 
     if (!ok) return;
@@ -1616,6 +1618,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
       });
   }
+
   private finalizeMainDrawerClose() {
     this.drawerVisible.set(false);
     this.dirty.set(false);
