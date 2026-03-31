@@ -2,44 +2,38 @@
   <section class="detailWorkspace">
     <article class="detailHero">
       <div class="detailHero__copy">
-        <div class="detailHero__eyebrow">Orden de trabajo</div>
         <h3>OT #{{ orden.idVehOrdenTrabajo }} · {{ orden.tipoServicio || 'SERVICIO' }}</h3>
-        <p>
-          {{ orden.fallaReportada || orden.detalleCliente || 'Gestiona recepción, diagnóstico, hallazgos, repuestos y comercial desde un solo workspace.' }}
+
+        <p *ngIf="orden.fallaReportada || orden.detalleCliente || orden.observaciones">
+          {{ orden.fallaReportada || orden.detalleCliente || orden.observaciones }}
         </p>
       </div>
+
       <div class="detailHero__meta">
         <p-tag [value]="orden.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(orden.estadoOrden)"></p-tag>
       </div>
     </article>
 
-    <section class="contextGrid">
-      <article class="contextCard">
+    <section class="contextStrip">
+      <article class="contextPill">
         <span>Cliente</span>
         <strong>{{ clienteNombre }}</strong>
       </article>
-      <article class="contextCard">
+
+      <article class="contextPill">
         <span>Vehículo</span>
         <strong>{{ vehiculoNombre }}</strong>
       </article>
-      <article class="contextCard">
-        <span>Responsable recepción</span>
+
+      <article class="contextPill">
+        <span>Recepción</span>
         <strong>{{ responsableRecepcionNombre }}</strong>
       </article>
-      <article class="contextCard">
-        <span>Responsable técnico</span>
+
+      <article class="contextPill">
+        <span>Técnico</span>
         <strong>{{ responsableTecnicoNombre }}</strong>
       </article>
-    </section>
-
-    <section class="quickActions">
-      <button pButton type="button" icon="pi pi-check-square" size="small" label="Checklist" (click)="openChecklist.emit()"></button>
-      <button pButton type="button" icon="pi pi-cog" size="small" severity="secondary" label="Trabajo" (click)="openTrabajo.emit()"></button>
-      <button pButton type="button" icon="pi pi-search" size="small" severity="secondary" label="Hallazgo" (click)="openHallazgo.emit()"></button>
-      <button pButton type="button" icon="pi pi-box" size="small" severity="secondary" label="Repuesto" (click)="openRepuesto.emit()"></button>
-      <button pButton type="button" icon="pi pi-verified" size="small" severity="secondary" label="Autorización" (click)="openAutorizacion.emit()"></button>
-      <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow" (click)="openWorkflow.emit()"></button>
-      <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura" (click)="openFactura.emit()"></button>
     </section>
 
     <section class="tabRail">
@@ -56,10 +50,7 @@
 
     <section class="panelCard" *ngIf="activeTab()==='resumen'">
       <div class="sectionHead">
-        <div>
-          <h4>Vista rápida</h4>
-          <div class="secondaryCell">La información principal siempre visible, sin perder contexto.</div>
-        </div>
+        <h4>Vista rápida</h4>
         <p-tag [value]="orden.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(orden.estadoOrden)"></p-tag>
       </div>
 
@@ -159,6 +150,7 @@
             <h4>Vistas del vehículo</h4>
             <span class="secondaryCell">{{ vistas.length }} cargadas</span>
           </div>
+
           <div class="jiraLikeList" *ngIf="vistas.length; else noVistas">
             <article
               class="jiraLikeRow compact"
@@ -250,10 +242,7 @@
 
     <section class="panelCard" *ngIf="activeTab()==='comercial'">
       <div class="sectionHead">
-        <div>
-          <h4>Centro comercial</h4>
-          <div class="secondaryCell">Facturas, cobros y seguimiento sin sacar al usuario de la OT.</div>
-        </div>
+        <h4>Comercial</h4>
         <div class="actionWrap">
           <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow" (click)="openWorkflow.emit()"></button>
           <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura" (click)="openFactura.emit()"></button>
@@ -298,6 +287,7 @@
               <h4>Relación OT / factura</h4>
               <span class="secondaryCell">{{ ordenFacturas.length }} vínculo(s)</span>
             </div>
+
             <div class="jiraLikeList">
               <article class="jiraLikeRow compact" *ngFor="let rel of ordenFacturas">
                 <div class="rowHeader">
@@ -393,10 +383,7 @@
 
       <section class="panelCard panelCard--nested workflowResultCard" *ngIf="workflowResultado as workflow">
         <div class="sectionHead">
-          <div>
-            <h4>Último workflow ejecutado</h4>
-            <div class="secondaryCell">Resultado integral generado desde esta misma OT.</div>
-          </div>
+          <h4>Último workflow ejecutado</h4>
           <p-tag [value]="workflow.estadoOrdenSugerido || 'PROCESADO'" severity="success"></p-tag>
         </div>
 
@@ -441,54 +428,54 @@
   <app-vehiculos-empty-state
     icon="pi pi-receipt"
     title="Selecciona una OT"
-    subtitle="Aquí verás el workspace completo de la orden, con tabs, contexto visible y acciones rápidas.">
+    subtitle="Aquí verás la operación de la orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noChecklist>
-  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist" subtitle="Agrega los ítems de recepción aplicados a esta orden."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist" subtitle="Agrega ítems de recepción."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noTrabajos>
-  <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajos" subtitle="Registra las tareas ejecutadas por el técnico."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajos" subtitle="Registra tareas del técnico."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noHallazgos>
-  <app-vehiculos-empty-state icon="pi pi-exclamation-circle" title="Sin hallazgos" subtitle="Registra daños, fallas o novedades encontradas en la revisión."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-exclamation-circle" title="Sin hallazgos" subtitle="Registra daños o fallas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noVistas>
-  <app-vehiculos-empty-state icon="pi pi-images" title="Sin vistas" subtitle="No se encontraron vistas configuradas para el vehículo asociado."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-images" title="Sin vistas" subtitle="No hay vistas configuradas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFotos>
-  <app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias reales del hallazgo antes, durante o después del trabajo."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-camera" title="Sin fotos" subtitle="Registra evidencias."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noRepuestos>
-  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos" subtitle="Agrega partes o consumibles relacionados a la orden."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos" subtitle="Agrega partes o consumibles."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noAutorizaciones>
-  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones" subtitle="Registra aprobaciones del cliente para cambios adicionales."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones" subtitle="Registra aprobaciones del cliente."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturasOt>
-  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas de la OT" subtitle="Desde aquí puedes lanzar el workflow integral o crear una factura manual."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas de la OT" subtitle="Genera workflow o factura manual."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaSeleccionada>
-  <app-vehiculos-empty-state icon="pi pi-dollar" title="Selecciona una factura" subtitle="Verás detalle, plan CxC y cobros sin salir del contexto de la orden."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-dollar" title="Selecciona una factura" subtitle="Aquí verás detalle y cobros."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaItems>
-  <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado" subtitle="No se encontraron líneas de detalle para esta factura."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado" subtitle="No se encontraron líneas."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCxc>
-  <app-vehiculos-empty-state icon="pi pi-calendar" title="Sin plan CxC" subtitle="Esta factura no registra cuotas pendientes."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-calendar" title="Sin plan CxC" subtitle="No hay cuotas pendientes."></app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCobros>
-  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros" subtitle="Todavía no existen cobros registrados para la factura seleccionada."></app-vehiculos-empty-state>
+  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cobros" subtitle="No existen cobros registrados."></app-vehiculos-empty-state>
 </ng-template>

@@ -195,6 +195,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       this.visibleChange.emit(true);
       return;
     }
+
     void this.onRequestClose();
   }
 
@@ -218,7 +219,9 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   clienteLabel(): string {
     const cli = this.clienteSeleccionado();
     if (cli) {
-      return [cli.nombre || cli.ruc || `Cliente #${cli.idTaxDni ?? cli.dni ?? ''}`, cli.ruc].filter(Boolean).join(' · ');
+      return [cli.nombre || cli.ruc || `Cliente #${cli.idTaxDni ?? cli.dni ?? ''}`, cli.ruc]
+        .filter(Boolean)
+        .join(' · ');
     }
 
     const dni = this.form.controls.dni.value;
@@ -552,6 +555,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       this.updateDirtyState();
       return;
     }
+
     this.atributosRows.removeAt(index);
     this.updateDirtyState();
   }
@@ -585,7 +589,9 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       responsableTecnico: item.responsableTecnico ?? null,
       observaciones: item.observaciones || '',
     });
+
     this.form.controls.estadoOrden.disable({ emitEvent: false });
+    this.syncVehiculoControlState();
 
     this.populateAtributosFormArray(this.atributosRows, item.atributos ?? {});
     this.hydrateClienteSeleccionado(item.dni ?? null);
@@ -633,10 +639,23 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       responsableTecnico: null,
       observaciones: '',
     });
+
     this.form.controls.estadoOrden.disable({ emitEvent: false });
+    this.syncVehiculoControlState();
 
     this.populateAtributosFormArray(this.atributosRows, {});
     this.refreshSnapshot();
+  }
+
+  private syncVehiculoControlState() {
+    const vehiculoControl = this.form.controls.idCliVehiculoFk;
+
+    if (this.isSelectionLocked()) {
+      vehiculoControl.disable({ emitEvent: false });
+      return;
+    }
+
+    vehiculoControl.enable({ emitEvent: false });
   }
 
   private hydrateClienteSeleccionado(dni: number | null | undefined) {
@@ -695,6 +714,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   private populateAtributosFormArray(formArray: FormArray<AtributoRowForm>, data?: Record<string, unknown> | null) {
     formArray.clear();
     const entries = Object.entries(data ?? {});
+
     if (entries.length === 0) {
       formArray.push(this.createAtributoRow('', ''));
       return;
