@@ -32,7 +32,7 @@ type OrdenDetailTab =
   | 'autorizaciones'
   | 'comercial';
 
-type ExecutionTab = 'hallazgos' | 'marcas' | 'evidencias';
+type ExecutionTab = 'detalle' | 'hallazgos' | 'marcas' | 'evidencias';
 
 export type ChecklistBulkRow = {
   relationId: number;
@@ -184,17 +184,66 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Output() pointMarked = new EventEmitter<{ x: number; y: number }>();
 
   activeTab = signal<OrdenDetailTab>('resumen');
-  executionTab = signal<ExecutionTab>('hallazgos');
+  executionTab = signal<ExecutionTab>('detalle');
 
   checklistRows = signal<ChecklistEditorRow[]>([]);
 
   selectedTrabajoId: number | null = null;
   editingTrabajoId: number | null = null;
   editingHallazgoId: number | null = null;
+  selectedFotoId: number | null = null;
 
   trabajoDraft: TrabajoDraft = this.createEmptyTrabajoDraft();
   hallazgoDraft: HallazgoDraft = this.createEmptyHallazgoDraft();
   fotoDraft: FotoDraft = this.createEmptyFotoDraft();
+
+  readonly trabajoTipoOptions = [
+    'DIAGNOSTICO',
+    'REPARACION',
+    'MANTENIMIENTO',
+    'INSTALACION',
+    'PRUEBA',
+    'OTRO',
+  ];
+
+  readonly trabajoEstadoOptions = [
+    'PENDIENTE',
+    'EN_PROCESO',
+    'PAUSADO',
+    'FINALIZADO',
+    'ANULADO',
+  ];
+
+  readonly hallazgoTipoOptions = [
+    'RECEPCION',
+    'DIAGNOSTICO',
+    'DESMONTAJE',
+    'PRUEBA',
+    'ENTREGA',
+    'OTRO',
+  ];
+
+  readonly hallazgoCategoriaOptions = [
+    'GENERAL',
+    'MECANICO',
+    'ELECTRICO',
+    'CARROCERIA',
+    'PINTURA',
+    'INTERIOR',
+    'SEGURIDAD',
+  ];
+
+  readonly hallazgoSeveridadOptions = ['BAJA', 'MEDIA', 'ALTA', 'CRITICA'];
+
+  readonly hallazgoEstadoOptions = [
+    'REPORTADO',
+    'VALIDADO',
+    'APROBADO',
+    'RECHAZADO',
+    'RESUELTO',
+  ];
+
+  readonly evidenciaEtapaOptions = ['ANTES', 'DURANTE', 'DESPUES'];
 
   private pendingResetKind: 'trabajo' | 'hallazgo' | 'foto' | null = null;
 
@@ -218,7 +267,9 @@ export class OrdenDetailPanelComponent implements OnChanges {
         this.pendingResetKind = null;
       } else if (!this.editingTrabajoId && !this.trabajoDraft.descripcionInicial.trim()) {
         const currentTrabajo = this.selectedTrabajoActual();
-        if (currentTrabajo) this.loadTrabajoDraft(currentTrabajo);
+        if (currentTrabajo) {
+          this.loadTrabajoDraft(currentTrabajo);
+        }
       }
     }
 
@@ -233,13 +284,22 @@ export class OrdenDetailPanelComponent implements OnChanges {
         this.pendingResetKind = null;
       } else if (!this.editingHallazgoId && !this.hallazgoDraft.descripcion.trim()) {
         const currentHallazgo = this.selectedHallazgoEnContexto();
-        if (currentHallazgo) this.loadHallazgoDraft(currentHallazgo);
+        if (currentHallazgo) {
+          this.loadHallazgoDraft(currentHallazgo);
+        }
       }
     }
 
     if (changes['fotos'] && this.pendingResetKind === 'foto') {
       this.cancelFotoDraft();
       this.pendingResetKind = null;
+    }
+
+    if (changes['fotos']) {
+      const currentFoto = this.selectedFotoActual();
+      if (!currentFoto) {
+        this.selectedFotoId = this.fotos[0]?.idVehOrdenTrabajoHallazgoFoto ?? null;
+      }
     }
   }
 
@@ -253,9 +313,9 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   severityEstado(estado?: string | null) {
     const v = (estado || '').toUpperCase();
-    if (v.includes('ENTREG')) return 'success';
+    if (v.includes('ENTREG') || v.includes('FINALIZ') || v.includes('RESUELT') || v.includes('APROB')) return 'success';
     if (v.includes('FACTUR')) return 'info';
-    if (v.includes('PEND') || v.includes('ESPERA')) return 'warn';
+    if (v.includes('PEND') || v.includes('ESPERA') || v.includes('PAUS')) return 'warn';
     if (v.includes('ANUL') || v.includes('RECHAZ')) return 'danger';
     return 'secondary';
   }
@@ -309,6 +369,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
     if (!binary) return null;
     const value = String(binary).trim();
     if (!value) return null;
+
     if (
       value.startsWith('data:') ||
       value.startsWith('http://') ||
@@ -317,6 +378,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
     ) {
       return value;
     }
+
     return `data:${this.guessMimeType(value)};base64,${value}`;
   }
 
@@ -327,16 +389,53 @@ export class OrdenDetailPanelComponent implements OnChanges {
     return false;
   }
 
+  formatDateShort(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const safe = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const date = new Date(safe);
+
+    if (Number.isNaN(date.getTime())) {
+      return raw.slice(0, 10);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
+
+  formatDateTimeShort(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+      return this.formatDateShort(raw);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
   allChecklistChecked(): boolean {
     const rows = this.checklistRows();
     return rows.length > 0 && rows.every((row) => row.checked);
   }
 
   onToggleAllChecklist(checked: boolean) {
-    const next = this.checklistRows().map((row) => ({
-      ...row,
-      checked,
-    }));
+    const next = this.checklistRows().map((row) => ({ ...row, checked }));
     this.checklistRows.set(next);
   }
 
@@ -369,12 +468,6 @@ export class OrdenDetailPanelComponent implements OnChanges {
     this.saveChecklist.emit(payload);
   }
 
-  trackByChecklistRow = (_index: number, row: ChecklistEditorRow) => row.relationId;
-  trackByTrabajo = (_index: number, item: VehOrdenTrabajoTrabajo) => item.idVehOrdenTrabajoTrabajo;
-  trackByHallazgo = (_index: number, item: VehOrdenTrabajoHallazgo) => item.idVehOrdenTrabajoHallazgo;
-  trackByVista = (_index: number, item: VehTipoVehiculoVista) => item.idVehTipoVehiculoVista;
-  trackByFoto = (_index: number, item: VehOrdenTrabajoHallazgoFoto) => item.idVehOrdenTrabajoHallazgoFoto;
-
   trabajosListado(): VehOrdenTrabajoTrabajo[] {
     return this.trabajos ?? [];
   }
@@ -402,6 +495,20 @@ export class OrdenDetailPanelComponent implements OnChanges {
     return current;
   }
 
+  marcasDeVistaSeleccionada(): VehOrdenTrabajoHallazgoMarca[] {
+    const vistaId = this.selectedVista?.idVehTipoVehiculoVista ?? null;
+    if (!vistaId) return this.marcas ?? [];
+
+    return (this.marcas ?? []).filter(
+      (item) => Number(item.idVehTipoVehiculoVistaFk ?? 0) === Number(vistaId),
+    );
+  }
+
+  selectedFotoActual(): VehOrdenTrabajoHallazgoFoto | null {
+    if (!this.selectedFotoId) return null;
+    return this.fotos.find((item) => item.idVehOrdenTrabajoHallazgoFoto === this.selectedFotoId) ?? null;
+  }
+
   seleccionarTrabajoWorkbench(item: VehOrdenTrabajoTrabajo) {
     this.loadTrabajoDraft(item);
 
@@ -410,16 +517,17 @@ export class OrdenDetailPanelComponent implements OnChanges {
     );
 
     const currentHallazgo = this.selectedHallazgoEnContexto();
-    if (currentHallazgo) return;
-
-    if (hallazgos.length) {
+    if (!currentHallazgo && hallazgos.length) {
       this.selectHallazgo.emit(hallazgos[0]);
       this.loadHallazgoDraft(hallazgos[0]);
-      return;
     }
 
-    this.clearHallazgoSelection.emit();
-    this.loadHallazgoDraft(null);
+    if (!hallazgos.length) {
+      this.clearHallazgoSelection.emit();
+      this.loadHallazgoDraft(null);
+    }
+
+    this.executionTab.set('detalle');
   }
 
   iniciarNuevoTrabajo() {
@@ -428,10 +536,12 @@ export class OrdenDetailPanelComponent implements OnChanges {
     this.trabajoDraft = this.createEmptyTrabajoDraft();
     this.clearHallazgoSelection.emit();
     this.loadHallazgoDraft(null);
+    this.executionTab.set('detalle');
   }
 
   editarTrabajo(item: VehOrdenTrabajoTrabajo) {
     this.loadTrabajoDraft(item);
+    this.executionTab.set('detalle');
   }
 
   guardarTrabajo() {
@@ -475,11 +585,13 @@ export class OrdenDetailPanelComponent implements OnChanges {
     this.editingHallazgoId = null;
     this.hallazgoDraft = this.createEmptyHallazgoDraft();
     this.clearHallazgoSelection.emit();
+    this.executionTab.set('hallazgos');
   }
 
   editarHallazgo(item: VehOrdenTrabajoHallazgo) {
     this.loadHallazgoDraft(item);
     this.selectHallazgo.emit(item);
+    this.executionTab.set('hallazgos');
   }
 
   guardarHallazgo() {
@@ -525,8 +637,31 @@ export class OrdenDetailPanelComponent implements OnChanges {
     if (item.idVehOrdenTrabajoTrabajoFk) {
       this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk;
     }
+
     this.selectHallazgo.emit(item);
     this.loadHallazgoDraft(item);
+
+    if (!this.selectedVista && this.vistas.length) {
+      this.selectVista.emit(this.vistas[0]);
+    }
+
+    this.executionTab.set('hallazgos');
+  }
+
+  seleccionarFoto(item: VehOrdenTrabajoHallazgoFoto) {
+    this.selectedFotoId = item.idVehOrdenTrabajoHallazgoFoto;
+  }
+
+  editarFotoLocal(item: VehOrdenTrabajoHallazgoFoto) {
+    this.selectedFotoId = item.idVehOrdenTrabajoHallazgoFoto;
+    this.fotoDraft = {
+      etapa: item.etapa || 'ANTES',
+      descripcion: item.descripcion || '',
+      principal: this.esVerdadero((item as any).principal),
+      fotoBase64: null,
+      fotoPreview: this.resolveBinarySrc((item.foto || (item as any).urlArchivo) ?? null),
+    };
+    this.executionTab.set('evidencias');
   }
 
   onFotoSelected(event: Event) {
@@ -568,7 +703,16 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   cancelFotoDraft() {
+    this.selectedFotoId = null;
     this.fotoDraft = this.createEmptyFotoDraft();
+  }
+
+  checklistChangedCount(): number {
+    return this.checklistRows().filter(
+      (row) =>
+        row.checked !== row.originalChecked ||
+        row.observaciones.trim() !== row.originalObservaciones.trim(),
+    ).length;
   }
 
   private reconcileSelectedTrabajo() {
@@ -717,7 +861,18 @@ export class OrdenDetailPanelComponent implements OnChanges {
     if (base64.startsWith('iVBOR')) return 'image/png';
     if (base64.startsWith('R0lGOD')) return 'image/gif';
     if (base64.startsWith('UklGR')) return 'image/webp';
-    if (base64.startsWith('PHN2Zy') || base64.startsWith('PD94bWw')) return 'image/svg+xml';
     return 'image/png';
   }
+  
+  fotoFechaGeneracion(foto: VehOrdenTrabajoHallazgoFoto | null | undefined): string | null {
+    if (!foto) return null;
+    return (foto as any).fecGen ?? null;
+  }
+
+  trackByChecklistRow = (_index: number, row: ChecklistEditorRow) => row.relationId;
+  trackByTrabajo = (_index: number, item: VehOrdenTrabajoTrabajo) => item.idVehOrdenTrabajoTrabajo;
+  trackByHallazgo = (_index: number, item: VehOrdenTrabajoHallazgo) => item.idVehOrdenTrabajoHallazgo;
+  trackByVista = (_index: number, item: VehTipoVehiculoVista) => item.idVehTipoVehiculoVista;
+  trackByFoto = (_index: number, item: VehOrdenTrabajoHallazgoFoto) => item.idVehOrdenTrabajoHallazgoFoto;
+  trackByMarca = (_index: number, item: VehOrdenTrabajoHallazgoMarca) => item.idVehOrdenTrabajoHallazgoMarca;
 }
