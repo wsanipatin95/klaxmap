@@ -32,6 +32,8 @@ type OrdenDetailTab =
   | 'autorizaciones'
   | 'comercial';
 
+type ExecutionTab = 'hallazgos' | 'marcas' | 'evidencias';
+
 export type ChecklistBulkRow = {
   relationId: number;
   label: string;
@@ -62,9 +64,9 @@ export type HallazgoWorkbenchSavePayload = {
   descripcion: string;
   severidad: string;
   estadoHallazgo: string;
-  requiereCambio: boolean;
+  requiereCambio: number;
   motivoCambio?: string | null;
-  aprobadoCliente: boolean;
+  aprobadoCliente: number;
   fechaAprobacion?: string | null;
   observaciones?: string | null;
 };
@@ -182,11 +184,11 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Output() pointMarked = new EventEmitter<{ x: number; y: number }>();
 
   activeTab = signal<OrdenDetailTab>('resumen');
+  executionTab = signal<ExecutionTab>('hallazgos');
 
   checklistRows = signal<ChecklistEditorRow[]>([]);
 
   selectedTrabajoId: number | null = null;
-
   editingTrabajoId: number | null = null;
   editingHallazgoId: number | null = null;
 
@@ -201,21 +203,38 @@ export class OrdenDetailPanelComponent implements OnChanges {
       this.rebuildChecklistRows();
     }
 
-    if (changes['trabajos'] || changes['selectedHallazgo']) {
+    if (changes['trabajos'] || changes['hallazgos'] || changes['selectedHallazgo']) {
       this.reconcileSelectedTrabajo();
     }
 
-    if (changes['trabajos'] && this.pendingResetKind === 'trabajo') {
-      this.cancelTrabajoDraft();
-      this.pendingResetKind = null;
-    }
-
-    if (changes['hallazgos']) {
-      if (this.pendingResetKind === 'hallazgo') {
-        this.cancelHallazgoDraft();
+    if (changes['trabajos']) {
+      if (this.pendingResetKind === 'trabajo') {
+        const currentTrabajo = this.selectedTrabajoActual();
+        if (currentTrabajo) {
+          this.loadTrabajoDraft(currentTrabajo);
+        } else {
+          this.cancelTrabajoDraft();
+        }
         this.pendingResetKind = null;
+      } else if (!this.editingTrabajoId && !this.trabajoDraft.descripcionInicial.trim()) {
+        const currentTrabajo = this.selectedTrabajoActual();
+        if (currentTrabajo) this.loadTrabajoDraft(currentTrabajo);
       }
-      this.reconcileSelectedTrabajo();
+    }
+
+    if (changes['hallazgos'] || changes['selectedHallazgo']) {
+      if (this.pendingResetKind === 'hallazgo') {
+        const currentHallazgo = this.selectedHallazgoEnContexto();
+        if (currentHallazgo) {
+          this.loadHallazgoDraft(currentHallazgo);
+        } else {
+          this.cancelHallazgoDraft();
+        }
+        this.pendingResetKind = null;
+      } else if (!this.editingHallazgoId && !this.hallazgoDraft.descripcion.trim()) {
+        const currentHallazgo = this.selectedHallazgoEnContexto();
+        if (currentHallazgo) this.loadHallazgoDraft(currentHallazgo);
+      }
     }
 
     if (changes['fotos'] && this.pendingResetKind === 'foto') {
@@ -226,6 +245,10 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   setTab(tab: OrdenDetailTab) {
     this.activeTab.set(tab);
+  }
+
+  setExecutionTab(tab: ExecutionTab) {
+    this.executionTab.set(tab);
   }
 
   severityEstado(estado?: string | null) {
@@ -356,10 +379,13 @@ export class OrdenDetailPanelComponent implements OnChanges {
     return this.trabajos ?? [];
   }
 
-  hallazgosDelTrabajoSeleccionado(): VehOrdenTrabajoHallazgo[] {
-    if (!this.trabajos.length) return [];
-    if (!this.selectedTrabajoId) return [];
+  selectedTrabajoActual(): VehOrdenTrabajoTrabajo | null {
+    if (!this.selectedTrabajoId) return null;
+    return this.trabajos.find((item) => item.idVehOrdenTrabajoTrabajo === this.selectedTrabajoId) ?? null;
+  }
 
+  hallazgosDelTrabajoSeleccionado(): VehOrdenTrabajoHallazgo[] {
+    if (!this.selectedTrabajoId) return [];
     return this.hallazgos.filter(
       (item) => Number(item.idVehOrdenTrabajoTrabajoFk ?? 0) === Number(this.selectedTrabajoId ?? 0),
     );
@@ -377,40 +403,35 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   seleccionarTrabajoWorkbench(item: VehOrdenTrabajoTrabajo) {
-    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajo;
+    this.loadTrabajoDraft(item);
 
-    const hallazgos = this.hallazgosDelTrabajoSeleccionado();
+    const hallazgos = this.hallazgos.filter(
+      (hallazgo) => Number(hallazgo.idVehOrdenTrabajoTrabajoFk ?? 0) === Number(item.idVehOrdenTrabajoTrabajo),
+    );
+
     const currentHallazgo = this.selectedHallazgoEnContexto();
-
     if (currentHallazgo) return;
 
     if (hallazgos.length) {
       this.selectHallazgo.emit(hallazgos[0]);
+      this.loadHallazgoDraft(hallazgos[0]);
       return;
     }
 
     this.clearHallazgoSelection.emit();
+    this.loadHallazgoDraft(null);
   }
 
   iniciarNuevoTrabajo() {
+    this.selectedTrabajoId = null;
     this.editingTrabajoId = null;
     this.trabajoDraft = this.createEmptyTrabajoDraft();
+    this.clearHallazgoSelection.emit();
+    this.loadHallazgoDraft(null);
   }
 
   editarTrabajo(item: VehOrdenTrabajoTrabajo) {
-    this.editingTrabajoId = item.idVehOrdenTrabajoTrabajo;
-    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajo;
-    this.trabajoDraft = {
-      tipoTrabajo: item.tipoTrabajo || 'DIAGNOSTICO',
-      descripcionInicial: item.descripcionInicial || '',
-      descripcionRealizada: item.descripcionRealizada || '',
-      resultado: item.resultado || '',
-      estadoTrabajo: item.estadoTrabajo || 'PENDIENTE',
-      fechaInicio: this.toDate(item.fechaInicio),
-      fechaFin: this.toDate(item.fechaFin),
-      motivo: item.motivo || '',
-      observaciones: item.observaciones || '',
-    };
+    this.loadTrabajoDraft(item);
   }
 
   guardarTrabajo() {
@@ -432,32 +453,33 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   cancelTrabajoDraft() {
+    const currentTrabajo = this.selectedTrabajoActual();
+    if (currentTrabajo) {
+      this.loadTrabajoDraft(currentTrabajo);
+      return;
+    }
+
+    const firstTrabajo = this.trabajos[0] ?? null;
+    if (firstTrabajo) {
+      this.loadTrabajoDraft(firstTrabajo);
+      return;
+    }
+
+    this.selectedTrabajoId = null;
     this.editingTrabajoId = null;
     this.trabajoDraft = this.createEmptyTrabajoDraft();
   }
 
   iniciarNuevoHallazgo() {
+    if (!this.selectedTrabajoId) return;
     this.editingHallazgoId = null;
     this.hallazgoDraft = this.createEmptyHallazgoDraft();
+    this.clearHallazgoSelection.emit();
   }
 
   editarHallazgo(item: VehOrdenTrabajoHallazgo) {
-    this.editingHallazgoId = item.idVehOrdenTrabajoHallazgo;
-    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk ?? this.selectedTrabajoId;
+    this.loadHallazgoDraft(item);
     this.selectHallazgo.emit(item);
-
-    this.hallazgoDraft = {
-      tipoHallazgo: item.tipoHallazgo || 'RECEPCION',
-      categoria: item.categoria || 'GENERAL',
-      descripcion: item.descripcion || '',
-      severidad: item.severidad || 'MEDIA',
-      estadoHallazgo: item.estadoHallazgo || 'REPORTADO',
-      requiereCambio: this.esVerdadero(item.requiereCambio),
-      motivoCambio: item.motivoCambio || '',
-      aprobadoCliente: this.esVerdadero(item.aprobadoCliente),
-      fechaAprobacion: this.toDate(item.fechaAprobacion),
-      observaciones: item.observaciones || '',
-    };
   }
 
   guardarHallazgo() {
@@ -473,15 +495,28 @@ export class OrdenDetailPanelComponent implements OnChanges {
       descripcion: this.hallazgoDraft.descripcion,
       severidad: this.hallazgoDraft.severidad,
       estadoHallazgo: this.hallazgoDraft.estadoHallazgo,
-      requiereCambio: !!this.hallazgoDraft.requiereCambio,
       motivoCambio: this.hallazgoDraft.motivoCambio || null,
-      aprobadoCliente: !!this.hallazgoDraft.aprobadoCliente,
+      requiereCambio: this.hallazgoDraft.requiereCambio ? 1 : 0,
+      aprobadoCliente: this.hallazgoDraft.aprobadoCliente ? 1 : 0,
       fechaAprobacion: this.toTimestamp(this.hallazgoDraft.fechaAprobacion),
       observaciones: this.hallazgoDraft.observaciones || null,
     });
   }
 
   cancelHallazgoDraft() {
+    const currentHallazgo = this.selectedHallazgoEnContexto();
+    if (currentHallazgo) {
+      this.loadHallazgoDraft(currentHallazgo);
+      return;
+    }
+
+    const firstHallazgo = this.hallazgosDelTrabajoSeleccionado()[0] ?? null;
+    if (firstHallazgo) {
+      this.selectHallazgo.emit(firstHallazgo);
+      this.loadHallazgoDraft(firstHallazgo);
+      return;
+    }
+
     this.editingHallazgoId = null;
     this.hallazgoDraft = this.createEmptyHallazgoDraft();
   }
@@ -491,6 +526,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
       this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk;
     }
     this.selectHallazgo.emit(item);
+    this.loadHallazgoDraft(item);
   }
 
   onFotoSelected(event: Event) {
@@ -575,6 +611,55 @@ export class OrdenDetailPanelComponent implements OnChanges {
     });
 
     this.checklistRows.set(rows);
+  }
+
+  private loadTrabajoDraft(item: VehOrdenTrabajoTrabajo | null) {
+    if (!item) {
+      this.selectedTrabajoId = null;
+      this.editingTrabajoId = null;
+      this.trabajoDraft = this.createEmptyTrabajoDraft();
+      return;
+    }
+
+    this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajo;
+    this.editingTrabajoId = item.idVehOrdenTrabajoTrabajo;
+    this.trabajoDraft = {
+      tipoTrabajo: item.tipoTrabajo || 'DIAGNOSTICO',
+      descripcionInicial: item.descripcionInicial || '',
+      descripcionRealizada: item.descripcionRealizada || '',
+      resultado: item.resultado || '',
+      estadoTrabajo: item.estadoTrabajo || 'PENDIENTE',
+      fechaInicio: this.toDate(item.fechaInicio),
+      fechaFin: this.toDate(item.fechaFin),
+      motivo: item.motivo || '',
+      observaciones: item.observaciones || '',
+    };
+  }
+
+  private loadHallazgoDraft(item: VehOrdenTrabajoHallazgo | null) {
+    if (!item) {
+      this.editingHallazgoId = null;
+      this.hallazgoDraft = this.createEmptyHallazgoDraft();
+      return;
+    }
+
+    this.editingHallazgoId = item.idVehOrdenTrabajoHallazgo;
+    if (item.idVehOrdenTrabajoTrabajoFk) {
+      this.selectedTrabajoId = item.idVehOrdenTrabajoTrabajoFk;
+    }
+
+    this.hallazgoDraft = {
+      tipoHallazgo: item.tipoHallazgo || 'RECEPCION',
+      categoria: item.categoria || 'GENERAL',
+      descripcion: item.descripcion || '',
+      severidad: item.severidad || 'MEDIA',
+      estadoHallazgo: item.estadoHallazgo || 'REPORTADO',
+      requiereCambio: this.esVerdadero(item.requiereCambio),
+      motivoCambio: item.motivoCambio || '',
+      aprobadoCliente: this.esVerdadero(item.aprobadoCliente),
+      fechaAprobacion: this.toDate(item.fechaAprobacion),
+      observaciones: item.observaciones || '',
+    };
   }
 
   private createEmptyTrabajoDraft(): TrabajoDraft {

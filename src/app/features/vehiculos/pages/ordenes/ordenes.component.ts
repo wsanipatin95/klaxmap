@@ -1873,9 +1873,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       descripcion: payload.descripcion?.trim() || '',
       severidad: payload.severidad || null,
       estadoHallazgo: payload.estadoHallazgo || null,
-      requiereCambio: !!payload.requiereCambio,
       motivoCambio: payload.motivoCambio?.trim() || null,
-      aprobadoCliente: !!payload.aprobadoCliente,
+      requiereCambio: Number(payload.requiereCambio ?? 0),
+      aprobadoCliente: Number(payload.aprobadoCliente ?? 0),
       fechaAprobacion: payload.fechaAprobacion || null,
       observaciones: payload.observaciones?.trim() || null,
     };
