@@ -46,8 +46,6 @@
           (click)="setTab('ejecucion')">Ejecución</button>
         <button class="tabButton" [class.active]="activeTab()==='repuestos'"
           (click)="setTab('repuestos')">Repuestos</button>
-        <button class="tabButton" [class.active]="activeTab()==='autorizaciones'"
-          (click)="setTab('autorizaciones')">Autorizaciones</button>
         <button class="tabButton" [class.active]="activeTab()==='comercial'"
           (click)="setTab('comercial')">Comercial</button>
       </div>
@@ -72,7 +70,7 @@
         </article>
         <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
-        <article class="metric"><span>Autorizaciones</span><strong>{{ autorizaciones.length }}</strong></article>
+        <article class="metric"><span>Relaciones factura</span><strong>{{ ordenFacturas.length }}</strong></article>
       </div>
 
       <div class="kvGrid">
@@ -569,54 +567,15 @@
       </div>
     </section>
 
-    <!-- AUTORIZACIONES -->
-    <section class="panelCard" *ngIf="activeTab()==='autorizaciones'">
-      <div class="sectionHead">
-        <h4>Autorizaciones</h4>
-      </div>
-
-      <div class="jiraLikeList" *ngIf="autorizaciones.length; else noAutorizaciones">
-        <article class="jiraLikeRow compact compactRow" *ngFor="let item of autorizaciones">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ item.descripcion || item.tipoAutorizacion }}</div>
-              <div class="secondaryCell">
-                {{ item.tipoAutorizacion || 'ADICIONAL' }} · {{ formatDateShort(item.fechaRespuesta) }}
-              </div>
-            </div>
-
-            <p-tag [value]="item.estadoAutorizacion || 'PENDIENTE'"
-              [severity]="severityEstado(item.estadoAutorizacion)">
-            </p-tag>
-          </div>
-        </article>
-      </div>
-    </section>
 
     <!-- COMERCIAL -->
     <section class="panelCard" *ngIf="activeTab()==='comercial'">
-      <div class="sectionHead">
-        <h4>Comercial</h4>
-
-        <div class="actionWrap actionWrap--compact">
-          <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow"
-            (click)="openWorkflow.emit()"></button>
-          <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura"
-            (click)="openFactura.emit()"></button>
-          <button pButton type="button" icon="pi pi-wallet" size="small" severity="secondary" label="Cobro"
-            [disabled]="!selectedFacturaOt" (click)="openCobro.emit()"></button>
-          <button pButton type="button" icon="pi pi-chart-line" size="small" severity="secondary" label="Contabilizar"
-            [disabled]="!selectedFacturaOt" (click)="openContabilizar.emit()"></button>
-        </div>
-      </div>
-
-      <div class="metricGrid">
-        <article class="metric"><span>Repuestos OT</span><strong>{{ repuestos.length }}</strong></article>
-        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
-        </article>
-        <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
-        <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
-      </div>
+      <app-orden-comercial-panel [orden]="orden" [clienteNombre]="clienteNombre" [vehiculoNombre]="vehiculoNombre"
+        [repuestos]="repuestos" [facturasOt]="facturasOt" [selectedFacturaOt]="selectedFacturaOt"
+        [facturaDetalle]="facturaDetalle" [cobrosFactura]="cobrosFactura" [articulosCatalogo]="articulosCatalogo"
+        (selectFactura)="selectFactura.emit($event)" (createFactura)="createFactura.emit($event)"
+        (openCobro)="openCobro.emit()" (openContabilizar)="openContabilizar.emit()">
+      </app-orden-comercial-panel>
     </section>
   </section>
 </ng-container>
@@ -647,11 +606,6 @@
   </app-vehiculos-empty-state>
 </ng-template>
 
-<ng-template #noAutorizaciones>
-  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones"
-    subtitle="No hay autorizaciones registradas en esta orden.">
-  </app-vehiculos-empty-state>
-</ng-template>
 <p-dialog [visible]="repuestoArticuloModalVisible()" (visibleChange)="repuestoArticuloModalVisible.set($event)"
   [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true" [closeOnEscape]="true"
   styleClass="repuestoArticuloDialog" [style]="{ width: '88vw', maxWidth: '1100px' }">

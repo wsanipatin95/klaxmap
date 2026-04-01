@@ -1,0 +1,445 @@
+<section class="comercialWorkspace" *ngIf="orden; else noOrden">
+  <aside class="comercialSidebar">
+    <div class="sectionHead sectionHead--compact">
+      <div>
+        <h4>Facturas OT</h4>
+        <div class="secondaryCell">{{ facturasOt.length }} registrada(s)</div>
+      </div>
+
+      <button
+        pButton
+        type="button"
+        size="small"
+        icon="pi pi-plus"
+        label="Nueva"
+        (click)="openNuevaFactura()">
+      </button>
+    </div>
+
+    <article class="shortcutCard" [class.active]="mode === 'new'" (click)="openNuevaFactura()">
+      <div class="shortcutCard__copy">
+        <strong>Nueva factura</strong>
+        <span>{{ pendingLines.length }} repuesto(s) pendiente(s)</span>
+      </div>
+
+      <p-tag
+        [value]="pendingLines.length ? (pendingLines.length + ' pendientes') : 'Sin pendientes'"
+        [severity]="pendingLines.length ? 'warn' : 'success'">
+      </p-tag>
+    </article>
+
+    <div class="scrollList comercialScroll" *ngIf="facturasOt.length; else noFacturas">
+      <article
+        class="facturaRow"
+        *ngFor="let item of facturasOt"
+        [class.selected]="mode === 'view' && selectedFacturaOt?.idFacVenta === item.idFacVenta"
+        (click)="seleccionarFacturaRow(item)">
+
+        <div class="facturaRow__top">
+          <div class="facturaRow__copy">
+            <strong>{{ facturaNumber(item) }}</strong>
+            <span>{{ formatDateShort(item.fecEmi) }}</span>
+          </div>
+
+          <p-tag
+            [value]="item.sriEstado || 'ACTIVA'"
+            [severity]="severityEstado(item.sriEstado || 'ACTIVA')">
+          </p-tag>
+        </div>
+
+        <div class="facturaRow__meta">
+          <span>Total</span>
+          <strong>{{ formatMoney(item.total) }}</strong>
+        </div>
+
+        <div class="facturaRow__meta">
+          <span>Saldo</span>
+          <strong>{{ formatMoney(item.cxcDeuda) }}</strong>
+        </div>
+      </article>
+    </div>
+  </aside>
+
+  <section class="comercialMain">
+    <ng-container *ngIf="mode === 'new'; else facturaViewMode">
+      <section class="workspaceCard">
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Nueva factura</h4>
+            <div class="secondaryCell">Cliente, vehículo y OT cargados automáticamente desde la orden</div>
+          </div>
+
+          <button
+            pButton
+            type="button"
+            size="small"
+            icon="pi pi-check"
+            label="Emitir factura"
+            [disabled]="!canEmitFactura()"
+            (click)="emitirFactura()">
+          </button>
+        </div>
+
+        <div class="contextGrid">
+          <article class="contextItem">
+            <span>Cliente</span>
+            <strong>{{ clienteNombre }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>Vehículo</span>
+            <strong>{{ vehiculoNombre }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>OT</span>
+            <strong>#{{ orden.idVehOrdenTrabajo }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>DNI</span>
+            <strong>{{ orden.dni }}</strong>
+          </article>
+        </div>
+
+        <div class="editorGrid">
+          <div class="editorField span-3">
+            <label>Tipo facturación</label>
+            <select [(ngModel)]="comercialDraft.tipoFacturacion" [ngModelOptions]="{ standalone: true }">
+              <option value="PARCIAL">PARCIAL</option>
+              <option value="TOTAL">TOTAL</option>
+            </select>
+          </div>
+
+          <div class="editorField span-3">
+            <label>CEN</label>
+            <input
+              pInputText
+              type="number"
+              [(ngModel)]="comercialDraft.cen"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Opcional">
+          </div>
+
+          <div class="editorField span-3">
+            <label>Punto emisión</label>
+            <input
+              pInputText
+              type="number"
+              [(ngModel)]="comercialDraft.idAdmPtoemi"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Opcional">
+          </div>
+
+          <div class="editorField span-3">
+            <label>ID comp. aut.</label>
+            <input
+              pInputText
+              type="number"
+              [(ngModel)]="comercialDraft.idTaxCompAutFk"
+              [ngModelOptions]="{ standalone: true }">
+          </div>
+
+          <div class="editorField span-3 checkboxField">
+            <label class="checkboxLabel">
+              <input
+                type="checkbox"
+                [(ngModel)]="comercialDraft.credito"
+                [ngModelOptions]="{ standalone: true }">
+              Crédito
+            </label>
+          </div>
+
+          <div class="editorField span-3 checkboxField">
+            <label class="checkboxLabel">
+              <input
+                type="checkbox"
+                [(ngModel)]="comercialDraft.usarPrecioRepuesto"
+                [ngModelOptions]="{ standalone: true }">
+              Usar precio repuesto
+            </label>
+          </div>
+
+          <div class="editorField span-2">
+            <label>Entrada</label>
+            <input
+              pInputText
+              type="number"
+              [(ngModel)]="comercialDraft.entrada"
+              [ngModelOptions]="{ standalone: true }">
+          </div>
+
+          <div class="editorField span-2">
+            <label>Cuotas</label>
+            <input
+              pInputText
+              type="number"
+              [(ngModel)]="comercialDraft.cuotas"
+              [ngModelOptions]="{ standalone: true }">
+          </div>
+
+          <div class="editorField span-2">
+            <label>Primer vencimiento</label>
+            <input
+              type="date"
+              [(ngModel)]="comercialDraft.fechaPrimerVencimiento"
+              [ngModelOptions]="{ standalone: true }">
+          </div>
+
+          <div class="editorField span-12">
+            <label>Observación</label>
+            <textarea
+              pTextarea
+              rows="2"
+              [(ngModel)]="comercialDraft.observacion"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Observación interna o comercial">
+            </textarea>
+          </div>
+        </div>
+
+        <div class="lineToolbar">
+          <label class="checkboxLabel">
+            <input
+              type="checkbox"
+              [checked]="allPendingSelected()"
+              (change)="toggleAllPending($any($event.target).checked)">
+            Seleccionar todos
+          </label>
+
+          <span>{{ selectedLineCount() }} línea(s) seleccionada(s)</span>
+        </div>
+
+        <div class="lineTable" *ngIf="pendingLines.length; else noPendientes">
+          <div class="lineTable__head">
+            <div></div>
+            <div>Artículo</div>
+            <div>Cant.</div>
+            <div>P. unit.</div>
+            <div>% IVA</div>
+            <div>Subtotal</div>
+            <div>IVA</div>
+            <div>Total</div>
+          </div>
+
+          <div class="lineTable__body">
+            <div class="lineTable__row" *ngFor="let line of pendingLines">
+              <div class="lineTable__cell lineTable__cell--check">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="line.selected"
+                  [ngModelOptions]="{ standalone: true }">
+              </div>
+
+              <div class="lineTable__cell lineTable__cell--main">
+                <strong>{{ line.artcod }}</strong>
+                <span>{{ line.articulo }}</span>
+              </div>
+
+              <div class="lineTable__cell">{{ line.cantidad }}</div>
+              <div class="lineTable__cell">{{ formatMoney(line.precioUnitario) }}</div>
+              <div class="lineTable__cell">{{ formatPct(line.porcentajeIva) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(line.subtotalNeto) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(line.ivaValor) }}</div>
+              <div class="lineTable__cell lineTable__cell--total">{{ formatMoney(line.total) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summaryGrid">
+          <article class="summaryItem">
+            <span>Subtotal 0%</span>
+            <strong>{{ formatMoney(subtotalCeroPreview()) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>Subtotal IVA</span>
+            <strong>{{ formatMoney(subtotalIvaPreview()) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>IVA</span>
+            <strong>{{ formatMoney(ivaPreview()) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>Descuento</span>
+            <strong>{{ formatMoney(descuentoPreview()) }}</strong>
+          </article>
+
+          <article class="summaryItem summaryItem--accent">
+            <span>Total</span>
+            <strong>{{ formatMoney(totalPreview()) }}</strong>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-template #facturaViewMode>
+      <section class="workspaceCard" *ngIf="facturaActual() as factura; else noFacturaSeleccionada">
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>{{ facturaNumber(factura) }}</h4>
+            <div class="secondaryCell">{{ formatDateShort(factura.fecEmi) }}</div>
+          </div>
+
+          <div class="actionWrap">
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="secondary"
+              icon="pi pi-wallet"
+              label="Cobro"
+              (click)="openCobro.emit()">
+            </button>
+
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="secondary"
+              icon="pi pi-chart-line"
+              label="Contabilizar"
+              (click)="openContabilizar.emit()">
+            </button>
+          </div>
+        </div>
+
+        <div class="contextGrid">
+          <article class="contextItem">
+            <span>Cliente</span>
+            <strong>{{ clienteNombre }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>Vehículo</span>
+            <strong>{{ vehiculoNombre }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>Total</span>
+            <strong>{{ formatMoney(factura.total) }}</strong>
+          </article>
+
+          <article class="contextItem">
+            <span>Saldo</span>
+            <strong>{{ formatMoney(factura.cxcDeuda) }}</strong>
+          </article>
+        </div>
+
+        <div class="lineTable lineTable--view" *ngIf="facturaDetalleItems().length">
+          <div class="lineTable__head lineTable__head--view">
+            <div>Detalle</div>
+            <div>Cant.</div>
+            <div>P. unit.</div>
+            <div>% IVA</div>
+            <div>Desc.</div>
+            <div>Subtotal</div>
+            <div>Total</div>
+          </div>
+
+          <div class="lineTable__body">
+            <div class="lineTable__row lineTable__row--view" *ngFor="let item of facturaDetalleItems()">
+              <div class="lineTable__cell lineTable__cell--main">
+                <strong>{{ detalleLabel(item) }}</strong>
+              </div>
+              <div class="lineTable__cell">{{ detalleCantidad(item) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(detallePrecio(item)) }}</div>
+              <div class="lineTable__cell">{{ formatPct(detalleIvaPct(item)) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(detalleDescuento(item)) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(detalleSubtotal(item)) }}</div>
+              <div class="lineTable__cell lineTable__cell--total">{{ formatMoney(detalleTotal(item)) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summaryGrid">
+          <article class="summaryItem">
+            <span>Subtotal 0%</span>
+            <strong>{{ formatMoney(factura.baseCero) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>Subtotal IVA</span>
+            <strong>{{ formatMoney(factura.baseImponible) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>IVA</span>
+            <strong>{{ formatMoney(factura.iva) }}</strong>
+          </article>
+
+          <article class="summaryItem">
+            <span>Descuento</span>
+            <strong>{{ formatMoney(factura.descuento) }}</strong>
+          </article>
+
+          <article class="summaryItem summaryItem--accent">
+            <span>Total</span>
+            <strong>{{ formatMoney(factura.total) }}</strong>
+          </article>
+        </div>
+
+        <section class="cxcBlock" *ngIf="facturaCxcItems().length || cobrosFactura.length">
+          <div class="sectionHead sectionHead--compact">
+            <div>
+              <h4>Cartera y cobros</h4>
+              <div class="secondaryCell">
+                {{ facturaCxcItems().length }} CxC · {{ cobrosFactura.length }} cobro(s)
+              </div>
+            </div>
+          </div>
+
+          <div class="miniGrid" *ngIf="facturaCxcItems().length">
+            <article class="miniItem" *ngFor="let item of facturaCxcItems()">
+              <span>Vence</span>
+              <strong>{{ formatDateShort(item?.fechaVencimiento || item?.fecVence || item?.fecha) }}</strong>
+              <small>Saldo {{ formatMoney(item?.saldo || item?.valor || item?.deuda || 0) }}</small>
+            </article>
+          </div>
+
+          <div class="miniGrid" *ngIf="cobrosFactura.length">
+            <article class="miniItem" *ngFor="let item of cobrosFactura">
+              <span>Cobro</span>
+              <strong>{{ formatDateShort(item.fecha) }}</strong>
+              <small>{{ formatMoney(item.valor) }} · {{ item.concepto || 'Sin concepto' }}</small>
+            </article>
+          </div>
+        </section>
+      </section>
+    </ng-template>
+  </section>
+</section>
+
+<ng-template #noOrden>
+  <app-vehiculos-empty-state
+    icon="pi pi-file"
+    title="Sin orden seleccionada"
+    subtitle="Selecciona una OT para trabajar la parte comercial.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noFacturas>
+  <app-vehiculos-empty-state
+    icon="pi pi-receipt"
+    title="Sin facturas todavía"
+    subtitle="Usa el acceso de Nueva factura para emitir la primera factura de la OT.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noPendientes>
+  <app-vehiculos-empty-state
+    icon="pi pi-check-circle"
+    title="Sin repuestos pendientes"
+    subtitle="Todos los repuestos ya están facturados o todavía no existen líneas comerciales para esta OT.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noFacturaSeleccionada>
+  <app-vehiculos-empty-state
+    icon="pi pi-file-edit"
+    title="Modo comercial"
+    subtitle="Selecciona una factura de la lista o crea una nueva factura.">
+  </app-vehiculos-empty-state>
+</ng-template>

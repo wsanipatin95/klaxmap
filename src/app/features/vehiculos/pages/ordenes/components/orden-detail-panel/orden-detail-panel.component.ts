@@ -9,6 +9,10 @@ import { TextareaModule } from 'primeng/textarea';
 import { VehiculosEmptyStateComponent } from '../../../../components/empty-state/empty-state.component';
 import { VehiculoVistaCanvasComponent } from '../../../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import {
+  FacturaComercialSavePayload,
+  OrdenComercialPanelComponent,
+} from '../orden-comercial-panel/orden-comercial-panel.component';
+import {
   VehArticuloCatalogo,
   VehCheckListVehiculo,
   VehCobro,
@@ -31,7 +35,6 @@ type OrdenDetailTab =
   | 'checklist'
   | 'ejecucion'
   | 'repuestos'
-  | 'autorizaciones'
   | 'comercial';
 
 type ExecutionTab = 'detalle' | 'hallazgos';
@@ -160,6 +163,7 @@ type FotoDraft = {
     TagModule,
     VehiculosEmptyStateComponent,
     VehiculoVistaCanvasComponent,
+    OrdenComercialPanelComponent,
   ],
   templateUrl: './orden-detail-panel.component.html',
   styleUrl: './orden-detail-panel.component.scss',
@@ -201,8 +205,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Output() deleteRepuesto = new EventEmitter<VehOrdenTrabajoRepuesto>();
   @Output() articuloQueryChange = new EventEmitter<string>();
   @Output() articuloSelected = new EventEmitter<VehArticuloCatalogo>();
-  @Output() openWorkflow = new EventEmitter<void>();
-  @Output() openFactura = new EventEmitter<void>();
+  @Output() createFactura = new EventEmitter<FacturaComercialSavePayload>();
   @Output() openCobro = new EventEmitter<void>();
   @Output() openContabilizar = new EventEmitter<void>();
 
@@ -1116,3 +1119,4 @@ export class OrdenDetailPanelComponent implements OnChanges {
   trackByFoto = (_index: number, item: VehOrdenTrabajoHallazgoFoto) => item.idVehOrdenTrabajoHallazgoFoto;
   trackByMarca = (_index: number, item: VehOrdenTrabajoHallazgoMarca) => item.idVehOrdenTrabajoHallazgoMarca;
 }
+export type { FacturaComercialSavePayload } from '../orden-comercial-panel/orden-comercial-panel.component';

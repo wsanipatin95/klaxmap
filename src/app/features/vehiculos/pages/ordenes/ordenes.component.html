@@ -91,8 +91,8 @@
       (articuloSelected)="seleccionarArticuloRepuesto($event)" (selectHallazgo)="seleccionarHallazgo($event)"
       (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()" (selectVista)="seleccionarVista($event)"
       (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)"
-      (openWorkflow)="abrirComercialDrawer('workflow')" (openFactura)="abrirComercialDrawer('factura')"
-      (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')">
+      (createFactura)="guardarFacturaDesdePanel($event)" (openCobro)="abrirComercialDrawer('cobro')"
+      (openContabilizar)="abrirComercialDrawer('contabilizar')">
     </app-orden-detail-panel>
   </section>
 </div>

@@ -56,6 +56,7 @@ import { VehiculosConfirmService } from '../../services/vehiculos-confirm.servic
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 import {
   ChecklistBulkRow,
+  FacturaComercialSavePayload,
   FotoWorkbenchSavePayload,
   HallazgoWorkbenchSavePayload,
   OrdenDetailPanelComponent,
@@ -2061,6 +2062,48 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   repuestoDisplay(item?: VehOrdenTrabajoRepuesto | null): string {
     if (!item) return 'Repuesto';
     return [item.artcod || `ART-${item.art}`, item.articulo || ''].filter(Boolean).join(' · ');
+  }
+
+  guardarFacturaDesdePanel(payload: FacturaComercialSavePayload) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite operaciones comerciales.');
+      return;
+    }
+
+    if (!payload.idsVehOrdenTrabajoRepuesto?.length) {
+      this.notify.warn('Sin líneas seleccionadas', 'Selecciona al menos un repuesto para facturar.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.repo.crearFactura(payload)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (res: any) => {
+          const createdId = Number(res?.data?.idFacVenta ?? res?.data?.id ?? 0);
+
+          if (createdId > 0) {
+            this.selectedFacturaOt.set({ idFacVenta: createdId } as VehFactura);
+          } else {
+            this.selectedFacturaOt.set(null);
+          }
+
+          this.notify.success(
+            'Factura creada',
+            res?.mensaje || 'La factura se generó correctamente desde el panel comercial.',
+          );
+
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo crear la factura', err?.message),
+      });
   }
 
 }
