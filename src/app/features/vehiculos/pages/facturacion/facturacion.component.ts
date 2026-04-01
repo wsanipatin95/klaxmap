@@ -22,6 +22,7 @@ import {
   VehFacturaCrearRequest,
   VehFacturacionWorkflowRequest,
   VehFacturacionWorkflowResultado,
+  VehFacturaDetalleResponse,
 } from '../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
@@ -67,7 +68,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
   cajas = signal<VehCaja[]>([]);
   selectedFactura = signal<VehFactura | null>(null);
   selectedCobro = signal<VehCobro | null>(null);
-  facturaDetalle = signal<Record<string, unknown> | null>(null);
+  facturaDetalle = signal<VehFacturaDetalleResponse | null>(null);
   cobroDetalle = signal<Record<string, unknown> | null>(null);
   workflowResultado = signal<VehFacturacionWorkflowResultado | null>(null);
 
@@ -130,33 +131,15 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
 
   workflowForm = this.fb.group({
     idVehOrdenTrabajoFk: [null as number | null, Validators.required],
-    idAdmPtoemiFk: [null as number | null],
     idsVehOrdenTrabajoRepuesto: [''],
     observacionFactura: [''],
-    tipoFacturacion: ['PARCIAL'],
-    dni: [null as number | null],
-    cen: [null as number | null],
-    credito: [false],
-    pagoInicial: [0],
-    cuotas: [1],
-    fechaEmisionIso: [''],
-    fechaPrimerVencimientoIso: [''],
-    idTaxCompAutFk: [1],
-    usarPrecioRepuesto: [true],
-    idCntFormaPagoFk: [null as number | null],
-    idCntPlanFormaPagoFk: [null as number | null],
-    idBanDocBancoFk: [null as number | null],
-    idBanBancoFk: [null as number | null],
-    idBanBancoSubFk: [null as number | null],
-    idTaxTarjetaDiferidoFk: [null as number | null],
-    idBanTarjetaFk: [null as number | null],
-    referenciaDatafast: [''],
-    traCash: [''],
-    crearRecibo: [true],
-    contabilizarFactura: [true],
-    contabilizarCobro: [true],
-    conceptoFactura: ['Factura vehicular'],
-    conceptoCobro: ['Cobro vehicular'],
+    dni: [null as number | null, Validators.required],
+    subtotalCero: [0, Validators.required],
+    subtotalIva: [0, Validators.required],
+    iva: [0, Validators.required],
+    descuento: [0, Validators.required],
+    total: [0, Validators.required],
+    usu: [null as number | null],
   });
 
   constructor() {
@@ -276,33 +259,15 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     if (mode === 'workflow') {
       this.workflowForm.reset({
         idVehOrdenTrabajoFk: null,
-        idAdmPtoemiFk: null,
         idsVehOrdenTrabajoRepuesto: '',
         observacionFactura: '',
-        tipoFacturacion: 'PARCIAL',
         dni: null,
-        cen: null,
-        credito: false,
-        pagoInicial: 0,
-        cuotas: 1,
-        fechaEmisionIso: '',
-        fechaPrimerVencimientoIso: '',
-        idTaxCompAutFk: 1,
-        usarPrecioRepuesto: true,
-        idCntFormaPagoFk: null,
-        idCntPlanFormaPagoFk: null,
-        idBanDocBancoFk: null,
-        idBanBancoFk: null,
-        idBanBancoSubFk: null,
-        idTaxTarjetaDiferidoFk: null,
-        idBanTarjetaFk: null,
-        referenciaDatafast: '',
-        traCash: '',
-        crearRecibo: true,
-        contabilizarFactura: true,
-        contabilizarCobro: true,
-        conceptoFactura: 'Factura vehicular',
-        conceptoCobro: 'Cobro vehicular',
+        subtotalCero: 0,
+        subtotalIva: 0,
+        iva: 0,
+        descuento: 0,
+        total: 0,
+        usu: null,
       });
     }
   }
@@ -407,35 +372,27 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
         this.notify.warn('Formulario incompleto', 'Debes indicar la OT para el workflow.');
         return;
       }
+      const idsVehOrdenTrabajoRepuesto =
+        this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto) ?? [];
+
+      const dni = this.workflowForm.value.dni;
+      if (dni == null) {
+        this.saving.set(false);
+        this.notify.warn('Formulario incompleto', 'Debes indicar el DNI del cliente.');
+        return;
+      }
+
       const payload: VehFacturacionWorkflowRequest = {
         idVehOrdenTrabajoFk: Number(this.workflowForm.value.idVehOrdenTrabajoFk),
-        idAdmPtoemiFk: this.workflowForm.value.idAdmPtoemiFk ?? null,
-        idsVehOrdenTrabajoRepuesto: this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto),
+        dni: Number(dni),
+        idsVehOrdenTrabajoRepuesto,
+        subtotalCero: Number(this.workflowForm.value.subtotalCero || 0),
+        subtotalIva: Number(this.workflowForm.value.subtotalIva || 0),
+        iva: Number(this.workflowForm.value.iva || 0),
+        descuento: Number(this.workflowForm.value.descuento || 0),
+        total: Number(this.workflowForm.value.total || 0),
         observacionFactura: this.workflowForm.value.observacionFactura?.trim() || null,
-        tipoFacturacion: this.workflowForm.value.tipoFacturacion || null,
-        dni: this.workflowForm.value.dni ?? null,
-        cen: this.workflowForm.value.cen ?? null,
-        credito: !!this.workflowForm.value.credito,
-        pagoInicial: Number(this.workflowForm.value.pagoInicial || 0),
-        cuotas: Number(this.workflowForm.value.cuotas || 1),
-        fechaEmisionIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaEmisionIso),
-        fechaPrimerVencimientoIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaPrimerVencimientoIso),
-        idTaxCompAutFk: this.workflowForm.value.idTaxCompAutFk ?? null,
-        usarPrecioRepuesto: !!this.workflowForm.value.usarPrecioRepuesto,
-        idCntFormaPagoFk: this.workflowForm.value.idCntFormaPagoFk ?? null,
-        idCntPlanFormaPagoFk: this.workflowForm.value.idCntPlanFormaPagoFk ?? null,
-        idBanDocBancoFk: this.workflowForm.value.idBanDocBancoFk ?? null,
-        idBanBancoFk: this.workflowForm.value.idBanBancoFk ?? null,
-        idBanBancoSubFk: this.workflowForm.value.idBanBancoSubFk ?? null,
-        idTaxTarjetaDiferidoFk: this.workflowForm.value.idTaxTarjetaDiferidoFk ?? null,
-        idBanTarjetaFk: this.workflowForm.value.idBanTarjetaFk ?? null,
-        referenciaDatafast: this.workflowForm.value.referenciaDatafast?.trim() || null,
-        traCash: this.workflowForm.value.traCash?.trim() || null,
-        crearRecibo: !!this.workflowForm.value.crearRecibo,
-        contabilizarFactura: !!this.workflowForm.value.contabilizarFactura,
-        contabilizarCobro: !!this.workflowForm.value.contabilizarCobro,
-        conceptoFactura: this.workflowForm.value.conceptoFactura?.trim() || null,
-        conceptoCobro: this.workflowForm.value.conceptoCobro?.trim() || null,
+        usu: this.workflowForm.value.usu ?? null,
       };
       request$ = this.repo.facturarCobrarWorkflow(payload);
     }
@@ -453,9 +410,7 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     });
   }
 
-  muestraCamposCobroWorkflow() {
-    return !!this.workflowForm.value.crearRecibo && Number(this.workflowForm.value.pagoInicial || 0) > 0;
-  }
+ 
 
   private toIdList(raw?: string | null): number[] | null {
     if (!raw || !raw.trim()) return null;
@@ -475,4 +430,5 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     if (!value) return null;
     return value.includes('T') ? value : `${value}T00:00:00-05:00`;
   }
+  
 }
