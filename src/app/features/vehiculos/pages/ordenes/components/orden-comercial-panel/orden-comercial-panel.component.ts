@@ -10,23 +10,18 @@ import {
   VehArticuloCatalogo,
   VehCobro,
   VehFactura,
+  VehFacturacionWorkflowRequest,
   VehOrdenTrabajo,
   VehOrdenTrabajoRepuesto,
+  VehFacturaDetalleResponse
 } from '../../../../data-access/vehiculos.models';
+
+export type FacturaComercialSavePayload = VehFacturacionWorkflowRequest;
 
 type ComercialMode = 'new' | 'view';
 
 type ComercialDraft = {
-  tipoFacturacion: string;
-  observacion: string;
-  cen: number | null;
-  idAdmPtoemi: number | null;
-  credito: boolean;
-  entrada: number;
-  cuotas: number;
-  fechaPrimerVencimiento: string;
-  idTaxCompAutFk: number | null;
-  usarPrecioRepuesto: boolean;
+  observacionFactura: string;
 };
 
 export type FacturaComercialLineaDraft = {
@@ -45,21 +40,6 @@ export type FacturaComercialLineaDraft = {
   selected: boolean;
 };
 
-export type FacturaComercialSavePayload = {
-  idVehOrdenTrabajoFk: number;
-  idsVehOrdenTrabajoRepuesto: number[];
-  tipoFacturacion?: string | null;
-  observacion?: string | null;
-  dni?: number | null;
-  cen?: number | null;
-  idAdmPtoemi?: number | null;
-  credito?: boolean | null;
-  entrada?: number | null;
-  cuotas?: number | null;
-  fechaPrimerVencimiento?: string | null;
-  idTaxCompAutFk?: number | null;
-  usarPrecioRepuesto?: boolean | null;
-};
 
 @Component({
   selector: 'app-orden-comercial-panel',
@@ -83,10 +63,9 @@ export class OrdenComercialPanelComponent implements OnChanges {
   @Input() repuestos: VehOrdenTrabajoRepuesto[] = [];
   @Input() facturasOt: VehFactura[] = [];
   @Input() selectedFacturaOt: VehFactura | null = null;
-  @Input() facturaDetalle: Record<string, unknown> | null = null;
   @Input() cobrosFactura: VehCobro[] = [];
   @Input() articulosCatalogo: VehArticuloCatalogo[] = [];
-
+  @Input() facturaDetalle: VehFacturaDetalleResponse | null = null;
   @Output() selectFactura = new EventEmitter<VehFactura>();
   @Output() createFactura = new EventEmitter<FacturaComercialSavePayload>();
   @Output() openCobro = new EventEmitter<void>();
@@ -133,22 +112,28 @@ export class OrdenComercialPanelComponent implements OnChanges {
 
   facturaNumber(item?: VehFactura | null): string {
     if (!item) return 'Factura';
-    return `${item.estab || '-'}-${item.ptoemi || '-'}-${item.secuencial || item.idFacVenta}`;
+    if (item.numeroFactura?.trim()) return item.numeroFactura;
+    const estab = String(item.estab ?? 0).padStart(3, '0');
+    const ptoemi = String(item.ptoemi ?? 0).padStart(3, '0');
+    const sec = String(item.secuencial ?? item.idFacVenta ?? 0).padStart(9, '0');
+    return `${estab}-${ptoemi}-${sec}`;
+  }
+
+  facturaCliente(item?: VehFactura | null): string {
+    if (!item) return 'Cliente';
+    return item.nombre || item.ruc || (item.dni ? `DNI ${item.dni}` : 'Cliente');
   }
 
   facturaActual(): VehFactura | null {
-    const data = this.facturaDetalle as any;
-    return (data?.factura as VehFactura | null) ?? this.selectedFacturaOt ?? null;
+    return this.facturaDetalle?.factura ?? this.selectedFacturaOt ?? null;
   }
 
-  facturaDetalleItems(): any[] {
-    const data = this.facturaDetalle as any;
-    return Array.isArray(data?.detalle) ? data.detalle : [];
+  facturaDetalleItems() {
+    return this.facturaDetalle?.detalle ?? [];
   }
 
-  facturaCxcItems(): any[] {
-    const data = this.facturaDetalle as any;
-    return Array.isArray(data?.cxc) ? data.cxc : [];
+  facturaCxcItems() {
+    return this.facturaDetalle?.cxc ?? [];
   }
 
   hasPendingLines(): boolean {
@@ -207,18 +192,14 @@ export class OrdenComercialPanelComponent implements OnChanges {
 
     const payload: FacturaComercialSavePayload = {
       idVehOrdenTrabajoFk: this.orden.idVehOrdenTrabajo,
+      dni: Number(this.orden.dni),
       idsVehOrdenTrabajoRepuesto: lineas.map((line) => line.idVehOrdenTrabajoRepuesto),
-      tipoFacturacion: this.comercialDraft.tipoFacturacion || 'PARCIAL',
-      observacion: this.comercialDraft.observacion?.trim() || null,
-      dni: this.orden.dni ?? null,
-      cen: this.comercialDraft.cen ?? null,
-      idAdmPtoemi: this.comercialDraft.idAdmPtoemi ?? null,
-      credito: !!this.comercialDraft.credito,
-      entrada: Number(this.comercialDraft.entrada || 0),
-      cuotas: Number(this.comercialDraft.cuotas || 1),
-      fechaPrimerVencimiento: this.comercialDraft.fechaPrimerVencimiento || null,
-      idTaxCompAutFk: this.comercialDraft.idTaxCompAutFk ?? 1,
-      usarPrecioRepuesto: !!this.comercialDraft.usarPrecioRepuesto,
+      subtotalCero: Number(this.subtotalCeroPreview().toFixed(2)),
+      subtotalIva: Number(this.subtotalIvaPreview().toFixed(2)),
+      iva: Number(this.ivaPreview().toFixed(2)),
+      descuento: Number(this.descuentoPreview().toFixed(2)),
+      total: Number(this.totalPreview().toFixed(2)),
+      observacionFactura: this.comercialDraft.observacionFactura?.trim() || null,
     };
 
     this.createFactura.emit(payload);
@@ -313,16 +294,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
 
   private createEmptyDraft(): ComercialDraft {
     return {
-      tipoFacturacion: 'PARCIAL',
-      observacion: '',
-      cen: null,
-      idAdmPtoemi: null,
-      credito: false,
-      entrada: 0,
-      cuotas: 1,
-      fechaPrimerVencimiento: '',
-      idTaxCompAutFk: 1,
-      usarPrecioRepuesto: true,
+      observacionFactura: '',
     };
   }
 

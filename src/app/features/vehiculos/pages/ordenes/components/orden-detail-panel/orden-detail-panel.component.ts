@@ -17,6 +17,7 @@ import {
   VehCheckListVehiculo,
   VehCobro,
   VehFactura,
+  VehFacturaDetalleResponse,
   VehFacturacionWorkflowResultado,
   VehOrdenTrabajo,
   VehOrdenTrabajoAutorizacion,
@@ -189,7 +190,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Input() selectedVista: VehTipoVehiculoVista | null = null;
   @Input() facturasOt: VehFactura[] = [];
   @Input() selectedFacturaOt: VehFactura | null = null;
-  @Input() facturaDetalle: Record<string, unknown> | null = null;
+  @Input() facturaDetalle: VehFacturaDetalleResponse | null = null;
   @Input() cobrosFactura: VehCobro[] = [];
   @Input() workflowResultado: VehFacturacionWorkflowResultado | null = null;
 

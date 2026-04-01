@@ -60,7 +60,8 @@ import {
   VehTipoVehiculoVista,
   VehTipoVehiculoVistaEditarRequest,
   VehTipoVehiculoVistaGuardarRequest,
-  SegUsuarioListadoItem
+  SegUsuarioListadoItem,
+  VehFacturaDetalleResponse
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
@@ -279,7 +280,9 @@ export class VehiculosApi {
     return this.http.get<ApiEnvelope<Paged<VehFactura>>>(`${this.baseUrl}/facturas`, { params: buildListParams(query) });
   }
   obtenerFactura(idFacVenta: number) {
-    return this.http.get<ApiEnvelope<Record<string, unknown>>>(`${this.baseUrl}/facturas/${idFacVenta}`);
+    return this.http.get<ApiEnvelope<VehFacturaDetalleResponse>>(
+      `${this.baseUrl}/facturas/${idFacVenta}`
+    );
   }
   crearFactura(payload: VehFacturaCrearRequest) {
     return this.http.post<ApiEnvelope<Record<string, unknown>>>(`${this.baseUrl}/facturas`, payload);

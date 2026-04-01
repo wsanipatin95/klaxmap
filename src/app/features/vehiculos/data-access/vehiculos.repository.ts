@@ -157,7 +157,9 @@ export class VehiculosRepository {
   listarFacturas(q = '', page = 0, size = 20, all = false, extra: Record<string, unknown> = {}) {
     return this.api.listarFacturas({ q, page, size, all, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));
   }
-  obtenerFactura(idFacVenta: number) { return this.api.obtenerFactura(idFacVenta).pipe(map((r) => unwrapOrThrow(r))); }
+  obtenerFactura(idFacVenta: number) {
+    return this.api.obtenerFactura(idFacVenta).pipe(map((r) => unwrapOrThrow(r)));
+  }
   crearFactura(payload: VehFacturaCrearRequest) { return this.api.crearFactura(payload).pipe(map((r) => unwrapWithMsg(r))); }
   contabilizarFactura(payload: VehFacturaContabilizarRequest) { return this.api.contabilizarFactura(payload).pipe(map((r) => unwrapWithMsg(r))); }
 

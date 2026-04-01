@@ -6,13 +6,7 @@
         <div class="secondaryCell">{{ facturasOt.length }} registrada(s)</div>
       </div>
 
-      <button
-        pButton
-        type="button"
-        size="small"
-        icon="pi pi-plus"
-        label="Nueva"
-        (click)="openNuevaFactura()">
+      <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva" (click)="openNuevaFactura()">
       </button>
     </div>
 
@@ -22,28 +16,24 @@
         <span>{{ pendingLines.length }} repuesto(s) pendiente(s)</span>
       </div>
 
-      <p-tag
-        [value]="pendingLines.length ? (pendingLines.length + ' pendientes') : 'Sin pendientes'"
+      <p-tag [value]="pendingLines.length ? (pendingLines.length + ' pendientes') : 'Sin pendientes'"
         [severity]="pendingLines.length ? 'warn' : 'success'">
       </p-tag>
     </article>
 
     <div class="scrollList comercialScroll" *ngIf="facturasOt.length; else noFacturas">
-      <article
-        class="facturaRow"
-        *ngFor="let item of facturasOt"
+      <article class="facturaRow" *ngFor="let item of facturasOt"
         [class.selected]="mode === 'view' && selectedFacturaOt?.idFacVenta === item.idFacVenta"
         (click)="seleccionarFacturaRow(item)">
 
         <div class="facturaRow__top">
           <div class="facturaRow__copy">
             <strong>{{ facturaNumber(item) }}</strong>
+            <span>{{ facturaCliente(item) }}</span>
             <span>{{ formatDateShort(item.fecEmi) }}</span>
           </div>
 
-          <p-tag
-            [value]="item.sriEstado || 'ACTIVA'"
-            [severity]="severityEstado(item.sriEstado || 'ACTIVA')">
+          <p-tag [value]="item.sriEstado || 'ACTIVA'" [severity]="severityEstado(item.sriEstado || 'ACTIVA')">
           </p-tag>
         </div>
 
@@ -69,14 +59,8 @@
             <div class="secondaryCell">Cliente, vehículo y OT cargados automáticamente desde la orden</div>
           </div>
 
-          <button
-            pButton
-            type="button"
-            size="small"
-            icon="pi pi-check"
-            label="Emitir factura"
-            [disabled]="!canEmitFactura()"
-            (click)="emitirFactura()">
+          <button pButton type="button" size="small" icon="pi pi-check" label="Emitir factura"
+            [disabled]="!canEmitFactura()" (click)="emitirFactura()">
           </button>
         </div>
 
@@ -103,106 +87,17 @@
         </div>
 
         <div class="editorGrid">
-          <div class="editorField span-3">
-            <label>Tipo facturación</label>
-            <select [(ngModel)]="comercialDraft.tipoFacturacion" [ngModelOptions]="{ standalone: true }">
-              <option value="PARCIAL">PARCIAL</option>
-              <option value="TOTAL">TOTAL</option>
-            </select>
-          </div>
-
-          <div class="editorField span-3">
-            <label>CEN</label>
-            <input
-              pInputText
-              type="number"
-              [(ngModel)]="comercialDraft.cen"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="Opcional">
-          </div>
-
-          <div class="editorField span-3">
-            <label>Punto emisión</label>
-            <input
-              pInputText
-              type="number"
-              [(ngModel)]="comercialDraft.idAdmPtoemi"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="Opcional">
-          </div>
-
-          <div class="editorField span-3">
-            <label>ID comp. aut.</label>
-            <input
-              pInputText
-              type="number"
-              [(ngModel)]="comercialDraft.idTaxCompAutFk"
-              [ngModelOptions]="{ standalone: true }">
-          </div>
-
-          <div class="editorField span-3 checkboxField">
-            <label class="checkboxLabel">
-              <input
-                type="checkbox"
-                [(ngModel)]="comercialDraft.credito"
-                [ngModelOptions]="{ standalone: true }">
-              Crédito
-            </label>
-          </div>
-
-          <div class="editorField span-3 checkboxField">
-            <label class="checkboxLabel">
-              <input
-                type="checkbox"
-                [(ngModel)]="comercialDraft.usarPrecioRepuesto"
-                [ngModelOptions]="{ standalone: true }">
-              Usar precio repuesto
-            </label>
-          </div>
-
-          <div class="editorField span-2">
-            <label>Entrada</label>
-            <input
-              pInputText
-              type="number"
-              [(ngModel)]="comercialDraft.entrada"
-              [ngModelOptions]="{ standalone: true }">
-          </div>
-
-          <div class="editorField span-2">
-            <label>Cuotas</label>
-            <input
-              pInputText
-              type="number"
-              [(ngModel)]="comercialDraft.cuotas"
-              [ngModelOptions]="{ standalone: true }">
-          </div>
-
-          <div class="editorField span-2">
-            <label>Primer vencimiento</label>
-            <input
-              type="date"
-              [(ngModel)]="comercialDraft.fechaPrimerVencimiento"
-              [ngModelOptions]="{ standalone: true }">
-          </div>
-
           <div class="editorField span-12">
             <label>Observación</label>
-            <textarea
-              pTextarea
-              rows="2"
-              [(ngModel)]="comercialDraft.observacion"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="Observación interna o comercial">
-            </textarea>
+            <textarea pTextarea rows="2" [(ngModel)]="comercialDraft.observacionFactura"
+              [ngModelOptions]="{ standalone: true }" placeholder="Observación interna o comercial">
+    </textarea>
           </div>
         </div>
 
         <div class="lineToolbar">
           <label class="checkboxLabel">
-            <input
-              type="checkbox"
-              [checked]="allPendingSelected()"
+            <input type="checkbox" [checked]="allPendingSelected()"
               (change)="toggleAllPending($any($event.target).checked)">
             Seleccionar todos
           </label>
@@ -225,10 +120,7 @@
           <div class="lineTable__body">
             <div class="lineTable__row" *ngFor="let line of pendingLines">
               <div class="lineTable__cell lineTable__cell--check">
-                <input
-                  type="checkbox"
-                  [(ngModel)]="line.selected"
-                  [ngModelOptions]="{ standalone: true }">
+                <input type="checkbox" [(ngModel)]="line.selected" [ngModelOptions]="{ standalone: true }">
               </div>
 
               <div class="lineTable__cell lineTable__cell--main">
@@ -284,23 +176,11 @@
           </div>
 
           <div class="actionWrap">
-            <button
-              pButton
-              type="button"
-              size="small"
-              severity="secondary"
-              icon="pi pi-wallet"
-              label="Cobro"
+            <button pButton type="button" size="small" severity="secondary" icon="pi pi-wallet" label="Cobro"
               (click)="openCobro.emit()">
             </button>
 
-            <button
-              pButton
-              type="button"
-              size="small"
-              severity="secondary"
-              icon="pi pi-chart-line"
-              label="Contabilizar"
+            <button pButton type="button" size="small" severity="secondary" icon="pi pi-chart-line" label="Contabilizar"
               (click)="openContabilizar.emit()">
             </button>
           </div>
@@ -394,8 +274,8 @@
           <div class="miniGrid" *ngIf="facturaCxcItems().length">
             <article class="miniItem" *ngFor="let item of facturaCxcItems()">
               <span>Vence</span>
-              <strong>{{ formatDateShort(item?.fechaVencimiento || item?.fecVence || item?.fecha) }}</strong>
-              <small>Saldo {{ formatMoney(item?.saldo || item?.valor || item?.deuda || 0) }}</small>
+              <strong>{{ formatDateShort(item?.fecha) }}</strong>
+              <small>Saldo {{ formatMoney(item?.saldo ?? item?.valor ?? 0) }}</small>
             </article>
           </div>
 
@@ -413,33 +293,25 @@
 </section>
 
 <ng-template #noOrden>
-  <app-vehiculos-empty-state
-    icon="pi pi-file"
-    title="Sin orden seleccionada"
+  <app-vehiculos-empty-state icon="pi pi-file" title="Sin orden seleccionada"
     subtitle="Selecciona una OT para trabajar la parte comercial.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturas>
-  <app-vehiculos-empty-state
-    icon="pi pi-receipt"
-    title="Sin facturas todavía"
+  <app-vehiculos-empty-state icon="pi pi-receipt" title="Sin facturas todavía"
     subtitle="Usa el acceso de Nueva factura para emitir la primera factura de la OT.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noPendientes>
-  <app-vehiculos-empty-state
-    icon="pi pi-check-circle"
-    title="Sin repuestos pendientes"
+  <app-vehiculos-empty-state icon="pi pi-check-circle" title="Sin repuestos pendientes"
     subtitle="Todos los repuestos ya están facturados o todavía no existen líneas comerciales para esta OT.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noFacturaSeleccionada>
-  <app-vehiculos-empty-state
-    icon="pi pi-file-edit"
-    title="Modo comercial"
+  <app-vehiculos-empty-state icon="pi pi-file-edit" title="Modo comercial"
     subtitle="Selecciona una factura de la lista o crea una nueva factura.">
   </app-vehiculos-empty-state>
 </ng-template>

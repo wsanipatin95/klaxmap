@@ -50,6 +50,7 @@ import {
   VehOrdenTrabajoTrabajo,
   VehOrdenTrabajoTrabajoGuardarRequest,
   VehTipoVehiculoVista,
+  VehFacturaDetalleResponse,
 } from '../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
@@ -151,7 +152,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   facturasOt = signal<VehFactura[]>([]);
   selectedFacturaOt = signal<VehFactura | null>(null);
-  facturaDetalle = signal<Record<string, unknown> | null>(null);
+  facturaDetalle = signal<VehFacturaDetalleResponse | null>(null);
   cobrosFactura = signal<VehCobro[]>([]);
   workflowResultado = signal<VehFacturacionWorkflowResultado | null>(null);
 
@@ -718,7 +719,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       cobros: this.repo.listarCobros('', 0, 100, true, { idFacVenta: item.idFacVenta }),
     }).subscribe({
       next: ({ detalle, cobros }) => {
-        this.facturaDetalle.set(detalle as Record<string, unknown>);
+        this.facturaDetalle.set(detalle);
         this.cobrosFactura.set(cobros.items ?? []);
       },
       error: (err) => this.notify.error('No se pudo cargar el detalle comercial', err?.message),
@@ -1240,34 +1241,16 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
       const payload: VehFacturacionWorkflowRequest = {
         idVehOrdenTrabajoFk: Number(this.workflowForm.value.idVehOrdenTrabajoFk),
-        idAdmPtoemiFk: this.workflowForm.value.idAdmPtoemiFk ?? null,
-        idsVehOrdenTrabajoRepuesto: this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto),
+        dni: Number(this.workflowForm.value.dni),
+        idsVehOrdenTrabajoRepuesto: this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto) ?? [],
+        subtotalCero: 0,
+        subtotalIva: 0,
+        iva: 0,
+        descuento: 0,
+        total: 0,
         observacionFactura: this.workflowForm.value.observacionFactura?.trim() || null,
-        tipoFacturacion: this.workflowForm.value.tipoFacturacion || null,
-        dni: this.workflowForm.value.dni ?? null,
-        cen: this.workflowForm.value.cen ?? null,
-        credito: !!this.workflowForm.value.credito,
-        pagoInicial: Number(this.workflowForm.value.pagoInicial || 0),
-        cuotas: Number(this.workflowForm.value.cuotas || 1),
-        fechaEmisionIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaEmisionIso),
-        fechaPrimerVencimientoIso: this.toIsoStartOfDayWithOffset(this.workflowForm.value.fechaPrimerVencimientoIso),
-        idTaxCompAutFk: this.workflowForm.value.idTaxCompAutFk ?? null,
-        usarPrecioRepuesto: !!this.workflowForm.value.usarPrecioRepuesto,
-        idCntFormaPagoFk: this.workflowForm.value.idCntFormaPagoFk ?? null,
-        idCntPlanFormaPagoFk: this.workflowForm.value.idCntPlanFormaPagoFk ?? null,
-        idBanDocBancoFk: this.workflowForm.value.idBanDocBancoFk ?? null,
-        idBanBancoFk: this.workflowForm.value.idBanBancoFk ?? null,
-        idBanBancoSubFk: this.workflowForm.value.idBanBancoSubFk ?? null,
-        idTaxTarjetaDiferidoFk: this.workflowForm.value.idTaxTarjetaDiferidoFk ?? null,
-        idBanTarjetaFk: this.workflowForm.value.idBanTarjetaFk ?? null,
-        referenciaDatafast: this.workflowForm.value.referenciaDatafast?.trim() || null,
-        traCash: this.workflowForm.value.traCash?.trim() || null,
-        crearRecibo: !!this.workflowForm.value.crearRecibo,
-        contabilizarFactura: !!this.workflowForm.value.contabilizarFactura,
-        contabilizarCobro: !!this.workflowForm.value.contabilizarCobro,
-        conceptoFactura: this.workflowForm.value.conceptoFactura?.trim() || null,
-        conceptoCobro: this.workflowForm.value.conceptoCobro?.trim() || null,
       };
+
       request$ = this.repo.facturarCobrarWorkflow(payload);
     }
 
@@ -2083,11 +2066,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     }
 
     this.saving.set(true);
-    this.repo.crearFactura(payload)
+    this.repo.facturarCobrarWorkflow(payload)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (res: any) => {
-          const createdId = Number(res?.data?.idFacVenta ?? res?.data?.id ?? 0);
+          this.workflowResultado.set((res?.data ?? null) as any);
+
+          const createdId = Number(res?.data?.idFacVenta ?? 0);
 
           if (createdId > 0) {
             this.selectedFacturaOt.set({ idFacVenta: createdId } as VehFactura);

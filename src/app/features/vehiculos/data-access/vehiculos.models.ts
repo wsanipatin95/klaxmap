@@ -280,6 +280,9 @@ export interface VehFactura {
   estab?: number | null;
   ptoemi?: number | null;
   secuencial?: number | null;
+  numeroFactura?: string | null;
+  ruc?: string | null;
+  nombre?: string | null;
   baseImponible?: number | null;
   iva?: number | null;
   ivaPorcentaje?: number | null;
@@ -304,11 +307,37 @@ export interface VehFacturaDet {
   valcom?: number | null;
   descuento?: number | null;
   art?: number | null;
+  artcod?: string | null;
+  articulo?: string | null;
   detalle?: string | null;
   iva?: number | null;
   ivaPorcen?: number | null;
   idConPlanFk?: number | null;
   observaciones?: string | null;
+  fecGen?: string | null;
+}
+
+export interface VehFacturaCxc {
+  idFacVentaCxc: number;
+  idFacVentaFk: number;
+  cuotaNum?: number | null;
+  fecha?: string | null;
+  valor?: number | null;
+  saldo?: number | null;
+  interes?: number | null;
+  mora?: number | null;
+  gestion?: number | null;
+  capital?: number | null;
+  idCreCreditoFk?: number | null;
+  saldoAcumulado?: number | null;
+  dias?: number | null;
+}
+
+export interface VehFacturaDetalleResponse {
+  factura: VehFactura | null;
+  detalle: VehFacturaDet[];
+  cxc: VehFacturaCxc[];
+  ordenesTrabajo: VehOrdenTrabajoFactura[];
 }
 
 export interface VehCobro {
@@ -646,37 +675,20 @@ export interface VehFacturaContabilizarRequest {
   fechaContable?: string | null;
   concepto?: string | null;
 }
+
 export interface VehFacturacionWorkflowRequest {
   idVehOrdenTrabajoFk: number;
-  idAdmPtoemiFk?: number | null;
-  idsVehOrdenTrabajoRepuesto?: number[] | null;
+  dni: number;
+  idsVehOrdenTrabajoRepuesto: number[];
+  subtotalCero: number;
+  subtotalIva: number;
+  iva: number;
+  descuento: number;
+  total: number;
   observacionFactura?: string | null;
-  tipoFacturacion?: string | null;
-  dni?: number | null;
-  cen?: number | null;
-  credito?: boolean | null;
-  pagoInicial?: number | null;
-  cuotas?: number | null;
-  fechaEmisionIso?: string | null;
-  fechaPrimerVencimientoIso?: string | null;
-  idTaxCompAutFk?: number | null;
-  usarPrecioRepuesto?: boolean | null;
-  idCntFormaPagoFk?: number | null;
-  idCntPlanFormaPagoFk?: number | null;
-  idBanDocBancoFk?: number | null;
-  idBanBancoFk?: number | null;
-  idBanBancoSubFk?: number | null;
-  idTaxTarjetaDiferidoFk?: number | null;
-  idBanTarjetaFk?: number | null;
-  referenciaDatafast?: string | null;
-  traCash?: string | null;
-  crearRecibo?: boolean | null;
-  contabilizarFactura?: boolean | null;
-  contabilizarCobro?: boolean | null;
-  conceptoFactura?: string | null;
-  conceptoCobro?: string | null;
   usu?: number | null;
 }
+
 export interface VehFacturacionWorkflowResultado {
   idVehOrdenTrabajoFk?: number | null;
   idAdmPtoemiFk?: number | null;
@@ -691,7 +703,9 @@ export interface VehFacturacionWorkflowResultado {
   total?: number | null;
   pagoInicial?: number | null;
   saldoPendiente?: number | null;
+  idFacVentaCxc?: number | null;
   idFacVentaCobro?: number | null;
+  referenciaRecibo?: string | null;
   traFactura?: number | null;
   traCobro?: number | null;
   estadoOrdenSugerido?: string | null;
