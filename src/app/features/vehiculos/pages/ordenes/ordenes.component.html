@@ -25,24 +25,30 @@
       <p-tag [value]="ordenes().length + ' OT'" severity="secondary"></p-tag>
     </div>
 
-    <div class="backlogCard__body" *ngIf="ordenes().length; else noOrdenes">
-      <article class="jiraLikeRow" *ngFor="let item of ordenes()"
+    <div class="backlogCard__body backlogCard__body--compact" *ngIf="ordenes().length; else noOrdenes">
+      <article class="jiraLikeRow jiraLikeRow--compact" *ngFor="let item of ordenes()"
         [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo"
         (click)="seleccionarOrden(item)">
-        <div class="rowHeader">
-          <div class="rowCopy">
-            <div class="primaryCell">
+        <div class="rowHeader rowHeader--compact">
+          <div class="rowCopy rowCopy--compact">
+            <div class="primaryCell primaryCell--compact">
               OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}
             </div>
-            <div class="secondaryCell">
-              {{ ordenClienteDisplay(item) }} · {{ ordenVehiculoDisplay(item) }}
+
+            <div class="secondaryCell secondaryCell--compact rowLineClamp">
+              {{ item.nombre || item.ruc || ('Cliente #' + item.dni) }}
             </div>
-            <div class="secondaryCell">
+
+            <div class="secondaryCell secondaryCell--compact rowLineClamp">
+              {{ [item.marca, item.modelo, item.placa].filter(x => !!x).join(' · ') || 'Vehículo' }}
+            </div>
+
+            <div class="secondaryCell secondaryCell--compact">
               {{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen || 'Sin fecha' }}
             </div>
           </div>
 
-          <div class="rowActions">
+          <div class="rowActions rowActions--compact">
             <p-tag [value]="item.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(item.estadoOrden)"></p-tag>
 
             <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
@@ -56,11 +62,10 @@
             <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
               [disabled]="isOrdenAnulada(item)" (click)="eliminarOrden(item); $event.stopPropagation()">
             </button>
-
           </div>
         </div>
 
-        <div class="secondaryCell rowDetail">
+        <div class="secondaryCell secondaryCell--compact rowDetail rowDetail--compact rowLineClamp">
           {{ item.fallaReportada || item.detalleCliente || item.observaciones || 'Sin detalle operativo' }}
         </div>
       </article>
