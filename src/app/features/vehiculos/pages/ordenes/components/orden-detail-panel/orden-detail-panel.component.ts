@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
@@ -130,6 +131,7 @@ type FotoDraft = {
     CommonModule,
     FormsModule,
     ButtonModule,
+    DialogModule,
     InputTextModule,
     TextareaModule,
     TagModule,
@@ -187,7 +189,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   activeTab = signal<OrdenDetailTab>('resumen');
   executionTab = signal<ExecutionTab>('detalle');
   hallazgoInnerTab = signal<HallazgoInnerTab>('marcas');
-
+  hallazgoMediaModalVisible = signal(false);
   checklistRows = signal<ChecklistEditorRow[]>([]);
 
   selectedTrabajoId: number | null = null;
@@ -315,6 +317,19 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   setHallazgoInnerTab(tab: HallazgoInnerTab) {
     this.hallazgoInnerTab.set(tab);
+  }
+  
+  openHallazgoMediaModal(tab: HallazgoInnerTab) {
+    this.hallazgoInnerTab.set(tab);
+    this.hallazgoMediaModalVisible.set(true);
+
+    if (tab === 'marcas' && !this.selectedVista && this.vistas.length) {
+      this.selectVista.emit(this.vistas[0]);
+    }
+  }
+
+  closeHallazgoMediaModal() {
+    this.hallazgoMediaModalVisible.set(false);
   }
 
   severityEstado(estado?: string | null) {

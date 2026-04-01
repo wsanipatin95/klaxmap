@@ -10,9 +10,7 @@
       </div>
 
       <div class="detailHero__meta">
-        <p-tag
-          [value]="orden.estadoOrden || 'RECIBIDO'"
-          [severity]="severityEstado(orden.estadoOrden)">
+        <p-tag [value]="orden.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(orden.estadoOrden)">
         </p-tag>
       </div>
     </article>
@@ -42,11 +40,16 @@
     <section class="tabRail">
       <div class="tabRail__scroll">
         <button class="tabButton" [class.active]="activeTab()==='resumen'" (click)="setTab('resumen')">Resumen</button>
-        <button class="tabButton" [class.active]="activeTab()==='checklist'" (click)="setTab('checklist')">Checklist</button>
-        <button class="tabButton" [class.active]="activeTab()==='ejecucion'" (click)="setTab('ejecucion')">Ejecución</button>
-        <button class="tabButton" [class.active]="activeTab()==='repuestos'" (click)="setTab('repuestos')">Repuestos</button>
-        <button class="tabButton" [class.active]="activeTab()==='autorizaciones'" (click)="setTab('autorizaciones')">Autorizaciones</button>
-        <button class="tabButton" [class.active]="activeTab()==='comercial'" (click)="setTab('comercial')">Comercial</button>
+        <button class="tabButton" [class.active]="activeTab()==='checklist'"
+          (click)="setTab('checklist')">Checklist</button>
+        <button class="tabButton" [class.active]="activeTab()==='ejecucion'"
+          (click)="setTab('ejecucion')">Ejecución</button>
+        <button class="tabButton" [class.active]="activeTab()==='repuestos'"
+          (click)="setTab('repuestos')">Repuestos</button>
+        <button class="tabButton" [class.active]="activeTab()==='autorizaciones'"
+          (click)="setTab('autorizaciones')">Autorizaciones</button>
+        <button class="tabButton" [class.active]="activeTab()==='comercial'"
+          (click)="setTab('comercial')">Comercial</button>
       </div>
     </section>
 
@@ -65,17 +68,21 @@
       </div>
 
       <div class="metricGrid">
-        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
+        </article>
         <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
         <article class="metric"><span>Autorizaciones</span><strong>{{ autorizaciones.length }}</strong></article>
       </div>
 
       <div class="kvGrid">
-        <article class="kvItem"><span>Ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen) }}</strong></article>
-        <article class="kvItem"><span>Promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong></article>
+        <article class="kvItem"><span>Ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen)
+            }}</strong></article>
+        <article class="kvItem"><span>Promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong>
+        </article>
         <article class="kvItem"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong></article>
-        <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{ orden.nivelBateria || '-' }}</strong></article>
+        <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{
+            orden.nivelBateria || '-' }}</strong></article>
       </div>
     </section>
 
@@ -87,23 +94,15 @@
           <div class="secondaryCell">{{ checklistChangedCount() }} cambio(s) pendiente(s)</div>
         </div>
 
-        <button
-          pButton
-          type="button"
-          size="small"
-          icon="pi pi-save"
-          label="Guardar"
-          [disabled]="!checklistRows().length"
-          (click)="saveChecklistTable()">
+        <button pButton type="button" size="small" icon="pi pi-save" label="Guardar"
+          [disabled]="!checklistRows().length" (click)="saveChecklistTable()">
         </button>
       </div>
 
       <div class="checklistBoard" *ngIf="checklistRows().length; else noChecklist">
         <div class="checklistHead">
           <div class="checkCell checkCell--checkbox">
-            <input
-              type="checkbox"
-              [checked]="allChecklistChecked()"
+            <input type="checkbox" [checked]="allChecklistChecked()"
               (change)="onToggleAllChecklist($any($event.target).checked)">
           </div>
           <div class="checkCell checkCell--item">Checklist</div>
@@ -113,9 +112,7 @@
         <div class="checklistBody">
           <div class="checklistRow" *ngFor="let row of checklistRows(); trackBy: trackByChecklistRow">
             <div class="checkCell checkCell--checkbox">
-              <input
-                type="checkbox"
-                [checked]="row.checked"
+              <input type="checkbox" [checked]="row.checked"
                 (change)="onToggleChecklistRow(row.relationId, $any($event.target).checked)">
             </div>
 
@@ -124,10 +121,7 @@
             </div>
 
             <div class="checkCell checkCell--obs">
-              <input
-                pInputText
-                [ngModel]="row.observaciones"
-                [ngModelOptions]="{ standalone: true }"
+              <input pInputText [ngModel]="row.observaciones" [ngModelOptions]="{ standalone: true }"
                 (ngModelChange)="onChecklistObservationChange(row.relationId, $event ?? '')"
                 placeholder="Observación opcional">
             </div>
@@ -147,20 +141,13 @@
               <div class="secondaryCell">{{ trabajosListado().length }} registro(s)</div>
             </div>
 
-            <button
-              pButton
-              type="button"
-              size="small"
-              icon="pi pi-plus"
-              label="Nuevo"
-              (click)="iniciarNuevoTrabajo()">
+            <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo" (click)="iniciarNuevoTrabajo()">
             </button>
           </div>
 
           <div class="listCard listCard--tight">
             <div class="scrollList scrollList--compact">
-              <article
-                class="jiraLikeRow compact compactRow"
+              <article class="jiraLikeRow compact compactRow"
                 *ngFor="let item of trabajosListado(); trackBy: trackByTrabajo"
                 [class.selected]="selectedTrabajoId === item.idVehOrdenTrabajoTrabajo"
                 (click)="seleccionarTrabajoWorkbench(item)">
@@ -172,9 +159,7 @@
                     </div>
                   </div>
 
-                  <p-tag
-                    [value]="item.estadoTrabajo || 'PENDIENTE'"
-                    [severity]="severityEstado(item.estadoTrabajo)">
+                  <p-tag [value]="item.estadoTrabajo || 'PENDIENTE'" [severity]="severityEstado(item.estadoTrabajo)">
                   </p-tag>
                 </div>
 
@@ -183,10 +168,7 @@
                 </div>
               </article>
 
-              <app-vehiculos-empty-state
-                *ngIf="!trabajosListado().length"
-                icon="pi pi-cog"
-                title="Sin trabajos"
+              <app-vehiculos-empty-state *ngIf="!trabajosListado().length" icon="pi pi-cog" title="Sin trabajos"
                 subtitle="Crea un trabajo para comenzar.">
               </app-vehiculos-empty-state>
             </div>
@@ -203,62 +185,40 @@
                   {{ executionTab()==='detalle' ? 'Detalle del trabajo' : 'Detalle del hallazgo' }}
                 </h4>
 
-                <div class="secondaryCell" *ngIf="executionTab()==='detalle' && selectedTrabajoActual() as trabajoActual">
+                <div class="secondaryCell"
+                  *ngIf="executionTab()==='detalle' && selectedTrabajoActual() as trabajoActual">
                   {{ trabajoActual.tipoTrabajo || 'TRABAJO' }} · {{ trabajoActual.estadoTrabajo || 'PENDIENTE' }}
                 </div>
 
-                <div class="secondaryCell" *ngIf="executionTab()==='hallazgos' && selectedTrabajoActual() as trabajoActual">
+                <div class="secondaryCell"
+                  *ngIf="executionTab()==='hallazgos' && selectedTrabajoActual() as trabajoActual">
                   Sobre: {{ trabajoActual.tipoTrabajo || 'TRABAJO' }}
                 </div>
               </div>
 
               <div class="inlineTabs">
-                <button
-                  class="subTabButton"
-                  [class.active]="executionTab()==='detalle'"
+                <button class="subTabButton" [class.active]="executionTab()==='detalle'"
                   (click)="setExecutionTab('detalle')">
                   Detalle
                 </button>
 
-                <button
-                  class="subTabButton"
-                  [class.active]="executionTab()==='hallazgos'"
-                  (click)="setExecutionTab('hallazgos')"
-                  [disabled]="!selectedTrabajoId">
+                <button class="subTabButton" [class.active]="executionTab()==='hallazgos'"
+                  (click)="setExecutionTab('hallazgos')" [disabled]="!selectedTrabajoId">
                   Hallazgos
                 </button>
               </div>
 
               <div class="actionWrap actionWrap--compact">
-                <button
-                  pButton
-                  type="button"
-                  size="small"
-                  severity="secondary"
-                  [text]="true"
-                  label="Cancelar"
+                <button pButton type="button" size="small" severity="secondary" [text]="true" label="Cancelar"
                   (click)="executionTab()==='detalle' ? cancelTrabajoDraft() : cancelHallazgoDraft()">
                 </button>
 
-                <button
-                  *ngIf="executionTab()==='detalle'"
-                  pButton
-                  type="button"
-                  size="small"
-                  icon="pi pi-save"
-                  label="Guardar"
-                  [disabled]="!trabajoDraft.descripcionInicial.trim()"
-                  (click)="guardarTrabajo()">
+                <button *ngIf="executionTab()==='detalle'" pButton type="button" size="small" icon="pi pi-save"
+                  label="Guardar" [disabled]="!trabajoDraft.descripcionInicial.trim()" (click)="guardarTrabajo()">
                 </button>
 
-                <button
-                  *ngIf="executionTab()==='hallazgos'"
-                  pButton
-                  type="button"
-                  size="small"
-                  icon="pi pi-save"
-                  label="Guardar"
-                  [disabled]="!selectedTrabajoId || !hallazgoDraft.descripcion.trim()"
+                <button *ngIf="executionTab()==='hallazgos'" pButton type="button" size="small" icon="pi pi-save"
+                  label="Guardar" [disabled]="!selectedTrabajoId || !hallazgoDraft.descripcion.trim()"
                   (click)="guardarHallazgo()">
                 </button>
               </div>
@@ -295,17 +255,20 @@
 
                   <div class="editorField span-12">
                     <label>Descripción inicial</label>
-                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionInicial" [ngModelOptions]="{ standalone: true }"></textarea>
+                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionInicial"
+                      [ngModelOptions]="{ standalone: true }"></textarea>
                   </div>
 
                   <div class="editorField span-6">
                     <label>Descripción realizada</label>
-                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionRealizada" [ngModelOptions]="{ standalone: true }"></textarea>
+                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionRealizada"
+                      [ngModelOptions]="{ standalone: true }"></textarea>
                   </div>
 
                   <div class="editorField span-6">
                     <label>Resultado</label>
-                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.resultado" [ngModelOptions]="{ standalone: true }"></textarea>
+                    <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.resultado"
+                      [ngModelOptions]="{ standalone: true }"></textarea>
                   </div>
 
                   <div class="editorField span-6">
@@ -331,19 +294,13 @@
                         <div class="secondaryCell">{{ hallazgosDelTrabajoSeleccionado().length }} registro(s)</div>
                       </div>
 
-                      <button
-                        pButton
-                        type="button"
-                        size="small"
-                        icon="pi pi-plus"
-                        label="Nuevo"
+                      <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo"
                         (click)="iniciarNuevoHallazgo()">
                       </button>
                     </div>
 
                     <div class="scrollList scrollList--compact">
-                      <article
-                        class="jiraLikeRow compact compactRow"
+                      <article class="jiraLikeRow compact compactRow"
                         *ngFor="let item of hallazgosDelTrabajoSeleccionado(); trackBy: trackByHallazgo"
                         [class.selected]="selectedHallazgo?.idVehOrdenTrabajoHallazgo === item.idVehOrdenTrabajoHallazgo"
                         (click)="seleccionarHallazgoWorkbench(item)">
@@ -355,17 +312,14 @@
                             </div>
                           </div>
 
-                          <p-tag
-                            [value]="item.estadoHallazgo || 'REPORTADO'"
+                          <p-tag [value]="item.estadoHallazgo || 'REPORTADO'"
                             [severity]="severityEstado(item.estadoHallazgo)">
                           </p-tag>
                         </div>
                       </article>
 
-                      <app-vehiculos-empty-state
-                        *ngIf="!hallazgosDelTrabajoSeleccionado().length"
-                        icon="pi pi-exclamation-circle"
-                        title="Sin hallazgos"
+                      <app-vehiculos-empty-state *ngIf="!hallazgosDelTrabajoSeleccionado().length"
+                        icon="pi pi-exclamation-circle" title="Sin hallazgos"
                         subtitle="Crea hallazgos para este trabajo.">
                       </app-vehiculos-empty-state>
                     </div>
@@ -397,7 +351,8 @@
 
                       <div class="editorField span-12">
                         <label>Descripción</label>
-                        <textarea pTextarea rows="2" [(ngModel)]="hallazgoDraft.descripcion" [ngModelOptions]="{ standalone: true }"></textarea>
+                        <textarea pTextarea rows="2" [(ngModel)]="hallazgoDraft.descripcion"
+                          [ngModelOptions]="{ standalone: true }"></textarea>
                       </div>
 
                       <div class="editorField span-4">
@@ -409,18 +364,21 @@
 
                       <div class="editorField span-4">
                         <label>Fecha aprobación</label>
-                        <input type="date" [(ngModel)]="hallazgoDraft.fechaAprobacion" [ngModelOptions]="{ standalone: true }">
+                        <input type="date" [(ngModel)]="hallazgoDraft.fechaAprobacion"
+                          [ngModelOptions]="{ standalone: true }">
                       </div>
 
                       <div class="editorField span-4 checkboxField">
                         <div class="checkboxRow">
                           <label class="checkboxLabel">
-                            <input type="checkbox" [(ngModel)]="hallazgoDraft.requiereCambio" [ngModelOptions]="{ standalone: true }">
+                            <input type="checkbox" [(ngModel)]="hallazgoDraft.requiereCambio"
+                              [ngModelOptions]="{ standalone: true }">
                             Requiere cambio
                           </label>
 
                           <label class="checkboxLabel">
-                            <input type="checkbox" [(ngModel)]="hallazgoDraft.aprobadoCliente" [ngModelOptions]="{ standalone: true }">
+                            <input type="checkbox" [(ngModel)]="hallazgoDraft.aprobadoCliente"
+                              [ngModelOptions]="{ standalone: true }">
                             Aprobado cliente
                           </label>
                         </div>
@@ -428,212 +386,29 @@
 
                       <div class="editorField span-6">
                         <label>Motivo cambio</label>
-                        <input pInputText [(ngModel)]="hallazgoDraft.motivoCambio" [ngModelOptions]="{ standalone: true }">
+                        <input pInputText [(ngModel)]="hallazgoDraft.motivoCambio"
+                          [ngModelOptions]="{ standalone: true }">
                       </div>
 
                       <div class="editorField span-6">
                         <label>Observaciones</label>
-                        <input pInputText [(ngModel)]="hallazgoDraft.observaciones" [ngModelOptions]="{ standalone: true }">
+                        <input pInputText [(ngModel)]="hallazgoDraft.observaciones"
+                          [ngModelOptions]="{ standalone: true }">
                       </div>
                     </div>
 
                     <ng-container *ngIf="selectedHallazgoEnContexto() as hallazgoCtx">
-                      <section class="subTabRail subTabRail--inner">
-                        <div class="subTabRail__scroll">
-                          <button
-                            class="subTabButton"
-                            [class.active]="hallazgoInnerTab()==='marcas'"
-                            (click)="setHallazgoInnerTab('marcas')">
-                            Marcas
-                          </button>
+                      <div class="hallazgoMediaActions">
+                        <button pButton type="button" size="small" severity="secondary" icon="pi pi-map" label="Marcas"
+                          (click)="openHallazgoMediaModal('marcas')">
+                        </button>
 
-                          <button
-                            class="subTabButton"
-                            [class.active]="hallazgoInnerTab()==='fotos'"
-                            (click)="setHallazgoInnerTab('fotos')">
-                            Fotos
-                          </button>
-                        </div>
-                      </section>
-
-                      <!-- MARCAS -->
-                      <section class="hallazgoChildPanel" *ngIf="hallazgoInnerTab()==='marcas'">
-                        <div class="childGrid">
-                          <section class="childPane">
-                            <div class="sectionHead sectionHead--compact">
-                              <h4>Vistas</h4>
-                              <span class="secondaryCell">{{ vistas.length }}</span>
-                            </div>
-
-                            <div class="scrollList scrollList--compact">
-                              <article
-                                class="jiraLikeRow compact compactRow"
-                                *ngFor="let vista of vistas; trackBy: trackByVista"
-                                [class.selected]="selectedVista?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
-                                (click)="selectVista.emit(vista)">
-                                <div class="primaryCell">{{ vista.vista }}</div>
-                                <div class="secondaryCell">Orden {{ vista.orden || '-' }}</div>
-                              </article>
-                            </div>
-                          </section>
-
-                          <section class="childPane">
-                            <div class="sectionHead sectionHead--compact">
-                              <h4>Marcas del hallazgo</h4>
-                              <span class="secondaryCell">{{ marcasDeVistaSeleccionada().length }}</span>
-                            </div>
-
-                            <div class="canvasWrap canvasWrap--compact">
-                              <app-vehiculo-vista-canvas
-                                [vista]="selectedVista"
-                                [marcas]="marcas"
-                                [interactive]="true"
-                                (pointMarked)="pointMarked.emit($event)">
-                              </app-vehiculo-vista-canvas>
-                            </div>
-
-                            <div class="markList">
-                              <article
-                                class="jiraLikeRow compact compactRow"
-                                *ngFor="let marca of marcasDeVistaSeleccionada(); trackBy: trackByMarca">
-                                <div class="rowHeader">
-                                  <div class="rowCopy">
-                                    <div class="primaryCell">{{ marca.tipoMarca || 'MARCA' }}</div>
-                                    <div class="secondaryCell">{{ marca.color || 'Sin color' }}</div>
-                                  </div>
-
-                                  <span class="markSwatch" [style.background]="marca.color || '#7b0061'"></span>
-                                </div>
-
-                                <div class="secondaryCell rowClamp">
-                                  {{ marca.observaciones || 'Sin observaciones' }}
-                                </div>
-                              </article>
-                            </div>
-                          </section>
-                        </div>
-                      </section>
-
-                      <!-- FOTOS -->
-                      <section class="hallazgoChildPanel" *ngIf="hallazgoInnerTab()==='fotos'">
-                        <div class="childGrid">
-                          <section class="childPane">
-                            <div class="sectionHead sectionHead--compact">
-                              <h4>Evidencias</h4>
-                              <span class="secondaryCell">{{ fotos.length }}</span>
-                            </div>
-
-                            <div class="scrollList scrollList--compact">
-                              <article
-                                class="photoCard photoCard--compact"
-                                *ngFor="let foto of fotos; trackBy: trackByFoto"
-                                [class.selected]="selectedFotoId === foto.idVehOrdenTrabajoHallazgoFoto"
-                                (click)="seleccionarFoto(foto)">
-                                <ng-container *ngIf="resolveBinarySrc((foto.foto || foto.urlArchivo) ?? null) as fotoSrc; else noThumbHallazgo">
-                                  <img class="fotoThumb" [src]="fotoSrc" [alt]="foto.descripcion || 'Foto hallazgo'">
-                                </ng-container>
-
-                                <ng-template #noThumbHallazgo>
-                                  <div class="fotoThumb fotoThumb--empty">Sin imagen</div>
-                                </ng-template>
-
-                                <div class="photoBody">
-                                  <div class="rowHeader">
-                                    <div class="rowCopy">
-                                      <div class="primaryCell">{{ foto.etapa || 'ETAPA' }}</div>
-                                      <div class="secondaryCell">{{ foto.descripcion || 'Sin descripción' }}</div>
-                                    </div>
-
-                                    <div class="miniActions">
-                                      <button
-                                        pButton
-                                        type="button"
-                                        size="small"
-                                        [text]="true"
-                                        icon="pi pi-pencil"
-                                        (click)="editarFotoLocal(foto); $event.stopPropagation()">
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </article>
-                            </div>
-                          </section>
-
-                          <section class="childPane">
-                            <div class="sectionHead sectionHead--compact">
-                              <h4>Nueva evidencia</h4>
-                            </div>
-
-                            <div class="editorGrid editorGrid--compact">
-                              <div class="editorField span-4">
-                                <label>Etapa</label>
-                                <select [(ngModel)]="fotoDraft.etapa" [ngModelOptions]="{ standalone: true }">
-                                  <option *ngFor="let option of evidenciaEtapaOptions" [value]="option">{{ option }}</option>
-                                </select>
-                              </div>
-
-                              <div class="editorField span-8 checkboxField">
-                                <div class="checkboxRow checkboxRow--single">
-                                  <label class="checkboxLabel">
-                                    <input type="checkbox" [(ngModel)]="fotoDraft.principal" [ngModelOptions]="{ standalone: true }">
-                                    Marcar como principal
-                                  </label>
-                                </div>
-                              </div>
-
-                              <div class="editorField span-12">
-                                <label>Descripción</label>
-                                <textarea pTextarea rows="2" [(ngModel)]="fotoDraft.descripcion" [ngModelOptions]="{ standalone: true }"></textarea>
-                              </div>
-
-                              <div class="editorField span-12">
-                                <label>Archivo</label>
-                                <input type="file" accept="image/*" (change)="onFotoSelected($event)">
-                              </div>
-
-                              <div class="editorField span-12" *ngIf="fotoDraft.fotoPreview">
-                                <div class="previewCard">
-                                  <img [src]="fotoDraft.fotoPreview!" alt="Preview foto">
-                                </div>
-                              </div>
-
-                              <div class="editorField span-12">
-                                <button
-                                  pButton
-                                  type="button"
-                                  size="small"
-                                  icon="pi pi-save"
-                                  label="Guardar evidencia"
-                                  [disabled]="!fotoDraft.fotoBase64"
-                                  (click)="guardarFoto()">
-                                </button>
-                              </div>
-                            </div>
-
-                            <div class="detailMiniCard" *ngIf="selectedFotoActual() as fotoActual">
-                              <div class="sectionHead sectionHead--compact">
-                                <h4>Detalle actual</h4>
-                                <span class="secondaryCell">
-                                  {{ formatDateTimeShort(fotoFechaGeneracion(fotoActual)) }}
-                                </span>
-                              </div>
-
-                              <div class="miniKv">
-                                <article class="miniKv__item">
-                                  <span>Etapa</span>
-                                  <strong>{{ fotoActual.etapa || '-' }}</strong>
-                                </article>
-                                <article class="miniKv__item">
-                                  <span>Descripción</span>
-                                  <strong>{{ fotoActual.descripcion || 'Sin descripción' }}</strong>
-                                </article>
-                              </div>
-                            </div>
-                          </section>
-                        </div>
-                      </section>
+                        <button pButton type="button" size="small" severity="secondary" icon="pi pi-camera"
+                          label="Fotos" (click)="openHallazgoMediaModal('fotos')">
+                        </button>
+                      </div>
                     </ng-container>
+
                   </section>
                 </div>
               </section>
@@ -655,12 +430,12 @@
             <div>
               <div class="primaryCell">{{ articuloLabel(item.art) }}</div>
               <div class="secondaryCell">
-                {{ item.cantidad }} × {{ item.precioUnitario }} · {{ item.detalleInstalacion || item.motivoCambio || 'Sin detalle' }}
+                {{ item.cantidad }} × {{ item.precioUnitario }} · {{ item.detalleInstalacion || item.motivoCambio ||
+                'Sin detalle' }}
               </div>
             </div>
 
-            <p-tag
-              [value]="item.idFacVentaFk ? 'Facturado' : 'Pendiente'"
+            <p-tag [value]="item.idFacVentaFk ? 'Facturado' : 'Pendiente'"
               [severity]="item.idFacVentaFk ? 'success' : 'warn'">
             </p-tag>
           </div>
@@ -684,8 +459,7 @@
               </div>
             </div>
 
-            <p-tag
-              [value]="item.estadoAutorizacion || 'PENDIENTE'"
+            <p-tag [value]="item.estadoAutorizacion || 'PENDIENTE'"
               [severity]="severityEstado(item.estadoAutorizacion)">
             </p-tag>
           </div>
@@ -699,16 +473,21 @@
         <h4>Comercial</h4>
 
         <div class="actionWrap actionWrap--compact">
-          <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow" (click)="openWorkflow.emit()"></button>
-          <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura" (click)="openFactura.emit()"></button>
-          <button pButton type="button" icon="pi pi-wallet" size="small" severity="secondary" label="Cobro" [disabled]="!selectedFacturaOt" (click)="openCobro.emit()"></button>
-          <button pButton type="button" icon="pi pi-chart-line" size="small" severity="secondary" label="Contabilizar" [disabled]="!selectedFacturaOt" (click)="openContabilizar.emit()"></button>
+          <button pButton type="button" icon="pi pi-bolt" size="small" label="Workflow"
+            (click)="openWorkflow.emit()"></button>
+          <button pButton type="button" icon="pi pi-file" size="small" severity="secondary" label="Factura"
+            (click)="openFactura.emit()"></button>
+          <button pButton type="button" icon="pi pi-wallet" size="small" severity="secondary" label="Cobro"
+            [disabled]="!selectedFacturaOt" (click)="openCobro.emit()"></button>
+          <button pButton type="button" icon="pi pi-chart-line" size="small" severity="secondary" label="Contabilizar"
+            [disabled]="!selectedFacturaOt" (click)="openContabilizar.emit()"></button>
         </div>
       </div>
 
       <div class="metricGrid">
         <article class="metric"><span>Repuestos OT</span><strong>{{ repuestos.length }}</strong></article>
-        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+        <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
+        </article>
         <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
       </div>
@@ -717,43 +496,222 @@
 </ng-container>
 
 <ng-template #noSelection>
-  <app-vehiculos-empty-state
-    icon="pi pi-receipt"
-    title="Sin orden seleccionada"
+  <app-vehiculos-empty-state icon="pi pi-receipt" title="Sin orden seleccionada"
     subtitle="Selecciona una OT del backlog para ver el detalle operativo.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noChecklist>
-  <app-vehiculos-empty-state
-    icon="pi pi-check-square"
-    title="Sin checklist"
+  <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist"
     subtitle="No hay checklist configurado para esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noTrabajoContext>
   <section class="workbenchCard">
-    <app-vehiculos-empty-state
-      icon="pi pi-cog"
-      title="Sin trabajo activo"
+    <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajo activo"
       subtitle="Selecciona o crea un trabajo para continuar con la ejecución.">
     </app-vehiculos-empty-state>
   </section>
 </ng-template>
 
 <ng-template #noRepuestos>
-  <app-vehiculos-empty-state
-    icon="pi pi-box"
-    title="Sin repuestos"
+  <app-vehiculos-empty-state icon="pi pi-box" title="Sin repuestos"
     subtitle="Todavía no hay repuestos registrados en esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noAutorizaciones>
-  <app-vehiculos-empty-state
-    icon="pi pi-verified"
-    title="Sin autorizaciones"
+  <app-vehiculos-empty-state icon="pi pi-verified" title="Sin autorizaciones"
     subtitle="No hay autorizaciones registradas en esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
+<p-dialog [visible]="hallazgoMediaModalVisible()" (visibleChange)="hallazgoMediaModalVisible.set($event)" [modal]="true"
+  [draggable]="false" [resizable]="false" [dismissableMask]="true" [closeOnEscape]="true"
+  styleClass="hallazgoMediaDialog" [style]="{ width: '92vw', maxWidth: '1400px' }">
+
+  <ng-template pTemplate="header">
+    <div class="dialogHeaderBar">
+      <div class="dialogHeaderBar__copy">
+        <strong>{{ hallazgoInnerTab()==='marcas' ? 'Marcas del hallazgo' : 'Fotos del hallazgo' }}</strong>
+        <span class="secondaryCell" *ngIf="selectedHallazgoEnContexto() as hallazgoCtx">
+          {{ hallazgoCtx.descripcion }}
+        </span>
+      </div>
+
+      <div class="inlineTabs">
+        <button class="subTabButton" [class.active]="hallazgoInnerTab()==='marcas'"
+          (click)="setHallazgoInnerTab('marcas')">
+          Marcas
+        </button>
+
+        <button class="subTabButton" [class.active]="hallazgoInnerTab()==='fotos'"
+          (click)="setHallazgoInnerTab('fotos')">
+          Fotos
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-container *ngIf="selectedHallazgoEnContexto() as hallazgoCtx">
+    <!-- MODAL MARCAS -->
+    <section class="hallazgoChildPanel hallazgoChildPanel--modal" *ngIf="hallazgoInnerTab()==='marcas'">
+      <div class="childGrid childGrid--modal">
+        <section class="childPane childPane--modalList">
+          <div class="sectionHead sectionHead--compact">
+            <h4>Vistas</h4>
+            <span class="secondaryCell">{{ vistas.length }}</span>
+          </div>
+
+          <div class="scrollList scrollList--compact modalScroll">
+            <article class="jiraLikeRow compact compactRow" *ngFor="let vista of vistas; trackBy: trackByVista"
+              [class.selected]="selectedVista?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
+              (click)="selectVista.emit(vista)">
+              <div class="primaryCell">{{ vista.vista }}</div>
+              <div class="secondaryCell">Orden {{ vista.orden || '-' }}</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="childPane childPane--modalDetail">
+          <div class="sectionHead sectionHead--compact">
+            <h4>Detalle de marcas</h4>
+            <span class="secondaryCell">{{ marcasDeVistaSeleccionada().length }}</span>
+          </div>
+
+          <div class="canvasWrap canvasWrap--modal">
+            <app-vehiculo-vista-canvas [vista]="selectedVista" [marcas]="marcas" [interactive]="true"
+              (pointMarked)="pointMarked.emit($event)">
+            </app-vehiculo-vista-canvas>
+          </div>
+
+          <div class="markList modalListGrid">
+            <article class="jiraLikeRow compact compactRow"
+              *ngFor="let marca of marcasDeVistaSeleccionada(); trackBy: trackByMarca">
+              <div class="rowHeader">
+                <div class="rowCopy">
+                  <div class="primaryCell">{{ marca.tipoMarca || 'MARCA' }}</div>
+                  <div class="secondaryCell">{{ marca.color || 'Sin color' }}</div>
+                </div>
+
+                <span class="markSwatch" [style.background]="marca.color || '#7b0061'"></span>
+              </div>
+
+              <div class="secondaryCell rowClamp">
+                {{ marca.observaciones || 'Sin observaciones' }}
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- MODAL FOTOS -->
+    <section class="hallazgoChildPanel hallazgoChildPanel--modal" *ngIf="hallazgoInnerTab()==='fotos'">
+      <div class="childGrid childGrid--modal">
+        <section class="childPane childPane--modalList">
+          <div class="sectionHead sectionHead--compact">
+            <h4>Evidencias</h4>
+            <span class="secondaryCell">{{ fotos.length }}</span>
+          </div>
+
+          <div class="scrollList scrollList--compact modalScroll">
+            <article class="photoCard photoCard--compact" *ngFor="let foto of fotos; trackBy: trackByFoto"
+              [class.selected]="selectedFotoId === foto.idVehOrdenTrabajoHallazgoFoto" (click)="seleccionarFoto(foto)">
+              <ng-container
+                *ngIf="resolveBinarySrc((foto.foto || foto.urlArchivo) ?? null) as fotoSrc; else noThumbHallazgoModal">
+                <img class="fotoThumb" [src]="fotoSrc" [alt]="foto.descripcion || 'Foto hallazgo'">
+              </ng-container>
+
+              <ng-template #noThumbHallazgoModal>
+                <div class="fotoThumb fotoThumb--empty">Sin imagen</div>
+              </ng-template>
+
+              <div class="photoBody">
+                <div class="rowHeader">
+                  <div class="rowCopy">
+                    <div class="primaryCell">{{ foto.etapa || 'ETAPA' }}</div>
+                    <div class="secondaryCell">{{ foto.descripcion || 'Sin descripción' }}</div>
+                  </div>
+
+                  <div class="miniActions">
+                    <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+                      (click)="editarFotoLocal(foto); $event.stopPropagation()">
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="childPane childPane--modalDetail">
+          <div class="sectionHead sectionHead--compact">
+            <h4>Nueva evidencia</h4>
+          </div>
+
+          <div class="editorGrid editorGrid--compact">
+            <div class="editorField span-4">
+              <label>Etapa</label>
+              <select [(ngModel)]="fotoDraft.etapa" [ngModelOptions]="{ standalone: true }">
+                <option *ngFor="let option of evidenciaEtapaOptions" [value]="option">{{ option }}</option>
+              </select>
+            </div>
+
+            <div class="editorField span-8 checkboxField">
+              <div class="checkboxRow checkboxRow--single">
+                <label class="checkboxLabel">
+                  <input type="checkbox" [(ngModel)]="fotoDraft.principal" [ngModelOptions]="{ standalone: true }">
+                  Marcar como principal
+                </label>
+              </div>
+            </div>
+
+            <div class="editorField span-12">
+              <label>Descripción</label>
+              <textarea pTextarea rows="2" [(ngModel)]="fotoDraft.descripcion"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+            </div>
+
+            <div class="editorField span-12">
+              <label>Archivo</label>
+              <input type="file" accept="image/*" (change)="onFotoSelected($event)">
+            </div>
+
+            <div class="editorField span-12" *ngIf="fotoDraft.fotoPreview">
+              <div class="previewCard">
+                <img [src]="fotoDraft.fotoPreview!" alt="Preview foto">
+              </div>
+            </div>
+
+            <div class="editorField span-12">
+              <button pButton type="button" size="small" icon="pi pi-save" label="Guardar evidencia"
+                [disabled]="!fotoDraft.fotoBase64" (click)="guardarFoto()">
+              </button>
+            </div>
+          </div>
+
+          <div class="detailMiniCard" *ngIf="selectedFotoActual() as fotoActual">
+            <div class="sectionHead sectionHead--compact">
+              <h4>Detalle actual</h4>
+              <span class="secondaryCell">
+                {{ formatDateTimeShort(fotoFechaGeneracion(fotoActual)) }}
+              </span>
+            </div>
+
+            <div class="miniKv">
+              <article class="miniKv__item">
+                <span>Etapa</span>
+                <strong>{{ fotoActual.etapa || '-' }}</strong>
+              </article>
+              <article class="miniKv__item">
+                <span>Descripción</span>
+                <strong>{{ fotoActual.descripcion || 'Sin descripción' }}</strong>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </ng-container>
+</p-dialog>

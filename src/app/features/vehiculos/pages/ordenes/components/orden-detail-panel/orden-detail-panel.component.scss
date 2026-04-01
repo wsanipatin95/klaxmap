@@ -674,13 +674,28 @@
   padding: 0.2rem 0.42rem;
 }
 
-.span-12 { grid-column: span 12; }
-.span-8  { grid-column: span 8; }
-.span-6  { grid-column: span 6; }
-.span-4  { grid-column: span 4; }
-.span-2  { grid-column: span 2; }
+.span-12 {
+  grid-column: span 12;
+}
+
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
 
 @media (max-width: 1480px) {
+
   .executionWorkbench--merged,
   .hallazgoWorkbench,
   .childGrid,
@@ -694,6 +709,7 @@
 }
 
 @media (max-width: 1200px) {
+
   .contextStrip,
   .metricGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -701,6 +717,7 @@
 }
 
 @media (max-width: 960px) {
+
   .kvGrid,
   .contextStrip,
   .metricGrid,
@@ -739,5 +756,79 @@
   .checkboxRow {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+.hallazgoMediaActions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 0.2rem;
+}
+
+.dialogHeaderBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.dialogHeaderBar__copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.hallazgoChildPanel--modal {
+  min-width: 0;
+}
+
+.childGrid--modal {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.childPane--modalList,
+.childPane--modalDetail {
+  min-width: 0;
+}
+
+.modalScroll {
+  max-height: 60vh;
+}
+
+.modalListGrid {
+  max-height: 22vh;
+  overflow: auto;
+}
+
+.canvasWrap--modal {
+  min-height: 38vh;
+}
+
+:host ::ng-deep .hallazgoMediaDialog .p-dialog-content {
+  padding-top: 0.35rem;
+}
+
+:host ::ng-deep .hallazgoMediaDialog .p-dialog-header {
+  padding-bottom: 0.35rem;
+}
+
+@media (max-width: 1200px) {
+
+  .childGrid--modal,
+  .dialogHeaderBar {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
+
+@media (max-width: 960px) {
+  .hallazgoMediaActions {
+    flex-wrap: wrap;
   }
 }
