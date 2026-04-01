@@ -59,8 +59,10 @@ import {
   FotoWorkbenchSavePayload,
   HallazgoWorkbenchSavePayload,
   OrdenDetailPanelComponent,
+  RepuestoWorkbenchSavePayload,
   TrabajoWorkbenchSavePayload,
-} from './components/orden-detail-panel/orden-detail-panel.component'; import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
+} from './components/orden-detail-panel/orden-detail-panel.component';
+import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
 
 type ChildDrawerMode =
   | 'trabajo'
@@ -354,7 +356,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     }
     return result;
   });
-
+  readonly articulosCatalogo = computed<VehArticuloCatalogo[]>(() =>
+    Object.values(this.articuloCache()).sort((a, b) =>
+      String(a.articulo || '').localeCompare(String(b.articulo || '')),
+    ),
+  );
   constructor() {
     this.ensureAtLeastOneAtributoRow(this.hallazgoAtributosRows);
 
@@ -872,10 +878,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   seleccionarArticuloRepuesto(item: VehArticuloCatalogo) {
-    this.repuestoForm.controls.art.setValue(item.idActInventario);
     const current = { ...this.articuloCache(), [item.idActInventario]: item };
     this.articuloCache.set(current);
-    this.updateChildDirtyState();
   }
 
   submitChild() {
@@ -1940,5 +1944,90 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.selectedHallazgo.set(null);
     this.marcas.set([]);
     this.fotos.set([]);
+  }
+
+  guardarRepuestoWorkbench(payload: RepuestoWorkbenchSavePayload) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (this.isOrdenAnulada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+      return;
+    }
+
+    const base = {
+      art: Number(payload.art),
+      cantidad: Number(payload.cantidad || 0),
+      precioUnitario: Number(payload.precioUnitario || 0),
+      motivoCambio: payload.motivoCambio?.trim() || null,
+      detalleInstalacion: payload.detalleInstalacion?.trim() || null,
+      serieAnterior: payload.serieAnterior?.trim() || null,
+      serieNueva: payload.serieNueva?.trim() || null,
+      observaciones: payload.observaciones?.trim() || null,
+    };
+
+    const request$ = payload.idVehOrdenTrabajoRepuesto
+      ? this.repo.editarRepuesto({
+        idVehOrdenTrabajoRepuesto: payload.idVehOrdenTrabajoRepuesto,
+        cambios: base,
+      })
+      : this.repo.crearRepuesto({
+        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+        ...base,
+      });
+
+    this.saving.set(true);
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success(
+            payload.idVehOrdenTrabajoRepuesto ? 'Repuesto actualizado' : 'Repuesto agregado',
+            'La información del repuesto se guardó correctamente.',
+          );
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo guardar el repuesto', err?.message),
+      });
+  }
+
+  async eliminarRepuestoWorkbench(item: VehOrdenTrabajoRepuesto) {
+    const orden = this.selectedOrden();
+
+    if (!orden) {
+      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
+      return;
+    }
+
+    if (item.idFacVentaFk) {
+      this.notify.warn('Repuesto bloqueado', 'El repuesto ya fue facturado y no se puede eliminar.');
+      return;
+    }
+
+    let ok = false;
+
+    try {
+      ok = await this.confirm.confirmDelete(`el repuesto ${this.articuloLabelById(item.art)}`);
+    } catch {
+      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
+      return;
+    }
+
+    if (!ok) return;
+
+    this.saving.set(true);
+    this.repo.eliminarRepuesto(item.idVehOrdenTrabajoRepuesto)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.notify.success('Repuesto eliminado', 'El repuesto fue eliminado correctamente.');
+          this.cargarDetalle(orden);
+        },
+        error: (err) => this.notify.error('No se pudo eliminar el repuesto', err?.message),
+      });
   }
 }

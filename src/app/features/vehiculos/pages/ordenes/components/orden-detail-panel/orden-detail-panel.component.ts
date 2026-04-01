@@ -9,6 +9,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { VehiculosEmptyStateComponent } from '../../../../components/empty-state/empty-state.component';
 import { VehiculoVistaCanvasComponent } from '../../../../components/vehiculo-vista-canvas/vehiculo-vista-canvas.component';
 import {
+  VehArticuloCatalogo,
   VehCheckListVehiculo,
   VehCobro,
   VehFactura,
@@ -79,6 +80,28 @@ export type FotoWorkbenchSavePayload = {
   descripcion?: string | null;
   principal: boolean;
   foto: string;
+};
+export type RepuestoWorkbenchSavePayload = {
+  idVehOrdenTrabajoRepuesto?: number | null;
+  art: number;
+  cantidad: number;
+  precioUnitario: number;
+  motivoCambio?: string | null;
+  detalleInstalacion?: string | null;
+  serieAnterior?: string | null;
+  serieNueva?: string | null;
+  observaciones?: string | null;
+};
+
+type RepuestoDraft = {
+  art: number | null;
+  cantidad: number;
+  precioUnitario: number;
+  motivoCambio: string;
+  detalleInstalacion: string;
+  serieAnterior: string;
+  serieNueva: string;
+  observaciones: string;
 };
 
 type ChecklistEditorRow = {
@@ -169,12 +192,15 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Input() checklistLabelMap: Record<number, string> = {};
   @Input() trabajoLabelMap: Record<number, string> = {};
   @Input() articuloLabelMap: Record<number, string> = {};
-
+  @Input() articulosCatalogo: VehArticuloCatalogo[] = [];
   @Output() saveChecklist = new EventEmitter<ChecklistBulkRow[]>();
   @Output() saveTrabajo = new EventEmitter<TrabajoWorkbenchSavePayload>();
   @Output() saveHallazgo = new EventEmitter<HallazgoWorkbenchSavePayload>();
   @Output() saveFoto = new EventEmitter<FotoWorkbenchSavePayload>();
-
+  @Output() saveRepuesto = new EventEmitter<RepuestoWorkbenchSavePayload>();
+  @Output() deleteRepuesto = new EventEmitter<VehOrdenTrabajoRepuesto>();
+  @Output() articuloQueryChange = new EventEmitter<string>();
+  @Output() articuloSelected = new EventEmitter<VehArticuloCatalogo>();
   @Output() openWorkflow = new EventEmitter<void>();
   @Output() openFactura = new EventEmitter<void>();
   @Output() openCobro = new EventEmitter<void>();
@@ -196,10 +222,15 @@ export class OrdenDetailPanelComponent implements OnChanges {
   editingTrabajoId: number | null = null;
   editingHallazgoId: number | null = null;
   selectedFotoId: number | null = null;
+  selectedRepuestoId: number | null = null;
+  editingRepuestoId: number | null = null;
+  repuestoQuery = '';
 
   trabajoDraft: TrabajoDraft = this.createEmptyTrabajoDraft();
   hallazgoDraft: HallazgoDraft = this.createEmptyHallazgoDraft();
   fotoDraft: FotoDraft = this.createEmptyFotoDraft();
+  repuestoDraft: RepuestoDraft = this.createEmptyRepuestoDraft();
+  repuestoArticuloModalVisible = signal(false);
 
   readonly trabajoTipoOptions = [
     'DIAGNOSTICO',
@@ -305,6 +336,19 @@ export class OrdenDetailPanelComponent implements OnChanges {
         this.selectedFotoId = this.fotos[0]?.idVehOrdenTrabajoHallazgoFoto ?? null;
       }
     }
+    if (changes['repuestos']) {
+      const current = this.selectedRepuestoActual();
+      if (!current) {
+        const first = this.repuestos[0] ?? null;
+        if (first) {
+          this.loadRepuestoDraft(first);
+        } else {
+          this.selectedRepuestoId = null;
+          this.editingRepuestoId = null;
+          this.repuestoDraft = this.createEmptyRepuestoDraft();
+        }
+      }
+    }
   }
 
   setTab(tab: OrdenDetailTab) {
@@ -318,7 +362,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   setHallazgoInnerTab(tab: HallazgoInnerTab) {
     this.hallazgoInnerTab.set(tab);
   }
-  
+
   openHallazgoMediaModal(tab: HallazgoInnerTab) {
     this.hallazgoInnerTab.set(tab);
     this.hallazgoMediaModalVisible.set(true);
@@ -759,6 +803,130 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
     this.selectedTrabajoId = this.trabajos[0]?.idVehOrdenTrabajoTrabajo ?? null;
   }
+  repuestosListado(): VehOrdenTrabajoRepuesto[] {
+    return this.repuestos ?? [];
+  }
+
+  selectedRepuestoActual(): VehOrdenTrabajoRepuesto | null {
+    if (!this.selectedRepuestoId) return null;
+    return this.repuestos.find((item) => item.idVehOrdenTrabajoRepuesto === this.selectedRepuestoId) ?? null;
+  }
+
+  selectedArticuloCatalogo(): VehArticuloCatalogo | null {
+    const art = this.repuestoDraft.art;
+    if (!art) return null;
+    return this.articulosCatalogo.find((item) => item.idActInventario === art) ?? null;
+  }
+
+  repuestoEditable(item?: VehOrdenTrabajoRepuesto | null): boolean {
+    if (!item) return true;
+    return !item.idFacVentaFk;
+  }
+
+  onRepuestoQueryInput(value: string) {
+    this.repuestoQuery = value ?? '';
+    this.articuloQueryChange.emit(this.repuestoQuery.trim());
+  }
+
+  seleccionarArticuloCatalogo(item: VehArticuloCatalogo) {
+    this.repuestoDraft = {
+      ...this.repuestoDraft,
+      art: item.idActInventario,
+      precioUnitario: Number(item.precio4 ?? item.artmay ?? item.artcom ?? item.artmen ?? 0),
+    };
+    this.articuloSelected.emit(item);
+  }
+
+  iniciarNuevoRepuesto() {
+    this.selectedRepuestoId = null;
+    this.editingRepuestoId = null;
+    this.repuestoDraft = this.createEmptyRepuestoDraft();
+    this.repuestoQuery = '';
+  }
+
+  seleccionarRepuesto(item: VehOrdenTrabajoRepuesto) {
+    this.loadRepuestoDraft(item);
+  }
+
+  guardarRepuesto() {
+    if (!this.repuestoDraft.art) return;
+    if (!this.repuestoDraft.cantidad || this.repuestoDraft.cantidad <= 0) return;
+
+    this.saveRepuesto.emit({
+      idVehOrdenTrabajoRepuesto: this.editingRepuestoId,
+      art: Number(this.repuestoDraft.art),
+      cantidad: Number(this.repuestoDraft.cantidad || 0),
+      precioUnitario: Number(this.repuestoDraft.precioUnitario || 0),
+      motivoCambio: this.repuestoDraft.motivoCambio?.trim() || null,
+      detalleInstalacion: this.repuestoDraft.detalleInstalacion?.trim() || null,
+      serieAnterior: this.repuestoDraft.serieAnterior?.trim() || null,
+      serieNueva: this.repuestoDraft.serieNueva?.trim() || null,
+      observaciones: this.repuestoDraft.observaciones?.trim() || null,
+    });
+  }
+
+  eliminarRepuestoSeleccionado() {
+    const repuesto = this.selectedRepuestoActual();
+    if (!repuesto) return;
+    if (!this.repuestoEditable(repuesto)) return;
+    this.deleteRepuesto.emit(repuesto);
+  }
+
+  cancelRepuestoDraft() {
+    const current = this.selectedRepuestoActual();
+    if (current) {
+      this.loadRepuestoDraft(current);
+      return;
+    }
+
+    const first = this.repuestos[0] ?? null;
+    if (first) {
+      this.loadRepuestoDraft(first);
+      return;
+    }
+
+    this.selectedRepuestoId = null;
+    this.editingRepuestoId = null;
+    this.repuestoDraft = this.createEmptyRepuestoDraft();
+    this.repuestoQuery = '';
+  }
+
+  private loadRepuestoDraft(item: VehOrdenTrabajoRepuesto | null) {
+    if (!item) {
+      this.selectedRepuestoId = null;
+      this.editingRepuestoId = null;
+      this.repuestoDraft = this.createEmptyRepuestoDraft();
+      this.repuestoQuery = '';
+      return;
+    }
+
+    this.selectedRepuestoId = item.idVehOrdenTrabajoRepuesto;
+    this.editingRepuestoId = item.idVehOrdenTrabajoRepuesto;
+    this.repuestoDraft = {
+      art: item.art ?? null,
+      cantidad: Number(item.cantidad ?? 1),
+      precioUnitario: Number(item.precioUnitario ?? 0),
+      motivoCambio: item.motivoCambio || '',
+      detalleInstalacion: item.detalleInstalacion || '',
+      serieAnterior: item.serieAnterior || '',
+      serieNueva: item.serieNueva || '',
+      observaciones: item.observaciones || '',
+    };
+    this.repuestoQuery = '';
+  }
+
+  private createEmptyRepuestoDraft(): RepuestoDraft {
+    return {
+      art: null,
+      cantidad: 1,
+      precioUnitario: 0,
+      motivoCambio: '',
+      detalleInstalacion: '',
+      serieAnterior: '',
+      serieNueva: '',
+      observaciones: '',
+    };
+  }
 
   private rebuildChecklistRows() {
     const existingByRelation = new Map<number, VehOrdenTrabajoCheckList>();
@@ -896,6 +1064,25 @@ export class OrdenDetailPanelComponent implements OnChanges {
   fotoFechaGeneracion(foto: VehOrdenTrabajoHallazgoFoto | null | undefined): string | null {
     if (!foto) return null;
     return (foto as any).fecGen ?? null;
+  }
+
+  openRepuestoArticuloModal() {
+    this.repuestoArticuloModalVisible.set(true);
+    this.articuloQueryChange.emit((this.repuestoQuery || '').trim());
+  }
+
+  closeRepuestoArticuloModal() {
+    this.repuestoArticuloModalVisible.set(false);
+  }
+
+  seleccionarArticuloDesdeModal(item: VehArticuloCatalogo) {
+    this.seleccionarArticuloCatalogo(item);
+    this.repuestoArticuloModalVisible.set(false);
+  }
+
+  repuestoBloqueado(): boolean {
+    const repuesto = this.selectedRepuestoActual();
+    return !!repuesto && !this.repuestoEditable(repuesto);
   }
 
   trackByChecklistRow = (_index: number, row: ChecklistEditorRow) => row.relationId;

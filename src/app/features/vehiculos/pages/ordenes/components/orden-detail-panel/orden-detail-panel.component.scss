@@ -832,3 +832,93 @@
     flex-wrap: wrap;
   }
 }
+
+.repuestoWorkbench {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 0.55rem;
+  min-width: 0;
+  align-items: start;
+}
+
+.repuestoSearchBox {
+  margin-bottom: 0.15rem;
+}
+
+.articleMetaCard {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.72rem;
+  background: #f8fafc;
+  padding: 0.55rem;
+}
+
+.articleMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+@media (max-width: 1480px) {
+  .repuestoWorkbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .articleMetaGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.executionPane--scroll {
+  max-height: 65vh;
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.lookupField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.lookupField > .p-inputtext,
+.lookupField input {
+  width: 100%;
+}
+
+.articleHintBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  align-items: center;
+  padding: 0.48rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.74rem;
+}
+
+.repuestoArticuloModal {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.1fr) minmax(16rem, 0.9fr);
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.articleMetaGrid--single {
+  grid-template-columns: 1fr;
+}
+
+:host ::ng-deep .repuestoArticuloDialog .p-dialog-content {
+  padding-top: 0.35rem;
+}
+
+@media (max-width: 1200px) {
+  .repuestoArticuloModal {
+    grid-template-columns: 1fr;
+  }
+}

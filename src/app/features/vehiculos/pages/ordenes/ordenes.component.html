@@ -62,6 +62,7 @@
   </section>
 
   <section class="workspaceCard">
+
     <app-orden-detail-panel [orden]="selectedOrden()" [clienteNombre]="clienteNombreSeleccionado()"
       [vehiculoNombre]="vehiculoNombreSeleccionado()" [responsableRecepcionNombre]="responsableRecepcionNombre()"
       [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()"
@@ -71,9 +72,12 @@
       [selectedVista]="selectedVista()" [facturasOt]="facturasOt()" [selectedFacturaOt]="selectedFacturaOt()"
       [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
       [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
-      [articuloLabelMap]="articuloLabelMap()" (saveChecklist)="guardarChecklistMasivo($event)"
-      (saveTrabajo)="guardarTrabajoWorkbench($event)" (saveHallazgo)="guardarHallazgoWorkbench($event)"
-      (saveFoto)="guardarFotoWorkbench($event)" (selectHallazgo)="seleccionarHallazgo($event)"
+      [articuloLabelMap]="articuloLabelMap()" [articulosCatalogo]="articulosCatalogo()"
+      (saveChecklist)="guardarChecklistMasivo($event)" (saveTrabajo)="guardarTrabajoWorkbench($event)"
+      (saveHallazgo)="guardarHallazgoWorkbench($event)" (saveFoto)="guardarFotoWorkbench($event)"
+      (saveRepuesto)="guardarRepuestoWorkbench($event)" (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
+      (articuloQueryChange)="onRepuestoArticuloQueryChange($event)"
+      (articuloSelected)="seleccionarArticuloRepuesto($event)" (selectHallazgo)="seleccionarHallazgo($event)"
       (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()" (selectVista)="seleccionarVista($event)"
       (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)"
       (openWorkflow)="abrirComercialDrawer('workflow')" (openFactura)="abrirComercialDrawer('factura')"
