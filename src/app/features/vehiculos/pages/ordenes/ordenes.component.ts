@@ -347,20 +347,34 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   });
 
   readonly articuloLabelMap = computed<Record<number, string>>(() => {
-    const cache = this.articuloCache();
     const result: Record<number, string> = {};
+
+    for (const item of this.repuestos()) {
+      if (!item.art) continue;
+      result[item.art] = [
+        item.artcod || `ART-${item.art}`,
+        item.articulo || '',
+      ].filter(Boolean).join(' · ');
+    }
+
+    const cache = this.articuloCache();
     for (const key of Object.keys(cache)) {
       const id = Number(key);
       const item = cache[id];
-      result[id] = [item.artcod || `ART-${item.idActInventario}`, item.articulo].filter(Boolean).join(' · ');
+      if (!result[id]) {
+        result[id] = [item.artcod || `ART-${item.idActInventario}`, item.articulo].filter(Boolean).join(' · ');
+      }
     }
+
     return result;
   });
+
   readonly articulosCatalogo = computed<VehArticuloCatalogo[]>(() =>
     Object.values(this.articuloCache()).sort((a, b) =>
       String(a.articulo || '').localeCompare(String(b.articulo || '')),
     ),
   );
+
   constructor() {
     this.ensureAtLeastOneAtributoRow(this.hallazgoAtributosRows);
 
@@ -576,7 +590,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.hidratarArticulos((repuestos.items ?? []).map((x) => x.art));
 
         if (checklistOpciones.vehiculo) {
-          this.vehiculoSeleccionadoLabel.set([checklistOpciones.vehiculo.marca, checklistOpciones.vehiculo.modelo, checklistOpciones.vehiculo.placa].filter(Boolean).join(' · ') || 'Vehículo');
+          this.vehiculoSeleccionadoLabel.set(
+            this.ordenVehiculoDisplay(item) ||
+            [checklistOpciones.vehiculo.marca, checklistOpciones.vehiculo.modelo, checklistOpciones.vehiculo.placa]
+              .filter(Boolean)
+              .join(' · ') ||
+            'Vehículo',
+          );
           this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk: checklistOpciones.vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => this.checklistOpciones.set(r.items ?? []),
             error: () => this.checklistOpciones.set([]),
@@ -635,17 +655,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.cobrosFactura.set([]);
         }
 
-        this.repo.listarClientes('', 0, 200, true).subscribe({
-          next: (res) => {
-            const cli = (res.items ?? []).find(
-              (x) => Number((x as any).dni ?? (x as any).idTaxDni ?? (x as any).ruc ?? 0) === Number(item.dni ?? 0),
-            ) ?? null;
-
-            this.clienteSeleccionadoNombre.set(cli?.nombre || cli?.ruc || `Cliente #${item.dni}`);
-          },
-          error: () => this.clienteSeleccionadoNombre.set(`Cliente #${item.dni}`),
-        });
-
+        this.clienteSeleccionadoNombre.set(this.ordenClienteDisplay(item));
         this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
         this.cargarUsuarioSeleccionado(item.responsableTecnico ?? null, 'tecnico');
       },
@@ -724,11 +734,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   clienteNombreSeleccionado(): string {
-    return this.clienteSeleccionadoNombre();
+    return this.ordenClienteDisplay(this.selectedOrden()) || this.clienteSeleccionadoNombre();
   }
 
   vehiculoNombreSeleccionado(): string {
-    return this.vehiculoSeleccionadoLabel();
+    return this.ordenVehiculoDisplay(this.selectedOrden()) || this.vehiculoSeleccionadoLabel();
   }
 
   responsableRecepcionNombre(): string {
@@ -751,7 +761,15 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   articuloLabelById(art?: number | null): string {
     if (!art) return 'Repuesto';
-    return this.articuloLabelMap()[art] || 'Repuesto de inventario';
+
+    const repuesto = this.repuestos().find((x) => x.art === art);
+    if (repuesto?.articulo || repuesto?.artcod) {
+      return [repuesto.artcod || `ART-${repuesto.art}`, repuesto.articulo || '']
+        .filter(Boolean)
+        .join(' · ');
+    }
+
+    return this.articuloLabelMap()[art] || `ART-${art}`;
   }
 
   facturaNumber(item?: VehFactura | null): string {
@@ -2030,4 +2048,19 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         error: (err) => this.notify.error('No se pudo eliminar el repuesto', err?.message),
       });
   }
+  ordenClienteDisplay(item?: VehOrdenTrabajo | null): string {
+    if (!item) return 'Cliente';
+    return item.nombre || item.ruc || `Cliente #${item.dni}`;
+  }
+
+  ordenVehiculoDisplay(item?: VehOrdenTrabajo | null): string {
+    if (!item) return 'Vehículo';
+    return [item.marca, item.modelo, item.placa].filter(Boolean).join(' · ') || 'Vehículo';
+  }
+
+  repuestoDisplay(item?: VehOrdenTrabajoRepuesto | null): string {
+    if (!item) return 'Repuesto';
+    return [item.artcod || `ART-${item.art}`, item.articulo || ''].filter(Boolean).join(' · ');
+  }
+
 }

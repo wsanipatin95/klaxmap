@@ -129,6 +129,12 @@ export interface VehOrdenTrabajo {
   observaciones?: string | null;
   atributos?: JsonMap | null;
   fecGen?: string | null;
+
+  ruc?: string | null;
+  nombre?: string | null;
+  placa?: string | null;
+  marca?: string | null;
+  modelo?: string | null;
 }
 
 export interface VehOrdenTrabajoCheckList {
@@ -207,6 +213,14 @@ export interface VehOrdenTrabajoRepuesto {
   idFacVentaDetFk?: number | null;
   idFacVentaFk?: number | null;
   observaciones?: string | null;
+
+  artcod?: string | null;
+  articulo?: string | null;
+  precio4?: number | null;
+  saldo?: number | null;
+  subtipo?: string | null;
+  tipoArticulo?: string | null;
+  categoriaArticulo?: string | null;
 }
 
 export interface VehOrdenTrabajoAutorizacion {

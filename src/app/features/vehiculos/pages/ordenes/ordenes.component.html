@@ -31,9 +31,15 @@
         (click)="seleccionarOrden(item)">
         <div class="rowHeader">
           <div class="rowCopy">
-            <div class="primaryCell">OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}</div>
-            <div class="secondaryCell">{{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen ||
-              'Sin fecha' }}</div>
+            <div class="primaryCell">
+              OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}
+            </div>
+            <div class="secondaryCell">
+              {{ ordenClienteDisplay(item) }} · {{ ordenVehiculoDisplay(item) }}
+            </div>
+            <div class="secondaryCell">
+              {{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen || 'Sin fecha' }}
+            </div>
           </div>
 
           <div class="rowActions">
@@ -273,16 +279,19 @@
 
   <form *ngIf="childMode() === 'repuesto'" [formGroup]="repuestoForm" class="drawerForm">
     <div class="drawerGrid">
-      <div class="drawerField span-4">
-        <label>ID artículo</label>
-        <input pInputText type="number" formControlName="art"
-          (input)="onRepuestoArticuloQueryChange(($any($event.target).value || '').toString())">
-        <small class="helperText" *ngIf="repuestoArticuloSeleccionado() as articulo">
-          {{ articulo.artcod || ('ART-' + articulo.idActInventario) }} · {{ articulo.articulo }}
-        </small>
+      <div class="drawerField span-8">
+        <label>Artículo</label>
+        <input pInputText
+          [value]="repuestoArticuloSeleccionado() ? ((repuestoArticuloSeleccionado()?.artcod || ('ART-' + repuestoArticuloSeleccionado()?.idActInventario)) + ' · ' + (repuestoArticuloSeleccionado()?.articulo || '')) : ''"
+          readonly placeholder="Selecciona el artículo desde la pestaña Repuestos">
       </div>
 
-      <div class="drawerField span-2">
+      <div class="drawerField span-4">
+        <label>ID artículo</label>
+        <input pInputText type="number" formControlName="art" readonly>
+      </div>
+
+      <div class="drawerField span-3">
         <label>Cantidad</label>
         <input pInputText type="number" formControlName="cantidad">
       </div>
@@ -293,16 +302,6 @@
       </div>
 
       <div class="drawerField span-3">
-        <label>Motivo cambio</label>
-        <input pInputText formControlName="motivoCambio">
-      </div>
-
-      <div class="drawerField span-6">
-        <label>Detalle instalación</label>
-        <input pInputText formControlName="detalleInstalacion">
-      </div>
-
-      <div class="drawerField span-3">
         <label>Serie anterior</label>
         <input pInputText formControlName="serieAnterior">
       </div>
@@ -310,6 +309,16 @@
       <div class="drawerField span-3">
         <label>Serie nueva</label>
         <input pInputText formControlName="serieNueva">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Motivo cambio</label>
+        <input pInputText formControlName="motivoCambio">
+      </div>
+
+      <div class="drawerField span-6">
+        <label>Detalle instalación</label>
+        <input pInputText formControlName="detalleInstalacion">
       </div>
 
       <div class="drawerField span-12">

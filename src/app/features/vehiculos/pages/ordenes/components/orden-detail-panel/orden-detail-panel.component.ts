@@ -397,7 +397,15 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
   articuloLabel(art?: number | null): string {
     if (!art) return 'Repuesto';
-    return this.articuloLabelMap[art] || 'Repuesto de inventario';
+
+    const repuesto = this.repuestos.find((x) => x.art === art);
+    if (repuesto?.articulo || repuesto?.artcod) {
+      return [repuesto.artcod || `ART-${repuesto.art}`, repuesto.articulo || '']
+        .filter(Boolean)
+        .join(' · ');
+    }
+
+    return this.articuloLabelMap[art] || `ART-${art}`;
   }
 
   facturaNumber(item?: VehFactura | null): string {
@@ -815,7 +823,23 @@ export class OrdenDetailPanelComponent implements OnChanges {
   selectedArticuloCatalogo(): VehArticuloCatalogo | null {
     const art = this.repuestoDraft.art;
     if (!art) return null;
-    return this.articulosCatalogo.find((item) => item.idActInventario === art) ?? null;
+
+    const fromCatalog = this.articulosCatalogo.find((item) => item.idActInventario === art) ?? null;
+    if (fromCatalog) return fromCatalog;
+
+    const repuesto = this.repuestos.find((item) => item.art === art);
+    if (!repuesto) return null;
+
+    return {
+      idActInventario: repuesto.art,
+      artcod: repuesto.artcod ?? null,
+      articulo: repuesto.articulo ?? `ART-${repuesto.art}`,
+      precio4: repuesto.precio4 ?? repuesto.precioUnitario ?? 0,
+      saldo: repuesto.saldo ?? null,
+      subtipo: repuesto.subtipo ?? null,
+      tipoArticulo: repuesto.tipoArticulo ?? null,
+      categoriaArticulo: repuesto.categoriaArticulo ?? null,
+    };
   }
 
   repuestoEditable(item?: VehOrdenTrabajoRepuesto | null): boolean {
