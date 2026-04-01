@@ -690,6 +690,10 @@
   grid-column: span 4;
 }
 
+.span-3 {
+  grid-column: span 3;
+}
+
 .span-2 {
   grid-column: span 2;
 }
@@ -871,6 +875,7 @@
     grid-template-columns: 1fr;
   }
 }
+
 .executionPane--scroll {
   max-height: 65vh;
   overflow: auto;
@@ -884,7 +889,7 @@
   align-items: center;
 }
 
-.lookupField > .p-inputtext,
+.lookupField>.p-inputtext,
 .lookupField input {
   width: 100%;
 }
