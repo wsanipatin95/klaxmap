@@ -1,23 +1,39 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
-  DashboardMetric,
+  CliVehiculo,
   VehCheckList,
   VehCheckListVehiculo,
   VehCliente,
+  VehCobro,
+  VehFactura,
   VehOrdenTrabajo,
   VehTipoVehiculo,
 } from '../../data-access/vehiculos.models';
+import { emptyPaged, Paged } from '../../data-access/vehiculos.shared';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
+
+type AccessCard = {
+  label: string;
+  hint: string;
+  icon: string;
+  route: string;
+  value: number | string;
+};
+
+type ResumeCard = {
+  label: string;
+  value: number | string;
+  hint: string;
+  tone?: 'accent' | 'success' | 'warn' | 'neutral';
+};
 
 @Component({
   selector: 'app-vehiculos-dashboard',
@@ -25,9 +41,7 @@ import { PendingChangesAware } from '../../guards/pending-changes.guard';
   imports: [
     CommonModule,
     ButtonModule,
-    TagModule,
     VehiculosPageHeaderComponent,
-    VehiculosEmptyStateComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -38,15 +52,129 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
   private router = inject(Router);
 
   readonly loading = signal(false);
+  readonly failures = signal<string[]>([]);
 
-  readonly metrics = signal<DashboardMetric[]>([]);
   readonly tipos = signal<VehTipoVehiculo[]>([]);
   readonly checklists = signal<VehCheckList[]>([]);
   readonly relaciones = signal<VehCheckListVehiculo[]>([]);
   readonly clientes = signal<VehCliente[]>([]);
+  readonly vehiculos = signal<CliVehiculo[]>([]);
   readonly ordenes = signal<VehOrdenTrabajo[]>([]);
+  readonly facturas = signal<VehFactura[]>([]);
+  readonly cobros = signal<VehCobro[]>([]);
 
-  readonly recientes = signal<Array<{ label: string; value: string; chip?: string }>>([]);
+  readonly tiposSinChecklist = computed(() => {
+    const relacionados = new Set(this.relaciones().map((x) => x.idVehTipoVehiculoFk));
+    return this.tipos().filter((x) => !relacionados.has(x.idVehTipoVehiculo)).length;
+  });
+
+  readonly checklistSinTipo = computed(() => {
+    const relacionados = new Set(this.relaciones().map((x) => x.idVehVehiculoCheckListFk));
+    return this.checklists().filter((x) => !relacionados.has(x.idVehVehiculoCheckList)).length;
+  });
+
+  readonly ordenesAbiertas = computed(() =>
+    this.ordenes().filter((x) => !this.isEstado(x.estadoOrden, ['ANUL', 'ENTREG', 'CERR', 'FACTURADO_FINAL'])).length
+  );
+
+  readonly ordenesEnProceso = computed(() =>
+    this.ordenes().filter((x) =>
+      this.isEstado(x.estadoOrden, ['PEND', 'PROCES', 'DIAG', 'RECEP', 'VALID', 'ESPERA', 'FACTURADO_PARCIAL'])
+    ).length
+  );
+
+  readonly ordenesAnuladas = computed(() =>
+    this.ordenes().filter((x) => this.isEstado(x.estadoOrden, ['ANUL'])).length
+  );
+
+  readonly facturasConSaldo = computed(() =>
+    this.facturas().filter((x) => Number(x.cxcDeuda || 0) > 0).length
+  );
+
+  readonly saldoCartera = computed(() =>
+    this.facturas().reduce((acc, item) => acc + Number(item.cxcDeuda || 0), 0)
+  );
+
+  readonly totalCobrado = computed(() =>
+    this.cobros().reduce((acc, item) => acc + Number(item.valor || 0), 0)
+  );
+
+  readonly accessCards = computed<AccessCard[]>(() => [
+    {
+      label: 'Checklist',
+      hint: 'catálogo e igualdad por tipo',
+      icon: 'pi pi-check-square',
+      route: '/app/vehiculos/checklists',
+      value: this.checklists().length,
+    },
+    {
+      label: 'Tipos',
+      hint: 'configuración base',
+      icon: 'pi pi-car',
+      route: '/app/vehiculos/tipos',
+      value: this.tipos().length,
+    },
+    {
+      label: 'Clientes',
+      hint: 'clientes y vehículos',
+      icon: 'pi pi-users',
+      route: '/app/vehiculos/clientes',
+      value: this.clientes().length,
+    },
+    {
+      label: 'Órdenes',
+      hint: 'recepción, ejecución y comercial',
+      icon: 'pi pi-wrench',
+      route: '/app/vehiculos/ordenes',
+      value: this.ordenesAbiertas(),
+    },
+    {
+      label: 'Facturación',
+      hint: 'facturas, cobros y caja',
+      icon: 'pi pi-money-bill',
+      route: '/app/vehiculos/facturacion',
+      value: this.facturas().length,
+    },
+  ]);
+
+  readonly resumeCards = computed<ResumeCard[]>(() => [
+    {
+      label: 'Activas',
+      value: this.ordenesAbiertas(),
+      hint: 'órdenes vigentes',
+      tone: 'accent',
+    },
+    {
+      label: 'Proceso',
+      value: this.ordenesEnProceso(),
+      hint: 'operación en curso',
+      tone: 'success',
+    },
+    {
+      label: 'Clientes',
+      value: this.clientes().length,
+      hint: 'base activa',
+      tone: 'neutral',
+    },
+    {
+      label: 'Vehículos',
+      value: this.vehiculos().length,
+      hint: 'registrados',
+      tone: 'neutral',
+    },
+    {
+      label: 'Saldo',
+      value: this.formatMoney(this.saldoCartera()),
+      hint: 'cartera pendiente',
+      tone: 'warn',
+    },
+    {
+      label: 'Cobrado',
+      value: this.formatMoney(this.totalCobrado()),
+      hint: 'ingreso acumulado',
+      tone: 'success',
+    },
+  ]);
 
   constructor() {
     this.cargar();
@@ -58,98 +186,36 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
 
   cargar(): void {
     this.loading.set(true);
+    this.failures.set([]);
 
     forkJoin({
-      tipos: this.repo.listarTipos('', 0, 300, true),
-      checklists: this.repo.listarChecklists(),
-      relaciones: this.repo.listarChecklistsVehiculo(),
-      clientes: this.repo.listarClientes('', 0, 300, true),
-      vehiculos: this.repo.listarClientesVehiculo(),
-      ordenes: this.repo.listarOrdenes('', 0, 300, true),
-      facturas: this.repo.listarFacturas('', 0, 300, true),
-      cobros: this.repo.listarCobros('', 0, 300, true),
+      tipos: this.safeList(this.repo.listarTipos('', 0, 300, true), 'tipos'),
+      checklists: this.safeList(this.repo.listarChecklists(), 'checklists'),
+      relaciones: this.safeList(this.repo.listarChecklistsVehiculo(), 'relaciones'),
+      clientes: this.safeList(this.repo.listarClientes('', 0, 300, true), 'clientes'),
+      vehiculos: this.safeList(this.repo.listarClientesVehiculo(), 'vehiculos'),
+      ordenes: this.safeList(this.repo.listarOrdenes('', 0, 300, true), 'ordenes'),
+      facturas: this.safeList(this.repo.listarFacturas('', 0, 300, true), 'facturas'),
+      cobros: this.safeList(this.repo.listarCobros('', 0, 300, true), 'cobros'),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (bundle) => {
-          const tipos = bundle.tipos.items ?? [];
-          const checklists = bundle.checklists.items ?? [];
-          const relaciones = bundle.relaciones.items ?? [];
-          const clientes = bundle.clientes.items ?? [];
-          const ordenes = bundle.ordenes.items ?? [];
-          const vehiculos = bundle.vehiculos.items ?? [];
-          const facturas = bundle.facturas.items ?? [];
-          const cobros = bundle.cobros.items ?? [];
+          this.tipos.set(bundle.tipos.items ?? []);
+          this.checklists.set(bundle.checklists.items ?? []);
+          this.relaciones.set(bundle.relaciones.items ?? []);
+          this.clientes.set(bundle.clientes.items ?? []);
+          this.vehiculos.set(bundle.vehiculos.items ?? []);
+          this.ordenes.set(bundle.ordenes.items ?? []);
+          this.facturas.set(bundle.facturas.items ?? []);
+          this.cobros.set(bundle.cobros.items ?? []);
 
-          this.tipos.set(tipos);
-          this.checklists.set(checklists);
-          this.relaciones.set(relaciones);
-          this.clientes.set(clientes);
-          this.ordenes.set(ordenes);
-
-          const tiposRelacionados = new Set<number>(
-            relaciones.map((x) => x.idVehTipoVehiculoFk)
-          );
-          const checklistsRelacionados = new Set<number>(
-            relaciones.map((x) => x.idVehVehiculoCheckListFk)
-          );
-
-          this.metrics.set([
-            { label: 'Tipos de vehículo', value: tipos.length, hint: 'Catálogo maestro' },
-            { label: 'Checklist maestro', value: checklists.length, hint: 'Ítems registrados' },
-            { label: 'Relaciones', value: relaciones.length, hint: 'Checklist por tipo' },
-            {
-              label: 'Tipos sin checklist',
-              value: tipos.filter((x) => !tiposRelacionados.has(x.idVehTipoVehiculo)).length,
-              hint: 'Pendientes de relacionar',
-            },
-            {
-              label: 'Checklist sin tipo',
-              value: checklists.filter((x) => !checklistsRelacionados.has(x.idVehVehiculoCheckList)).length,
-              hint: 'Pendientes de asignar',
-            },
-            { label: 'Clientes', value: clientes.length, hint: 'Clientes activos' },
-            { label: 'Vehículos', value: vehiculos.length, hint: 'Unidades registradas' },
-            { label: 'Órdenes', value: ordenes.length, hint: 'Órdenes de trabajo' },
-            { label: 'Facturas', value: facturas.length, hint: 'Documentos emitidos' },
-            { label: 'Cobros', value: cobros.length, hint: 'Recibos registrados' },
-          ]);
-
-          const tiposRecientes = this.tiposRecientes();
-          const checklistsRecientes = this.checklistsRecientes();
-          const clientesRecientes = this.clientesRecientes();
-          const ordenesRecientes = this.ordenesRecientes();
-
-          this.recientes.set([
-            {
-              label: 'Último tipo',
-              value: tiposRecientes[0]?.tipoVehiculo || 'Sin tipos',
-              chip: tiposRecientes[0]
-                ? `#${tiposRecientes[0].idVehTipoVehiculo}`
-                : 'SIN DATOS',
-            },
-            {
-              label: 'Último checklist',
-              value: checklistsRecientes[0]?.nombreItem || 'Sin checklist',
-              chip: checklistsRecientes[0]
-                ? (this.esObligatorio(checklistsRecientes[0].obligatorio) ? 'Obligatorio' : 'Opcional')
-                : 'SIN DATOS',
-            },
-            {
-              label: 'Último cliente',
-              value: clientesRecientes[0]?.nombre || 'Sin clientes',
-              chip: clientesRecientes[0]
-                ? `#${clientesRecientes[0].dni || clientesRecientes[0].idTaxDni || ''}`
-                : 'SIN DATOS',
-            },
-            {
-              label: 'Última orden',
-              value: ordenesRecientes[0]
-                ? `Orden #${ordenesRecientes[0].idVehOrdenTrabajo}`
-                : 'Sin órdenes',
-              chip: ordenesRecientes[0]?.estadoOrden || 'SIN DATOS',
-            },
-          ]);
+          if (this.failures().length) {
+            this.notify.warn(
+              'Dashboard parcial',
+              `Se cargó con datos incompletos: ${this.failures().join(', ')}.`
+            );
+          }
         },
         error: (err) => {
           console.error(err);
@@ -158,24 +224,46 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
       });
   }
 
-  irAChecklists(): void {
-    this.router.navigate(['/app/vehiculos/checklists']);
+  go(route: string): void {
+    this.router.navigate([route]);
   }
 
   irATipos(): void {
-    this.router.navigate(['/app/vehiculos/tipos']);
+    this.go('/app/vehiculos/tipos');
+  }
+
+  irAChecklists(): void {
+    this.go('/app/vehiculos/checklists');
   }
 
   irAClientes(): void {
-    this.router.navigate(['/app/vehiculos/clientes']);
+    this.go('/app/vehiculos/clientes');
   }
 
   irAOrdenes(): void {
-    this.router.navigate(['/app/vehiculos/ordenes']);
+    this.go('/app/vehiculos/ordenes');
   }
 
   irAFacturacion(): void {
-    this.router.navigate(['/app/vehiculos/facturacion']);
+    this.go('/app/vehiculos/facturacion');
+  }
+
+  ordenesRecientes(): VehOrdenTrabajo[] {
+    return [...this.ordenes()]
+      .sort((a, b) => this.compareReciente(a, b, 'idVehOrdenTrabajo'))
+      .slice(0, 6);
+  }
+
+  facturasRecientes(): VehFactura[] {
+    return [...this.facturas()]
+      .sort((a, b) => this.compareReciente(a, b, 'idFacVenta'))
+      .slice(0, 6);
+  }
+
+  clientesRecientes(): VehCliente[] {
+    return [...this.clientes()]
+      .sort((a, b) => this.compareReciente(a, b, 'dni'))
+      .slice(0, 5);
   }
 
   tiposRecientes(): VehTipoVehiculo[] {
@@ -190,24 +278,20 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
       .slice(0, 5);
   }
 
-  clientesRecientes(): VehCliente[] {
-    return [...this.clientes()]
-      .sort((a, b) => this.compareReciente(a, b, 'dni'))
-      .slice(0, 5);
+  ordenVehiculo(item: VehOrdenTrabajo): string {
+    return [item.marca, item.modelo, item.placa].filter(Boolean).join(' · ') || `Vehículo #${item.idCliVehiculoFk}`;
   }
 
-  ordenesRecientes(): VehOrdenTrabajo[] {
-    return [...this.ordenes()]
-      .sort((a, b) => this.compareReciente(a, b, 'idVehOrdenTrabajo'))
-      .slice(0, 5);
+  facturaNumero(item: VehFactura): string {
+    if (item.numeroFactura?.trim()) return item.numeroFactura;
+    const estab = String(item.estab ?? 0).padStart(3, '0');
+    const ptoemi = String(item.ptoemi ?? 0).padStart(3, '0');
+    const sec = String(item.secuencial ?? item.idFacVenta ?? 0).padStart(9, '0');
+    return `${estab}-${ptoemi}-${sec}`;
   }
 
-  nombreTipo(id?: number | null): string {
-    return this.tipos().find((x) => x.idVehTipoVehiculo === id)?.tipoVehiculo || `Tipo #${id}`;
-  }
-
-  nombreChecklist(id?: number | null): string {
-    return this.checklists().find((x) => x.idVehVehiculoCheckList === id)?.nombreItem || `Checklist #${id}`;
+  facturaCliente(item: VehFactura): string {
+    return item.nombre || item.ruc || (item.dni ? `DNI ${item.dni}` : 'Cliente');
   }
 
   esObligatorio(value: unknown): boolean {
@@ -217,39 +301,43 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
     return false;
   }
 
-  relacionesPendientesTexto(): string {
-    const tiposRelacionados = new Set<number>(
-      this.relaciones().map((x) => x.idVehTipoVehiculoFk)
+  formatMoney(value: unknown): string {
+    const amount = Number(value ?? 0);
+    return new Intl.NumberFormat('es-EC', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  }
+
+  private safeList<T>(source$: Observable<Paged<T>>, key: string): Observable<Paged<T>> {
+    return source$.pipe(
+      catchError((err) => {
+        console.error(`[dashboard:${key}]`, err);
+        this.failures.update((current) => current.includes(key) ? current : [...current, key]);
+        return of(emptyPaged<T>());
+      })
     );
-    const checklistsRelacionados = new Set<number>(
-      this.relaciones().map((x) => x.idVehVehiculoCheckListFk)
-    );
+  }
 
-    const tiposPend = this.tipos().filter(
-      (x) => !tiposRelacionados.has(x.idVehTipoVehiculo)
-    ).length;
-
-    const checkPend = this.checklists().filter(
-      (x) => !checklistsRelacionados.has(x.idVehVehiculoCheckList)
-    ).length;
-
-    return `${tiposPend} tipos sin checklist · ${checkPend} checklist sin tipo`;
+  private isEstado(value: string | null | undefined, tokens: string[]): boolean {
+    const raw = String(value || '').toUpperCase();
+    return tokens.some((token) => raw.includes(token));
   }
 
   private compareReciente<T>(a: T, b: T, idField: keyof T): number {
-    const aWithDate = a as T & { fecGen?: string | null };
-    const bWithDate = b as T & { fecGen?: string | null };
+    const ax = a as T & { fecGen?: string | null; fecEmi?: string | null; fecha?: string | null };
+    const bx = b as T & { fecGen?: string | null; fecEmi?: string | null; fecha?: string | null };
 
-    const fa = aWithDate.fecGen ? new Date(aWithDate.fecGen).getTime() : 0;
-    const fb = bWithDate.fecGen ? new Date(bWithDate.fecGen).getTime() : 0;
+    const fa = ax.fecEmi || ax.fecGen || ax.fecha || null;
+    const fb = bx.fecEmi || bx.fecGen || bx.fecha || null;
 
-    if (fb !== fa) {
-      return fb - fa;
-    }
+    const ta = fa ? new Date(fa).getTime() : 0;
+    const tb = fb ? new Date(fb).getTime() : 0;
+
+    if (tb !== ta) return tb - ta;
 
     const ia = Number(a[idField] ?? 0);
     const ib = Number(b[idField] ?? 0);
-
     return ib - ia;
   }
 }

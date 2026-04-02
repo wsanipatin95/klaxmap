@@ -1,330 +1,213 @@
 <app-vehiculos-page-header
-  title="Vehículos y taller"
-  subtitle="Panel maestro del módulo. Desde aquí puedes entrar a checklist, tipos, clientes, órdenes y facturación.">
+  title="Vehículos"
+  subtitle="Taller, operación y comercial">
   <button
     pButton
     type="button"
     icon="pi pi-refresh"
-    label="Recargar"
+    label="Actualizar"
     (click)="cargar()"
     [loading]="loading()">
   </button>
-
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    icon="pi pi-list-check"
-    label="Checklist"
-    (click)="irAChecklists()">
-  </button>
-
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    icon="pi pi-car"
-    label="Tipos"
-    (click)="irATipos()">
-  </button>
-
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    icon="pi pi-users"
-    label="Clientes"
-    (click)="irAClientes()">
-  </button>
-
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    icon="pi pi-wrench"
-    label="Órdenes"
-    (click)="irAOrdenes()">
-  </button>
 </app-vehiculos-page-header>
 
-<div class="split2" *ngIf="!loading(); else loadingBlock">
-  <section class="stackedRows">
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Configuración rápida</h4>
-          <div class="secondaryCell">
-            Primer paso del módulo: checklist, tipo, cliente y orden de trabajo.
-          </div>
+<div class="dashboardShell" *ngIf="!loading(); else loadingBlock">
+  <section class="contentCard accessPanel">
+    <div class="sectionHead">
+      <div>
+        <h4>Accesos</h4>
+        <div class="secondaryCell" *ngIf="failures().length; else dashboardOk">
+          Parcial: {{ failures().join(' · ') }}
         </div>
-        <p-tag value="Maestros" severity="contrast"></p-tag>
+        <ng-template #dashboardOk>
+          <div class="secondaryCell">Todo el módulo en una sola vista</div>
+        </ng-template>
       </div>
+    </div>
 
-      <div class="quickGrid quickGrid--4">
-        <article class="quickAction" (click)="irAChecklists()">
-          <div class="quickIcon"><i class="pi pi-check-square"></i></div>
-          <div>
-            <strong>Checklist maestro</strong>
-            <p>Administra ítems de inspección y recepción por tipo de vehículo.</p>
-          </div>
-        </article>
-
-        <article class="quickAction" (click)="irATipos()">
-          <div class="quickIcon"><i class="pi pi-car"></i></div>
-          <div>
-            <strong>Tipos de vehículo</strong>
-            <p>Crea el catálogo maestro y sus configuraciones base.</p>
-          </div>
-        </article>
-
-        <article class="quickAction" (click)="irAClientes()">
-          <div class="quickIcon"><i class="pi pi-users"></i></div>
-          <div>
-            <strong>Clientes</strong>
-            <p>Registra clientes y sus vehículos dentro del módulo.</p>
-          </div>
-        </article>
-
-        <article class="quickAction" (click)="irAOrdenes()">
-          <div class="quickIcon"><i class="pi pi-wrench"></i></div>
-          <div>
-            <strong>Órdenes de trabajo</strong>
-            <p>Gestiona recepción, diagnóstico, hallazgos, repuestos y flujo operativo.</p>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Resumen maestro</h4>
-          <div class="secondaryCell">{{ relacionesPendientesTexto() }}</div>
-        </div>
-        <p-tag value="Live" severity="secondary"></p-tag>
-      </div>
-
-      <div class="metricGrid">
-        <article class="metric" *ngFor="let metric of metrics()">
-          <span>{{ metric.label }}</span>
-          <strong>{{ metric.value }}</strong>
-          <small>{{ metric.hint }}</small>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <h4>Actividad reciente</h4>
-        <p-tag value="Dashboard" severity="secondary"></p-tag>
-      </div>
-
-      <div class="recentGrid recentGrid--4" *ngIf="recientes().length; else noRecentActivity">
-        <article class="recentCard" *ngFor="let item of recientes()">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <p-tag *ngIf="item.chip" [value]="item.chip" severity="secondary"></p-tag>
-        </article>
-      </div>
-    </section>
+    <div class="accessGrid">
+      <button
+        type="button"
+        class="accessCard"
+        *ngFor="let item of accessCards()"
+        (click)="go(item.route)">
+        <span class="accessIcon"><i [class]="item.icon"></i></span>
+        <span class="accessText">
+          <strong>{{ item.label }}</strong>
+          <small>{{ item.hint }}</small>
+        </span>
+        <strong class="accessValue">{{ item.value }}</strong>
+      </button>
+    </div>
   </section>
 
-  <section class="stackedRows">
-    <section class="contentCard">
+  <section class="kpiGrid">
+    <article
+      class="kpiCard"
+      *ngFor="let item of resumeCards()"
+      [class.is-accent]="item.tone === 'accent'"
+      [class.is-success]="item.tone === 'success'"
+      [class.is-warn]="item.tone === 'warn'">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.value }}</strong>
+      <small>{{ item.hint }}</small>
+    </article>
+  </section>
+
+  <section class="workspaceGrid">
+    <section class="contentCard panel panel--wide">
       <div class="sectionHead">
         <div>
-          <h4>Últimos tipos de vehículo</h4>
-          <div class="secondaryCell">{{ tipos().length }} registrados</div>
-        </div>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-arrow-right"
-          size="small"
-          label="Ir a tipos"
-          (click)="irATipos()">
-        </button>
-      </div>
-
-      <div class="jiraLikeList" *ngIf="tiposRecientes().length; else noTipos">
-        <article class="jiraLikeRow compact" *ngFor="let item of tiposRecientes()">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ item.tipoVehiculo || 'Sin nombre' }}</div>
-              <div class="secondaryCell">ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</div>
-            </div>
-            <p-tag value="Tipo" severity="secondary"></p-tag>
+          <h4>Órdenes</h4>
+          <div class="secondaryCell">
+            {{ ordenesAbiertas() }} abiertas · {{ ordenesEnProceso() }} en proceso
           </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Últimos checklist</h4>
-          <div class="secondaryCell">{{ checklists().length }} ítems maestros</div>
         </div>
+
         <button
           pButton
           type="button"
-          icon="pi pi-arrow-right"
           size="small"
-          label="Ir a checklist"
-          (click)="irAChecklists()">
-        </button>
-      </div>
-
-      <div class="jiraLikeList" *ngIf="checklistsRecientes().length; else noChecklists">
-        <article class="jiraLikeRow compact" *ngFor="let item of checklistsRecientes()">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ item.nombreItem }}</div>
-              <div class="secondaryCell">{{ item.categoria || 'GENERAL' }} · Orden {{ item.orden || '-' }}</div>
-            </div>
-            <p-tag
-              [value]="esObligatorio(item.obligatorio) ? 'Obligatorio' : 'Opcional'"
-              [severity]="esObligatorio(item.obligatorio) ? 'warn' : 'secondary'">
-            </p-tag>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Últimos clientes</h4>
-          <div class="secondaryCell">{{ clientes().length }} clientes registrados</div>
-        </div>
-        <button
-          pButton
-          type="button"
           icon="pi pi-arrow-right"
-          size="small"
-          label="Ir a clientes"
-          (click)="irAClientes()">
-        </button>
-      </div>
-
-      <div class="jiraLikeList" *ngIf="clientesRecientes().length; else noClientes">
-        <article class="jiraLikeRow compact" *ngFor="let item of clientesRecientes()">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">{{ item.nombre || 'Sin nombre' }}</div>
-              <div class="secondaryCell">
-                DNI {{ item.dni || item.idTaxDni || '-' }} · {{ item.ruc || 'Sin identificación' }}
-              </div>
-            </div>
-            <p-tag value="Cliente" severity="secondary"></p-tag>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Últimas órdenes</h4>
-          <div class="secondaryCell">{{ ordenes().length }} órdenes registradas</div>
-        </div>
-        <button
-          pButton
-          type="button"
-          icon="pi pi-arrow-right"
-          size="small"
-          label="Ir a órdenes"
+          label="Órdenes"
           (click)="irAOrdenes()">
         </button>
       </div>
 
-      <div class="jiraLikeList" *ngIf="ordenesRecientes().length; else noOrdenes">
-        <article class="jiraLikeRow compact" *ngFor="let item of ordenesRecientes()">
-          <div class="rowHeader">
-            <div>
-              <div class="primaryCell">Orden #{{ item.idVehOrdenTrabajo }}</div>
-              <div class="secondaryCell">
-                {{ item.tipoServicio || 'SIN TIPO' }} · Vehículo #{{ item.idCliVehiculoFk }}
-              </div>
-            </div>
-            <p-tag [value]="item.estadoOrden || 'SIN ESTADO'" severity="secondary"></p-tag>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="contentCard">
-      <div class="sectionHead">
-        <div>
-          <h4>Flujo comercial</h4>
-          <div class="secondaryCell">Facturación y cobros del módulo</div>
-        </div>
+      <div class="denseList" *ngIf="ordenesRecientes().length; else noOrdenes">
         <button
-          pButton
           type="button"
-          icon="pi pi-arrow-right"
-          size="small"
-          label="Ir a facturación"
-          (click)="irAFacturacion()">
+          class="denseRow"
+          *ngFor="let item of ordenesRecientes()"
+          (click)="irAOrdenes()">
+          <div class="denseMain">
+            <strong>#{{ item.idVehOrdenTrabajo }}</strong>
+            <small>{{ ordenVehiculo(item) }}</small>
+          </div>
+
+          <div class="denseMeta">
+            <span>{{ item.tipoServicio || 'Sin tipo' }}</span>
+            <small>{{ item.estadoOrden || 'Sin estado' }}</small>
+          </div>
         </button>
       </div>
-
-      <div class="dashboardCallout">
-        <div class="dashboardCalloutIcon">
-          <i class="pi pi-money-bill"></i>
-        </div>
-        <div>
-          <strong>Facturación</strong>
-          <p>Accede a emisión de factura, caja, cobros y workflow facturar-cobrar.</p>
-        </div>
-      </div>
     </section>
+
+    <div class="stackPanel">
+      <section class="contentCard panel">
+        <div class="sectionHead">
+          <div>
+            <h4>Comercial</h4>
+            <div class="secondaryCell">
+              {{ facturas().length }} facturas · {{ facturasConSaldo() }} con saldo
+            </div>
+          </div>
+
+          <button
+            pButton
+            type="button"
+            size="small"
+            icon="pi pi-arrow-right"
+            label="Facturación"
+            (click)="irAFacturacion()">
+          </button>
+        </div>
+
+        <div class="miniStats">
+          <article class="miniStat">
+            <span>Facturas</span>
+            <strong>{{ facturas().length }}</strong>
+          </article>
+
+          <article class="miniStat">
+            <span>Cobros</span>
+            <strong>{{ cobros().length }}</strong>
+          </article>
+
+          <article class="miniStat">
+            <span>Saldo</span>
+            <strong>{{ formatMoney(saldoCartera()) }}</strong>
+          </article>
+        </div>
+
+        <div class="denseList denseList--mini" *ngIf="facturasRecientes().length; else noFacturas">
+          <button
+            type="button"
+            class="denseRow"
+            *ngFor="let item of facturasRecientes()"
+            (click)="irAFacturacion()">
+            <div class="denseMain">
+              <strong>{{ facturaNumero(item) }}</strong>
+              <small>{{ facturaCliente(item) }}</small>
+            </div>
+
+            <div class="denseMeta alignRight">
+              <span>{{ formatMoney(item.total) }}</span>
+              <small>Saldo {{ formatMoney(item.cxcDeuda) }}</small>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <section class="contentCard panel">
+        <div class="sectionHead">
+          <div>
+            <h4>Alertas</h4>
+            <div class="secondaryCell">Pendientes del módulo</div>
+          </div>
+        </div>
+
+        <div class="alertList">
+          <button type="button" class="alertItem" (click)="irAChecklists()">
+            <strong>{{ tiposSinChecklist() }}</strong>
+            <span>tipos sin checklist</span>
+          </button>
+
+          <button type="button" class="alertItem" (click)="irAChecklists()">
+            <strong>{{ checklistSinTipo() }}</strong>
+            <span>checklist sin tipo</span>
+          </button>
+
+          <button type="button" class="alertItem" (click)="irAFacturacion()">
+            <strong>{{ facturasConSaldo() }}</strong>
+            <span>facturas con saldo</span>
+          </button>
+
+          <button type="button" class="alertItem" (click)="irAOrdenes()">
+            <strong>{{ ordenesAnuladas() }}</strong>
+            <span>órdenes anuladas</span>
+          </button>
+        </div>
+      </section>
+    </div>
   </section>
+
+  
 </div>
 
 <ng-template #loadingBlock>
   <section class="contentCard loadingState">
     <i class="pi pi-spin pi-spinner"></i>
-    <span>Cargando dashboard maestro...</span>
+    <span>Cargando dashboard...</span>
   </section>
 </ng-template>
 
-<ng-template #noRecentActivity>
-  <app-vehiculos-empty-state
-    icon="pi pi-chart-bar"
-    title="Sin actividad todavía"
-    subtitle="Cuando empieces a crear tipos, checklist, clientes y órdenes, aquí verás el resumen reciente.">
-  </app-vehiculos-empty-state>
+<ng-template #noOrdenes>
+  <div class="inlineEmpty">Sin órdenes registradas.</div>
+</ng-template>
+
+<ng-template #noFacturas>
+  <div class="inlineEmpty">Sin facturas registradas.</div>
 </ng-template>
 
 <ng-template #noTipos>
-  <app-vehiculos-empty-state
-    icon="pi pi-car"
-    title="Sin tipos de vehículo"
-    subtitle="Crea el primer tipo maestro desde el módulo de tipos.">
-  </app-vehiculos-empty-state>
+  <div class="inlineEmpty">Sin tipos.</div>
 </ng-template>
 
 <ng-template #noChecklists>
-  <app-vehiculos-empty-state
-    icon="pi pi-check-square"
-    title="Sin checklist maestro"
-    subtitle="Crea el primer checklist de inspección desde su pantalla dedicada.">
-  </app-vehiculos-empty-state>
+  <div class="inlineEmpty">Sin checklist.</div>
 </ng-template>
 
 <ng-template #noClientes>
-  <app-vehiculos-empty-state
-    icon="pi pi-users"
-    title="Sin clientes"
-    subtitle="Registra el primer cliente y su vehículo desde el módulo de clientes.">
-  </app-vehiculos-empty-state>
-</ng-template>
-
-<ng-template #noOrdenes>
-  <app-vehiculos-empty-state
-    icon="pi pi-wrench"
-    title="Sin órdenes"
-    subtitle="Crea la primera orden de trabajo desde el módulo de órdenes.">
-  </app-vehiculos-empty-state>
+  <div class="inlineEmpty">Sin clientes.</div>
 </ng-template>
