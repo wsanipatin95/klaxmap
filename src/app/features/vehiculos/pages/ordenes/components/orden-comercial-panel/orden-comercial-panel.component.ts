@@ -157,31 +157,45 @@ export class OrdenComercialPanelComponent implements OnChanges {
   }
 
   subtotalCeroPreview(): number {
-    return this.selectedLines()
-      .filter((line) => line.porcentajeIva <= 0)
-      .reduce((acc, line) => acc + line.subtotalNeto, 0);
+    return this.sumMoney(
+      this.selectedLines()
+        .filter((line) => line.porcentajeIva <= 0)
+        .map((line) => line.subtotalNeto)
+    );
   }
 
   subtotalIvaPreview(): number {
-    return this.selectedLines()
-      .filter((line) => line.porcentajeIva > 0)
-      .reduce((acc, line) => acc + line.subtotalNeto, 0);
+    return this.sumMoney(
+      this.selectedLines()
+        .filter((line) => line.porcentajeIva > 0)
+        .map((line) => line.subtotalNeto)
+    );
   }
 
   descuentoPreview(): number {
-    return this.selectedLines().reduce((acc, line) => acc + line.descuento, 0);
+    return this.sumMoney(this.selectedLines().map((line) => line.descuento));
   }
 
   ivaPreview(): number {
-    return this.selectedLines().reduce((acc, line) => acc + line.ivaValor, 0);
+    return this.sumMoney(this.selectedLines().map((line) => line.ivaValor));
   }
 
   totalPreview(): number {
-    return this.selectedLines().reduce((acc, line) => acc + line.total, 0);
+    return this.sumMoney(this.selectedLines().map((line) => line.total));
   }
 
   canEmitFactura(): boolean {
-    return !!this.orden && this.selectedLines().length > 0;
+    if (!this.orden || this.selectedLines().length === 0) return false;
+
+    const tasasPositivas = [
+      ...new Set(
+        this.selectedLines()
+          .map((line) => this.money(line.porcentajeIva))
+          .filter((value) => value > 0)
+      ),
+    ];
+
+    return tasasPositivas.length <= 1;
   }
 
   emitirFactura() {
@@ -190,15 +204,27 @@ export class OrdenComercialPanelComponent implements OnChanges {
     const lineas = this.selectedLines();
     if (!lineas.length) return;
 
+    const tasasPositivas = [
+      ...new Set(
+        lineas
+          .map((line) => this.money(line.porcentajeIva))
+          .filter((value) => value > 0)
+      ),
+    ];
+
+    if (tasasPositivas.length > 1) {
+      return;
+    }
+
     const payload: FacturaComercialSavePayload = {
       idVehOrdenTrabajoFk: this.orden.idVehOrdenTrabajo,
       dni: Number(this.orden.dni),
       idsVehOrdenTrabajoRepuesto: lineas.map((line) => line.idVehOrdenTrabajoRepuesto),
-      subtotalCero: Number(this.subtotalCeroPreview().toFixed(2)),
-      subtotalIva: Number(this.subtotalIvaPreview().toFixed(2)),
-      iva: Number(this.ivaPreview().toFixed(2)),
-      descuento: Number(this.descuentoPreview().toFixed(2)),
-      total: Number(this.totalPreview().toFixed(2)),
+      subtotalCero: this.money(this.subtotalCeroPreview()),
+      subtotalIva: this.money(this.subtotalIvaPreview()),
+      iva: this.money(this.ivaPreview()),
+      descuento: this.money(this.descuentoPreview()),
+      total: this.money(this.totalPreview()),
       observacionFactura: this.comercialDraft.observacionFactura?.trim() || null,
     };
 
@@ -314,14 +340,26 @@ export class OrdenComercialPanelComponent implements OnChanges {
 
   private buildPendingLine(item: VehOrdenTrabajoRepuesto, selected: boolean): FacturaComercialLineaDraft {
     const article = this.findArticulo(item.art);
-    const cantidad = Number(item.cantidad || 0);
-    const precioUnitario = Number(item.precioUnitario || article?.precio4 || article?.artmay || article?.artcom || article?.artmen || 0);
-    const porcentajeIva = this.normalizeIva(article?.porcentaje ?? 0);
-    const descuento = 0;
-    const subtotalBruto = cantidad * precioUnitario;
-    const subtotalNeto = subtotalBruto - descuento;
-    const ivaValor = subtotalNeto * (porcentajeIva / 100);
-    const total = subtotalNeto + ivaValor;
+
+    const cantidad = this.money(item.cantidad || 0);
+    const precioUnitario = this.money(
+      item.precioUnitario ||
+      article?.precio4 ||
+      article?.artmay ||
+      article?.artcom ||
+      article?.artmen ||
+      0
+    );
+
+    const porcentajeIva = this.normalizeIva(
+      item.porcentaje ?? article?.porcentaje ?? 0
+    );
+
+    const descuento = this.money(0);
+    const subtotalBruto = this.money(cantidad * precioUnitario);
+    const subtotalNeto = this.money(subtotalBruto - descuento);
+    const ivaValor = this.money(subtotalNeto * (porcentajeIva / 100));
+    const total = this.money(subtotalNeto + ivaValor);
 
     return {
       idVehOrdenTrabajoRepuesto: item.idVehOrdenTrabajoRepuesto,
@@ -338,6 +376,15 @@ export class OrdenComercialPanelComponent implements OnChanges {
       total,
       selected,
     };
+  }
+  private sumMoney(values: number[]): number {
+    return this.money(values.reduce((acc, value) => acc + Number(value || 0), 0));
+  }
+
+  private money(value: unknown): number {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num)) return 0;
+    return Math.round((num + Number.EPSILON) * 100) / 100;
   }
 
   private findArticulo(art?: number | null): VehArticuloCatalogo | null {

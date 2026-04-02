@@ -221,6 +221,7 @@ export interface VehOrdenTrabajoRepuesto {
   subtipo?: string | null;
   tipoArticulo?: string | null;
   categoriaArticulo?: string | null;
+  porcentaje?: number | null;
 }
 
 export interface VehOrdenTrabajoAutorizacion {

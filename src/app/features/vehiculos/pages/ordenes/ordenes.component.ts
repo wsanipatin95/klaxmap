@@ -76,7 +76,6 @@ type ChildDrawerMode =
   | null;
 
 type ComercialDrawerMode =
-  | 'workflow'
   | 'factura'
   | 'cobro'
   | 'contabilizar'
@@ -1060,38 +1059,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.comercialDrawerMode.set(mode);
     this.comercialDrawerVisible.set(true);
 
-    if (mode === 'workflow') {
-      this.workflowForm.reset({
-        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-        idAdmPtoemiFk: null,
-        idsVehOrdenTrabajoRepuesto: idsPendientes,
-        observacionFactura: '',
-        tipoFacturacion: 'PARCIAL',
-        dni: orden.dni ?? null,
-        cen: null,
-        credito: false,
-        pagoInicial: 0,
-        cuotas: 1,
-        fechaEmisionIso: '',
-        fechaPrimerVencimientoIso: '',
-        idTaxCompAutFk: 1,
-        usarPrecioRepuesto: true,
-        idCntFormaPagoFk: null,
-        idCntPlanFormaPagoFk: null,
-        idBanDocBancoFk: null,
-        idBanBancoFk: null,
-        idBanBancoSubFk: null,
-        idTaxTarjetaDiferidoFk: null,
-        idBanTarjetaFk: null,
-        referenciaDatafast: '',
-        traCash: '',
-        crearRecibo: true,
-        contabilizarFactura: true,
-        contabilizarCobro: true,
-        conceptoFactura: 'Factura vehicular',
-        conceptoCobro: 'Cobro vehicular',
-      });
-    }
+  
 
     if (mode === 'factura') {
       this.facturaForm.reset({
@@ -1258,9 +1226,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (res: any) => {
         this.notify.success('Operación exitosa', res?.mensaje || 'Proceso ejecutado correctamente.');
-        if (mode === 'workflow') {
-          this.workflowResultado.set((res?.data ?? null) as VehFacturacionWorkflowResultado | null);
-        }
         this.comercialDrawerVisible.set(false);
         this.comercialDrawerMode.set(null);
         this.refreshComercialSnapshot();
@@ -1350,7 +1315,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   comercialDrawerTitle() {
     switch (this.comercialDrawerMode()) {
-      case 'workflow': return 'Workflow integral';
       case 'factura': return 'Factura manual';
       case 'cobro': return 'Registrar cobro';
       case 'contabilizar': return 'Contabilizar factura';
@@ -1360,7 +1324,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   comercialDrawerSubtitle() {
     switch (this.comercialDrawerMode()) {
-      case 'workflow': return 'Facturación + cobro + contabilidad en un solo flujo desde la OT.';
       case 'factura': return 'Genera la factura manualmente sin abandonar el contexto de la orden.';
       case 'cobro': return 'Registra el cobro inicial o total directamente desde la misma OT.';
       case 'contabilizar': return 'Lanza el asiento contable de la factura seleccionada.';

@@ -174,16 +174,6 @@
             <h4>{{ facturaNumber(factura) }}</h4>
             <div class="secondaryCell">{{ formatDateShort(factura.fecEmi) }}</div>
           </div>
-
-          <div class="actionWrap">
-            <button pButton type="button" size="small" severity="secondary" icon="pi pi-wallet" label="Cobro"
-              (click)="openCobro.emit()">
-            </button>
-
-            <button pButton type="button" size="small" severity="secondary" icon="pi pi-chart-line" label="Contabilizar"
-              (click)="openContabilizar.emit()">
-            </button>
-          </div>
         </div>
 
         <div class="contextGrid">
