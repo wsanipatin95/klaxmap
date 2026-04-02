@@ -35,6 +35,7 @@ type BasemapKey =
   | 'cartoLight'
   | 'cartoDark'
   | 'esriWorldImagery'
+  | 'googleSatellite'
   | 'openTopo';
 
 interface BasemapOption {
@@ -59,6 +60,12 @@ interface ResolvedElementStyle {
 interface CachedElementBounds {
   signature: string;
   bounds: L.LatLngBounds | null;
+}
+
+interface MeasureState {
+  points: L.LatLng[];
+  previewPoint: L.LatLng | null;
+  finished: boolean;
 }
 
 @Component({
@@ -116,11 +123,20 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     },
     {
       key: 'esriWorldImagery',
-      label: 'Satélite',
+      label: 'Satélite Esri',
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       options: {
         maxZoom: 22,
         attribution: 'Tiles &copy; Esri',
+      },
+    },
+    {
+      key: 'googleSatellite',
+      label: 'Satélite Google',
+      url: 'https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga',
+      options: {
+        maxZoom: 22,
+        attribution: 'Google imagery · verificar licencias antes de uso productivo',
       },
     },
     {
@@ -137,11 +153,18 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   selectedBasemap: BasemapKey = 'osm';
   basemapMenuOpen = false;
+  labelsVisible = true;
+  measureActive = false;
+  measureStarted = false;
+  measureDistanceText = '0 m';
 
   private readonly DEFAULT_STROKE = '#38bdf8';
   private readonly DEFAULT_FILL = '#38bdf8';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
+  private readonly LABELS_MIN_ZOOM = 14;
+  private readonly MEASURE_STROKE = '#f59e0b';
+  private readonly MEASURE_FILL = '#fde68a';
 
   private readonly PERFORMANCE_THRESHOLD = 5000;
   private readonly SIMPLIFY_POINTS_BELOW_ZOOM = 14;
@@ -151,6 +174,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private map!: L.Map;
   private baseLayer!: L.TileLayer;
   private readonly drawnItems = new L.FeatureGroup();
+  private readonly measureLayer = new L.FeatureGroup();
   private readonly renderedLayers = new Map<number, L.Layer>();
   private readonly elementBoundsCache = new Map<number, CachedElementBounds>();
   private readonly vectorRenderer = L.canvas({ padding: 0.8 });
@@ -183,6 +207,12 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     originalSnapshot: null,
   };
 
+  private measureState: MeasureState = {
+    points: [],
+    previewPoint: null,
+    finished: false,
+  };
+
   private get performanceModeEnabled(): boolean {
     return this.elementos.length >= this.PERFORMANCE_THRESHOLD;
   }
@@ -194,6 +224,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   ngAfterViewInit(): void {
     this.initMap();
     this.updateViewBounds();
+    this.fitInitialBoundsIfNeeded();
     this.scheduleRender();
     this.syncToolMode();
   }
@@ -206,6 +237,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       changes['selectedElementoId'] ||
       changes['tipos'] ||
       changes['hiddenTipoIds'];
+
+    if (changes['elementos'] && !this.hasInitialAutoFit) {
+      this.fitInitialBoundsIfNeeded();
+    }
 
     if (dataChanged) {
       if (!this.editSession.active) {
@@ -261,6 +296,22 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.basemapOptions.find((item) => item.key === this.selectedBasemap)?.label ??
       'Mapa'
     );
+  }
+
+  toggleLabelsVisible() {
+    this.labelsVisible = !this.labelsVisible;
+    this.scheduleRender();
+  }
+
+  clearMeasurement() {
+    this.measureState = {
+      points: [],
+      previewPoint: null,
+      finished: false,
+    };
+    this.measureStarted = false;
+    this.measureDistanceText = '0 m';
+    this.measureLayer.clearLayers();
   }
 
   centerOnElemento(id: number | null) {
@@ -406,10 +457,28 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.baseLayer.addTo(this.map);
 
     this.drawnItems.addTo(this.map);
+    this.measureLayer.addTo(this.map);
 
-    this.map.on('click', () => {
+    this.map.on('click', (event: L.LeafletMouseEvent) => {
       if (this.basemapMenuOpen) {
         this.closeBasemapMenu();
+      }
+
+      if (this.toolMode === 'measure') {
+        this.handleMeasureClick(event.latlng);
+      }
+    });
+
+    this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
+      if (this.toolMode === 'measure') {
+        this.handleMeasureMouseMove(event.latlng);
+      }
+    });
+
+    this.map.on('dblclick', (event: L.LeafletMouseEvent) => {
+      if (this.toolMode === 'measure') {
+        L.DomEvent.stop(event.originalEvent);
+        this.finishMeasurement();
       }
     });
 
@@ -418,15 +487,12 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
       if (!this.editSession.active) {
         this.scheduleRender();
+      } else {
+        this.scheduleRenderKeepingDraft();
       }
     });
 
     this.drawPluginAvailable = this.detectDrawPlugin();
-
-    console.log('Leaflet version:', (L as any)?.version);
-    console.log('Leaflet Draw disponible:', this.drawPluginAvailable);
-    console.log('L.Draw:', (L as any)?.Draw);
-    console.log('L.Draw.Event:', (L as any)?.Draw?.Event);
 
     const drawRef = this.getDrawRef();
 
@@ -442,10 +508,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
         this.geometryCreated.emit({ wkt, geomTipo });
       });
-    } else {
-      console.error(
-        'Leaflet Draw no está cargado. Verifica angular.json -> scripts/styles y el orden de carga.'
-      );
     }
   }
 
@@ -456,6 +518,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     this.currentViewBounds = this.map.getBounds();
+  }
+
+  private fitInitialBoundsIfNeeded() {
+    if (!this.map || this.hasInitialAutoFit || !this.elementos.length || this.selectedElementoId != null) {
+      return;
+    }
+
+    const hiddenSet = new Set(this.hiddenTipoIds);
+    const bounds = L.latLngBounds([]);
+
+    for (const item of this.elementos) {
+      if (hiddenSet.has(item.idGeoTipoElementoFk)) {
+        continue;
+      }
+
+      const itemBounds = this.getElementBounds(item);
+      if (itemBounds?.isValid?.()) {
+        bounds.extend(itemBounds);
+      }
+    }
+
+    if (bounds.isValid()) {
+      this.map.fitBounds(bounds.pad(0.2));
+      this.updateViewBounds();
+      this.hasInitialAutoFit = true;
+    }
   }
 
   private scheduleRender() {
@@ -492,7 +580,11 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.scheduleRender();
     }
 
-    if (!this.editSession.active) {
+    if (this.toolMode !== 'measure' && this.measureActive) {
+      this.disableMeasureMode(true);
+    }
+
+    if (!this.editSession.active && this.toolMode !== 'measure') {
       this.stopActiveDraw();
     }
 
@@ -526,6 +618,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.stopActiveDraw();
       container.style.cursor = 'crosshair';
       this.ensureEditSessionForSelection();
+      return;
+    }
+
+    if (this.toolMode === 'measure') {
+      this.stopActiveDraw();
+      this.map.dragging.disable();
+      container.style.cursor = 'crosshair';
+      this.enableMeasureMode();
     }
   }
 
@@ -737,6 +837,150 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     };
   }
 
+  private enableMeasureMode() {
+    if (this.measureActive) {
+      return;
+    }
+
+    this.measureActive = true;
+    this.measureStarted = this.measureState.points.length > 0;
+    this.map.doubleClickZoom.disable();
+    this.renderMeasurement();
+  }
+
+  private disableMeasureMode(clear = false) {
+    this.measureActive = false;
+    this.map.doubleClickZoom.enable();
+
+    if (clear) {
+      this.clearMeasurement();
+      return;
+    }
+
+    this.measureState.previewPoint = null;
+    this.renderMeasurement();
+  }
+
+  private handleMeasureClick(latlng: L.LatLng) {
+    if (!this.measureActive) {
+      return;
+    }
+
+    if (this.measureState.finished) {
+      this.clearMeasurement();
+    }
+
+    this.measureState.points = [...this.measureState.points, latlng];
+    this.measureState.previewPoint = null;
+    this.measureState.finished = false;
+    this.measureStarted = true;
+    this.renderMeasurement();
+  }
+
+  private handleMeasureMouseMove(latlng: L.LatLng) {
+    if (!this.measureActive || this.measureState.finished || !this.measureState.points.length) {
+      return;
+    }
+
+    this.measureState.previewPoint = latlng;
+    this.renderMeasurement();
+  }
+
+  private finishMeasurement() {
+    if (!this.measureActive) {
+      return;
+    }
+
+    this.measureState.previewPoint = null;
+    this.measureState.finished = this.measureState.points.length >= 2;
+    this.renderMeasurement();
+  }
+
+  private renderMeasurement() {
+    this.measureLayer.clearLayers();
+
+    const points = this.measureState.previewPoint
+      ? [...this.measureState.points, this.measureState.previewPoint]
+      : [...this.measureState.points];
+
+    if (!points.length) {
+      this.measureDistanceText = '0 m';
+      this.measureStarted = false;
+      return;
+    }
+
+    this.measureStarted = true;
+
+    for (const point of this.measureState.points) {
+      const marker = L.circleMarker(point, {
+        radius: 4,
+        color: this.MEASURE_STROKE,
+        weight: 2,
+        fillColor: this.MEASURE_FILL,
+        fillOpacity: 0.95,
+        renderer: this.vectorRenderer,
+      });
+      this.measureLayer.addLayer(marker);
+    }
+
+    if (points.length >= 2) {
+      const polyline = L.polyline(points, {
+        color: this.MEASURE_STROKE,
+        weight: 3,
+        dashArray: '8 6',
+        lineCap: 'round',
+        renderer: this.vectorRenderer,
+      });
+      this.measureLayer.addLayer(polyline);
+    }
+
+    const totalMeters = this.computeDistance(points);
+    this.measureDistanceText = this.formatDistance(totalMeters);
+
+    const lastPoint = points[points.length - 1];
+    const label = L.marker(lastPoint, {
+      interactive: false,
+      icon: this.createMeasureLabelIcon(this.measureDistanceText),
+      zIndexOffset: 1500,
+    });
+    this.measureLayer.addLayer(label);
+  }
+
+  private computeDistance(points: L.LatLng[]): number {
+    if (!this.map || points.length < 2) {
+      return 0;
+    }
+
+    let total = 0;
+
+    for (let index = 1; index < points.length; index += 1) {
+      total += this.map.distance(points[index - 1], points[index]);
+    }
+
+    return total;
+  }
+
+  private formatDistance(meters: number): string {
+    if (!Number.isFinite(meters) || meters <= 0) {
+      return '0 m';
+    }
+
+    if (meters < 1000) {
+      return `${meters.toFixed(meters < 10 ? 2 : meters < 100 ? 1 : 0)} m`;
+    }
+
+    return `${(meters / 1000).toFixed(meters < 10000 ? 2 : 1)} km`;
+  }
+
+  private createMeasureLabelIcon(text: string): L.DivIcon {
+    return L.divIcon({
+      className: 'mapa-measure-label-host',
+      html: `<div class="mapa-measure-label">${this.escapeHtml(text)}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+  }
+
   private renderElementosKeepingDraft() {
     const activeId = this.editSession.elementId;
     const dirty = this.editSession.dirty;
@@ -812,10 +1056,25 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       (layer as any).__elementName = el.nombre ?? '';
       (layer as any).__tooltipBound = true;
 
-      this.bindTooltipForLayer(layer, el.nombre ?? '');
+      this.bindTooltipForLayer(layer, el);
 
-      layer.on('click', () => this.elementoSelected.emit(el));
+      layer.on('click', (ev: any) => {
+        if (this.toolMode === 'measure') {
+          const latlng = ev?.latlng ?? this.tryGetLayerLatLng(layer);
+          if (latlng) {
+            this.handleMeasureClick(latlng);
+          }
+          return;
+        }
+
+        this.elementoSelected.emit(el);
+      });
+
       layer.on('contextmenu', (ev: any) => {
+        if (this.toolMode === 'measure') {
+          return;
+        }
+
         this.elementoContext.emit({
           elemento: el,
           x: ev.originalEvent?.clientX ?? 0,
@@ -828,25 +1087,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     this.applySelectionStyle();
-
-    if (
-      !this.editSession.active &&
-      !this.performanceModeEnabled &&
-      !this.hasInitialAutoFit &&
-      this.selectedElementoId == null &&
-      this.drawnItems.getLayers().length > 0
-    ) {
-      const bounds = this.drawnItems.getBounds();
-      if (bounds.isValid()) {
-        this.map.fitBounds(bounds.pad(0.2));
-        this.updateViewBounds();
-      }
-      this.hasInitialAutoFit = true;
-    }
   }
 
-  private bindTooltipForLayer(layer: L.Layer, name: string) {
-    const safeName = (name || '').trim();
+  private bindTooltipForLayer(layer: L.Layer, elemento: MapaElemento) {
+    const safeName = (elemento.nombre || '').trim();
     if (!safeName) return;
 
     const anyLayer = layer as any;
@@ -854,12 +1098,34 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       return;
     }
 
+    if (typeof anyLayer.unbindTooltip === 'function') {
+      anyLayer.unbindTooltip();
+    }
+
+    const permanent = this.shouldShowPersistentLabel(elemento);
+    const direction = elemento.geomTipo === 'polygon' ? 'center' : 'top';
+
     anyLayer.bindTooltip(safeName, {
-      direction: 'top',
-      sticky: true,
-      opacity: 0.96,
-      className: 'mapa-element-tooltip',
+      direction,
+      sticky: !permanent,
+      permanent,
+      opacity: permanent ? 0.92 : 0.96,
+      className: permanent
+        ? 'mapa-element-tooltip mapa-element-tooltip--persistent'
+        : 'mapa-element-tooltip',
     });
+  }
+
+  private shouldShowPersistentLabel(_elemento: MapaElemento): boolean {
+    if (!this.labelsVisible) {
+      return false;
+    }
+
+    if (this.performanceModeEnabled && this.currentZoom < this.LABELS_MIN_ZOOM) {
+      return false;
+    }
+
+    return true;
   }
 
   private openTooltipForLayer(layer: L.Layer | null) {
@@ -1096,6 +1362,23 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (typeof anyLayer.getElement === 'function') {
       return anyLayer.getElement() as HTMLElement | null;
     }
+    return null;
+  }
+
+  private tryGetLayerLatLng(layer: L.Layer): L.LatLng | null {
+    const anyLayer = layer as any;
+
+    if (typeof anyLayer.getLatLng === 'function') {
+      return anyLayer.getLatLng() as L.LatLng;
+    }
+
+    if (typeof anyLayer.getBounds === 'function') {
+      const bounds = anyLayer.getBounds();
+      if (bounds?.isValid?.()) {
+        return bounds.getCenter();
+      }
+    }
+
     return null;
   }
 

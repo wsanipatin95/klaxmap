@@ -10,7 +10,7 @@
   {{ performanceNotice }}
 </div>
 
-<div class="tree-scroll" *ngIf="hasVisibleTreeData">
+<div #treeScroll class="tree-scroll" *ngIf="hasVisibleTreeData">
   <ul class="tree-root">
     <ng-container *ngFor="let item of tree; trackBy: trackByNode">
       <ng-container
@@ -27,6 +27,7 @@
       [class.active]="item.node.idRedNodo === selectedNodoId"
       [class.is-hidden]="!isNodeVisible(item.node)"
       [style.paddingLeft.px]="4 + (level * 12)"
+      [attr.data-node-id]="item.node.idRedNodo"
       (click)="onNodeClick(item.node, $event)"
       (contextmenu)="openNodeContext(item.node, $event)"
       [attr.title]="item.node.nodo"
@@ -77,6 +78,7 @@
         [class.active]="el.idGeoElemento === selectedElementoId"
         [class.is-hidden]="!isElementoVisible(el)"
         [style.paddingLeft.px]="26 + ((level + 1) * 12)"
+        [attr.data-element-id]="el.idGeoElemento"
         (click)="onElementoClick(el, $event)"
         (contextmenu)="openElementoContext(el, $event)"
         [attr.title]="el.nombre"
@@ -191,7 +193,7 @@
       <button type="button" (click)="centerElementoRequested.emit(el); closeContext()">
         Centrar en mapa
       </button>
-      <button  *ngIf="editarElemento()" type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
+      <button *ngIf="editarElemento()" type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
         Editar datos
       </button>
       <button *ngIf="editarElemento()" type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">

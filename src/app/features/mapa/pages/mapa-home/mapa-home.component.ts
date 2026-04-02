@@ -150,6 +150,10 @@ export class MapaHomeComponent {
         : `Editando forma: ${this.editSessionElementName() || 'elemento'}`;
     }
 
+    if (this.ui.toolMode() === 'measure') {
+      return 'Modo medición activo · haz clic para marcar puntos y doble clic para terminar';
+    }
+
     if (this.ui.propertiesOpen()) {
       return this.infoPanelDirty()
         ? `Editando datos: ${elemento?.nombre || 'elemento'} · cambios pendientes`
@@ -476,6 +480,18 @@ export class MapaHomeComponent {
         this.ui.closeProperties();
         this.interaction.setInfoPanelDirty(false);
         this.ui.setDrawPolygonMode();
+      },
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
+    );
+  }
+
+  onToolbarMeasureMode() {
+    this.interaction.runWithPendingGuards(
+      () => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
+        this.ui.setMeasureMode();
       },
       (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)

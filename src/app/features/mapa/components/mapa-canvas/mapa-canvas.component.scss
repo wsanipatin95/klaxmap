@@ -71,11 +71,37 @@
   border-top-color: rgba(8, 18, 36, 0.96);
 }
 
-.mapa-basemap-control {
+.mapa-element-tooltip--persistent {
+  border-color: rgba(147, 197, 253, 0.42);
+  background: rgba(8, 18, 36, 0.82);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.42rem;
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.28);
+}
+
+.mapa-overlay-right {
   position: absolute;
   top: 0.85rem;
   right: 0.85rem;
   z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-end;
+}
+
+.mapa-overlay-left {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mapa-basemap-control {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
@@ -109,7 +135,7 @@
 
 .mapa-basemap-menu {
   overflow: hidden;
-  min-width: 13.5rem;
+  min-width: 14rem;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 0.85rem;
   background: rgba(8, 18, 36, 0.95);
@@ -153,4 +179,101 @@
 .mapa-basemap-option-check {
   font-size: 0.82rem;
   color: #93c5fd;
+}
+
+.mapa-toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  background: rgba(8, 18, 36, 0.92);
+  color: #e2e8f0;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.28);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.mapa-toggle-chip.active {
+  color: #dbeafe;
+  border-color: rgba(96, 165, 250, 0.42);
+}
+
+.mapa-measure-card {
+  min-width: 16rem;
+  max-width: 18rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 1rem;
+  background: rgba(8, 18, 36, 0.92);
+  color: #f8fafc;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 18px 38px rgba(2, 6, 23, 0.34);
+}
+
+.mapa-measure-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fbbf24;
+}
+
+.mapa-measure-distance {
+  margin-top: 0.4rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.mapa-measure-help {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+.mapa-measure-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mapa-measure-btn {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  padding: 0.42rem 0.72rem;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.mapa-measure-btn:hover {
+  background: rgba(30, 41, 59, 0.96);
+}
+
+.mapa-measure-label-host {
+  background: transparent;
+  border: 0;
+}
+
+.mapa-measure-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(8, 18, 36, 0.96);
+  color: #fde68a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.32);
 }

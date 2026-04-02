@@ -1,3 +1,23 @@
 :host {
   display: block;
+  min-height: 100dvh;
+}
+
+.layout-wrapper--mapa {
+  min-height: 100dvh;
+  background: #020617;
+}
+
+.layout-main-container--mapa {
+  margin-top: 0 !important;
+  margin-left: 0 !important;
+  min-height: 100dvh !important;
+}
+
+.main-content--mapa {
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 0 !important;
+  background: #020617;
+  overflow: hidden;
 }

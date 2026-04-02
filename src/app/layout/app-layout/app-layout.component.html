@@ -1,20 +1,31 @@
-<div class="layout-wrapper">
-  <app-navbar />
+<div class="layout-wrapper" [class.layout-wrapper--mapa]="isMapaFullscreen()">
+  @if (!isMapaFullscreen()) {
+    <app-navbar />
+  }
 
-  <!-- Overlay para móviles -->
-  @if (isMobileVisible()) {
-  <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
+  @if (!isMapaFullscreen() && isMobileVisible()) {
+    <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
+  }
+
+  @if (!isMapaFullscreen()) {
+    <div
+      class="layout-sidebar"
+      [class.sidebar-collapsed]="isCollapsed()"
+      [class.sidebar-visible]="isMobileVisible()"
+    >
+      <app-sidebar />
+    </div>
   }
 
   <div
-    class="layout-sidebar"
-    [class.sidebar-collapsed]="isCollapsed()"
-    [class.sidebar-visible]="isMobileVisible()"
+    class="layout-main-container"
+    [class.sidebar-collapsed]="!isMapaFullscreen() && isCollapsed()"
+    [class.layout-main-container--mapa]="isMapaFullscreen()"
   >
-    <app-sidebar />
-  </div>
-  <div class="layout-main-container" [class.sidebar-collapsed]="isCollapsed()">
-    <div class="main-content">
+    <div
+      class="main-content"
+      [class.main-content--mapa]="isMapaFullscreen()"
+    >
       <router-outlet></router-outlet>
     </div>
   </div>

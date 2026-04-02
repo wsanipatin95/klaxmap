@@ -2,13 +2,18 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnChanges,
   Output,
   SimpleChanges,
-  signal, computed, inject
+  ViewChild,
+  computed,
+  inject,
+  signal,
 } from '@angular/core';
+
 import type {
   MapaElemento,
   MapaGeomTipo,
@@ -23,6 +28,7 @@ import {
   sortNodes,
 } from '../../utils/mapa-visibility.utils';
 import { SessionStore } from '../../../seg/store/session.store';
+
 interface TreeNodeVm {
   node: MapaNodo;
   children: TreeNodeVm[];
@@ -73,6 +79,8 @@ interface TreeElementVisual {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapaTreeComponent implements OnChanges {
+  @ViewChild('treeScroll') treeScroll?: ElementRef<HTMLDivElement>;
+
   @Input() nodos: MapaNodo[] = [];
   @Input() elementos: MapaElemento[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
@@ -103,9 +111,9 @@ export class MapaTreeComponent implements OnChanges {
   readonly contextNode = signal<MapaNodo | null>(null);
   readonly contextElemento = signal<MapaElemento | null>(null);
 
-  private sessionStore = inject(SessionStore);
+  private readonly sessionStore = inject(SessionStore);
 
-  editarElemento = computed(() =>
+  readonly editarElemento = computed(() =>
     this.sessionStore.hasCompanyPrivilege('eem_red_red')
   );
 
@@ -123,6 +131,7 @@ export class MapaTreeComponent implements OnChanges {
   private hiddenNodeSet = new Set<number>();
   private hiddenElementoSet = new Set<number>();
   private tipoMap = new Map<number, MapaTipoElemento>();
+  private pendingScrollToSelection = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     const nodosChanged = !!changes['nodos'];
@@ -152,6 +161,10 @@ export class MapaTreeComponent implements OnChanges {
 
     if ((selectedNodoChanged || selectedElementoChanged) && !this.searchValue.trim()) {
       this.ensureSelectionPathExpanded();
+    }
+
+    if (nodosChanged || searchChanged || selectedNodoChanged || selectedElementoChanged) {
+      this.requestScrollSelectionIntoView();
     }
   }
 
@@ -191,6 +204,7 @@ export class MapaTreeComponent implements OnChanges {
     }
 
     this.expandedIds.set([...current]);
+    this.requestScrollSelectionIntoView();
   }
 
   isExpanded(node: MapaNodo): boolean {
@@ -465,9 +479,7 @@ export class MapaTreeComponent implements OnChanges {
     const limit = q ? this.TREE_LIMIT_SEARCH : this.TREE_LIMIT_NO_SEARCH;
 
     if (source.length <= limit) {
-      this.performanceNotice = q
-        ? ``
-        : '';
+      this.performanceNotice = '';
       return source;
     }
 
@@ -483,10 +495,7 @@ export class MapaTreeComponent implements OnChanges {
       trimmed[trimmed.length - 1] = selected;
     }
 
-    this.performanceNotice = q
-      ? ``
-      : ``;
-
+    this.performanceNotice = '';
     return trimmed;
   }
 
@@ -685,5 +694,45 @@ export class MapaTreeComponent implements OnChanges {
       elemento.observacion ?? '',
       elemento.estado ?? '',
     ].some((v) => (v || '').toLowerCase().includes(q));
+  }
+
+  private requestScrollSelectionIntoView() {
+    if (this.pendingScrollToSelection) {
+      return;
+    }
+
+    this.pendingScrollToSelection = true;
+
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        this.pendingScrollToSelection = false;
+        this.scrollSelectionIntoView();
+      });
+    });
+  }
+
+  private scrollSelectionIntoView() {
+    const host = this.treeScroll?.nativeElement;
+    if (!host) {
+      return;
+    }
+
+    const selector =
+      this.selectedElementoId != null
+        ? `.element-row[data-element-id="${this.selectedElementoId}"]`
+        : this.selectedNodoId != null
+          ? `.node-row[data-node-id="${this.selectedNodoId}"]`
+          : null;
+
+    if (!selector) {
+      return;
+    }
+
+    const target = host.querySelector<HTMLElement>(selector);
+    target?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'nearest',
+    });
   }
 }

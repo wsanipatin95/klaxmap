@@ -6,7 +6,8 @@ export type MapaToolMode =
   | 'draw-point'
   | 'draw-line'
   | 'draw-polygon'
-  | 'edit-geometry';
+  | 'edit-geometry'
+  | 'measure';
 
 @Injectable({ providedIn: 'root' })
 export class MapaUiStore {
@@ -37,6 +38,10 @@ export class MapaUiStore {
 
   setDrawPolygonMode() {
     this.toolMode.set('draw-polygon');
+  }
+
+  setMeasureMode() {
+    this.toolMode.set('measure');
   }
 
   toggleSidebar() {

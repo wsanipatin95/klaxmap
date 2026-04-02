@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+
 import { MapaUiStore, MapaToolMode } from '../../store/mapa-ui.store';
 import { SessionStore } from '../../../seg/store/session.store';
 
@@ -13,7 +14,7 @@ import { SessionStore } from '../../../seg/store/session.store';
 })
 export class MapaToolbarComponent {
   readonly ui = inject(MapaUiStore);
-  private sessionStore = inject(SessionStore);
+  private readonly sessionStore = inject(SessionStore);
 
   @Input() selectedName: string | null = null;
   @Input() totalElementos = 0;
@@ -32,12 +33,13 @@ export class MapaToolbarComponent {
   @Output() drawPointModeRequested = new EventEmitter<void>();
   @Output() drawLineModeRequested = new EventEmitter<void>();
   @Output() drawPolygonModeRequested = new EventEmitter<void>();
+  @Output() measureModeRequested = new EventEmitter<void>();
 
-  editarTipoElemento = computed(() =>
+  readonly editarTipoElemento = computed(() =>
     this.sessionStore.hasCompanyPrivilege('etm_red_red')
   );
 
-  editarElemento = computed(() =>
+  readonly editarElemento = computed(() =>
     this.sessionStore.hasCompanyPrivilege('eem_red_red')
   );
 
@@ -62,6 +64,8 @@ export class MapaToolbarComponent {
         return 'Editar forma';
       case 'move':
         return 'Mover mapa';
+      case 'measure':
+        return 'Medir distancia';
       case 'select':
       default:
         return 'Seleccionar elementos';
@@ -103,6 +107,12 @@ export class MapaToolbarComponent {
           text: this.selectedName
             ? `Elemento listo para edición: "${this.selectedName}".`
             : 'Primero selecciona un elemento para editar su forma.',
+        };
+
+      case 'measure':
+        return {
+          title: 'Medir distancia',
+          text: 'Haz clic en el mapa para empezar, sigue marcando puntos y termina con doble clic.',
         };
 
       case 'select':

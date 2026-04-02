@@ -1,27 +1,57 @@
 <div class="mapa-canvas-shell">
-  <div class="mapa-basemap-control">
-    <button
-      type="button"
-      class="mapa-basemap-trigger"
-      (click)="toggleBasemapMenu()"
-    >
-      <span class="mapa-basemap-trigger-label">{{ currentBasemapLabel() }}</span>
-      <span class="mapa-basemap-trigger-icon">{{ basemapMenuOpen ? '▴' : '▾' }}</span>
-    </button>
-
-    <div class="mapa-basemap-menu" *ngIf="basemapMenuOpen">
+  <div class="mapa-overlay-right">
+    <div class="mapa-basemap-control">
       <button
         type="button"
-        class="mapa-basemap-option"
-        *ngFor="let option of basemapOptions"
-        [class.active]="option.key === selectedBasemap"
-        (click)="setBasemap(option.key)"
+        class="mapa-basemap-trigger"
+        (click)="toggleBasemapMenu()"
       >
-        <span class="mapa-basemap-option-title">{{ option.label }}</span>
-        <span class="mapa-basemap-option-check" *ngIf="option.key === selectedBasemap">
-          ✓
-        </span>
+        <span class="mapa-basemap-trigger-label">{{ currentBasemapLabel() }}</span>
+        <span class="mapa-basemap-trigger-icon">{{ basemapMenuOpen ? '▴' : '▾' }}</span>
       </button>
+
+      <div class="mapa-basemap-menu" *ngIf="basemapMenuOpen">
+        <button
+          type="button"
+          class="mapa-basemap-option"
+          *ngFor="let option of basemapOptions"
+          [class.active]="option.key === selectedBasemap"
+          (click)="setBasemap(option.key)"
+        >
+          <span class="mapa-basemap-option-title">{{ option.label }}</span>
+          <span class="mapa-basemap-option-check" *ngIf="option.key === selectedBasemap">
+            ✓
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="mapa-toggle-chip"
+      [class.active]="labelsVisible"
+      (click)="toggleLabelsVisible()"
+    >
+      {{ labelsVisible ? 'Etiquetas visibles' : 'Etiquetas ocultas' }}
+    </button>
+  </div>
+
+  <div class="mapa-overlay-left" *ngIf="measureActive">
+    <div class="mapa-measure-card">
+      <div class="mapa-measure-title">Medición</div>
+      <div class="mapa-measure-distance">{{ measureDistanceText }}</div>
+      <div class="mapa-measure-help">
+        {{
+          measureStarted
+            ? 'Haz clic para seguir midiendo y doble clic para terminar.'
+            : 'Haz clic en el mapa para iniciar una medición.'
+        }}
+      </div>
+      <div class="mapa-measure-actions">
+        <button type="button" class="mapa-measure-btn" (click)="clearMeasurement()">
+          Limpiar
+        </button>
+      </div>
     </div>
   </div>
 

@@ -61,10 +61,21 @@
       <i class="pi pi-stop"></i>
     </button>
 
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="isActive('measure')"
+      title="Medir distancias"
+      aria-label="Medir distancias"
+      (click)="measureModeRequested.emit()"
+    >
+      <span class="tool-btn-glyph" aria-hidden="true">📏</span>
+    </button>
+
     <span class="tool-separator" aria-hidden="true"></span>
 
     <button
-     *ngIf="editarTipoElemento()"
+      *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Tipos de elemento"
@@ -75,7 +86,7 @@
     </button>
 
     <button
-    *ngIf="editarTipoElemento()"
+      *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Importar KML"
@@ -86,7 +97,7 @@
     </button>
 
     <button
-    *ngIf="editarTipoElemento()"
+      *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
       title="Exportar KML"
