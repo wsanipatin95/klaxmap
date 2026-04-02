@@ -1,4 +1,3 @@
-
 import {
   AfterViewInit,
   Component,
@@ -9,6 +8,7 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  ViewEncapsulation,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type * as Leaflet from 'leaflet';
@@ -75,6 +75,7 @@ interface MeasureState {
   imports: [CommonModule],
   templateUrl: './mapa-canvas.component.html',
   styleUrl: './mapa-canvas.component.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
@@ -2099,7 +2100,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\"/g, '&quot;')
+      .replace(/\\"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 
