@@ -1,5 +1,5 @@
 <div class="mapa-canvas-shell">
-  <div class="mapa-overlay-right">
+  <div class="mapa-overlay-top-right">
     <div class="mapa-basemap-control">
       <button
         type="button"
@@ -25,14 +25,19 @@
         </button>
       </div>
     </div>
+  </div>
 
+  <div class="mapa-overlay-bottom-right">
     <button
       type="button"
-      class="mapa-toggle-chip"
+      class="mapa-toggle-chip mapa-toggle-chip--labels"
       [class.active]="labelsVisible"
+      [attr.aria-pressed]="labelsVisible"
+      [attr.title]="labelsVisible ? 'Ocultar etiquetas inteligentes' : 'Mostrar etiquetas inteligentes'"
       (click)="toggleLabelsVisible()"
     >
-      {{ labelsVisible ? 'Etiquetas visibles' : 'Etiquetas ocultas' }}
+      <span class="mapa-toggle-chip-dot" [class.active]="labelsVisible" aria-hidden="true"></span>
+      <span class="mapa-toggle-chip-text">Etiquetas inteligentes</span>
     </button>
   </div>
 

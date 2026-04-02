@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
@@ -20,7 +20,8 @@ export class AppLayoutComponent {
   readonly sidebarService = inject(SidebarService);
   readonly isCollapsed = this.sidebarService.isCollapsed;
   readonly isMobileVisible = this.sidebarService.isMobileVisible;
-  readonly isMapaFullscreen = signal(this.isMapaRoute(this.router.url));
+  readonly isMapaRouteActive = signal(this.isMapaRoute(this.router.url));
+  readonly mapaChromeHidden = signal(this.isMapaRoute(this.router.url));
 
   constructor() {
     this.router.events
@@ -29,12 +30,37 @@ export class AppLayoutComponent {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
-        this.isMapaFullscreen.set(this.isMapaRoute(this.router.url));
+        const isMapa = this.isMapaRoute(this.router.url);
+        this.isMapaRouteActive.set(isMapa);
+        this.mapaChromeHidden.set(isMapa);
       });
   }
 
   closeMobileSidebar() {
     this.sidebarService.closeMobileSidebar();
+  }
+
+  toggleMapaChrome() {
+    if (!this.isMapaRouteActive()) {
+      return;
+    }
+
+    this.mapaChromeHidden.update((hidden) => !hidden);
+  }
+
+  showMapaChrome() {
+    if (!this.isMapaRouteActive()) {
+      return;
+    }
+
+    this.mapaChromeHidden.set(false);
+  }
+
+  @HostListener('window:keydown.escape')
+  onEscapeKey() {
+    if (this.isMapaRouteActive() && this.mapaChromeHidden()) {
+      this.showMapaChrome();
+    }
   }
 
   private isMapaRoute(url: string): boolean {

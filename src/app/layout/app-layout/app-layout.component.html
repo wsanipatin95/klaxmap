@@ -1,13 +1,36 @@
-<div class="layout-wrapper" [class.layout-wrapper--mapa]="isMapaFullscreen()">
-  @if (!isMapaFullscreen()) {
+<div
+  class="layout-wrapper"
+  [class.layout-wrapper--mapa]="isMapaRouteActive()"
+  [class.layout-wrapper--mapa-chrome-hidden]="isMapaRouteActive() && mapaChromeHidden()"
+>
+  @if (isMapaRouteActive()) {
+    <button
+      type="button"
+      class="mapa-chrome-toggle"
+      [class.is-floating]="mapaChromeHidden()"
+      [attr.aria-pressed]="!mapaChromeHidden()"
+      [attr.aria-label]="mapaChromeHidden() ? 'Mostrar menú principal' : 'Ocultar menú principal'"
+      (click)="toggleMapaChrome()"
+    >
+      <span class="mapa-chrome-toggle-icon" aria-hidden="true">
+        {{ mapaChromeHidden() ? '☰' : '✕' }}
+      </span>
+      <span class="mapa-chrome-toggle-label">
+        {{ mapaChromeHidden() ? 'Mostrar menú' : 'Ocultar menú' }}
+      </span>
+      <span class="mapa-chrome-toggle-hint">Esc</span>
+    </button>
+  }
+
+  @if (!isMapaRouteActive() || !mapaChromeHidden()) {
     <app-navbar />
   }
 
-  @if (!isMapaFullscreen() && isMobileVisible()) {
+  @if ((!isMapaRouteActive() || !mapaChromeHidden()) && isMobileVisible()) {
     <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
   }
 
-  @if (!isMapaFullscreen()) {
+  @if (!isMapaRouteActive() || !mapaChromeHidden()) {
     <div
       class="layout-sidebar"
       [class.sidebar-collapsed]="isCollapsed()"
@@ -19,12 +42,12 @@
 
   <div
     class="layout-main-container"
-    [class.sidebar-collapsed]="!isMapaFullscreen() && isCollapsed()"
-    [class.layout-main-container--mapa]="isMapaFullscreen()"
+    [class.sidebar-collapsed]="(!isMapaRouteActive() || !mapaChromeHidden()) && isCollapsed()"
+    [class.layout-main-container--mapa]="isMapaRouteActive() && mapaChromeHidden()"
   >
     <div
       class="main-content"
-      [class.main-content--mapa]="isMapaFullscreen()"
+      [class.main-content--mapa]="isMapaRouteActive() && mapaChromeHidden()"
     >
       <router-outlet></router-outlet>
     </div>

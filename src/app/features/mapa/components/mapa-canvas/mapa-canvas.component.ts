@@ -1,3 +1,4 @@
+
 import {
   AfterViewInit,
   Component,
@@ -97,7 +98,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       label: 'OpenStreetMap',
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       options: {
-        maxZoom: 22,
+        maxZoom: 20,
+        maxNativeZoom: 19,
         attribution: '&copy; OpenStreetMap contributors',
       },
     },
@@ -108,6 +110,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       options: {
         subdomains: 'abcd',
         maxZoom: 20,
+        maxNativeZoom: 20,
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       },
     },
@@ -118,6 +121,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       options: {
         subdomains: 'abcd',
         maxZoom: 20,
+        maxNativeZoom: 20,
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       },
     },
@@ -126,7 +130,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       label: 'Satélite Esri',
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       options: {
-        maxZoom: 22,
+        maxZoom: 19,
+        maxNativeZoom: 19,
         attribution: 'Tiles &copy; Esri',
       },
     },
@@ -135,7 +140,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       label: 'Satélite Google',
       url: 'https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga',
       options: {
-        maxZoom: 22,
+        maxZoom: 20,
+        maxNativeZoom: 20,
         attribution: 'Google imagery · verificar licencias antes de uso productivo',
       },
     },
@@ -145,6 +151,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
       options: {
         maxZoom: 17,
+        maxNativeZoom: 17,
         attribution:
           'Map data &copy; OpenStreetMap contributors, SRTM | Map style &copy; OpenTopoMap',
       },
@@ -162,7 +169,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private readonly DEFAULT_FILL = '#38bdf8';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
-  private readonly LABELS_MIN_ZOOM = 14;
+  private readonly LABELS_MIN_ZOOM = 16;
+  private readonly LABELS_MAX_VISIBLE = 60;
+  private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 24;
   private readonly MEASURE_STROKE = '#f59e0b';
   private readonly MEASURE_FILL = '#fde68a';
 
@@ -175,9 +184,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private baseLayer!: L.TileLayer;
   private readonly drawnItems = new L.FeatureGroup();
   private readonly measureLayer = new L.FeatureGroup();
+  private readonly labelsLayer = new L.LayerGroup();
   private readonly renderedLayers = new Map<number, L.Layer>();
   private readonly elementBoundsCache = new Map<number, CachedElementBounds>();
-  private readonly vectorRenderer = L.canvas({ padding: 0.8 });
+  private readonly vectorRenderer = L.canvas({ padding: 0.8, tolerance: 10 });
 
   private activeDrawHandler: any = null;
   private renderFrameId: number | null = null;
@@ -450,6 +460,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       zoom: this.mapZoom,
       zoomControl: true,
       preferCanvas: true,
+      maxZoom: 20,
     });
 
     const defaultBasemap = this.basemapOptions.find((item) => item.key === this.selectedBasemap)!;
@@ -458,6 +469,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.drawnItems.addTo(this.map);
     this.measureLayer.addTo(this.map);
+    this.labelsLayer.addTo(this.map);
 
     this.map.on('click', (event: L.LeafletMouseEvent) => {
       if (this.basemapMenuOpen) {
@@ -1087,6 +1099,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     this.applySelectionStyle();
+    this.renderVisibleLabels(renderQueue);
   }
 
   private bindTooltipForLayer(layer: L.Layer, elemento: MapaElemento) {
@@ -1102,30 +1115,93 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       anyLayer.unbindTooltip();
     }
 
-    const permanent = this.shouldShowPersistentLabel(elemento);
     const direction = elemento.geomTipo === 'polygon' ? 'center' : 'top';
 
     anyLayer.bindTooltip(safeName, {
       direction,
-      sticky: !permanent,
-      permanent,
-      opacity: permanent ? 0.92 : 0.96,
-      className: permanent
-        ? 'mapa-element-tooltip mapa-element-tooltip--persistent'
-        : 'mapa-element-tooltip',
+      sticky: true,
+      permanent: false,
+      opacity: 0.96,
+      className: 'mapa-element-tooltip',
     });
   }
 
-  private shouldShowPersistentLabel(_elemento: MapaElemento): boolean {
-    if (!this.labelsVisible) {
-      return false;
+  private shouldShowPersistentLabels(): boolean {
+    return this.labelsVisible && this.currentZoom >= this.LABELS_MIN_ZOOM;
+  }
+
+  private renderVisibleLabels(renderedElementos: MapaElemento[]) {
+    this.labelsLayer.clearLayers();
+
+    if (!this.shouldShowPersistentLabels()) {
+      return;
     }
 
-    if (this.performanceModeEnabled && this.currentZoom < this.LABELS_MIN_ZOOM) {
-      return false;
+    const viewBounds = this.currentViewBounds;
+    if (!viewBounds) {
+      return;
     }
 
-    return true;
+    const maxLabels = this.performanceModeEnabled
+      ? this.LABELS_PERFORMANCE_MAX_VISIBLE
+      : this.LABELS_MAX_VISIBLE;
+
+    let painted = 0;
+
+    for (const elemento of renderedElementos) {
+      if (painted >= maxLabels) {
+        break;
+      }
+
+      const name = (elemento.nombre || '').trim();
+      if (!name) {
+        continue;
+      }
+
+      const layer = this.renderedLayers.get(elemento.idGeoElemento) ?? null;
+      if (!layer) {
+        continue;
+      }
+
+      const anchor = this.getLabelAnchor(layer, elemento);
+      if (!anchor || !viewBounds.pad(0.08).contains(anchor)) {
+        continue;
+      }
+
+      const label = L.marker(anchor, {
+        interactive: false,
+        zIndexOffset: 1200,
+        icon: this.createPersistentLabelIcon(name),
+      });
+
+      this.labelsLayer.addLayer(label);
+      painted += 1;
+    }
+  }
+
+  private getLabelAnchor(layer: L.Layer, elemento: MapaElemento): L.LatLng | null {
+    if (elemento.geomTipo === 'point') {
+      return this.tryGetLayerLatLng(layer);
+    }
+
+    const anyLayer = layer as any;
+    if (typeof anyLayer.getBounds === 'function') {
+      const bounds = anyLayer.getBounds();
+      if (bounds?.isValid?.()) {
+        return bounds.getCenter();
+      }
+    }
+
+    return this.tryGetLayerLatLng(layer);
+  }
+
+  private createPersistentLabelIcon(text: string): L.DivIcon {
+    return L.divIcon({
+      className: 'mapa-element-label-host',
+      html: `<div class="mapa-element-label">${this.escapeHtml(text)}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
   }
 
   private openTooltipForLayer(layer: L.Layer | null) {
@@ -1442,6 +1518,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          lineCap: 'round',
+          lineJoin: 'round',
           renderer: this.vectorRenderer,
         }
       );
@@ -1461,6 +1539,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          lineCap: 'round',
+          lineJoin: 'round',
           fillColor: style.colorFill,
           fillOpacity: 0.15,
           renderer: this.vectorRenderer,
@@ -1480,6 +1560,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          lineCap: 'round',
+          lineJoin: 'round',
           renderer: this.vectorRenderer,
         }
       );
@@ -1504,6 +1586,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         {
           color: style.colorStroke,
           weight: style.strokeWidth,
+          lineCap: 'round',
+          lineJoin: 'round',
           fillColor: style.colorFill,
           fillOpacity: 0.15,
           renderer: this.vectorRenderer,
@@ -2015,7 +2099,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
+      .replace(/\"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 

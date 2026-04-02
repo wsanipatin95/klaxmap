@@ -5,6 +5,9 @@
 
 .layout-wrapper--mapa {
   min-height: 100dvh;
+}
+
+.layout-wrapper--mapa-chrome-hidden {
   background: #020617;
 }
 
@@ -20,4 +23,87 @@
   padding: 0 !important;
   background: #020617;
   overflow: hidden;
+}
+
+.mapa-chrome-toggle {
+  position: fixed;
+  top: 0.85rem;
+  right: 0.95rem;
+  z-index: 2200;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(8, 18, 36, 0.92);
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.32);
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.mapa-chrome-toggle:hover {
+  transform: translateY(-1px);
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.36);
+}
+
+.mapa-chrome-toggle.is-floating {
+  top: 1rem;
+  right: 1rem;
+}
+
+.mapa-chrome-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.mapa-chrome-toggle-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.mapa-chrome-toggle-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 1.45rem;
+  padding: 0 0.42rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .mapa-chrome-toggle {
+    top: 0.7rem;
+    right: 0.7rem;
+    min-height: 2.5rem;
+    padding: 0.52rem 0.8rem;
+  }
+
+  .mapa-chrome-toggle-label {
+    font-size: 0.74rem;
+  }
+
+  .mapa-chrome-toggle-hint {
+    display: none;
+  }
 }
