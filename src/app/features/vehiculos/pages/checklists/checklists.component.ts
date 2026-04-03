@@ -182,7 +182,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
   }
 
   cargarTipos() {
-    this.repo.listarTipos('', 0, 500, true).subscribe({
+    this.repo.listarTipos('', 0, 100, false).subscribe({
       next: (res) => {
         this.tipos.set(res.items ?? []);
       },

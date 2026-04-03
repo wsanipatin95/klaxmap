@@ -884,7 +884,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (this.articuloSearchTimer) clearTimeout(this.articuloSearchTimer);
 
     this.articuloSearchTimer = setTimeout(() => {
-      this.repo.listarArticulos(query, 0, 30, false).subscribe({
+      this.repo.listarArticulos(query, 0, 100, false).subscribe({
         next: (res) => {
           const current = { ...this.articuloCache() };
           for (const item of res.items ?? []) {

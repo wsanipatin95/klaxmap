@@ -263,7 +263,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.error.set(null);
 
     this.repo
-      .listarTipos(this.q().trim(), 0, 500, true)
+      .listarTipos(this.q().trim(), 0, 100, false)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
@@ -302,7 +302,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.articuloLoading.set(true);
 
     this.repo
-      .listarArticulos('', 0, 500, true)
+      .listarArticulos('', 0, 100, false)
       .pipe(finalize(() => this.articuloLoading.set(false)))
       .subscribe({
         next: (res) => {
@@ -630,7 +630,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.articuloSearchTimer = setTimeout(() => {
       this.articuloLoading.set(true);
 
-      this.repo.listarArticulos(query, 0, 50, false)
+      this.repo.listarArticulos(query, 0, 100, false)
         .pipe(finalize(() => this.articuloLoading.set(false)))
         .subscribe({
           next: (res) => {

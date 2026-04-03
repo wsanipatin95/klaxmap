@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Observable, finalize, forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -13,23 +14,16 @@ import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
-  VehArticuloCatalogo,
-  VehCaja,
   VehCobro,
-  VehCobroCrearRequest,
   VehFactura,
-  VehFacturaContabilizarRequest,
   VehFacturaCrearRequest,
-  VehFacturacionWorkflowRequest,
-  VehFacturacionWorkflowResultado,
   VehFacturaDetalleResponse,
 } from '../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 
-type FacturacionTab = 'workflow' | 'facturas' | 'cobros' | 'cajas' | 'articulos';
-type DrawerMode = 'workflow' | 'factura' | 'cobro' | 'caja' | 'contabilizar' | null;
+type QuickFilter = 'all' | 'saldo' | 'pagadas' | 'credito' | 'anuladas';
 
 @Component({
   selector: 'app-vehiculos-facturacion',
@@ -56,25 +50,28 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
   private repo = inject(VehiculosRepository);
   private notify = inject(NotifyService);
   private confirm = inject(VehiculosConfirmService);
+  private router = inject(Router);
 
   q = '';
   loading = signal(false);
   saving = signal(false);
-  activeTab = signal<FacturacionTab>('workflow');
-
-  articulos = signal<VehArticuloCatalogo[]>([]);
-  facturas = signal<VehFactura[]>([]);
-  cobros = signal<VehCobro[]>([]);
-  cajas = signal<VehCaja[]>([]);
-  selectedFactura = signal<VehFactura | null>(null);
-  selectedCobro = signal<VehCobro | null>(null);
-  facturaDetalle = signal<VehFacturaDetalleResponse | null>(null);
-  cobroDetalle = signal<Record<string, unknown> | null>(null);
-  workflowResultado = signal<VehFacturacionWorkflowResultado | null>(null);
-
   drawerVisible = signal(false);
-  drawerMode = signal<DrawerMode>(null);
   dirty = signal(false);
+
+  quickFilter = signal<QuickFilter>('all');
+
+  facturas = signal<VehFactura[]>([]);
+  selectedFactura = signal<VehFactura | null>(null);
+  facturaDetalle = signal<VehFacturaDetalleResponse | null>(null);
+  cobrosFactura = signal<VehCobro[]>([]);
+
+  readonly quickFilters: Array<{ key: QuickFilter; label: string }> = [
+    { key: 'all', label: 'Todas' },
+    { key: 'saldo', label: 'Con saldo' },
+    { key: 'pagadas', label: 'Pagadas' },
+    { key: 'credito', label: 'Crédito' },
+    { key: 'anuladas', label: 'Anuladas' },
+  ];
 
   facturaForm = this.fb.group({
     idVehOrdenTrabajoFk: [null as number | null, Validators.required],
@@ -92,62 +89,46 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     usarPrecioRepuesto: [true],
   });
 
-  cobroForm = this.fb.group({
-    idFacVenta: [null as number | null, Validators.required],
-    valor: [0, Validators.required],
-    fecha: [''],
-    cen: [null as number | null],
-    idAdmPtoemi: [null as number | null],
-    idFacCaja: [null as number | null],
-    concepto: [''],
-    idCntFormaPagoFk: [null as number | null],
-    idBanDocBancoFk: [null as number | null],
-    traCash: [''],
-    idBanBancoFk: [null as number | null],
-    idBanBancoSubFk: [null as number | null],
-    idTaxTarjetaDiferidoFk: [null as number | null],
-    idBanTarjetaFk: [null as number | null],
-    referenciaDatafast: [''],
-    crearCajaSiNoExiste: [true],
-    contabilizar: [true],
-    idCntPlanFormaPagoFk: [null as number | null],
-    idCntTipoFk: [20],
+  readonly filteredFacturas = computed(() => {
+    const items = this.facturas();
+    const filter = this.quickFilter();
+
+    switch (filter) {
+      case 'saldo':
+        return items.filter((item) => Number(item.cxcDeuda || 0) > 0);
+      case 'pagadas':
+        return items.filter((item) => Number(item.cxcDeuda || 0) <= 0);
+      case 'credito':
+        return items.filter((item) => this.isCredito(item));
+      case 'anuladas':
+        return items.filter((item) => this.isAnulada(item));
+      default:
+        return items;
+    }
   });
 
-  cajaForm = this.fb.group({
-    idAdmPtoemi: [null as number | null],
-    cen: [null as number | null],
-    saldoCaja: [0],
-    comentario: ['Caja creada desde frontend vehicular.'],
-    estadoInicial: ['p'],
+  readonly facturaActual = computed<VehFactura | null>(() => {
+    return this.facturaDetalle()?.factura ?? this.selectedFactura() ?? null;
   });
 
-  contabilizarForm = this.fb.group({
-    idFacVenta: [null as number | null, Validators.required],
-    idCntTipoFk: [20],
-    fechaContable: [''],
-    concepto: ['Factura vehicular'],
-  });
+  readonly totalFacturadoListado = computed(() =>
+    this.money(this.filteredFacturas().reduce((acc, item) => acc + Number(item.total || 0), 0)),
+  );
 
-  workflowForm = this.fb.group({
-    idVehOrdenTrabajoFk: [null as number | null, Validators.required],
-    idsVehOrdenTrabajoRepuesto: [''],
-    observacionFactura: [''],
-    dni: [null as number | null, Validators.required],
-    subtotalCero: [0, Validators.required],
-    subtotalIva: [0, Validators.required],
-    iva: [0, Validators.required],
-    descuento: [0, Validators.required],
-    total: [0, Validators.required],
-    usu: [null as number | null],
-  });
+  readonly saldoPendienteListado = computed(() =>
+    this.money(this.filteredFacturas().reduce((acc, item) => acc + Number(item.cxcDeuda || 0), 0)),
+  );
+
+  readonly totalCobradoListado = computed(() =>
+    this.money(this.filteredFacturas().reduce((acc, item) => {
+      const total = Number(item.total || 0);
+      const saldo = Number(item.cxcDeuda || 0);
+      return acc + Math.max(total - saldo, 0);
+    }, 0)),
+  );
 
   constructor() {
     this.facturaForm.valueChanges.subscribe(() => this.dirty.set(true));
-    this.cobroForm.valueChanges.subscribe(() => this.dirty.set(true));
-    this.cajaForm.valueChanges.subscribe(() => this.dirty.set(true));
-    this.contabilizarForm.valueChanges.subscribe(() => this.dirty.set(true));
-    this.workflowForm.valueChanges.subscribe(() => this.dirty.set(true));
     this.cargar();
   }
 
@@ -156,120 +137,120 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     return true;
   }
 
+  volver() {
+    if (this.drawerVisible() && this.dirty()) {
+      this.confirm.confirmDiscard().then((ok) => {
+        if (ok) this.router.navigate(['/app/vehiculos/dashboard']);
+      });
+      return;
+    }
+
+    this.router.navigate(['/app/vehiculos/dashboard']);
+  }
+
+  irAOrdenes() {
+    if (this.drawerVisible() && this.dirty()) {
+      this.confirm.confirmDiscard().then((ok) => {
+        if (ok) this.router.navigate(['/app/vehiculos/ordenes']);
+      });
+      return;
+    }
+
+    this.router.navigate(['/app/vehiculos/ordenes']);
+  }
+
   cargar() {
     this.loading.set(true);
-    forkJoin({
-      articulos: this.repo.listarArticulos(this.q, 0, 100, true),
-      facturas: this.repo.listarFacturas(this.q, 0, 100, true),
-      cobros: this.repo.listarCobros(this.q, 0, 100, true),
-      cajas: this.repo.listarCajas(this.q, 0, 100, true),
-    }).pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: ({ articulos, facturas, cobros, cajas }) => {
-        this.articulos.set(articulos.items ?? []);
-        this.facturas.set(facturas.items ?? []);
-        this.cobros.set(cobros.items ?? []);
-        this.cajas.set(cajas.items ?? []);
-      },
-      error: (err) => this.notify.error('No se pudo cargar facturación/cobros', err?.message),
-    });
+
+    this.repo
+      .listarFacturas(this.q, 0, 100, false)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (res) => {
+          const items = res.items ?? [];
+          this.facturas.set(items);
+
+          const currentId = this.selectedFactura()?.idFacVenta ?? null;
+          const selected = currentId
+            ? items.find((item) => item.idFacVenta === currentId) ?? null
+            : (items[0] ?? null);
+
+          if (selected) {
+            this.seleccionarFactura(selected, false);
+          } else {
+            this.selectedFactura.set(null);
+            this.facturaDetalle.set(null);
+            this.cobrosFactura.set([]);
+          }
+        },
+        error: (err) => this.notify.error('No se pudo cargar facturación', err?.message),
+      });
   }
 
-  seleccionarFactura(item: VehFactura) {
+  seleccionarFactura(item: VehFactura, scrollToTop = true) {
     this.selectedFactura.set(item);
-    this.repo.obtenerFactura(item.idFacVenta).subscribe({
-      next: (res) => this.facturaDetalle.set(res),
-      error: (err) => this.notify.error('No se pudo cargar detalle de factura', err?.message),
+
+    forkJoin({
+      detalle: this.repo.obtenerFactura(item.idFacVenta),
+      cobros: this.repo.listarCobros('', 0, 100, false, { idFacVenta: item.idFacVenta }),
+    }).subscribe({
+      next: ({ detalle, cobros }) => {
+        this.facturaDetalle.set(detalle);
+        this.cobrosFactura.set(cobros.items ?? []);
+
+        if (scrollToTop && typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+      error: (err) => this.notify.error('No se pudo cargar el detalle de la factura', err?.message),
     });
   }
 
-  seleccionarCobro(item: VehCobro) {
-    this.selectedCobro.set(item);
-    this.repo.obtenerCobro(item.idFacVentaCobro).subscribe({
-      next: (res) => this.cobroDetalle.set(res),
-      error: (err) => this.notify.error('No se pudo cargar detalle de cobro', err?.message),
-    });
+  setQuickFilter(filter: QuickFilter) {
+    this.quickFilter.set(filter);
+
+    const items = this.filteredFacturas();
+    const current = this.selectedFactura();
+    const selected = current
+      ? items.find((item) => item.idFacVenta === current.idFacVenta) ?? null
+      : null;
+
+    if (selected) {
+      this.seleccionarFactura(selected, false);
+      return;
+    }
+
+    if (items.length) {
+      this.seleccionarFactura(items[0], false);
+      return;
+    }
+
+    this.selectedFactura.set(null);
+    this.facturaDetalle.set(null);
+    this.cobrosFactura.set([]);
   }
 
-  abrirDrawer(mode: DrawerMode) {
-    this.drawerMode.set(mode);
+  abrirDrawer() {
+    const relation = this.facturaDetalle()?.ordenesTrabajo?.[0] ?? null;
+
+    this.facturaForm.reset({
+      idVehOrdenTrabajoFk: relation?.idVehOrdenTrabajoFk ?? null,
+      idsVehOrdenTrabajoRepuesto: '',
+      tipoFacturacion: relation?.tipoFacturacion || 'PARCIAL',
+      observacion: '',
+      dni: this.facturaActual()?.dni ?? null,
+      cen: this.facturaActual()?.cen ?? null,
+      idAdmPtoemi: null,
+      credito: false,
+      entrada: 0,
+      cuotas: 1,
+      fechaPrimerVencimiento: '',
+      idTaxCompAutFk: 1,
+      usarPrecioRepuesto: true,
+    });
+
     this.drawerVisible.set(true);
     this.dirty.set(false);
-
-    if (mode === 'factura') {
-      this.facturaForm.reset({
-        idVehOrdenTrabajoFk: null,
-        idsVehOrdenTrabajoRepuesto: '',
-        tipoFacturacion: 'PARCIAL',
-        observacion: '',
-        dni: null,
-        cen: null,
-        idAdmPtoemi: null,
-        credito: false,
-        entrada: 0,
-        cuotas: 1,
-        fechaPrimerVencimiento: '',
-        idTaxCompAutFk: 1,
-        usarPrecioRepuesto: true,
-      });
-    }
-
-    if (mode === 'cobro') {
-      this.cobroForm.reset({
-        idFacVenta: this.selectedFactura()?.idFacVenta ?? null,
-        valor: 0,
-        fecha: '',
-        cen: this.selectedFactura()?.cen ?? null,
-        idAdmPtoemi: null,
-        idFacCaja: null,
-        concepto: '',
-        idCntFormaPagoFk: null,
-        idBanDocBancoFk: null,
-        traCash: '',
-        idBanBancoFk: null,
-        idBanBancoSubFk: null,
-        idTaxTarjetaDiferidoFk: null,
-        idBanTarjetaFk: null,
-        referenciaDatafast: '',
-        crearCajaSiNoExiste: true,
-        contabilizar: true,
-        idCntPlanFormaPagoFk: null,
-        idCntTipoFk: 20,
-      });
-    }
-
-    if (mode === 'caja') {
-      this.cajaForm.reset({
-        idAdmPtoemi: null,
-        cen: null,
-        saldoCaja: 0,
-        comentario: 'Caja creada desde frontend vehicular.',
-        estadoInicial: 'p',
-      });
-    }
-
-    if (mode === 'contabilizar') {
-      this.contabilizarForm.reset({
-        idFacVenta: this.selectedFactura()?.idFacVenta ?? null,
-        idCntTipoFk: 20,
-        fechaContable: '',
-        concepto: 'Factura vehicular',
-      });
-    }
-
-    if (mode === 'workflow') {
-      this.workflowForm.reset({
-        idVehOrdenTrabajoFk: null,
-        idsVehOrdenTrabajoRepuesto: '',
-        observacionFactura: '',
-        dni: null,
-        subtotalCero: 0,
-        subtotalIva: 0,
-        iva: 0,
-        descuento: 0,
-        total: 0,
-        usu: null,
-      });
-    }
   }
 
   cerrarDrawer = async () => {
@@ -277,140 +258,170 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
       const ok = await this.confirm.confirmDiscard();
       if (!ok) return;
     }
+
     this.drawerVisible.set(false);
-    this.drawerMode.set(null);
     this.dirty.set(false);
   };
 
   submit() {
-    const mode = this.drawerMode();
-    if (!mode) return;
-
-    this.saving.set(true);
-    let request$: Observable<any>;
-
-    if (mode === 'factura') {
-      if (this.facturaForm.invalid) {
-        this.facturaForm.markAllAsTouched();
-        this.saving.set(false);
-        this.notify.warn('Formulario incompleto', 'Debes indicar la OT.');
-        return;
-      }
-
-      const payload: VehFacturaCrearRequest = {
-        idVehOrdenTrabajoFk: Number(this.facturaForm.value.idVehOrdenTrabajoFk),
-        idsVehOrdenTrabajoRepuesto: this.toIdList(this.facturaForm.value.idsVehOrdenTrabajoRepuesto),
-        tipoFacturacion: this.facturaForm.value.tipoFacturacion || null,
-        observacion: this.facturaForm.value.observacion?.trim() || null,
-        dni: this.facturaForm.value.dni ?? null,
-        cen: this.facturaForm.value.cen ?? null,
-        idAdmPtoemi: this.facturaForm.value.idAdmPtoemi ?? null,
-        credito: !!this.facturaForm.value.credito,
-        entrada: Number(this.facturaForm.value.entrada || 0),
-        cuotas: Number(this.facturaForm.value.cuotas || 1),
-        fechaPrimerVencimiento: this.facturaForm.value.fechaPrimerVencimiento || null,
-        idTaxCompAutFk: this.facturaForm.value.idTaxCompAutFk ?? null,
-        usarPrecioRepuesto: !!this.facturaForm.value.usarPrecioRepuesto,
-      };
-
-      request$ = this.repo.crearFactura(payload);
-    } else if (mode === 'cobro') {
-      if (this.cobroForm.invalid) {
-        this.cobroForm.markAllAsTouched();
-        this.saving.set(false);
-        this.notify.warn('Formulario incompleto', 'Factura y valor son obligatorios.');
-        return;
-      }
-      const payload: VehCobroCrearRequest = {
-        idFacVenta: Number(this.cobroForm.value.idFacVenta),
-        valor: Number(this.cobroForm.value.valor || 0),
-        fecha: this.toTimestamp(this.cobroForm.value.fecha),
-        cen: this.cobroForm.value.cen ?? null,
-        idAdmPtoemi: this.cobroForm.value.idAdmPtoemi ?? null,
-        idFacCaja: this.cobroForm.value.idFacCaja ?? null,
-        concepto: this.cobroForm.value.concepto?.trim() || null,
-        idCntFormaPagoFk: this.cobroForm.value.idCntFormaPagoFk ?? null,
-        idBanDocBancoFk: this.cobroForm.value.idBanDocBancoFk ?? null,
-        traCash: this.cobroForm.value.traCash?.trim() || null,
-        idBanBancoFk: this.cobroForm.value.idBanBancoFk ?? null,
-        idBanBancoSubFk: this.cobroForm.value.idBanBancoSubFk ?? null,
-        idTaxTarjetaDiferidoFk: this.cobroForm.value.idTaxTarjetaDiferidoFk ?? null,
-        idBanTarjetaFk: this.cobroForm.value.idBanTarjetaFk ?? null,
-        referenciaDatafast: this.cobroForm.value.referenciaDatafast?.trim() || null,
-        crearCajaSiNoExiste: !!this.cobroForm.value.crearCajaSiNoExiste,
-        contabilizar: !!this.cobroForm.value.contabilizar,
-        idCntPlanFormaPagoFk: this.cobroForm.value.idCntPlanFormaPagoFk ?? null,
-        idCntTipoFk: this.cobroForm.value.idCntTipoFk ?? null,
-      };
-      request$ = this.repo.crearCobro(payload);
-    } else if (mode === 'caja') {
-      request$ = this.repo.asegurarCaja({
-        idAdmPtoemi: this.cajaForm.value.idAdmPtoemi ?? null,
-        cen: this.cajaForm.value.cen ?? null,
-        saldoCaja: Number(this.cajaForm.value.saldoCaja || 0),
-        comentario: this.cajaForm.value.comentario?.trim() || null,
-        estadoInicial: this.cajaForm.value.estadoInicial?.trim() || null,
-      });
-    } else if (mode === 'contabilizar') {
-      if (this.contabilizarForm.invalid) {
-        this.contabilizarForm.markAllAsTouched();
-        this.saving.set(false);
-        this.notify.warn('Formulario incompleto', 'Debes indicar la factura.');
-        return;
-      }
-      const payload: VehFacturaContabilizarRequest = {
-        idFacVenta: Number(this.contabilizarForm.value.idFacVenta),
-        idCntTipoFk: this.contabilizarForm.value.idCntTipoFk ?? null,
-        fechaContable: this.contabilizarForm.value.fechaContable || null,
-        concepto: this.contabilizarForm.value.concepto?.trim() || null,
-      };
-      request$ = this.repo.contabilizarFactura(payload);
-    } else {
-      if (this.workflowForm.invalid) {
-        this.workflowForm.markAllAsTouched();
-        this.saving.set(false);
-        this.notify.warn('Formulario incompleto', 'Debes indicar la OT para el workflow.');
-        return;
-      }
-      const idsVehOrdenTrabajoRepuesto =
-        this.toIdList(this.workflowForm.value.idsVehOrdenTrabajoRepuesto) ?? [];
-
-      const dni = this.workflowForm.value.dni;
-      if (dni == null) {
-        this.saving.set(false);
-        this.notify.warn('Formulario incompleto', 'Debes indicar el DNI del cliente.');
-        return;
-      }
-
-      const payload: VehFacturacionWorkflowRequest = {
-        idVehOrdenTrabajoFk: Number(this.workflowForm.value.idVehOrdenTrabajoFk),
-        dni: Number(dni),
-        idsVehOrdenTrabajoRepuesto,
-        subtotalCero: Number(this.workflowForm.value.subtotalCero || 0),
-        subtotalIva: Number(this.workflowForm.value.subtotalIva || 0),
-        iva: Number(this.workflowForm.value.iva || 0),
-        descuento: Number(this.workflowForm.value.descuento || 0),
-        total: Number(this.workflowForm.value.total || 0),
-        observacionFactura: this.workflowForm.value.observacionFactura?.trim() || null,
-        usu: this.workflowForm.value.usu ?? null,
-      };
-      request$ = this.repo.facturarCobrarWorkflow(payload);
+    if (this.facturaForm.invalid) {
+      this.facturaForm.markAllAsTouched();
+      this.notify.warn('Formulario incompleto', 'Debes indicar la OT.');
+      return;
     }
 
-    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: (res: any) => {
-        this.notify.success('Operación exitosa', res?.mensaje || 'Proceso ejecutado correctamente.');
-        if (mode === 'workflow') this.workflowResultado.set(res.data as VehFacturacionWorkflowResultado);
-        this.drawerVisible.set(false);
-        this.drawerMode.set(null);
-        this.dirty.set(false);
-        this.cargar();
-      },
-      error: (err: any) => this.notify.error('No se pudo ejecutar la operación', err?.message),
-    });
+    this.saving.set(true);
+
+    const payload: VehFacturaCrearRequest = {
+      idVehOrdenTrabajoFk: Number(this.facturaForm.value.idVehOrdenTrabajoFk),
+      idsVehOrdenTrabajoRepuesto: this.toIdList(this.facturaForm.value.idsVehOrdenTrabajoRepuesto),
+      tipoFacturacion: this.facturaForm.value.tipoFacturacion || null,
+      observacion: this.facturaForm.value.observacion?.trim() || null,
+      dni: this.facturaForm.value.dni ?? null,
+      cen: this.facturaForm.value.cen ?? null,
+      idAdmPtoemi: this.facturaForm.value.idAdmPtoemi ?? null,
+      credito: !!this.facturaForm.value.credito,
+      entrada: Number(this.facturaForm.value.entrada || 0),
+      cuotas: Number(this.facturaForm.value.cuotas || 1),
+      fechaPrimerVencimiento: this.facturaForm.value.fechaPrimerVencimiento || null,
+      idTaxCompAutFk: this.facturaForm.value.idTaxCompAutFk ?? null,
+      usarPrecioRepuesto: !!this.facturaForm.value.usarPrecioRepuesto,
+    };
+
+    const request$: Observable<any> = this.repo.crearFactura(payload);
+
+    request$
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (res: any) => {
+          this.notify.success('Factura creada', res?.mensaje || 'La factura fue creada correctamente.');
+          this.drawerVisible.set(false);
+          this.dirty.set(false);
+          this.cargar();
+        },
+        error: (err: any) => this.notify.error('No se pudo crear la factura', err?.message),
+      });
   }
 
- 
+  facturaNumber(item?: VehFactura | null): string {
+    if (!item) return 'Factura';
+    if (item.numeroFactura?.trim()) return item.numeroFactura;
+    const estab = String(item.estab ?? 0).padStart(3, '0');
+    const ptoemi = String(item.ptoemi ?? 0).padStart(3, '0');
+    const sec = String(item.secuencial ?? item.idFacVenta ?? 0).padStart(9, '0');
+    return `${estab}-${ptoemi}-${sec}`;
+  }
+
+  facturaCliente(item?: VehFactura | null): string {
+    if (!item) return 'Cliente';
+    return item.nombre || item.ruc || (item.dni ? `DNI ${item.dni}` : 'Cliente');
+  }
+
+  formatMoney(value?: number | null): string {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('es-EC', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  formatDateShort(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const safe = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const date = new Date(safe);
+
+    if (Number.isNaN(date.getTime())) {
+      return raw.slice(0, 10);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
+
+  severityEstado(estado?: string | null) {
+    const value = String(estado || '').toUpperCase();
+    if (value.includes('PAG') || value.includes('COBR') || value.includes('ACTIV')) return 'success';
+    if (value.includes('SRI') || value.includes('EMIT')) return 'info';
+    if (value.includes('PEND')) return 'warn';
+    if (value.includes('ANUL') || value.includes('RECHAZ')) return 'danger';
+    return 'secondary';
+  }
+
+  detalleLabel(item: any): string {
+    const code = item?.artcod || (item?.art ? `ART-${item.art}` : '');
+    const detail =
+      item?.detalle ||
+      item?.descripcion ||
+      item?.articulo ||
+      item?.observaciones ||
+      'Detalle';
+    return [code, detail].filter(Boolean).join(' · ');
+  }
+
+  detalleCantidad(item: any): number {
+    return Number(item?.unidades ?? item?.cantidad ?? 0);
+  }
+
+  detallePrecio(item: any): number {
+    return Number(item?.valuni ?? item?.precioUnitario ?? 0);
+  }
+
+  detalleDescuento(item: any): number {
+    return Number(item?.descuento ?? 0);
+  }
+
+  detalleIvaPct(item: any): number {
+    return this.normalizeIva(item?.ivaPorcen ?? item?.ivaPorcentaje ?? item?.porcentaje ?? 0);
+  }
+
+  detalleSubtotal(item: any): number {
+    const cantidad = this.detalleCantidad(item);
+    const precio = this.detallePrecio(item);
+    return this.money(cantidad * precio);
+  }
+
+  detalleTotal(item: any): number {
+    const subtotal = this.detalleSubtotal(item);
+    const descuento = this.detalleDescuento(item);
+    const ivaPct = this.detalleIvaPct(item);
+    const neto = subtotal - descuento;
+    const iva = neto * (ivaPct / 100);
+    return this.money(neto + iva);
+  }
+
+  cobradoFactura(item?: VehFactura | null): number {
+    if (!item) return 0;
+    const total = Number(item.total || 0);
+    const saldo = Number(item.cxcDeuda || 0);
+    return this.money(Math.max(total - saldo, 0));
+  }
+
+  facturaDetalleItems() {
+    return this.facturaDetalle()?.detalle ?? [];
+  }
+
+  facturaCxcItems() {
+    return this.facturaDetalle()?.cxc ?? [];
+  }
+
+  ordenesFactura() {
+    return this.facturaDetalle()?.ordenesTrabajo ?? [];
+  }
+
+  private isCredito(item: VehFactura): boolean {
+    return Number(item.cuotas || 0) > 1 || Number(item.entrada || 0) > 0 || Number(item.cxc || 0) > 0;
+  }
+
+  private isAnulada(item: VehFactura): boolean {
+    const estado = String(item.sriEstado || '').toUpperCase();
+    return estado.includes('ANUL') || estado.includes('RECHAZ');
+  }
 
   private toIdList(raw?: string | null): number[] | null {
     if (!raw || !raw.trim()) return null;
@@ -421,14 +432,15 @@ export class VehiculosFacturacionComponent implements PendingChangesAware {
     return ids.length ? ids : null;
   }
 
-  private toTimestamp(value?: string | null) {
-    if (!value) return null;
-    return value.includes('T') || value.includes(' ') ? value : `${value} 00:00:00`;
+  private money(value: unknown): number {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num)) return 0;
+    return Math.round((num + Number.EPSILON) * 100) / 100;
   }
 
-  private toIsoStartOfDayWithOffset(value?: string | null) {
-    if (!value) return null;
-    return value.includes('T') ? value : `${value}T00:00:00-05:00`;
+  private normalizeIva(value: unknown): number {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num) || num <= 0) return 0;
+    return num > 1 ? num : num * 100;
   }
-  
 }

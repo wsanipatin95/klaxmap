@@ -665,7 +665,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       return;
     }
 
-    this.repo.listarClientes('', 0, 200, true).subscribe({
+    this.repo.listarClientes('', 0, 100, false).subscribe({
       next: (res) => {
         const cli = this.findClienteByOrdenDni(res.items ?? [], targetDni);
         this.clienteSeleccionado.set(cli);

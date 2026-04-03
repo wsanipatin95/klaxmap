@@ -216,7 +216,7 @@ export class VehiculosClientesComponent implements PendingChangesAware {
   }
 
   cargarTiposVehiculo(): void {
-    this.repo.listarTipos('', 0, 500, true).subscribe({
+    this.repo.listarTipos('', 0, 100, false).subscribe({
       next: (res) => this.tiposVehiculo.set(res.items ?? []),
       error: (err) => {
         console.error(err);

@@ -189,14 +189,14 @@ export class VehiculosDashboardComponent implements PendingChangesAware {
     this.failures.set([]);
 
     forkJoin({
-      tipos: this.safeList(this.repo.listarTipos('', 0, 300, true), 'tipos'),
+      tipos: this.safeList(this.repo.listarTipos('', 0, 100, false), 'tipos'),
       checklists: this.safeList(this.repo.listarChecklists(), 'checklists'),
       relaciones: this.safeList(this.repo.listarChecklistsVehiculo(), 'relaciones'),
-      clientes: this.safeList(this.repo.listarClientes('', 0, 300, true), 'clientes'),
+      clientes: this.safeList(this.repo.listarClientes('', 0, 100, false), 'clientes'),
       vehiculos: this.safeList(this.repo.listarClientesVehiculo(), 'vehiculos'),
-      ordenes: this.safeList(this.repo.listarOrdenes('', 0, 300, true), 'ordenes'),
-      facturas: this.safeList(this.repo.listarFacturas('', 0, 300, true), 'facturas'),
-      cobros: this.safeList(this.repo.listarCobros('', 0, 300, true), 'cobros'),
+      ordenes: this.safeList(this.repo.listarOrdenes('', 0, 100, false), 'ordenes'),
+      facturas: this.safeList(this.repo.listarFacturas('', 0, 100, false), 'facturas'),
+      cobros: this.safeList(this.repo.listarCobros('', 0, 100, false), 'cobros'),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
