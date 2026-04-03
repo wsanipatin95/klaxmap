@@ -2,6 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import type { MapaTipoElemento } from '../../data-access/mapa.models';
 import { MapaCapasStore } from '../../store/mapa-capas.store';
+import {
+  normalizeMapaColor,
+  normalizeMapaColorOrDefault,
+} from '../../utils/mapa-color.utils';
 
 @Component({
   selector: 'app-mapa-capas-panel',
@@ -64,12 +68,23 @@ export class MapaCapasPanelComponent {
   }
 
   previewStyle(tipo: MapaTipoElemento): Record<string, string> {
-    const stroke = tipo.colorStroke || '#7b0061';
-    const fill = tipo.colorFill || stroke;
+    const fill = normalizeMapaColorOrDefault(
+      tipo.colorFill ?? tipo.colorStroke ?? null,
+      '#f3aad6'
+    );
+    const stroke = normalizeMapaColorOrDefault(
+      tipo.colorStroke ?? tipo.colorFill ?? null,
+      '#7b0061'
+    );
+    const text = normalizeMapaColor(tipo.colorTexto, stroke) ?? stroke;
+    const strokeWidth = Math.max(1, Number(tipo.strokeWidth ?? 1) || 1);
 
     return {
       '--preview-stroke': stroke,
       '--preview-fill': fill,
+      '--preview-text': text,
+      '--preview-stroke-width': `${strokeWidth}`,
+      '--preview-stroke-width-px': `${strokeWidth}px`,
     } as Record<string, string>;
   }
 }

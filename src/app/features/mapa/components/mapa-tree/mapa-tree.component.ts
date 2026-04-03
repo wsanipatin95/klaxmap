@@ -27,6 +27,10 @@ import {
   isNodeHidden,
   sortNodes,
 } from '../../utils/mapa-visibility.utils';
+import {
+  normalizeMapaColor,
+  normalizeMapaColorOrDefault,
+} from '../../utils/mapa-color.utils';
 import { SessionStore } from '../../../seg/store/session.store';
 
 interface TreeNodeVm {
@@ -67,6 +71,7 @@ interface TreeElementVisual {
   colorFill: string;
   colorStroke: string;
   colorTexto: string | null;
+  strokeWidth: number;
   tamanoIcono: number;
 }
 
@@ -258,6 +263,8 @@ export class MapaTreeComponent implements OnChanges {
       '--preview-fill': visual.colorFill,
       '--preview-text': visual.colorTexto || visual.colorStroke,
       '--preview-size': `${visual.tamanoIcono}px`,
+      '--preview-stroke-width': `${visual.strokeWidth}`,
+      '--preview-stroke-width-px': `${visual.strokeWidth}px`,
     };
   }
 
@@ -309,12 +316,24 @@ export class MapaTreeComponent implements OnChanges {
     const icono = (elemento.icono || tipo?.icono || null) as string | null;
     const iconoClase = (elemento.iconoClase || tipo?.iconoClase || null) as string | null;
 
-    const colorStroke =
-      (elemento.colorStroke || tipo?.colorStroke || '#93c5fd') as string;
-    const colorFill =
-      (elemento.colorFill || tipo?.colorFill || colorStroke) as string;
-    const colorTexto =
-      (elemento.colorTexto || tipo?.colorTexto || colorStroke || null) as string | null;
+    const colorFill = normalizeMapaColorOrDefault(
+      elemento.colorFill || tipo?.colorFill || elemento.colorStroke || tipo?.colorStroke || null,
+      '#f3aad6'
+    );
+    const colorStroke = normalizeMapaColorOrDefault(
+      elemento.colorStroke || tipo?.colorStroke || elemento.colorFill || tipo?.colorFill || null,
+      '#7b0061'
+    );
+    const colorTexto = normalizeMapaColor(
+      elemento.colorTexto || tipo?.colorTexto || elemento.colorStroke || tipo?.colorStroke || null,
+      colorStroke
+    );
+
+    const strokeWidthRaw = Number(elemento.strokeWidth ?? tipo?.strokeWidth ?? 1);
+    const strokeWidth =
+      Number.isFinite(strokeWidthRaw) && strokeWidthRaw > 0
+        ? Math.max(1, Math.min(6, Math.round(strokeWidthRaw)))
+        : 1;
 
     const tamanoIconoRaw = Number(elemento.tamanoIcono ?? tipo?.tamanoIcono ?? 16);
     const tamanoIcono =
@@ -342,6 +361,7 @@ export class MapaTreeComponent implements OnChanges {
       colorFill,
       colorStroke,
       colorTexto,
+      strokeWidth,
       tamanoIcono,
     };
   }

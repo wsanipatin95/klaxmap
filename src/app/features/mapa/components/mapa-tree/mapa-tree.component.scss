@@ -251,20 +251,20 @@
 
 .element-preview.is-point {
   border-radius: 999px;
-  border: 2px solid var(--preview-stroke);
+  border: var(--preview-stroke-width-px, 2px) solid var(--preview-stroke);
   background: var(--preview-fill);
 }
 
 .element-preview.is-target {
   border-radius: 999px;
-  border: 2px solid var(--preview-stroke);
+  border: var(--preview-stroke-width-px, 2px) solid var(--preview-stroke);
   background: var(--preview-fill);
   box-shadow: inset 0 0 0 2px #ffffff;
 }
 
 .element-preview.is-donut {
   border-radius: 999px;
-  border: 3px solid var(--preview-stroke);
+  border: calc(var(--preview-stroke-width-px, 2px) + 1px) solid var(--preview-stroke);
   background: transparent;
 }
 
@@ -277,20 +277,36 @@
   filter: drop-shadow(0 0 1px var(--preview-stroke));
 }
 
-.element-preview.is-line::before {
+.element-preview.is-line {
+  background: transparent;
+  overflow: visible;
+}
+
+.element-preview.is-line::before,
+.element-preview.is-line::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  top: 6px;
-  height: 2px;
+  top: 50%;
   border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.element-preview.is-line::before {
+  height: calc(var(--preview-stroke-width-px, 2px) + 3px);
   background: var(--preview-stroke);
+  opacity: 0.95;
+}
+
+.element-preview.is-line::after {
+  height: var(--preview-stroke-width-px, 2px);
+  background: var(--preview-fill);
 }
 
 .element-preview.is-polygon {
   border-radius: 2px;
-  border: 2px solid var(--preview-stroke);
+  border: var(--preview-stroke-width-px, 2px) solid var(--preview-stroke);
   background: color-mix(in srgb, var(--preview-fill) 35%, transparent);
 }
 
