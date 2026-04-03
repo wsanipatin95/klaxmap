@@ -1,410 +1,543 @@
-<div class="tipos-page-shell">
-  <header class="page-topbar">
-    <div class="page-topbar-copy">
-      <h2>Tipos de vehículo</h2>
-      <p>Catálogo maestro, vistas estructurales y checklist por tipo</p>
+<div class="vehPageShell">
+  <app-vehiculos-page-header
+    title="Tipos de vehículo"
+    subtitle="Catálogo maestro, vistas estructurales y checklist por tipo">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-arrow-left"
+      label="Volver"
+      (click)="irADashboard()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-refresh"
+      [loading]="loading()"
+      (click)="cargarTodo()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-plus"
+      label="Nuevo"
+      [disabled]="saving()"
+      (click)="nuevoTipo()">
+    </button>
+  </app-vehiculos-page-header>
+
+  <section class="toolbarCard toolbarCard--tipos">
+    <div class="searchBox">
+      <i class="pi pi-search"></i>
+      <input
+        pInputText
+        [ngModel]="q()"
+        (ngModelChange)="q.set($event ?? '')"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Buscar tipo..."
+        (keyup.enter)="onSearchEnter()"
+      />
     </div>
 
-    <div class="page-topbar-actions">
-      <button type="button" class="ghost-btn" (click)="irADashboard()">
-        Volver
-      </button>
+    <div class="toolbarActions toolbarActions--tipos">
+      <div class="microStats">
+        <span class="microStat">
+          <small>Tipos</small>
+          <strong>{{ tipos().length }}</strong>
+        </span>
 
-      <button type="button" class="ghost-btn" (click)="cargarTodo()" [disabled]="loading() || saving()">
-        {{ loading() ? 'Actualizando...' : 'Refrescar' }}
-      </button>
+        <span class="microStat" *ngIf="mode() === 'editar' && selected()">
+          <small>Vistas</small>
+          <strong>{{ currentVistasCount() }}</strong>
+        </span>
 
-      <button type="button" class="primary-btn" (click)="nuevoTipo()" [disabled]="saving()">
-        Nuevo tipo
+        <span class="microStat" *ngIf="mode() === 'editar' && selected()">
+          <small>Checks</small>
+          <strong>{{ currentChecklistCount() }}</strong>
+        </span>
+      </div>
+
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        icon="pi pi-times"
+        [disabled]="!q()"
+        (click)="clearSearch()">
       </button>
     </div>
-  </header>
+  </section>
 
-  <div class="status-strip" *ngIf="loading() || saving() || success() || error() || hasPendingChanges()">
-    <div class="status-chip info" *ngIf="loading()">Cargando...</div>
-    <div class="status-chip info" *ngIf="saving()">Guardando...</div>
-    <div class="status-chip success" *ngIf="success()">{{ success() }}</div>
-    <div class="status-chip error" *ngIf="error()">{{ error() }}</div>
-    <div class="status-chip warning" *ngIf="hasPendingChanges()">Cambios sin guardar</div>
-  </div>
+  <section class="noticeStrip" *ngIf="loading() || saving() || success() || error() || hasPendingChanges()">
+    <span class="noticePill is-info" *ngIf="loading()">Cargando</span>
+    <span class="noticePill is-info" *ngIf="saving()">Guardando</span>
+    <span class="noticePill is-success" *ngIf="success()">{{ success() }}</span>
+    <span class="noticePill is-danger" *ngIf="error()">{{ error() }}</span>
+    <span class="noticePill is-warning" *ngIf="hasPendingChanges()">Sin guardar</span>
+  </section>
 
-  <div class="page-grid">
-    <aside class="panel panel-list">
-      <div class="panel-head panel-head--stack">
+  <section class="tiposWorkspace">
+    <aside class="contentCard sidebarPanel">
+      <div class="sectionHead sectionHead--compact">
         <div>
-          <h3>Listado</h3>
-          <p>{{ tipos().length }} tipo(s)</p>
+          <h4>Listado</h4>
+          <div class="secondaryCell">{{ tipos().length }} tipo(s)</div>
         </div>
 
-        <div class="search-inline">
-          <div class="search-box">
-            <span class="search-icon">⌕</span>
-            <input pInputText [ngModel]="q()" (ngModelChange)="q.set($event ?? '')"
-              [ngModelOptions]="{ standalone: true }" placeholder="Buscar tipo..." (keyup.enter)="onSearchEnter()" />
-          </div>
-
-          <button type="button" class="ghost-btn ghost-btn--sm" (click)="clearSearch()" [disabled]="!q()">
-            Limpiar
-          </button>
-        </div>
+        <span class="panelHint" *ngIf="selected() as selectedItem">
+          #{{ selectedItem.idVehTipoVehiculo }}
+        </span>
       </div>
 
-      <div class="empty" *ngIf="!loading() && tipos().length === 0">
-        No hay tipos de vehículo creados.
-      </div>
-
-      <div class="list" *ngIf="tipos().length > 0">
-        <button type="button" class="row" *ngFor="let item of tipos()"
-          [class.active]="selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo && mode() === 'editar'"
+      <div class="listScroll" *ngIf="tipos().length; else noTipos">
+        <button
+          type="button"
+          class="typeRow"
+          *ngFor="let item of tipos()"
+          [class.selected]="selected()?.idVehTipoVehiculo === item.idVehTipoVehiculo && mode() === 'editar'"
           (click)="seleccionarTipo(item)">
-          <div class="row-copy">
+          <div class="typeRow__main">
             <strong>{{ item.tipoVehiculo || ('Tipo #' + item.idVehTipoVehiculo) }}</strong>
             <span>ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</span>
           </div>
 
-          <div class="row-meta">
-            <span class="badge">
-              {{ (item.atributos ? (item.atributos | keyvalue).length : 0) }} atr.
+          <div class="typeRow__side">
+            <span class="miniBadge">
+              {{ (item.atributos ? (item.atributos | keyvalue).length : 0) }} atr
             </span>
           </div>
         </button>
       </div>
     </aside>
 
-    <section class="panel panel-editor">
-      <div class="panel-head panel-head--editor">
+    <section class="contentCard editorPanel">
+      <div class="sectionHead sectionHead--compact">
         <div>
-          <h3>{{ currentTitle() }}</h3>
-          <p>{{ currentSubtitle() }}</p>
+          <h4>{{ currentTitle() }}</h4>
+          <div class="secondaryCell">{{ currentSubtitle() }}</div>
         </div>
 
-        <button *ngIf="mode() === 'editar' && selected()" type="button" class="danger-btn"
-          (click)="eliminarTipoActual()" [disabled]="saving()">
-          Eliminar
-        </button>
+        <div class="rowActions">
+          <button
+            *ngIf="mode() === 'editar' && selected()"
+            pButton
+            type="button"
+            severity="danger"
+            [text]="true"
+            icon="pi pi-trash"
+            label="Eliminar"
+            [disabled]="saving()"
+            (click)="eliminarTipoActual()">
+          </button>
+        </div>
       </div>
 
-      <div class="editor-tabs" *ngIf="mode() === 'editar' && selected()">
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'edicion'"
+      <div class="tabBar" *ngIf="mode() === 'editar' && selected()">
+        <button
+          type="button"
+          class="tabButton"
+          [class.active]="activeTab() === 'edicion'"
           (click)="setTab('edicion')">
           Edición
         </button>
 
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'vistas'"
+        <button
+          type="button"
+          class="tabButton"
+          [class.active]="activeTab() === 'vistas'"
           (click)="setTab('vistas')">
           Vistas
         </button>
 
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'checklists'"
+        <button
+          type="button"
+          class="tabButton"
+          [class.active]="activeTab() === 'checklists'"
           (click)="setTab('checklists')">
           Checklists
         </button>
       </div>
 
-      <div class="editor-body">
-        <!-- EDICION -->
-        <section class="editor-view" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
-          <div class="editor-scroll">
-            <form class="veh-form">
-              <div class="form-grid cols-2">
-                <label class="form-field">
-                  <span>Tipo de vehículo</span>
-                  <select [formControl]="form.controls.tipoVehiculo">
-                    <option value="">Selecciona un tipo</option>
-                    <option *ngFor="let option of VEHICLE_TYPE_OPTIONS" [value]="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small class="field-error"
-                    *ngIf="form.controls.tipoVehiculo.invalid && form.controls.tipoVehiculo.touched">
-                    Debes seleccionar un tipo de vehículo.
-                  </small>
-                </label>
+      <div class="editorScroll" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
+        <form class="vehForm">
+          <div class="grid cols-2">
+            <label>
+              <span>Tipo</span>
+              <select [formControl]="form.controls.tipoVehiculo">
+                <option value="">Selecciona un tipo</option>
+                <option *ngFor="let option of VEHICLE_TYPE_OPTIONS" [value]="option">
+                  {{ option }}
+                </option>
+              </select>
+              <small class="fieldError" *ngIf="form.controls.tipoVehiculo.invalid && form.controls.tipoVehiculo.touched">
+                Debes seleccionar un tipo de vehículo.
+              </small>
+            </label>
 
-                <div class="form-field article-field">
-                  <span>Artículo inventario</span>
+            <div class="pickerField">
+              <label>
+                <span>Artículo</span>
+              </label>
 
-                  <button type="button" class="article-picker-trigger" (click)="openArticuloPanel()">
-                    <ng-container *ngIf="selectedArticulo() as articulo; else noArticulo">
-                      <div class="article-chip">
-                        <strong>{{ articulo.artcod || ('ART ' + articulo.idActInventario) }}</strong>
-                        <span>{{ articulo.articulo }}</span>
-                      </div>
-                    </ng-container>
-
-                    <ng-template #noArticulo>
-                      <span class="article-placeholder">Selecciona un artículo por código o nombre</span>
-                    </ng-template>
-                  </button>
-
-                  <div class="article-actions-inline" *ngIf="form.controls.art.value">
-                    <button type="button" class="ghost-btn ghost-btn--sm" (click)="clearArticuloSelection()">
-                      Quitar artículo
-                    </button>
+              <button type="button" class="pickerTrigger" (click)="openArticuloPanel()">
+                <ng-container *ngIf="selectedArticulo() as articulo; else noArticulo">
+                  <div class="pickerSelection">
+                    <strong>{{ articulo.artcod || ('ART ' + articulo.idActInventario) }}</strong>
+                    <span>{{ articulo.articulo || ('Artículo #' + articulo.idActInventario) }}</span>
                   </div>
+                </ng-container>
 
-                  <small class="field-hint">
-                    El catálogo se obtiene desde artículos y permite buscar por código o nombre.
-                  </small>
+                <ng-template #noArticulo>
+                  <span class="pickerPlaceholder">Selecciona un artículo</span>
+                </ng-template>
+              </button>
+
+              <div class="pickerActionsInline" *ngIf="selectedArticulo() as articulo">
+                <div class="selectedInline">
+                  <span>Seleccionado</span>
+                  <strong>{{ articulo.artcod || ('ART ' + articulo.idActInventario) }}</strong>
+                  <small>{{ articulo.articulo || ('Artículo #' + articulo.idActInventario) }}</small>
                 </div>
 
-                <section class="atributos-card cols-2">
-                  <div class="subpanel-head subpanel-head--inline">
-                    <div>
-                      <h4>Atributos</h4>
-                      <p>Agrega pares atributo / valor sin escribir JSON manual.</p>
-                    </div>
-
-                    <button type="button" class="ghost-btn ghost-btn--sm" (click)="addAtributoRow()">
-                      Agregar atributo
-                    </button>
-                  </div>
-
-                  <div class="attr-table">
-                    <div class="attr-head">
-                      <span>Atributo</span>
-                      <span>Valor</span>
-                      <span></span>
-                    </div>
-
-                    <div class="attr-row" *ngFor="let row of atributosFormArray.controls; let i = index">
-                      <input pInputText [formControl]="row.controls.key" placeholder="Ej. usaBateria" />
-                      <input pInputText [formControl]="row.controls.value" placeholder="Ej. true, 60V, { ... }" />
-
-                      <button type="button" class="danger-link danger-link--icon" (click)="removeAtributoRow(i)">
-                        Quitar
-                      </button>
-                    </div>
-                  </div>
-
-                  <small class="field-hint">
-                    Puedes escribir texto, números, true/false o incluso JSON en el valor.
-                  </small>
-                </section>
-              </div>
-
-              <div class="editor-actions">
-                <button type="button" class="ghost-btn" (click)="onMainFormCancel()" [disabled]="saving()">
-                  Cancelar
-                </button>
-
-                <button type="button" class="primary-btn" (click)="guardarTipo()" [disabled]="saving()">
-                  {{ saving() ? 'Guardando...' : 'Guardar' }}
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  label="Quitar"
+                  (click)="clearArticuloSelection()">
                 </button>
               </div>
-            </form>
-          </div>
-        </section>
 
-        <!-- VISTAS -->
-        <section class="editor-view" *ngIf="mode() === 'editar' && activeTab() === 'vistas' && selected() as sel">
-          <div class="editor-scroll">
-            <div class="section-stack">
-              <div class="subpanel">
-                <div class="subpanel-head subpanel-head--inline">
-                  <div>
-                    <h4>Vistas estructurales</h4>
-                    <p>Configura frente, atrás, laterales y otras superficies del vehículo.</p>
-                  </div>
+              <small class="fieldHint">
+                Visible también al editar aunque el artículo no venga en la primera carga del catálogo.
+              </small>
+            </div>
 
-                  <button type="button" class="primary-btn" (click)="nuevaVista()">
-                    Nueva vista
-                  </button>
+            <section class="subCard cols-full">
+              <div class="sectionHead sectionHead--compact">
+                <div>
+                  <h4>Atributos</h4>
+                  <div class="secondaryCell">Pares atributo / valor sin JSON manual</div>
                 </div>
 
-                <div class="empty" *ngIf="vistas().length === 0">
-                  Este tipo aún no tiene vistas configuradas.
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  icon="pi pi-plus"
+                  label="Atributo"
+                  (click)="addAtributoRow()">
+                </button>
+              </div>
+
+              <div class="attrTable">
+                <div class="attrHead">
+                  <span>Atributo</span>
+                  <span>Valor</span>
+                  <span></span>
                 </div>
 
-                <div class="list list--compact" *ngIf="vistas().length > 0">
-                  <button type="button" class="row" *ngFor="let vista of vistas()"
-                    [class.active]="selectedVista()?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
-                    (click)="seleccionarVista(vista)">
-                    <div class="row-copy">
-                      <strong>{{ vista.vista || 'Vista' }}</strong>
-                      <span>Orden {{ vista.orden || '-' }} · {{ vista.observaciones || 'Sin observaciones' }}</span>
-                    </div>
+                <div class="attrRow" *ngFor="let row of atributosFormArray.controls; let i = index">
+                  <input pInputText [formControl]="row.controls.key" placeholder="Ej. usaBateria" />
+                  <input pInputText [formControl]="row.controls.value" placeholder="Ej. true, 60V, { ... }" />
 
-                    <div class="row-meta">
-                      <span class="badge" [class.optional]="!vista.estructura">
-                        {{ vista.estructura ? 'Con imagen' : 'Sin imagen' }}
-                      </span>
-
-                      <button type="button" class="ghost-btn ghost-btn--sm"
-                        (click)="editarVista(vista); $event.stopPropagation()">
-                        Editar
-                      </button>
-
-                      <button type="button" class="danger-link"
-                        (click)="eliminarVista(vista); $event.stopPropagation()">
-                        Eliminar
-                      </button>
-                    </div>
+                  <button
+                    pButton
+                    type="button"
+                    severity="danger"
+                    [text]="true"
+                    icon="pi pi-times"
+                    (click)="removeAtributoRow(i)">
                   </button>
                 </div>
               </div>
 
-              <div class="subpanel" *ngIf="selectedVista() as currentVista">
-                <div class="subpanel-head">
-                  <div>
-                    <h4>Preview de vista</h4>
-                    <p>{{ currentVista.vista || 'Vista seleccionada' }}</p>
-                  </div>
+              <small class="fieldHint">
+                Se aceptan texto, números, true/false y JSON.
+              </small>
+            </section>
+          </div>
+
+          <div class="editorActions">
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              label="Cancelar"
+              [disabled]="saving()"
+              (click)="onMainFormCancel()">
+            </button>
+
+            <button
+              pButton
+              type="button"
+              icon="pi pi-check"
+              label="Guardar"
+              [loading]="saving()"
+              (click)="guardarTipo()">
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="editorScroll" *ngIf="mode() === 'editar' && activeTab() === 'vistas' && selected()">
+        <section class="stackBlock">
+          <section class="subCard">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>Vistas</h4>
+                <div class="secondaryCell">Superficies estructurales del tipo</div>
+              </div>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                label="Vista"
+                (click)="nuevaVista()">
+              </button>
+            </div>
+
+            <div class="miniListScroll" *ngIf="vistas().length; else noVistas">
+              <article
+                class="vistaRow"
+                *ngFor="let vista of vistas()"
+                [class.selected]="selectedVista()?.idVehTipoVehiculoVista === vista.idVehTipoVehiculoVista"
+                (click)="seleccionarVista(vista)">
+                <div class="vistaRow__main">
+                  <strong>{{ vista.vista || 'Vista' }}</strong>
+                  <span>Ord {{ vista.orden || '-' }} · {{ vista.observaciones || 'Sin observaciones' }}</span>
                 </div>
 
-                <div class="preview-card">
-                  <ng-container *ngIf="resolveBinarySrc(currentVista.estructura) as src; else noImage">
-                    <img class="preview-image" [src]="src" [alt]="currentVista.vista || 'Vista estructural'" />
-                  </ng-container>
+                <div class="vistaRow__side">
+                  <span class="miniBadge" [class.optional]="!vista.estructura">
+                    {{ vista.estructura ? 'Imagen' : 'Vacía' }}
+                  </span>
 
-                  <ng-template #noImage>
-                    <div class="empty-preview">
-                      <strong>Sin imagen estructural</strong>
-                      <p>Sube una imagen para usarla luego en marcación de hallazgos.</p>
-                    </div>
-                  </ng-template>
+                  <button
+                    pButton
+                    type="button"
+                    severity="secondary"
+                    [text]="true"
+                    label="Editar"
+                    (click)="editarVista(vista); $event.stopPropagation()">
+                  </button>
+
+                  <button
+                    pButton
+                    type="button"
+                    severity="danger"
+                    [text]="true"
+                    label="Eliminar"
+                    (click)="eliminarVista(vista); $event.stopPropagation()">
+                  </button>
                 </div>
+              </article>
+            </div>
+          </section>
 
-                <div class="meta-grid">
-                  <div class="meta-item">
-                    <span>Orden</span>
-                    <strong>{{ currentVista.orden || '-' }}</strong>
-                  </div>
-
-                  <div class="meta-item">
-                    <span>Observaciones</span>
-                    <strong>{{ currentVista.observaciones || 'Sin observaciones' }}</strong>
-                  </div>
-                </div>
+          <section class="subCard" *ngIf="selectedVista() as currentVista">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>Preview</h4>
+                <div class="secondaryCell">{{ currentVista.vista || 'Vista seleccionada' }}</div>
               </div>
             </div>
-          </div>
+
+            <div class="previewCard">
+              <ng-container *ngIf="resolveBinarySrc(currentVista.estructura) as src; else noImage">
+                <img class="previewImage" [src]="src" [alt]="currentVista.vista || 'Vista estructural'" />
+              </ng-container>
+
+              <ng-template #noImage>
+                <div class="emptyPreview">
+                  <strong>Sin imagen estructural</strong>
+                  <p>Sube una imagen para usarla luego en marcación de hallazgos.</p>
+                </div>
+              </ng-template>
+            </div>
+
+            <div class="metaGrid">
+              <article class="metaItem">
+                <span>Orden</span>
+                <strong>{{ currentVista.orden || '-' }}</strong>
+              </article>
+
+              <article class="metaItem">
+                <span>Observaciones</span>
+                <strong>{{ currentVista.observaciones || 'Sin observaciones' }}</strong>
+              </article>
+            </div>
+          </section>
         </section>
+      </div>
 
-        <!-- CHECKLIST -->
-        <section class="editor-view" *ngIf="mode() === 'editar' && activeTab() === 'checklists' && selected() as sel">
-          <div class="editor-scroll">
-            <div class="section-stack">
-              <div class="subpanel">
-                <div class="subpanel-head">
-                  <div>
-                    <h4>Checklist asignado al tipo</h4>
-                    <p>Administra qué ítems estarán disponibles para este tipo de vehículo.</p>
-                  </div>
-                </div>
-
-                <div class="assign-toolbar">
-                  <div class="search-box">
-                    <span class="search-icon">⌕</span>
-                    <input pInputText [ngModel]="checklistSearch()" (ngModelChange)="checklistSearch.set($event ?? '')"
-                      [ngModelOptions]="{ standalone: true }" placeholder="Buscar checklist disponible..." />
-                  </div>
-
-                  <select [ngModel]="selectedChecklistToAssign()"
-                    (ngModelChange)="selectedChecklistToAssign.set($event ? +$event : null)"
-                    [ngModelOptions]="{ standalone: true }">
-                    <option [ngValue]="null">Selecciona un checklist disponible</option>
-                    <option *ngFor="let item of checklistDisponiblesFiltrados()"
-                      [ngValue]="item.idVehVehiculoCheckList">
-                      {{ item.nombreItem }} · {{ item.categoria || 'GENERAL' }}
-                    </option>
-                  </select>
-
-                  <button type="button" class="primary-btn" (click)="agregarChecklistAlTipo()"
-                    [disabled]="saving() || !selectedChecklistToAssign()">
-                    Agregar
-                  </button>
-                </div>
-
-                <div class="empty" *ngIf="checklistAsignado().length === 0">
-                  Este tipo todavía no tiene checklist asignado.
-                </div>
-
-                <div class="list list--compact" *ngIf="checklistAsignado().length > 0">
-                  <div class="row row--readonly" *ngFor="let rel of checklistAsignado()">
-                    <div class="row-copy">
-                      <strong>{{ checklistNombre(rel.idVehVehiculoCheckListFk) }}</strong>
-                      <span>
-                        {{ checklistCategoria(rel.idVehVehiculoCheckListFk) }} · Relación #{{
-                        rel.idVehVehiculoCheckListVehiculo
-                        }}
-                      </span>
-                    </div>
-
-                    <div class="row-meta">
-                      <button type="button" class="danger-link" (click)="quitarChecklistDelTipo(rel)"
-                        [disabled]="saving()">
-                        Quitar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="subpanel" *ngIf="checklistDisponibles().length === 0">
-                <div class="empty">
-                  Todos los checklist del catálogo ya están asignados a este tipo.
-                </div>
+      <div class="editorScroll" *ngIf="mode() === 'editar' && activeTab() === 'checklists' && selected()">
+        <section class="stackBlock">
+          <section class="subCard">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>Checklist asignado</h4>
+                <div class="secondaryCell">Ítems disponibles para este tipo</div>
               </div>
             </div>
-          </div>
+
+            <div class="assignBar">
+              <div class="searchBox searchBox--inline">
+                <i class="pi pi-search"></i>
+                <input
+                  pInputText
+                  [ngModel]="checklistSearch()"
+                  (ngModelChange)="checklistSearch.set($event ?? '')"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="Filtrar checklist..."
+                />
+              </div>
+
+              <select
+                [ngModel]="selectedChecklistToAssign()"
+                (ngModelChange)="selectedChecklistToAssign.set($event ? +$event : null)"
+                [ngModelOptions]="{ standalone: true }">
+                <option [ngValue]="null">Selecciona un checklist disponible</option>
+                <option
+                  *ngFor="let item of checklistDisponiblesFiltrados()"
+                  [ngValue]="item.idVehVehiculoCheckList">
+                  {{ item.nombreItem }} · {{ item.categoria || 'GENERAL' }}
+                </option>
+              </select>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                label="Agregar"
+                [disabled]="saving() || !selectedChecklistToAssign()"
+                (click)="agregarChecklistAlTipo()">
+              </button>
+            </div>
+
+            <div class="miniListScroll" *ngIf="checklistAsignado().length; else noChecklistAsignado">
+              <article class="checkRow" *ngFor="let rel of checklistAsignado()">
+                <div class="checkRow__main">
+                  <strong>{{ checklistNombre(rel.idVehVehiculoCheckListFk) }}</strong>
+                  <span>
+                    {{ checklistCategoria(rel.idVehVehiculoCheckListFk) }} · Rel #{{ rel.idVehVehiculoCheckListVehiculo }}
+                  </span>
+                </div>
+
+                <button
+                  pButton
+                  type="button"
+                  severity="danger"
+                  [text]="true"
+                  label="Quitar"
+                  [disabled]="saving()"
+                  (click)="quitarChecklistDelTipo(rel)">
+                </button>
+              </article>
+            </div>
+          </section>
+
+          <section class="subCard subCard--muted" *ngIf="checklistDisponibles().length === 0">
+            <div class="emptyInline">
+              Todos los checklist del catálogo ya están asignados a este tipo.
+            </div>
+          </section>
         </section>
       </div>
     </section>
-  </div>
+  </section>
 
-  <!-- PANEL ARTICULOS -->
-  <p-dialog [visible]="articuloPanelOpen()" (visibleChange)="articuloPanelOpen.set($event)" [modal]="true"
-    [closable]="true" [dismissableMask]="true" [style]="{ width: '56rem' }" header="Seleccionar artículo">
-    <div class="picker-dialog">
-      <div class="picker-toolbar">
-        <div class="search-box">
-          <span class="search-icon">⌕</span>
-          <input pInputText [ngModel]="articuloQuery()" (ngModelChange)="onArticuloQueryChange($event ?? '')"
-            [ngModelOptions]="{ standalone: true }" placeholder="Buscar por código o nombre..." />
-        </div>
+  <ng-template #noTipos>
+    <div class="emptyInline">No hay tipos de vehículo creados.</div>
+  </ng-template>
+
+  <ng-template #noVistas>
+    <div class="emptyInline">Este tipo aún no tiene vistas configuradas.</div>
+  </ng-template>
+
+  <ng-template #noChecklistAsignado>
+    <div class="emptyInline">Este tipo todavía no tiene checklist asignado.</div>
+  </ng-template>
+
+  <p-dialog
+    [visible]="articuloPanelOpen()"
+    (visibleChange)="articuloPanelOpen.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '52rem' }"
+    header="Seleccionar artículo">
+    <div class="pickerDialog">
+      <div class="searchBox">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          [ngModel]="articuloQuery()"
+          (ngModelChange)="onArticuloQueryChange($event ?? '')"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Buscar por código, nombre o ID..."
+        />
       </div>
 
-      <div class="picker-loading" *ngIf="articuloLoading()">Cargando artículos...</div>
+      <div class="pickerLoading" *ngIf="articuloLoading()">Cargando artículos...</div>
 
-      <div class="picker-list" *ngIf="!articuloLoading()">
-        <button type="button" class="picker-row" *ngFor="let item of filteredArticulos()"
-          [class.active]="form.controls.art.value === item.idActInventario" (click)="seleccionarArticulo(item)">
-          <div class="picker-row-copy">
+      <div class="pickerList" *ngIf="!articuloLoading()">
+        <button
+          type="button"
+          class="pickerRow"
+          *ngFor="let item of filteredArticulos()"
+          [class.selected]="form.controls.art.value === item.idActInventario"
+          (click)="seleccionarArticulo(item)">
+          <div class="pickerRow__main">
             <strong>{{ item.artcod || ('ART ' + item.idActInventario) }}</strong>
             <span>{{ item.articulo }}</span>
           </div>
 
-          <div class="picker-row-meta">
-            <span>{{ item.precio4 ?? item.artmay ?? item.artmen ?? '-' }}</span>
+          <div class="pickerRow__side">
+            <small>{{ item.precio4 ?? item.artmay ?? item.artmen ?? '-' }}</small>
             <span *ngIf="form.controls.art.value === item.idActInventario">Seleccionado</span>
           </div>
         </button>
 
-        <div class="empty" *ngIf="filteredArticulos().length === 0">
+        <div class="emptyInline" *ngIf="filteredArticulos().length === 0">
           No hay artículos que coincidan con la búsqueda.
         </div>
       </div>
     </div>
   </p-dialog>
 
-  <!-- DIALOG VISTA -->
-  <p-dialog [visible]="vistaDialogVisible()" (visibleChange)="vistaDialogVisible.set($event)" [modal]="true"
-    [closable]="true" [dismissableMask]="false" [style]="{ width: '70rem' }"
+  <p-dialog
+    [visible]="vistaDialogVisible()"
+    (visibleChange)="vistaDialogVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="false"
+    [style]="{ width: '66rem' }"
     [header]="vistaDialogMode() === 'crear' ? 'Nueva vista' : 'Editar vista'">
-    <div class="vista-dialog">
-      <div class="vista-dialog-grid">
-        <section class="vista-panel">
-          <div class="subpanel-head">
+    <div class="vistaDialog">
+      <div class="vistaDialogGrid">
+        <section class="subCard">
+          <div class="sectionHead sectionHead--compact">
             <div>
-              <h4>Datos de la vista</h4>
-              <p>Solo usa valores del combo en nombre de vista.</p>
+              <h4>Datos</h4>
+              <div class="secondaryCell">Solo usa valores del combo en nombre de vista</div>
             </div>
           </div>
 
-          <form class="veh-form">
-            <div class="form-grid cols-2">
-              <label class="form-field">
+          <form class="vehForm">
+            <div class="grid cols-2">
+              <label>
                 <span>Vista</span>
                 <select [formControl]="vistaForm.controls.vista">
                   <option value="">Selecciona una vista</option>
@@ -412,47 +545,61 @@
                     {{ option }}
                   </option>
                 </select>
-                <small class="field-error" *ngIf="vistaForm.controls.vista.invalid && vistaForm.controls.vista.touched">
+                <small class="fieldError" *ngIf="vistaForm.controls.vista.invalid && vistaForm.controls.vista.touched">
                   Debes seleccionar una vista.
                 </small>
               </label>
 
-              <label class="form-field">
+              <label>
                 <span>Orden</span>
                 <input pInputText type="number" min="1" [formControl]="vistaForm.controls.orden" />
               </label>
 
-              <label class="form-field cols-2">
+              <label class="cols-full">
                 <span>Observaciones</span>
-                <input pInputText [formControl]="vistaForm.controls.observaciones"
-                  placeholder="Describe la vista o su uso..." />
+                <input
+                  pInputText
+                  [formControl]="vistaForm.controls.observaciones"
+                  placeholder="Describe la vista o su uso..."
+                />
               </label>
 
-              <section class="atributos-card cols-2">
-                <div class="subpanel-head subpanel-head--inline">
+              <section class="subCard cols-full">
+                <div class="sectionHead sectionHead--compact">
                   <div>
                     <h4>Atributos de la vista</h4>
-                    <p>Configura metadatos adicionales sin JSON manual.</p>
+                    <div class="secondaryCell">Metadatos adicionales</div>
                   </div>
 
-                  <button type="button" class="ghost-btn ghost-btn--sm" (click)="addVistaAtributoRow()">
-                    Agregar atributo
+                  <button
+                    pButton
+                    type="button"
+                    severity="secondary"
+                    [text]="true"
+                    icon="pi pi-plus"
+                    label="Atributo"
+                    (click)="addVistaAtributoRow()">
                   </button>
                 </div>
 
-                <div class="attr-table">
-                  <div class="attr-head">
+                <div class="attrTable">
+                  <div class="attrHead">
                     <span>Atributo</span>
                     <span>Valor</span>
                     <span></span>
                   </div>
 
-                  <div class="attr-row" *ngFor="let row of vistaAtributosFormArray.controls; let i = index">
+                  <div class="attrRow" *ngFor="let row of vistaAtributosFormArray.controls; let i = index">
                     <input pInputText [formControl]="row.controls.key" placeholder="Ej. aspectRatio" />
                     <input pInputText [formControl]="row.controls.value" placeholder='Ej. 16:9 o {"zoom":1.2}' />
 
-                    <button type="button" class="danger-link danger-link--icon" (click)="removeVistaAtributoRow(i)">
-                      Quitar
+                    <button
+                      pButton
+                      type="button"
+                      severity="danger"
+                      [text]="true"
+                      icon="pi pi-times"
+                      (click)="removeVistaAtributoRow(i)">
                     </button>
                   </div>
                 </div>
@@ -461,30 +608,35 @@
           </form>
         </section>
 
-        <section class="vista-panel">
-          <div class="subpanel-head">
+        <section class="subCard">
+          <div class="sectionHead sectionHead--compact">
             <div>
-              <h4>Imagen estructural</h4>
-              <p>Sube la imagen y revisa el preview antes de guardar.</p>
+              <h4>Imagen</h4>
+              <div class="secondaryCell">Sube la imagen y revisa el preview</div>
             </div>
           </div>
 
-          <div class="upload-box">
+          <div class="uploadBar">
             <input type="file" accept="image/*" (change)="onVistaStructureSelected($event)" />
 
-            <button type="button" class="ghost-btn ghost-btn--sm" *ngIf="vistaStructurePreview()"
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              label="Quitar"
+              *ngIf="vistaStructurePreview()"
               (click)="limpiarVistaStructure()">
-              Quitar imagen
             </button>
           </div>
 
-          <div class="preview-card">
+          <div class="previewCard">
             <ng-container *ngIf="vistaStructurePreview() as previewSrc; else emptyUpload">
-              <img class="preview-image" [src]="previewSrc" alt="Vista estructural cargada" />
+              <img class="previewImage" [src]="previewSrc" alt="Vista estructural cargada" />
             </ng-container>
 
             <ng-template #emptyUpload>
-              <div class="empty-preview">
+              <div class="emptyPreview">
                 <strong>Sin imagen cargada</strong>
                 <p>Selecciona un archivo de imagen para visualizar la estructura del vehículo.</p>
               </div>
@@ -493,47 +645,75 @@
         </section>
       </div>
 
-      <div class="editor-actions">
-        <button type="button" class="ghost-btn" (click)="onVistaCancel()" [disabled]="saving()">
-          Cancelar
+      <div class="editorActions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          label="Cancelar"
+          [disabled]="saving()"
+          (click)="onVistaCancel()">
         </button>
 
-        <button type="button" class="primary-btn" (click)="guardarVista()" [disabled]="saving()">
-          {{ saving() ? 'Guardando...' : 'Guardar vista' }}
+        <button
+          pButton
+          type="button"
+          icon="pi pi-check"
+          label="Guardar vista"
+          [loading]="saving()"
+          (click)="guardarVista()">
         </button>
       </div>
     </div>
   </p-dialog>
 
-  <!-- CONFIRM -->
-  <p-dialog [visible]="confirmVisible()" (visibleChange)="confirmVisible.set($event)" [modal]="true" [closable]="true"
-    [dismissableMask]="true" [style]="{ width: '28rem' }" [header]="confirmTitle()" (onHide)="onConfirmHide()">
-    <div class="confirm-body">
-      <div class="confirm-icon" [ngClass]="confirmSeverityClass()">
+  <p-dialog
+    [visible]="confirmVisible()"
+    (visibleChange)="confirmVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '26rem' }"
+    [header]="confirmTitle()"
+    (onHide)="onConfirmHide()">
+    <div class="confirmBody">
+      <div class="confirmIcon" [ngClass]="confirmSeverityClass()">
         {{ confirmIconSymbol() }}
       </div>
 
-      <div class="confirm-content">
-        <div class="confirm-title">{{ confirmTitle() }}</div>
-        <p class="confirm-message">{{ confirmMessage() }}</p>
+      <div class="confirmCopy">
+        <div class="confirmTitle">{{ confirmTitle() }}</div>
+        <p class="confirmMessage">{{ confirmMessage() }}</p>
       </div>
     </div>
 
     <ng-template pTemplate="footer">
-      <div class="dialog-footer">
-        <button type="button" class="ghost-btn ghost-btn--sm" (click)="confirmCancel()">
-          {{ confirmCancelLabel() }}
+      <div class="dialogFooter">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [label]="confirmCancelLabel()"
+          (click)="confirmCancel()">
         </button>
 
-        <button *ngIf="confirmAlternateLabel() as altLabel" type="button" class="alternate-btn"
+        <button
+          *ngIf="confirmAlternateLabel() as altLabel"
+          pButton
+          type="button"
+          severity="secondary"
+          [label]="altLabel"
           (click)="confirmAlternate()">
-          {{ altLabel }}
         </button>
 
-        <button type="button" class="confirm-btn" [class.is-danger]="confirmSeverity() === 'danger'"
-          [class.is-warning]="confirmSeverity() === 'warning'" [class.is-info]="confirmSeverity() === 'info'"
+        <button
+          pButton
+          type="button"
+          [label]="confirmConfirmLabel()"
+          [severity]="confirmSeverity() === 'danger' ? 'danger' : 'primary'"
           (click)="confirmAccept()">
-          {{ confirmConfirmLabel() }}
         </button>
       </div>
     </ng-template>

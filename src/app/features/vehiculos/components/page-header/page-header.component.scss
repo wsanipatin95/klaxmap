@@ -1,29 +1,66 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .vehPageHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.8rem;
+  margin-bottom: 0.15rem;
+  min-width: 0;
+}
 
-  h1 {
-    margin: 0;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    font-weight: 700;
-    color: #0f172a;
+.vehPageHeader .copy {
+  min-width: 0;
+}
+
+.vehPageHeader h1 {
+  margin: 0;
+  font-size: 1.16rem;
+  line-height: 1.15;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vehPageHeader p {
+  margin: 0.18rem 0 0;
+  color: #475569;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  max-width: 56rem;
+}
+
+.vehPageHeader .actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+:host ::ng-deep .actions .p-button {
+  min-height: 1.8rem;
+  font-size: 0.72rem;
+  padding: 0.26rem 0.52rem;
+  border-radius: 0.54rem;
+}
+
+:host ::ng-deep .actions .p-button.p-button-icon-only {
+  width: 1.8rem;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 860px) {
+  .vehPageHeader {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  p {
-    margin: 0.3rem 0 0;
-    color: #475569;
-    font-size: 0.875rem;
-    max-width: 66rem;
-  }
-
-  .actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-wrap: wrap;
+  .vehPageHeader .actions {
+    justify-content: flex-start;
   }
 }

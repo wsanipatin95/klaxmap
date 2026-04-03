@@ -11,9 +11,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TagModule } from 'primeng/tag';
+import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
   VehArticuloCatalogo,
@@ -48,7 +49,8 @@ type VistaAtributoRowForm = FormGroup<{
     ReactiveFormsModule,
     DialogModule,
     InputTextModule,
-    TagModule,
+    ButtonModule,
+    VehiculosPageHeaderComponent,
   ],
   templateUrl: './tipos.component.html',
   styleUrl: './tipos.component.scss',
@@ -58,6 +60,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   private repo = inject(VehiculosRepository);
   private router = inject(Router);
   private articuloSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
   readonly VEHICLE_TYPE_OPTIONS = [
     'AUTO',
     'MOTO',
@@ -97,6 +100,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   readonly checklistCatalogo = signal<VehCheckList[]>([]);
   readonly checklistAsignado = signal<VehCheckListVehiculo[]>([]);
   readonly articulos = signal<VehArticuloCatalogo[]>([]);
+  readonly selectedArticuloFallback = signal<VehArticuloCatalogo | null>(null);
 
   readonly selected = signal<VehTipoVehiculo | null>(null);
   readonly selectedVista = signal<VehTipoVehiculoVista | null>(null);
@@ -108,18 +112,18 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   readonly hasPendingChanges = computed(() => this.formDirty() || this.vistaDirty());
 
   readonly currentTitle = computed(() =>
-    this.mode() === 'crear' ? 'Nuevo tipo de vehículo' : 'Editar tipo de vehículo'
+    this.mode() === 'crear' ? 'Nuevo tipo' : 'Editar tipo'
   );
 
   readonly currentSubtitle = computed(() => {
     if (this.mode() === 'crear') {
-      return 'Configura el tipo, artículo, atributos, vistas y checklist asociado.';
+      return 'Catálogo base, vistas y checklist';
     }
 
     const current = this.selected();
     return current
-      ? `Editando: ${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}`
-      : 'Editar tipo de vehículo';
+      ? current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`
+      : 'Tipo seleccionado';
   });
 
   readonly articuloQuery = signal('');
@@ -138,7 +142,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .filter((item) => {
         const codigo = String(item.artcod || '').toLowerCase();
         const nombre = String(item.articulo || '').toLowerCase();
-        return codigo.includes(query) || nombre.includes(query);
+        const id = String(item.idActInventario || '').toLowerCase();
+        return codigo.includes(query) || nombre.includes(query) || id.includes(query);
       })
       .slice(0, 200);
   });
@@ -146,7 +151,16 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   readonly selectedArticulo = computed(() => {
     const art = this.form.controls.art.value;
     if (art == null) return null;
-    return this.articulos().find((x) => x.idActInventario === art) ?? null;
+
+    return (
+      this.articulos().find((x) => x.idActInventario === art) ??
+      this.selectedArticuloFallback() ??
+      ({
+        idActInventario: art,
+        artcod: `ART ${art}`,
+        articulo: `Artículo #${art}`,
+      } as VehArticuloCatalogo)
+    );
   });
 
   readonly checklistDisponibles = computed(() => {
@@ -173,6 +187,9 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   });
 
   readonly selectedChecklistToAssign = signal<number | null>(null);
+
+  readonly currentVistasCount = computed(() => this.vistas().length);
+  readonly currentChecklistCount = computed(() => this.checklistAsignado().length);
 
   readonly vistaDialogVisible = signal(false);
   readonly vistaDialogMode = signal<'crear' | 'editar'>('crear');
@@ -307,6 +324,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .subscribe({
         next: (res) => {
           this.articulos.set(res.items ?? []);
+          this.ensureSelectedArticuloVisible(this.form.controls.art.value);
           this.updateMainDirtyState();
         },
         error: (err) => {
@@ -441,7 +459,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
           next: (res: any) => {
             const newId = res?.idVehTipoVehiculo ?? res?.data?.idVehTipoVehiculo ?? null;
 
-            this.success.set('Tipo de vehículo creado.');
+            this.success.set('Tipo creado.');
             this.formDirty.set(false);
             this.cargarTipos();
 
@@ -487,7 +505,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.success.set('Tipo de vehículo actualizado.');
+          this.success.set('Tipo actualizado.');
           const updatedCurrent: VehTipoVehiculo = {
             ...current,
             art: payload.art ?? null,
@@ -511,7 +529,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.openConfirm(
       {
-        title: 'Eliminar tipo de vehículo',
+        title: 'Eliminar tipo',
         message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
@@ -527,7 +545,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
-              this.success.set('Tipo de vehículo eliminado.');
+              this.success.set('Tipo eliminado.');
               this.selected.set(null);
               this.selectedVista.set(null);
               this.vistas.set([]);
@@ -563,7 +581,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
         confirmLabel: 'Descartar',
-        cancelLabel: 'Seguir editando',
+        cancelLabel: 'Seguir',
         severity: 'warning',
       },
       () => {
@@ -622,6 +640,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.articuloPanelOpen.set(true);
     this.buscarArticulosRemoto(this.articuloQuery().trim());
   }
+
   buscarArticulosRemoto(query: string): void {
     if (this.articuloSearchTimer) {
       clearTimeout(this.articuloSearchTimer);
@@ -637,7 +656,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
             const items = res.items ?? [];
             const selected = this.selectedArticulo();
 
-            if (selected && !items.some(x => x.idActInventario === selected.idActInventario)) {
+            if (selected && !items.some((x) => x.idActInventario === selected.idActInventario)) {
               this.articulos.set([selected, ...items]);
             } else {
               this.articulos.set(items);
@@ -665,6 +684,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   clearArticuloSelection(): void {
     if (this.form.controls.art.value == null) return;
     this.form.controls.art.setValue(null);
+    this.selectedArticuloFallback.set(null);
     this.updateMainDirtyState();
   }
 
@@ -676,6 +696,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     }
 
     this.form.controls.art.setValue(item.idActInventario);
+    this.selectedArticuloFallback.set(item);
     this.closeArticuloPanel();
     this.updateMainDirtyState();
   }
@@ -720,7 +741,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.success.set('Checklist asignado al tipo.');
+          this.success.set('Checklist asignado.');
           this.selectedChecklistToAssign.set(null);
           this.cargarChecklistAsignado(current.idVehTipoVehiculo);
         },
@@ -736,7 +757,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.openConfirm(
       {
-        title: 'Quitar checklist del tipo',
+        title: 'Quitar checklist',
         message: `Se quitará "${label}" de este tipo de vehículo.\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Quitar',
         cancelLabel: 'Cancelar',
@@ -753,7 +774,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
-              this.success.set('Checklist quitado del tipo.');
+              this.success.set('Checklist quitado.');
               if (current) {
                 this.cargarChecklistAsignado(current.idVehTipoVehiculo);
               }
@@ -919,7 +940,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar en la vista.\n\nSi continúas, se perderán.',
         confirmLabel: 'Descartar',
-        cancelLabel: 'Seguir editando',
+        cancelLabel: 'Seguir',
         severity: 'warning',
       },
       () => {
@@ -1051,7 +1072,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
           title: 'Descartar cambios',
           message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
           confirmLabel: 'Descartar',
-          cancelLabel: 'Seguir editando',
+          cancelLabel: 'Seguir',
           severity: 'warning',
         },
         () => {
@@ -1085,7 +1106,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
         confirmLabel: 'Descartar',
-        cancelLabel: 'Seguir editando',
+        cancelLabel: 'Seguir',
         severity: 'warning',
       },
       () => {
@@ -1107,6 +1128,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.articuloQuery.set('');
     this.articuloPanelOpen.set(false);
+    this.selectedArticuloFallback.set(null);
 
     this.refreshMainSnapshot();
   }
@@ -1130,6 +1152,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     this.articuloQuery.set('');
     this.articuloPanelOpen.set(false);
+    this.ensureSelectedArticuloVisible(item.art ?? null);
 
     this.refreshMainSnapshot();
   }
@@ -1297,5 +1320,39 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   private updateVistaDirtyState(): void {
     this.vistaDirty.set(this.createVistaSnapshot() !== this.initialVistaSnapshot);
+  }
+
+  private ensureSelectedArticuloVisible(artId: number | null | undefined): void {
+    if (artId == null) {
+      this.selectedArticuloFallback.set(null);
+      return;
+    }
+
+    const existing = this.articulos().find((x) => x.idActInventario === artId) ?? null;
+    if (existing) {
+      this.selectedArticuloFallback.set(existing);
+      return;
+    }
+
+    this.selectedArticuloFallback.set({
+      idActInventario: artId,
+      artcod: `ART ${artId}`,
+      articulo: `Artículo #${artId}`,
+    } as VehArticuloCatalogo);
+
+    this.repo.listarArticulos(String(artId), 0, 25, false).subscribe({
+      next: (res) => {
+        const items = res.items ?? [];
+        const exact = items.find((x) => x.idActInventario === artId) ?? items[0] ?? null;
+        if (!exact) return;
+
+        const merged = [exact, ...this.articulos().filter((x) => x.idActInventario !== exact.idActInventario)];
+        this.articulos.set(merged);
+        this.selectedArticuloFallback.set(exact);
+      },
+      error: () => {
+        // Best effort: dejamos visible el fallback por ID.
+      },
+    });
   }
 }

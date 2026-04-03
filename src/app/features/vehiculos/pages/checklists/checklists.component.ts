@@ -3,8 +3,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
   VehCheckList,
@@ -26,6 +28,8 @@ type ConfirmSeverity = 'danger' | 'warning' | 'info';
     ReactiveFormsModule,
     DialogModule,
     InputTextModule,
+    ButtonModule,
+    VehiculosPageHeaderComponent,
   ],
   templateUrl: './checklists.component.html',
   styleUrl: './checklists.component.scss',
@@ -55,18 +59,16 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
   readonly assignDirty = signal(false);
 
   readonly currentTitle = computed(() =>
-    this.mode() === 'crear' ? 'Nuevo ítem checklist' : 'Editar ítem checklist'
+    this.mode() === 'crear' ? 'Nuevo checklist' : 'Editar checklist'
   );
 
   readonly currentSubtitle = computed(() => {
     if (this.mode() === 'crear') {
-      return 'Completa los datos base del catálogo.';
+      return 'Catálogo base del módulo';
     }
 
     const current = this.selected();
-    return current
-      ? `Editando: ${current.nombreItem}`
-      : 'Editar ítem checklist';
+    return current ? current.nombreItem : 'Checklist seleccionado';
   });
 
   readonly hasPendingChanges = computed(() =>
@@ -77,6 +79,8 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
     const used = new Set(this.asignaciones().map((x) => x.idVehTipoVehiculoFk));
     return this.tipos().filter((tipo) => !used.has(tipo.idVehTipoVehiculo));
   });
+
+  readonly currentAsignacionesCount = computed(() => this.asignaciones().length);
 
   form = this.fb.group({
     nombreItem: ['', Validators.required],
@@ -295,7 +299,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => {
-            this.success.set('Ítem checklist creado.');
+            this.success.set('Checklist creado.');
             this.mode.set('crear');
             this.activeTab.set('edicion');
             this.selected.set(null);
@@ -306,7 +310,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
           },
           error: (err) => {
             console.error(err);
-            this.error.set(err?.message || 'No se pudo crear el ítem checklist.');
+            this.error.set(err?.message || 'No se pudo crear el checklist.');
           },
         });
 
@@ -316,7 +320,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
     const current = this.selected();
     if (!current) {
       this.saving.set(false);
-      this.error.set('No hay un ítem checklist seleccionado.');
+      this.error.set('No hay un checklist seleccionado.');
       return;
     }
 
@@ -329,13 +333,13 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.success.set('Ítem checklist actualizado.');
+          this.success.set('Checklist actualizado.');
           this.formDirty.set(false);
           this.cargarChecks();
         },
         error: (err) => {
           console.error(err);
-          this.error.set(err?.message || 'No se pudo actualizar el ítem checklist.');
+          this.error.set(err?.message || 'No se pudo actualizar el checklist.');
         },
       });
   }
@@ -346,7 +350,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
 
     this.openConfirm(
       {
-        title: 'Eliminar ítem checklist',
+        title: 'Eliminar checklist',
         message: `Se eliminará "${current.nombreItem}".\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
@@ -361,7 +365,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
           .pipe(finalize(() => this.saving.set(false)))
           .subscribe({
             next: () => {
-              this.success.set('Ítem checklist eliminado.');
+              this.success.set('Checklist eliminado.');
               this.selected.set(null);
               this.selectedRelacion.set(null);
               this.mode.set('crear');
@@ -375,7 +379,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
             },
             error: (err) => {
               console.error(err);
-              this.error.set(err?.message || 'No se pudo eliminar el ítem checklist.');
+              this.error.set(err?.message || 'No se pudo eliminar el checklist.');
             },
           });
       }
@@ -397,7 +401,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
         confirmLabel: 'Descartar',
-        cancelLabel: 'Seguir editando',
+        cancelLabel: 'Seguir',
         severity: 'warning',
       },
       () => {
@@ -415,13 +419,13 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
   guardarAsignacion() {
     const current = this.selected();
     if (!current) {
-      this.error.set('Primero selecciona un ítem checklist.');
+      this.error.set('Primero selecciona un checklist.');
       return;
     }
 
     if (this.assignForm.invalid) {
       this.assignForm.markAllAsTouched();
-      this.error.set('Selecciona un tipo de vehículo para asignar.');
+      this.error.set('Selecciona un tipo de vehículo.');
       return;
     }
 
@@ -568,7 +572,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
           title: 'Descartar cambios',
           message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
           confirmLabel: 'Descartar',
-          cancelLabel: 'Seguir editando',
+          cancelLabel: 'Seguir',
           severity: 'warning',
         },
         () => {
@@ -602,7 +606,7 @@ export class VehiculosChecklistsComponent implements PendingChangesAware {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
         confirmLabel: 'Descartar',
-        cancelLabel: 'Seguir editando',
+        cancelLabel: 'Seguir',
         severity: 'warning',
       },
       () => {

@@ -1,105 +1,68 @@
-<app-vehiculos-page-header
-  title="Vehículos"
-  subtitle="Taller, operación y comercial">
-  <button
-    pButton
-    type="button"
-    icon="pi pi-refresh"
-    label="Actualizar"
-    (click)="cargar()"
-    [loading]="loading()">
-  </button>
-</app-vehiculos-page-header>
+<div class="vehPageShell">
+  <app-vehiculos-page-header
+    title="Vehículos"
+    subtitle="Taller, operación y comercial">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-refresh"
+      (click)="cargar()"
+      [loading]="loading()">
+    </button>
+  </app-vehiculos-page-header>
 
-<div class="dashboardShell" *ngIf="!loading(); else loadingBlock">
-  <section class="contentCard accessPanel">
-    <div class="sectionHead">
-      <div>
-        <h4>Accesos</h4>
-        <div class="secondaryCell" *ngIf="failures().length; else dashboardOk">
-          Parcial: {{ failures().join(' · ') }}
-        </div>
-        <ng-template #dashboardOk>
-          <div class="secondaryCell">Todo el módulo en una sola vista</div>
-        </ng-template>
-      </div>
-    </div>
-
-    <div class="accessGrid">
-      <button
-        type="button"
-        class="accessCard"
-        *ngFor="let item of accessCards()"
-        (click)="go(item.route)">
-        <span class="accessIcon"><i [class]="item.icon"></i></span>
-        <span class="accessText">
-          <strong>{{ item.label }}</strong>
-          <small>{{ item.hint }}</small>
-        </span>
-        <strong class="accessValue">{{ item.value }}</strong>
-      </button>
-    </div>
-  </section>
-
-  <section class="kpiGrid">
-    <article
-      class="kpiCard"
-      *ngFor="let item of resumeCards()"
-      [class.is-accent]="item.tone === 'accent'"
-      [class.is-success]="item.tone === 'success'"
-      [class.is-warn]="item.tone === 'warn'">
-      <span>{{ item.label }}</span>
-      <strong>{{ item.value }}</strong>
-      <small>{{ item.hint }}</small>
-    </article>
-  </section>
-
-  <section class="workspaceGrid">
-    <section class="contentCard panel panel--wide">
+  <div class="dashboardShell" *ngIf="!loading(); else loadingBlock">
+    <section class="contentCard accessPanel">
       <div class="sectionHead">
         <div>
-          <h4>Órdenes</h4>
-          <div class="secondaryCell">
-            {{ ordenesAbiertas() }} abiertas · {{ ordenesEnProceso() }} en proceso
+          <h4>Accesos</h4>
+          <div class="secondaryCell" *ngIf="failures().length; else dashboardOk">
+            Parcial: {{ failures().join(' · ') }}
           </div>
+          <ng-template #dashboardOk>
+            <div class="secondaryCell">Todo el módulo en una sola vista</div>
+          </ng-template>
         </div>
-
-        <button
-          pButton
-          type="button"
-          size="small"
-          icon="pi pi-arrow-right"
-          label="Órdenes"
-          (click)="irAOrdenes()">
-        </button>
       </div>
 
-      <div class="denseList" *ngIf="ordenesRecientes().length; else noOrdenes">
+      <div class="accessGrid">
         <button
           type="button"
-          class="denseRow"
-          *ngFor="let item of ordenesRecientes()"
-          (click)="irAOrdenes()">
-          <div class="denseMain">
-            <strong>#{{ item.idVehOrdenTrabajo }}</strong>
-            <small>{{ ordenVehiculo(item) }}</small>
-          </div>
-
-          <div class="denseMeta">
-            <span>{{ item.tipoServicio || 'Sin tipo' }}</span>
-            <small>{{ item.estadoOrden || 'Sin estado' }}</small>
-          </div>
+          class="accessCard"
+          *ngFor="let item of accessCards()"
+          (click)="go(item.route)">
+          <span class="accessIcon"><i [class]="item.icon"></i></span>
+          <span class="accessText">
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.hint }}</small>
+          </span>
+          <strong class="accessValue">{{ item.value }}</strong>
         </button>
       </div>
     </section>
 
-    <div class="stackPanel">
-      <section class="contentCard panel">
+    <section class="kpiGrid">
+      <article
+        class="kpiCard"
+        *ngFor="let item of resumeCards()"
+        [class.is-accent]="item.tone === 'accent'"
+        [class.is-success]="item.tone === 'success'"
+        [class.is-warn]="item.tone === 'warn'">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+        <small>{{ item.hint }}</small>
+      </article>
+    </section>
+
+    <section class="workspaceGrid">
+      <section class="contentCard panel panel--wide panel--orders">
         <div class="sectionHead">
           <div>
-            <h4>Comercial</h4>
+            <h4>Órdenes</h4>
             <div class="secondaryCell">
-              {{ facturas().length }} facturas · {{ facturasConSaldo() }} con saldo
+              {{ ordenesAbiertas() }} abiertas · {{ ordenesEnProceso() }} en proceso
             </div>
           </div>
 
@@ -108,88 +71,134 @@
             type="button"
             size="small"
             icon="pi pi-arrow-right"
-            label="Facturación"
-            (click)="irAFacturacion()">
+            label="Órdenes"
+            (click)="irAOrdenes()">
           </button>
         </div>
 
-        <div class="miniStats">
-          <article class="miniStat">
-            <span>Facturas</span>
-            <strong>{{ facturas().length }}</strong>
-          </article>
+        <div class="panelScroll panelScroll--orders">
+          <div class="denseList" *ngIf="ordenesRecientes().length; else noOrdenes">
+            <button
+              type="button"
+              class="denseRow"
+              *ngFor="let item of ordenesRecientes()"
+              (click)="irAOrdenes()">
+              <div class="denseMain">
+                <strong>#{{ item.idVehOrdenTrabajo }}</strong>
+                <small>{{ ordenVehiculo(item) }}</small>
+              </div>
 
-          <article class="miniStat">
-            <span>Cobros</span>
-            <strong>{{ cobros().length }}</strong>
-          </article>
-
-          <article class="miniStat">
-            <span>Saldo</span>
-            <strong>{{ formatMoney(saldoCartera()) }}</strong>
-          </article>
-        </div>
-
-        <div class="denseList denseList--mini" *ngIf="facturasRecientes().length; else noFacturas">
-          <button
-            type="button"
-            class="denseRow"
-            *ngFor="let item of facturasRecientes()"
-            (click)="irAFacturacion()">
-            <div class="denseMain">
-              <strong>{{ facturaNumero(item) }}</strong>
-              <small>{{ facturaCliente(item) }}</small>
-            </div>
-
-            <div class="denseMeta alignRight">
-              <span>{{ formatMoney(item.total) }}</span>
-              <small>Saldo {{ formatMoney(item.cxcDeuda) }}</small>
-            </div>
-          </button>
-        </div>
-      </section>
-
-      <section class="contentCard panel">
-        <div class="sectionHead">
-          <div>
-            <h4>Alertas</h4>
-            <div class="secondaryCell">Pendientes del módulo</div>
+              <div class="denseMeta">
+                <span>{{ item.tipoServicio || 'Sin tipo' }}</span>
+                <small>{{ item.estadoOrden || 'Sin estado' }}</small>
+              </div>
+            </button>
           </div>
         </div>
-
-        <div class="alertList">
-          <button type="button" class="alertItem" (click)="irAChecklists()">
-            <strong>{{ tiposSinChecklist() }}</strong>
-            <span>tipos sin checklist</span>
-          </button>
-
-          <button type="button" class="alertItem" (click)="irAChecklists()">
-            <strong>{{ checklistSinTipo() }}</strong>
-            <span>checklist sin tipo</span>
-          </button>
-
-          <button type="button" class="alertItem" (click)="irAFacturacion()">
-            <strong>{{ facturasConSaldo() }}</strong>
-            <span>facturas con saldo</span>
-          </button>
-
-          <button type="button" class="alertItem" (click)="irAOrdenes()">
-            <strong>{{ ordenesAnuladas() }}</strong>
-            <span>órdenes anuladas</span>
-          </button>
-        </div>
       </section>
-    </div>
-  </section>
 
-  
+      <div class="stackPanel">
+        <section class="contentCard panel panel--commercial">
+          <div class="sectionHead">
+            <div>
+              <h4>Comercial</h4>
+              <div class="secondaryCell">
+                {{ facturas().length }} facturas · {{ facturasConSaldo() }} con saldo
+              </div>
+            </div>
+
+            <button
+              pButton
+              type="button"
+              size="small"
+              icon="pi pi-arrow-right"
+              label="Facturación"
+              (click)="irAFacturacion()">
+            </button>
+          </div>
+
+          <div class="miniStats">
+            <article class="miniStat">
+              <span>Facturas</span>
+              <strong>{{ facturas().length }}</strong>
+            </article>
+
+            <article class="miniStat">
+              <span>Cobros</span>
+              <strong>{{ cobros().length }}</strong>
+            </article>
+
+            <article class="miniStat">
+              <span>Saldo</span>
+              <strong>{{ formatMoney(saldoCartera()) }}</strong>
+            </article>
+          </div>
+
+          <div class="panelScroll">
+            <div class="denseList denseList--mini" *ngIf="facturasRecientes().length; else noFacturas">
+              <button
+                type="button"
+                class="denseRow"
+                *ngFor="let item of facturasRecientes()"
+                (click)="irAFacturacion()">
+                <div class="denseMain">
+                  <strong>{{ facturaNumero(item) }}</strong>
+                  <small>{{ facturaCliente(item) }}</small>
+                </div>
+
+                <div class="denseMeta alignRight">
+                  <span>{{ formatMoney(item.total) }}</span>
+                  <small>Saldo {{ formatMoney(item.cxcDeuda) }}</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="contentCard panel panel--alerts">
+          <div class="sectionHead">
+            <div>
+              <h4>Alertas</h4>
+              <div class="secondaryCell">Pendientes del módulo</div>
+            </div>
+          </div>
+
+          <div class="panelScroll">
+            <div class="alertList">
+              <button type="button" class="alertItem" (click)="irAChecklists()">
+                <strong>{{ tiposSinChecklist() }}</strong>
+                <span>tipos sin checklist</span>
+              </button>
+
+              <button type="button" class="alertItem" (click)="irAChecklists()">
+                <strong>{{ checklistSinTipo() }}</strong>
+                <span>checklist sin tipo</span>
+              </button>
+
+              <button type="button" class="alertItem" (click)="irAFacturacion()">
+                <strong>{{ facturasConSaldo() }}</strong>
+                <span>facturas con saldo</span>
+              </button>
+
+              <button type="button" class="alertItem" (click)="irAOrdenes()">
+                <strong>{{ ordenesAnuladas() }}</strong>
+                <span>órdenes anuladas</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
 </div>
 
 <ng-template #loadingBlock>
-  <section class="contentCard loadingState">
-    <i class="pi pi-spin pi-spinner"></i>
-    <span>Cargando dashboard...</span>
-  </section>
+  <div class="vehPageShell">
+    <section class="contentCard loadingState">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Cargando dashboard...</span>
+    </section>
+  </div>
 </ng-template>
 
 <ng-template #noOrdenes>
