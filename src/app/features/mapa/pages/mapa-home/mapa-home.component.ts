@@ -629,10 +629,33 @@ export class MapaHomeComponent {
       return;
     }
 
-    if (this.selectedNodo()?.idRedNodo === event.node.idRedNodo) {
-      setTimeout(() => {
-        this.mapCanvas?.centerOnElementos(this.elementosCanvas());
-      }, 0);
+    const hiddenBranchIds = this.getBranchNodeIds(event.node.idRedNodo);
+    const selectedNodo = this.selectedNodo();
+    const selectedElemento = this.selectedElemento();
+
+    if (selectedNodo && hiddenBranchIds.has(selectedNodo.idRedNodo)) {
+      this.selection.setNodo(null);
+    }
+
+    if (
+      selectedElemento &&
+      (!this.visibility.isElementoVisible(selectedElemento, this.nodos()) ||
+        hiddenBranchIds.has(selectedElemento.idRedNodoFk))
+    ) {
+      this.selection.setElemento(null);
+
+      if (this.ui.propertiesOpen()) {
+        this.interaction.closeInfoPanel();
+      }
+    }
+
+    const contextElemento = this.contextElemento();
+    if (
+      contextElemento &&
+      (!this.visibility.isElementoVisible(contextElemento, this.nodos()) ||
+        hiddenBranchIds.has(contextElemento.idRedNodoFk))
+    ) {
+      this.interaction.closeContextMenu();
     }
   }
 

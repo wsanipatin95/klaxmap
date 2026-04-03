@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { SidebarService, MenuItem } from '../../core/services/sidebar.service';
 import { SessionStore, DynamicMenuItem } from '../../features/seg/store/session.store';
-
+import { ENVIRONMENT } from 'src/app/core/config/environment.token';
 @Component({
   selector: 'app-sidebar',
   imports: [CommonModule, RouterModule],
@@ -14,7 +14,7 @@ export class SidebarComponent {
   sidebarService = inject(SidebarService);
   private router = inject(Router);
   private sessionStore = inject(SessionStore);
-
+  private env = inject(ENVIRONMENT);
   auditoriaRed = computed(() =>
     this.sessionStore.hasCompanyPrivilege('ram_red_red')
   );
@@ -49,31 +49,35 @@ export class SidebarComponent {
 
   private buildOrgMenu(): MenuItem[] {
     const items: MenuItem[] = [
-      { label: 'Principal', isDivider: true },
-      {
+      { label: 'Principal', isDivider: true }
+    ];
+
+    if (this.env.company === 'inno') {
+      items.push({
         label: 'MAPAS',
         icon: 'pi pi-map',
         route: '/app/mapa/home',
-      },
-    ];
-
-    if (this.auditoriaRed()) {
+      });
+      if (this.auditoriaRed()) {
+        items.push({
+          label: 'Auditoría',
+          icon: 'pi pi-history',
+          route: '/app/adm/auditoria',
+        });
+      }
+    } else if (this.env.company === 'dumax') {
       items.push({
-        label: 'Auditoría',
+        label: 'Importación',
         icon: 'pi pi-history',
-        route: '/app/adm/auditoria',
+        route: '/app/importacion/',
+      });
+
+      items.push({
+        label: 'Vehículos',
+        icon: 'pi pi-car',
+        route: '/app/vehiculos/',
       });
     }
-    items.push({
-      label: 'Importación',
-      icon: 'pi pi-history',
-      route: '/app/importacion/',
-    });
-    items.push({
-      label: 'Vehículos',
-      icon: 'pi pi-car',
-      route: '/app/vehiculos/',
-    });
     return items;
   }
 

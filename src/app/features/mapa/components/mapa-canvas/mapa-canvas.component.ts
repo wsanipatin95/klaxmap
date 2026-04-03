@@ -426,6 +426,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.disableLayerEditing(this.editSession.layer);
     this.clearEditSession();
     this.emitEditSessionState();
+    this.scheduleRender();
 
     return payload;
   }
@@ -1069,9 +1070,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       if (!layer) continue;
 
       const outlineLayer = (layer as any).__outlineLayer as L.Layer | undefined;
-      if (outlineLayer) {
-        this.drawnItems.addLayer(outlineLayer);
-      }
 
       (layer as any).__idGeoElemento = el.idGeoElemento;
       (layer as any).__geomTipo = el.geomTipo;
@@ -1079,30 +1077,15 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       (layer as any).__tooltipBound = true;
 
       this.bindTooltipForLayer(layer, el);
+      this.bindLayerInteraction(layer, el);
 
-      layer.on('click', (ev: any) => {
-        if (this.toolMode === 'measure') {
-          const latlng = ev?.latlng ?? this.tryGetLayerLatLng(layer);
-          if (latlng) {
-            this.handleMeasureClick(latlng);
-          }
-          return;
-        }
-
-        this.elementoSelected.emit(el);
-      });
-
-      layer.on('contextmenu', (ev: any) => {
-        if (this.toolMode === 'measure') {
-          return;
-        }
-
-        this.elementoContext.emit({
-          elemento: el,
-          x: ev.originalEvent?.clientX ?? 0,
-          y: ev.originalEvent?.clientY ?? 0,
-        });
-      });
+      if (outlineLayer) {
+        (outlineLayer as any).__idGeoElemento = el.idGeoElemento;
+        (outlineLayer as any).__geomTipo = el.geomTipo;
+        (outlineLayer as any).__elementName = el.nombre ?? '';
+        this.bindLayerInteraction(outlineLayer, el, layer);
+        this.drawnItems.addLayer(outlineLayer);
+      }
 
       this.drawnItems.addLayer(layer);
       this.renderedLayers.set(el.idGeoElemento, layer);
@@ -1110,6 +1093,41 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.applySelectionStyle();
     this.renderVisibleLabels(renderQueue);
+  }
+
+  private bindLayerInteraction(
+    targetLayer: L.Layer,
+    elemento: MapaElemento,
+    anchorLayer?: L.Layer
+  ) {
+    const interactionAnchor = anchorLayer ?? targetLayer;
+
+    targetLayer.off('click');
+    targetLayer.off('contextmenu');
+
+    targetLayer.on('click', (ev: any) => {
+      if (this.toolMode === 'measure') {
+        const latlng = ev?.latlng ?? this.tryGetLayerLatLng(interactionAnchor);
+        if (latlng) {
+          this.handleMeasureClick(latlng);
+        }
+        return;
+      }
+
+      this.elementoSelected.emit(elemento);
+    });
+
+    targetLayer.on('contextmenu', (ev: any) => {
+      if (this.toolMode === 'measure') {
+        return;
+      }
+
+      this.elementoContext.emit({
+        elemento,
+        x: ev.originalEvent?.clientX ?? 0,
+        y: ev.originalEvent?.clientY ?? 0,
+      });
+    });
   }
 
   private bindTooltipForLayer(layer: L.Layer, elemento: MapaElemento) {
@@ -1660,7 +1678,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       opacity: 0.96,
       lineCap: 'round',
       lineJoin: 'round',
-      interactive: false,
+      interactive: true,
       renderer: this.vectorRenderer,
     });
 
@@ -2142,7 +2160,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
+      .replace(/\"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 
