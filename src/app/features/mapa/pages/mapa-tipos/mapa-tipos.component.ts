@@ -11,6 +11,10 @@ import type {
 import { MapaTipoFormComponent } from '../../components/mapa-tipo-form/mapa-tipo-form.component';
 import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog/mapa-confirm-dialog.component';
 import { AuditoriaRegistroComponent } from '../../components/auditoria-registro/auditoria-registro.component';
+import {
+  normalizeMapaColor,
+  normalizeMapaColorOrDefault,
+} from '../../utils/mapa-color.utils';
 
 type TipoPanelTab = 'edicion' | 'historial';
 
@@ -262,9 +266,16 @@ export class MapaTiposComponent {
   }
 
   previewStyle(tipo: MapaTipoElemento): Record<string, string> {
-    const stroke = tipo.colorStroke || '#7b0061';
-    const fill = tipo.colorFill || '#f3aad6';
-    const text = tipo.colorTexto || stroke;
+    const fill = normalizeMapaColorOrDefault(
+      tipo.colorFill ?? tipo.colorStroke ?? null,
+      '#f3aad6'
+    );
+    const stroke = normalizeMapaColorOrDefault(
+      tipo.colorStroke ?? tipo.colorFill ?? null,
+      '#7b0061'
+    );
+    const text = normalizeMapaColor(tipo.colorTexto, stroke) ?? stroke;
+    const strokeWidth = Math.max(1, Number(tipo.strokeWidth ?? 1) || 1);
     const size = `${tipo.tamanoIcono ?? 16}px`;
 
     return {
@@ -272,7 +283,8 @@ export class MapaTiposComponent {
       '--preview-fill': fill,
       '--preview-text': text,
       '--preview-size': size,
-      '--preview-stroke-width': `${tipo.strokeWidth ?? 1}`,
+      '--preview-stroke-width': `${strokeWidth}`,
+      '--preview-stroke-width-px': `${strokeWidth}px`,
     };
   }
 

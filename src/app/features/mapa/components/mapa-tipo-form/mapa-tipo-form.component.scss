@@ -140,15 +140,26 @@
   filter: drop-shadow(0 0 1px var(--preview-stroke, #7b0061));
 }
 
-.preview-shape.is-line::before {
+.preview-shape.is-line::before,
+.preview-shape.is-line::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   top: 28px;
-  height: max(2px, calc(var(--preview-stroke-width, 1) * 1px));
   border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.preview-shape.is-line::before {
+  height: calc(var(--preview-stroke-width, 1) * 1px + 4px);
   background: var(--preview-stroke, #7b0061);
+  opacity: 0.95;
+}
+
+.preview-shape.is-line::after {
+  height: calc(var(--preview-stroke-width, 1) * 1px);
+  background: var(--preview-fill, #f3aad6);
 }
 
 .preview-shape.is-polygon {

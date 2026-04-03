@@ -20,6 +20,10 @@ import type {
 } from '../../data-access/mapa.models';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
 import { parseWktGeometry } from '../../utils/mapa-geometry.utils';
+import {
+  normalizeMapaColor,
+  normalizeMapaColorOrDefault,
+} from '../../utils/mapa-color.utils';
 
 declare const L: typeof import('leaflet');
 
@@ -166,8 +170,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   measureStarted = false;
   measureDistanceText = '0 m';
 
-  private readonly DEFAULT_STROKE = '#38bdf8';
-  private readonly DEFAULT_FILL = '#38bdf8';
+  private readonly DEFAULT_STROKE = '#7b0061';
+  private readonly DEFAULT_FILL = '#f3aad6';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
   private readonly LABELS_MIN_ZOOM = 16;
@@ -1064,6 +1068,11 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       const layer = this.layerFromElemento(el, tipo);
       if (!layer) continue;
 
+      const outlineLayer = (layer as any).__outlineLayer as L.Layer | undefined;
+      if (outlineLayer) {
+        this.drawnItems.addLayer(outlineLayer);
+      }
+
       (layer as any).__idGeoElemento = el.idGeoElemento;
       (layer as any).__geomTipo = el.geomTipo;
       (layer as any).__elementName = el.nombre ?? '';
@@ -1387,6 +1396,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     for (const [id, layer] of this.renderedLayers.entries()) {
       const isSelected = id === this.selectedElementoId;
       const anyLayer = layer as any;
+      const outlineLayer = anyLayer.__outlineLayer as L.Layer | undefined;
 
       const baseWeight =
         typeof anyLayer.__baseWeight === 'number' ? Number(anyLayer.__baseWeight) : 3;
@@ -1400,10 +1410,22 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         typeof anyLayer.__baseRadius === 'number'
           ? Number(anyLayer.__baseRadius)
           : this.PERFORMANCE_POINT_RADIUS;
+      const baseOutlineWeight =
+        typeof anyLayer.__baseOutlineWeight === 'number'
+          ? Number(anyLayer.__baseOutlineWeight)
+          : Math.max(baseWeight + 2, baseWeight * 1.8);
+
+      if (outlineLayer && typeof (outlineLayer as any).setStyle === 'function') {
+        (outlineLayer as any).setStyle({
+          weight: isSelected ? Math.max(baseOutlineWeight + 2, baseOutlineWeight * 1.1) : baseOutlineWeight,
+          opacity: isSelected ? 1 : 0.96,
+          dashArray: undefined,
+        });
+      }
 
       if (typeof anyLayer.setStyle === 'function') {
         anyLayer.setStyle({
-          weight: isSelected ? Math.max(baseWeight + 2, baseWeight * 1.45) : baseWeight,
+          weight: isSelected ? Math.max(baseWeight + 1, baseWeight * 1.25) : baseWeight,
           opacity: isSelected ? 1 : 0.92,
           fillOpacity: isSelected ? Math.max(baseFillOpacity, 0.36) : baseFillOpacity,
           dashArray: isSelected ? '8 6' : undefined,
@@ -1424,6 +1446,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       }
 
       if (isSelected) {
+        if (outlineLayer && typeof (outlineLayer as any).bringToFront === 'function') {
+          (outlineLayer as any).bringToFront();
+        }
         if (typeof anyLayer.bringToFront === 'function') {
           anyLayer.bringToFront();
         }
@@ -1514,22 +1539,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     if (type === 'linestring' && Array.isArray(coords)) {
-      const layer = L.polyline(
+      return this.createLineLayer(
         coords.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
-        {
-          color: style.colorStroke,
-          weight: style.strokeWidth,
-          lineCap: 'round',
-          lineJoin: 'round',
-          renderer: this.vectorRenderer,
-        }
+        style
       );
-
-      (layer as any).__baseWeight = style.strokeWidth;
-      (layer as any).__baseFillOpacity = 0;
-      (layer as any).__baseZIndex = style.zIndex;
-
-      return layer;
     }
 
     if (type === 'polygon' && Array.isArray(coords) && Array.isArray(coords[0])) {
@@ -1556,22 +1569,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     if (type === 'multilinestring' && Array.isArray(coords) && Array.isArray(coords[0])) {
-      const layer = L.polyline(
+      return this.createLineLayer(
         coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
-        {
-          color: style.colorStroke,
-          weight: style.strokeWidth,
-          lineCap: 'round',
-          lineJoin: 'round',
-          renderer: this.vectorRenderer,
-        }
+        style
       );
-
-      (layer as any).__baseWeight = style.strokeWidth;
-      (layer as any).__baseFillOpacity = 0;
-      (layer as any).__baseZIndex = style.zIndex;
-
-      return layer;
     }
 
     if (
@@ -1628,17 +1629,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     if (parsed.renderType === 'polyline' && parsed.line) {
-      const layer = L.polyline(parsed.line, {
-        color: style.colorStroke,
-        weight: style.strokeWidth,
-        renderer: this.vectorRenderer,
-      });
-
-      (layer as any).__baseWeight = style.strokeWidth;
-      (layer as any).__baseFillOpacity = 0;
-      (layer as any).__baseZIndex = style.zIndex;
-
-      return layer;
+      return this.createLineLayer(parsed.line, style);
     }
 
     if (parsed.renderType === 'polygon' && parsed.polygon) {
@@ -1658,6 +1649,36 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     return null;
+  }
+
+  private createLineLayer(latlngs: L.LatLngExpression[] | L.LatLng[], style: ResolvedElementStyle): L.Layer {
+    const innerWeight = Math.max(1, style.strokeWidth);
+    const outlineWeight = Math.max(innerWeight + 2, Math.round(innerWeight * 1.8));
+    const outline = L.polyline(latlngs as any, {
+      color: style.colorStroke,
+      weight: outlineWeight,
+      opacity: 0.96,
+      lineCap: 'round',
+      lineJoin: 'round',
+      interactive: false,
+      renderer: this.vectorRenderer,
+    });
+
+    const line = L.polyline(latlngs as any, {
+      color: style.colorFill,
+      weight: innerWeight,
+      lineCap: 'round',
+      lineJoin: 'round',
+      renderer: this.vectorRenderer,
+    });
+
+    (line as any).__outlineLayer = outline;
+    (line as any).__baseWeight = innerWeight;
+    (line as any).__baseOutlineWeight = outlineWeight;
+    (line as any).__baseFillOpacity = 0;
+    (line as any).__baseZIndex = style.zIndex;
+
+    return line;
   }
 
   private geomTipoFromLayerType(layerType: string): MapaGeomTipo {
@@ -1777,6 +1798,19 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     if (typeof targetAny.setLatLngs === 'function' && typeof sourceAny.getLatLngs === 'function') {
       targetAny.setLatLngs(sourceAny.getLatLngs());
       targetAny.redraw?.();
+    }
+
+    const targetOutline = targetAny.__outlineLayer as any;
+    const sourceOutline = sourceAny.__outlineLayer as any;
+
+    if (
+      targetOutline &&
+      sourceOutline &&
+      typeof targetOutline.setLatLngs === 'function' &&
+      typeof sourceOutline.getLatLngs === 'function'
+    ) {
+      targetOutline.setLatLngs(sourceOutline.getLatLngs());
+      targetOutline.redraw?.();
     }
   }
 
@@ -2007,10 +2041,18 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     el: MapaElemento,
     tipo: MapaTipoElemento | null
   ): ResolvedElementStyle {
-    const colorStroke = el.colorStroke || tipo?.colorStroke || this.DEFAULT_STROKE;
-    const colorFill = el.colorFill || tipo?.colorFill || colorStroke;
-    const colorTexto =
-      el.colorTexto || tipo?.colorTexto || el.colorStroke || tipo?.colorStroke || null;
+    const colorFill = normalizeMapaColorOrDefault(
+      el.colorFill || tipo?.colorFill || el.colorStroke || tipo?.colorStroke || null,
+      this.DEFAULT_FILL
+    );
+    const colorStroke = normalizeMapaColorOrDefault(
+      el.colorStroke || tipo?.colorStroke || el.colorFill || tipo?.colorFill || null,
+      this.DEFAULT_STROKE
+    );
+    const colorTexto = normalizeMapaColor(
+      el.colorTexto || tipo?.colorTexto || el.colorStroke || tipo?.colorStroke || null,
+      colorStroke
+    );
 
     return {
       iconoFuente: el.iconoFuente || tipo?.iconoFuente || null,
@@ -2100,7 +2142,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\\"/g, '&quot;')
+      .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 

@@ -5,6 +5,10 @@ import type {
   MapaTipoElemento,
   MapaTipoElementoSaveRequest,
 } from '../../data-access/mapa.models';
+import {
+  normalizeMapaColor,
+  normalizeMapaColorOrDefault,
+} from '../../utils/mapa-color.utils';
 
 type GeometryMode = 'point' | 'linestring' | 'polygon' | 'mixed';
 type PointIconMode = 'none' | 'material' | 'class' | 'url' | 'preset';
@@ -224,6 +228,16 @@ export class MapaTipoFormComponent {
       }
     }
 
+    const normalizedFill = normalizeMapaColorOrDefault(
+      this.form.colorFill ?? this.form.colorStroke ?? null,
+      '#f3aad6'
+    );
+    const normalizedStroke = normalizeMapaColorOrDefault(
+      this.form.colorStroke ?? this.form.colorFill ?? null,
+      '#7b0061'
+    );
+    const normalizedText = normalizeMapaColor(this.form.colorTexto, normalizedStroke) ?? normalizedStroke;
+
     const payload: MapaTipoElementoSaveRequest = {
       codigo: this.form.codigo.trim(),
       nombre: this.form.nombre.trim(),
@@ -234,9 +248,9 @@ export class MapaTipoFormComponent {
       iconoClase,
 
       shapeBase: this.resolveShapeBaseForPayload(),
-      colorFill: this.cleanString(this.form.colorFill),
-      colorStroke: this.cleanString(this.form.colorStroke),
-      colorTexto: this.cleanString(this.form.colorTexto),
+      colorFill: normalizedFill,
+      colorStroke: normalizedStroke,
+      colorTexto: normalizedText,
       strokeWidth: this.normalizeNumber(this.form.strokeWidth, 1),
       zIndex: this.normalizeNumber(this.form.zIndex, 0),
       tamanoIcono,
@@ -278,20 +292,28 @@ export class MapaTipoFormComponent {
   }
 
   setColor(field: ColorFieldKey, value: string) {
-    this.form[field] = value;
+    this.form[field] = normalizeMapaColor(value, value) ?? value;
     this.emitDirty();
   }
 
   previewStyle(): Record<string, string> {
-    const stroke = this.form.colorStroke?.trim() || '#7b0061';
-    const fill = this.form.colorFill?.trim() || '#f3aad6';
-    const width = `${this.normalizeNumber(this.form.strokeWidth, 1)}`;
+    const fill = normalizeMapaColorOrDefault(
+      this.form.colorFill?.trim() || this.form.colorStroke?.trim(),
+      '#f3aad6'
+    );
+    const stroke = normalizeMapaColorOrDefault(
+      this.form.colorStroke?.trim() || this.form.colorFill?.trim(),
+      '#7b0061'
+    );
+    const widthValue = this.normalizeNumber(this.form.strokeWidth, 1);
+    const width = `${widthValue}`;
     const size = `${this.previewPointSize()}px`;
 
     return {
       '--preview-stroke': stroke,
       '--preview-fill': fill,
       '--preview-stroke-width': width,
+      '--preview-stroke-width-px': `${widthValue}px`,
       '--preview-size': size,
     };
   }
@@ -359,7 +381,10 @@ export class MapaTipoFormComponent {
   }
 
   previewTextColor(): string {
-    return this.form.colorTexto?.trim() || this.form.colorStroke?.trim() || '#334155';
+    return normalizeMapaColor(
+      this.form.colorTexto?.trim() || this.form.colorStroke?.trim(),
+      '#334155'
+    ) ?? '#334155';
   }
 
   markSaved(tipo?: MapaTipoElemento | null) {
@@ -373,6 +398,16 @@ export class MapaTipoFormComponent {
   }
 
   private loadFromTipo(tipo: MapaTipoElemento) {
+    const normalizedFill = normalizeMapaColorOrDefault(
+      tipo.colorFill ?? tipo.colorStroke ?? null,
+      '#f3aad6'
+    );
+    const normalizedStroke = normalizeMapaColorOrDefault(
+      tipo.colorStroke ?? tipo.colorFill ?? null,
+      '#7b0061'
+    );
+    const normalizedText = normalizeMapaColor(tipo.colorTexto, normalizedStroke) ?? normalizedStroke;
+
     this.form = {
       codigo: tipo.codigo ?? '',
       nombre: tipo.nombre ?? '',
@@ -381,9 +416,9 @@ export class MapaTipoFormComponent {
       iconoFuente: tipo.iconoFuente ?? '',
       iconoClase: tipo.iconoClase ?? '',
       shapeBase: tipo.shapeBase ?? '',
-      colorFill: tipo.colorFill ?? '',
-      colorStroke: tipo.colorStroke ?? '',
-      colorTexto: tipo.colorTexto ?? '',
+      colorFill: normalizedFill,
+      colorStroke: normalizedStroke,
+      colorTexto: normalizedText,
       strokeWidth: tipo.strokeWidth ?? 1,
       zIndex: tipo.zIndex ?? 0,
       tamanoIcono: tipo.tamanoIcono ?? null,

@@ -182,19 +182,19 @@
 
 .row-preview.is-point {
   border-radius: 999px;
-  border: var(--preview-stroke-width) solid var(--preview-stroke);
+  border: var(--preview-stroke-width-px) solid var(--preview-stroke);
   background: var(--preview-fill);
 }
 
 .row-preview.is-square {
   border-radius: 0.45rem;
-  border: var(--preview-stroke-width) solid var(--preview-stroke);
+  border: var(--preview-stroke-width-px) solid var(--preview-stroke);
   background: var(--preview-fill);
 }
 
 .row-preview.is-donut {
   border-radius: 999px;
-  border: calc(var(--preview-stroke-width) + 2px) solid var(--preview-stroke);
+  border: calc(var(--preview-stroke-width-px) + 2px) solid var(--preview-stroke);
   background: #ffffff;
 }
 
@@ -215,10 +215,32 @@
 }
 
 .row-preview.is-line {
-  width: 2.2rem;
-  height: 0;
-  border-top: calc(var(--preview-stroke-width) + 1px) solid var(--preview-stroke);
+  width: 2.4rem;
+  height: 1rem;
+  background: transparent;
+  overflow: visible;
+}
+
+.row-preview.is-line::before,
+.row-preview.is-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
   border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.row-preview.is-line::before {
+  height: calc(var(--preview-stroke-width-px) + 4px);
+  background: var(--preview-stroke);
+  opacity: 0.95;
+}
+
+.row-preview.is-line::after {
+  height: var(--preview-stroke-width-px);
+  background: var(--preview-fill);
 }
 
 .row-preview.is-polygon {
