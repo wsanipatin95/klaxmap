@@ -4,10 +4,7 @@ import { Router } from '@angular/router';
 import {
   FormsModule,
   ReactiveFormsModule,
-  FormArray,
   FormBuilder,
-  FormControl,
-  FormGroup,
   Validators,
 } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
@@ -15,6 +12,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
+import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
   CliVehiculo,
@@ -40,6 +38,7 @@ type ClienteLookupState = 'idle' | 'searching' | 'found' | 'not_found';
     DialogModule,
     ButtonModule,
     TextareaModule,
+    VehiculosPageHeaderComponent,
   ],
   templateUrl: './clientes.component.html',
   styleUrl: './clientes.component.scss',
@@ -48,6 +47,7 @@ export class VehiculosClientesComponent implements PendingChangesAware {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
   private router = inject(Router);
+
   readonly IDENTIFICACION_OPTIONS = [
     { value: '04', label: 'RUC' },
     { value: '05', label: 'Cédula' },
@@ -84,12 +84,12 @@ export class VehiculosClientesComponent implements PendingChangesAware {
 
   readonly currentSubtitle = computed(() => {
     if (this.mode() === 'crear') {
-      return 'Valida primero la identificación y luego crea el cliente.';
+      return 'Valida la identificación y crea el cliente.';
     }
     const current = this.selectedCliente();
     return current
-      ? `Editando: ${current.nombre || current.ruc}`
-      : 'Editar cliente';
+      ? current.nombre || current.ruc || 'Cliente seleccionado'
+      : 'Cliente seleccionado';
   });
 
   readonly vehiculoTitle = computed(() =>
@@ -99,8 +99,19 @@ export class VehiculosClientesComponent implements PendingChangesAware {
   readonly vehiculoSubtitle = computed(() => {
     const current = this.selectedCliente();
     if (!current) return 'Selecciona un cliente.';
-    return `Vehículos asociados a ${current.nombre || current.ruc}`;
+    return `Vehículos de ${current.nombre || current.ruc}`;
   });
+
+  readonly clientesCount = computed(() => this.clientes().length);
+  readonly vehiculosCount = computed(() => this.vehiculos().length);
+
+  readonly clienteSearchResolved = computed(() =>
+    this.clienteLookupState() === 'found' || this.clienteLookupState() === 'not_found'
+  );
+
+  readonly disableClienteActionsInCreate = computed(() =>
+    this.mode() === 'crear' && !this.clienteSearchResolved()
+  );
 
   private initialClienteSnapshot = '';
   private initialVehiculoSnapshot = '';
@@ -155,6 +166,9 @@ export class VehiculosClientesComponent implements PendingChangesAware {
   });
 
   constructor() {
+    this.resetClienteFormForNew();
+    this.resetVehiculoFormForNew();
+
     this.form.valueChanges.subscribe(() => this.updateClienteDirtyState());
     this.vehiculoForm.valueChanges.subscribe(() => this.updateVehiculoDirtyState());
 
@@ -421,7 +435,7 @@ export class VehiculosClientesComponent implements PendingChangesAware {
       emitEvent: false,
     });
 
-    if (!this.mode() || this.mode() === 'crear') {
+    if (this.mode() === 'crear') {
       this.clienteLookupState.set('idle');
       this.clienteEncontrado.set(null);
     }
@@ -654,9 +668,9 @@ export class VehiculosClientesComponent implements PendingChangesAware {
     const request$ =
       this.vehiculoMode() === 'editar' && this.selectedVehiculo()
         ? this.repo.editarClienteVehiculo({
-          idCliVehiculo: this.selectedVehiculo()!.idCliVehiculo,
-          cambios: payload,
-        })
+            idCliVehiculo: this.selectedVehiculo()!.idCliVehiculo,
+            cambios: payload,
+          })
         : this.repo.crearClienteVehiculo(payload);
 
     request$
@@ -740,6 +754,18 @@ export class VehiculosClientesComponent implements PendingChangesAware {
     );
   }
 
+  tipoVehiculoLabel(idVehTipoVehiculoFk: number | null | undefined): string {
+    if (idVehTipoVehiculoFk == null) return 'Sin tipo';
+    return (
+      this.tiposVehiculo().find((x) => x.idVehTipoVehiculo === idVehTipoVehiculoFk)?.tipoVehiculo ||
+      `Tipo #${idVehTipoVehiculoFk}`
+    );
+  }
+
+  clienteKey(cliente: VehCliente | null | undefined): number {
+    return Number(cliente?.dni ?? cliente?.ruc ?? 0);
+  }
+
   confirmSeverityClass(): string {
     if (this.confirmSeverity() === 'danger') return 'is-danger';
     if (this.confirmSeverity() === 'warning') return 'is-warning';
@@ -772,6 +798,12 @@ export class VehiculosClientesComponent implements PendingChangesAware {
 
   onConfirmHide(): void {
     this.closeConfirmInternal(false);
+  }
+
+  volver(): void {
+    this.runWithDiscardGuard(() => {
+      this.router.navigate(['/app/vehiculos/dashboard']);
+    });
   }
 
   private openConfirm(
@@ -1055,20 +1087,5 @@ export class VehiculosClientesComponent implements PendingChangesAware {
 
   private updateVehiculoDirtyState(): void {
     this.vehiculoDirty.set(this.createVehiculoSnapshot() !== this.initialVehiculoSnapshot);
-  }
-  clienteKey(cliente: VehCliente | null | undefined): number {
-    return Number(cliente?.dni ?? cliente?.ruc ?? 0);
-  }
-  readonly clienteSearchResolved = computed(() =>
-    this.clienteLookupState() === 'found' || this.clienteLookupState() === 'not_found'
-  );
-
-  readonly disableClienteActionsInCreate = computed(() =>
-    this.mode() === 'crear' && !this.clienteSearchResolved()
-  );
-  volver(): void {
-    this.runWithDiscardGuard(() => {
-      this.router.navigate(['/app/vehiculos/dashboard']);
-    });
   }
 }

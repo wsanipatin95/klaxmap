@@ -1,420 +1,539 @@
-<div class="tipos-page-shell">
-  <header class="page-topbar">
-    <div class="page-topbar-copy">
-      <h2>Clientes y vehículos</h2>
-      <p>Maestro de clientes con sus vehículos asociados en una sola pantalla operativa.</p>
+<div class="vehPageShell">
+  <app-vehiculos-page-header
+    title="Clientes y vehículos"
+    subtitle="Maestro de clientes con sus vehículos asociados en una sola pantalla operativa.">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-arrow-left"
+      label="Volver"
+      [disabled]="saving()"
+      (click)="volver()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-refresh"
+      [loading]="loading()"
+      [disabled]="saving()"
+      (click)="cargarTodo()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-plus"
+      label="Nuevo"
+      [disabled]="saving()"
+      (click)="nuevoCliente()">
+    </button>
+  </app-vehiculos-page-header>
+
+  <section class="toolbarCard toolbarCard--clientes">
+    <div class="searchBox">
+      <i class="pi pi-search"></i>
+      <input
+        pInputText
+        [ngModel]="q()"
+        (ngModelChange)="q.set($event ?? '')"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Buscar por identificación, nombre o contacto..."
+        (keyup.enter)="onSearchEnter()"
+      />
     </div>
 
-    <div class="page-topbar-actions">
-      <button type="button" class="ghost-btn" (click)="volver()" [disabled]="saving()">
-        Volver
-      </button>
+    <div class="toolbarActions toolbarActions--clientes">
+      <div class="microStats">
+        <span class="microStat">
+          <small>Clientes</small>
+          <strong>{{ clientesCount() }}</strong>
+        </span>
 
-      <button type="button" class="ghost-btn" (click)="cargarTodo()" [disabled]="loading() || saving()">
-        {{ loading() ? 'Actualizando...' : 'Refrescar' }}
-      </button>
+        <span class="microStat" *ngIf="mode() === 'editar' && selectedCliente()">
+          <small>Vehículos</small>
+          <strong>{{ vehiculosCount() }}</strong>
+        </span>
+      </div>
 
-      <button type="button" class="primary-btn" (click)="nuevoCliente()" [disabled]="saving()">
-        Nuevo cliente
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        icon="pi pi-times"
+        [disabled]="!q()"
+        (click)="clearSearch()">
       </button>
     </div>
-  </header>
+  </section>
 
-  <div class="status-strip" *ngIf="loading() || saving() || success() || error() || hasPendingChanges()">
-    <div class="status-chip info" *ngIf="loading()">Cargando...</div>
-    <div class="status-chip info" *ngIf="saving()">Guardando...</div>
-    <div class="status-chip success" *ngIf="success()">{{ success() }}</div>
-    <div class="status-chip error" *ngIf="error()">{{ error() }}</div>
-    <div class="status-chip warning" *ngIf="hasPendingChanges()">Cambios sin guardar</div>
-  </div>
+  <section class="noticeStrip" *ngIf="loading() || saving() || success() || error() || hasPendingChanges()">
+    <span class="noticePill is-info" *ngIf="loading()">Cargando</span>
+    <span class="noticePill is-info" *ngIf="saving()">Guardando</span>
+    <span class="noticePill is-success" *ngIf="success()">{{ success() }}</span>
+    <span class="noticePill is-danger" *ngIf="error()">{{ error() }}</span>
+    <span class="noticePill is-warning" *ngIf="hasPendingChanges()">Sin guardar</span>
+  </section>
 
-  <div class="page-grid">
-    <aside class="panel panel-list">
-      <div class="panel-head panel-head--stack">
+  <section class="clientesWorkspace">
+    <aside class="contentCard sidebarPanel">
+      <div class="sectionHead sectionHead--compact">
         <div>
-          <h3>Clientes</h3>
-          <p>{{ clientes().length }} registro(s)</p>
+          <h4>Listado</h4>
+          <div class="secondaryCell">{{ clientesCount() }} cliente(s)</div>
         </div>
 
-        <div class="search-inline">
-          <div class="search-box">
-            <span class="search-icon">⌕</span>
-            <input pInputText [ngModel]="q()" (ngModelChange)="q.set($event ?? '')"
-              [ngModelOptions]="{ standalone: true }" placeholder="Buscar por identificación, nombre o contacto..."
-              (keyup.enter)="onSearchEnter()" />
-          </div>
-
-          <button type="button" class="ghost-btn ghost-btn--sm" (click)="clearSearch()" [disabled]="!q()">
-            Limpiar
-          </button>
-        </div>
+        <span class="panelHint" *ngIf="selectedCliente() as selectedItem">
+          #{{ clienteKey(selectedItem) }}
+        </span>
       </div>
 
-      <div class="empty" *ngIf="!loading() && clientes().length === 0">
-        No hay clientes registrados.
-      </div>
-
-      <div class="list" *ngIf="clientes().length > 0">
-        <button type="button" class="row" *ngFor="let cliente of clientes()"
-          [class.active]="clienteKey(selectedCliente()) === clienteKey(cliente) && mode() === 'editar'"
+      <div class="listScroll" *ngIf="clientes().length; else noClientes">
+        <button
+          type="button"
+          class="clienteRow"
+          *ngFor="let cliente of clientes()"
+          [class.selected]="clienteKey(selectedCliente()) === clienteKey(cliente) && mode() === 'editar'"
           (click)="seleccionarCliente(cliente)">
-          <div class="row-copy">
+          <div class="clienteRow__main">
             <strong>{{ cliente.nombre || cliente.ruc }}</strong>
             <span>{{ cliente.ruc }} · {{ cliente.movil || cliente.telefono || 'Sin contacto' }}</span>
           </div>
 
-          <div class="row-meta">
-            <span class="badge">{{ cliente.idTaxTipIdeFk || '-' }}</span>
+          <div class="clienteRow__side">
+            <span class="miniBadge">{{ cliente.idTaxTipIdeFk || '-' }}</span>
           </div>
         </button>
       </div>
     </aside>
 
-    <section class="panel panel-editor">
-      <div class="panel-head panel-head--editor">
+    <section class="contentCard editorPanel">
+      <div class="sectionHead sectionHead--compact">
         <div>
-          <h3>{{ currentTitle() }}</h3>
-          <p>{{ currentSubtitle() }}</p>
+          <h4>{{ currentTitle() }}</h4>
+          <div class="secondaryCell">{{ currentSubtitle() }}</div>
         </div>
 
-        <button *ngIf="mode() === 'editar' && selectedCliente()" type="button" class="danger-btn"
-          (click)="eliminarClienteActual()" [disabled]="saving()">
-          Eliminar
-        </button>
+        <div class="rowActions">
+          <button
+            *ngIf="mode() === 'editar' && selectedCliente()"
+            pButton
+            type="button"
+            severity="danger"
+            [text]="true"
+            icon="pi pi-trash"
+            label="Eliminar"
+            [disabled]="saving()"
+            (click)="eliminarClienteActual()">
+          </button>
+        </div>
       </div>
 
-      <div class="editor-tabs" *ngIf="mode() === 'editar' && selectedCliente()">
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'edicion'"
+      <div class="tabBar" *ngIf="mode() === 'editar' && selectedCliente()">
+        <button
+          type="button"
+          class="tabButton"
+          [class.active]="activeTab() === 'edicion'"
           (click)="setTab('edicion')">
           Edición
         </button>
 
-        <button type="button" class="editor-tab-btn" [class.active]="activeTab() === 'vehiculos'"
+        <button
+          type="button"
+          class="tabButton"
+          [class.active]="activeTab() === 'vehiculos'"
           (click)="setTab('vehiculos')">
           Vehículos
         </button>
       </div>
 
-      <div class="editor-body">
-        <!-- CLIENTE -->
-        <section class="editor-view" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
-          <div class="editor-scroll">
-            <form class="veh-form">
-              <div class="form-grid cols-2">
-                <label class="form-field cols-2">
-                  <span>Identificación</span>
-                  <div class="search-inline">
-                    <div class="search-box">
-                      <input pInputText [formControl]="form.controls.ruc" placeholder="Ingresa cédula, RUC o pasaporte"
-                        (input)="onIdentificacionInput()" (blur)="buscarClienteExistentePorIdentificacion(false)"
-                        (keyup.enter)="buscarClienteExistentePorIdentificacion(true)" />
-                    </div>
+      <div class="editorScroll" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
+        <form class="vehForm">
+          <div class="grid cols-2">
+            <section class="subCard cols-full">
+              <div class="sectionHead sectionHead--compact">
+                <div>
+                  <h4>Identificación</h4>
+                  <div class="secondaryCell">Valida si ya existe antes de crear</div>
+                </div>
+              </div>
 
-                    <button type="button" class="ghost-btn ghost-btn--sm"
-                      (click)="buscarClienteExistentePorIdentificacion(true)">
-                      Buscar
-                    </button>
-                  </div>
-                </label>
+              <div class="lookupBar">
+                <input
+                  pInputText
+                  [formControl]="form.controls.ruc"
+                  placeholder="Ingresa cédula, RUC o pasaporte"
+                  (input)="onIdentificacionInput()"
+                  (blur)="buscarClienteExistentePorIdentificacion(false)"
+                  (keyup.enter)="buscarClienteExistentePorIdentificacion(true)"
+                />
 
-                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'not_found' && mode() === 'crear'">
-                  <small class="field-hint">No existe un cliente con esa identificación. Puedes crear uno nuevo.</small>
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  icon="pi pi-search"
+                  label="Buscar"
+                  (click)="buscarClienteExistentePorIdentificacion(true)">
+                </button>
+              </div>
+
+              <div class="lookupState" *ngIf="clienteLookupState() === 'searching'">
+                <span class="fieldHint">Buscando cliente existente...</span>
+              </div>
+
+              <div class="lookupState" *ngIf="clienteLookupState() === 'not_found' && mode() === 'crear'">
+                <span class="fieldHint">No existe un cliente con esa identificación. Puedes crear uno nuevo.</span>
+              </div>
+
+              <article class="lookupCard" *ngIf="clienteLookupState() === 'found' && mode() === 'crear' && clienteEncontrado() as found">
+                <div class="lookupCard__main">
+                  <strong>Ya existe un cliente</strong>
+                  <span>{{ found.nombre || found.ruc }} · {{ found.ruc }}</span>
                 </div>
 
-                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'found' && mode() === 'crear'">
-                  <div class="picker-row active" *ngIf="clienteEncontrado() as found">
-                    <div class="picker-row-copy">
-                      <strong>Ya existe un cliente</strong>
-                      <span>{{ found.nombre || found.ruc }} · {{ found.ruc }}</span>
-                    </div>
-                    <div class="picker-row-meta">
-                      <button type="button" class="ghost-btn ghost-btn--sm" (click)="cargarClienteEncontrado()">
-                        Cargar existente
-                      </button>
-                    </div>
-                  </div>
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  label="Cargar"
+                  (click)="cargarClienteEncontrado()">
+                </button>
+              </article>
+            </section>
+
+            <label>
+              <span>Tipo identificación</span>
+              <select [formControl]="form.controls.idTaxTipIdeFk">
+                <option *ngFor="let item of IDENTIFICACION_OPTIONS" [value]="item.value">
+                  {{ item.label }} ({{ item.value }})
+                </option>
+              </select>
+            </label>
+
+            <label>
+              <span>Nombre</span>
+              <input pInputText [formControl]="form.controls.nombre" />
+            </label>
+
+            <label>
+              <span>Dirección</span>
+              <input pInputText [formControl]="form.controls.direccion" />
+            </label>
+
+            <label>
+              <span>Email</span>
+              <input pInputText [formControl]="form.controls.email" />
+            </label>
+
+            <label>
+              <span>Móvil</span>
+              <input pInputText [formControl]="form.controls.movil" />
+            </label>
+
+            <label>
+              <span>Teléfono</span>
+              <input pInputText [formControl]="form.controls.telefono" />
+            </label>
+
+            <label>
+              <span>Centro</span>
+              <input pInputText type="number" [formControl]="form.controls.cen" />
+            </label>
+
+            <label>
+              <span>Número precio</span>
+              <input pInputText type="number" [formControl]="form.controls.numeroPrecio" />
+            </label>
+
+            <label>
+              <span>% descuento</span>
+              <input pInputText type="number" [formControl]="form.controls.porcentajeDescuento" />
+            </label>
+
+            <label class="cols-full">
+              <span>Observación</span>
+              <textarea pTextarea rows="4" [formControl]="form.controls.observacion"></textarea>
+            </label>
+          </div>
+
+          <div class="editorActions">
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              label="Cancelar"
+              [disabled]="saving() || disableClienteActionsInCreate()"
+              (click)="cancelarCliente()">
+            </button>
+
+            <button
+              pButton
+              type="button"
+              icon="pi pi-check"
+              label="Guardar"
+              [loading]="saving()"
+              [disabled]="disableClienteActionsInCreate()"
+              (click)="guardarCliente()">
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="editorScroll" *ngIf="mode() === 'editar' && activeTab() === 'vehiculos' && selectedCliente() as sel">
+        <section class="stackBlock">
+          <section class="subCard">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>Vehículos</h4>
+                <div class="secondaryCell">{{ vehiculosCount() }} vehículo(s) registrados para {{ sel.nombre || sel.ruc }}</div>
+              </div>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                label="Vehículo"
+                (click)="nuevoVehiculo()">
+              </button>
+            </div>
+
+            <div class="miniListScroll" *ngIf="vehiculos().length; else noVehiculos">
+              <article
+                class="vehiculoRow"
+                *ngFor="let vehiculo of vehiculos()"
+                [class.selected]="selectedVehiculo()?.idCliVehiculo === vehiculo.idCliVehiculo"
+                (click)="seleccionarVehiculo(vehiculo)">
+                <div class="vehiculoRow__main">
+                  <strong>{{ vehiculo.marca }} {{ vehiculo.modelo }}</strong>
+                  <span>{{ vehiculo.placa || 'Sin placa' }} · {{ tipoVehiculoLabel(vehiculo.idVehTipoVehiculoFk) }}</span>
                 </div>
 
-                <label class="form-field">
-                  <span>Tipo identificación</span>
-                  <select [formControl]="form.controls.idTaxTipIdeFk">
-                    <option *ngFor="let item of IDENTIFICACION_OPTIONS" [value]="item.value">
-                      {{ item.label }} ({{ item.value }})
+                <div class="vehiculoRow__side">
+                  <span class="miniBadge optional">{{ vehiculo.color || '-' }}</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="subCard">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>{{ vehiculoTitle() }}</h4>
+                <div class="secondaryCell">{{ vehiculoSubtitle() }}</div>
+              </div>
+
+              <button
+                *ngIf="vehiculoMode() === 'editar' && selectedVehiculo()"
+                pButton
+                type="button"
+                severity="danger"
+                [text]="true"
+                icon="pi pi-trash"
+                label="Eliminar"
+                [disabled]="saving()"
+                (click)="eliminarVehiculoActual()">
+              </button>
+            </div>
+
+            <form class="vehForm">
+              <div class="grid cols-3">
+                <label>
+                  <span>Tipo vehículo</span>
+                  <select [formControl]="vehiculoForm.controls.idVehTipoVehiculoFk">
+                    <option [ngValue]="null">Selecciona un tipo</option>
+                    <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">
+                      {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
                     </option>
                   </select>
                 </label>
 
-                <label class="form-field">
-                  <span>Nombre</span>
-                  <input pInputText [formControl]="form.controls.nombre" />
+                <label>
+                  <span>Placa</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.placa" />
                 </label>
 
-                <label class="form-field">
-                  <span>Dirección</span>
-                  <input pInputText [formControl]="form.controls.direccion" />
+                <label>
+                  <span>Año</span>
+                  <input pInputText type="number" [formControl]="vehiculoForm.controls.anio" />
                 </label>
 
-                <label class="form-field">
-                  <span>Email</span>
-                  <input pInputText [formControl]="form.controls.email" />
+                <label>
+                  <span>Marca</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.marca" />
                 </label>
 
-                <label class="form-field">
-                  <span>Móvil</span>
-                  <input pInputText [formControl]="form.controls.movil" />
+                <label>
+                  <span>Modelo</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.modelo" />
                 </label>
 
-                <label class="form-field">
-                  <span>Teléfono</span>
-                  <input pInputText [formControl]="form.controls.telefono" />
+                <label>
+                  <span>Color</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.color" />
                 </label>
 
-                <label class="form-field">
-                  <span>Centro</span>
-                  <input pInputText type="number" [formControl]="form.controls.cen" />
+                <label>
+                  <span>Chasis</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.numeroChasis" />
                 </label>
 
-                <label class="form-field">
-                  <span>Número precio</span>
-                  <input pInputText type="number" [formControl]="form.controls.numeroPrecio" />
+                <label>
+                  <span>Motor</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.numeroMotor" />
                 </label>
 
-                <label class="form-field">
-                  <span>% descuento</span>
-                  <input pInputText type="number" [formControl]="form.controls.porcentajeDescuento" />
+                <label>
+                  <span>Cilindraje</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.cilindraje" />
                 </label>
 
-                <div class="form-field cols-2" *ngIf="clienteLookupState() === 'searching'">
-                  <small class="field-hint">Buscando cliente existente...</small>
-                </div>
+                <label>
+                  <span>Combustible</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.combustible" />
+                </label>
 
-                <label class="form-field cols-2">
-                  <span>Observación</span>
-                  <textarea pTextarea rows="5" [formControl]="form.controls.observacion"></textarea>
+                <label>
+                  <span>Transmisión</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.transmision" />
+                </label>
+
+                <label>
+                  <span>Kilometraje</span>
+                  <input pInputText type="number" [formControl]="vehiculoForm.controls.kilometraje" />
+                </label>
+
+                <label>
+                  <span>Ruedas</span>
+                  <input pInputText type="number" [formControl]="vehiculoForm.controls.numeroRuedas" />
+                </label>
+
+                <label>
+                  <span>Capacidad carga</span>
+                  <input pInputText type="number" [formControl]="vehiculoForm.controls.capacidadCarga" />
+                </label>
+
+                <label>
+                  <span>Tipo batería</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.tipoBateria" />
+                </label>
+
+                <label>
+                  <span>Voltaje</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.voltajeBateria" />
+                </label>
+
+                <label>
+                  <span>Amperaje</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.amperajeBateria" />
+                </label>
+
+                <label>
+                  <span>Potencia motor</span>
+                  <input pInputText [formControl]="vehiculoForm.controls.potenciaMotor" />
+                </label>
+
+                <label>
+                  <span>Autonomía km</span>
+                  <input pInputText type="number" [formControl]="vehiculoForm.controls.autonomiaKm" />
+                </label>
+
+                <label class="cols-full">
+                  <span>Observaciones</span>
+                  <textarea pTextarea rows="4" [formControl]="vehiculoForm.controls.observaciones"></textarea>
                 </label>
               </div>
 
-              <div class="editor-actions">
-                <button type="button" class="ghost-btn" (click)="cancelarCliente()"
-                  [disabled]="saving() || disableClienteActionsInCreate()">
-                  Cancelar
+              <div class="editorActions">
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [text]="true"
+                  label="Cancelar"
+                  [disabled]="saving()"
+                  (click)="cancelarVehiculo()">
                 </button>
 
-                <button type="button" class="primary-btn" (click)="guardarCliente()"
-                  [disabled]="saving() || disableClienteActionsInCreate()">
-                  {{ saving() ? 'Guardando...' : 'Guardar' }}
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-check"
+                  [label]="vehiculoMode() === 'editar' ? 'Guardar' : 'Guardar vehículo'"
+                  [loading]="saving()"
+                  (click)="guardarVehiculo()">
                 </button>
               </div>
             </form>
-          </div>
-        </section>
-
-        <!-- VEHICULOS -->
-        <section class="editor-view"
-          *ngIf="mode() === 'editar' && activeTab() === 'vehiculos' && selectedCliente() as sel">
-          <div class="editor-scroll">
-            <div class="section-stack">
-              <div class="subpanel">
-                <div class="subpanel-head subpanel-head--inline">
-                  <div>
-                    <h4>Vehículos del cliente</h4>
-                    <p>{{ vehiculos().length }} vehículo(s) registrados para {{ sel.nombre || sel.ruc }}.</p>
-                  </div>
-
-                  <button type="button" class="primary-btn" (click)="nuevoVehiculo()">
-                    Nuevo vehículo
-                  </button>
-                </div>
-
-                <div class="empty" *ngIf="vehiculos().length === 0">
-                  Este cliente aún no tiene vehículos registrados.
-                </div>
-
-                <div class="list list--compact" *ngIf="vehiculos().length > 0">
-                  <button type="button" class="row" *ngFor="let vehiculo of vehiculos()"
-                    [class.active]="selectedVehiculo()?.idCliVehiculo === vehiculo.idCliVehiculo"
-                    (click)="seleccionarVehiculo(vehiculo)">
-                    <div class="row-copy">
-                      <strong>{{ vehiculo.marca }} {{ vehiculo.modelo }}</strong>
-                      <span>{{ vehiculo.placa || 'Sin placa' }} · Tipo {{ vehiculo.idVehTipoVehiculoFk }}</span>
-                    </div>
-
-                    <div class="row-meta">
-                      <span class="badge">{{ vehiculo.color || '-' }}</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div class="subpanel">
-                <div class="subpanel-head subpanel-head--inline">
-                  <div>
-                    <h4>{{ vehiculoTitle() }}</h4>
-                    <p>{{ vehiculoSubtitle() }}</p>
-                  </div>
-
-                  <button *ngIf="vehiculoMode() === 'editar' && selectedVehiculo()" type="button" class="danger-btn"
-                    (click)="eliminarVehiculoActual()" [disabled]="saving()">
-                    Eliminar
-                  </button>
-                </div>
-
-                <form class="veh-form">
-                  <div class="form-grid cols-3">
-                    <label class="form-field">
-                      <span>Tipo vehículo</span>
-                      <select [formControl]="vehiculoForm.controls.idVehTipoVehiculoFk">
-                        <option [ngValue]="null">Selecciona un tipo</option>
-                        <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">
-                          {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
-                        </option>
-                      </select>
-                    </label>
-
-                    <label class="form-field">
-                      <span>Placa</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.placa" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Año</span>
-                      <input pInputText type="number" [formControl]="vehiculoForm.controls.anio" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Marca</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.marca" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Modelo</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.modelo" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Color</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.color" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Chasis</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.numeroChasis" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Motor</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.numeroMotor" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Cilindraje</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.cilindraje" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Combustible</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.combustible" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Transmisión</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.transmision" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Kilometraje</span>
-                      <input pInputText type="number" [formControl]="vehiculoForm.controls.kilometraje" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Número ruedas</span>
-                      <input pInputText type="number" [formControl]="vehiculoForm.controls.numeroRuedas" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Capacidad carga</span>
-                      <input pInputText type="number" [formControl]="vehiculoForm.controls.capacidadCarga" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Tipo batería</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.tipoBateria" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Voltaje</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.voltajeBateria" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Amperaje</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.amperajeBateria" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Potencia motor</span>
-                      <input pInputText [formControl]="vehiculoForm.controls.potenciaMotor" />
-                    </label>
-
-                    <label class="form-field">
-                      <span>Autonomía km</span>
-                      <input pInputText type="number" [formControl]="vehiculoForm.controls.autonomiaKm" />
-                    </label>
-
-                    <label class="form-field cols-3">
-                      <span>Observaciones</span>
-                      <textarea pTextarea rows="5" [formControl]="vehiculoForm.controls.observaciones"></textarea>
-                    </label>
-                  </div>
-
-                  <div class="editor-actions">
-                    <button type="button" class="ghost-btn" (click)="cancelarVehiculo()" [disabled]="saving()">
-                      Cancelar
-                    </button>
-
-                    <button type="button" class="primary-btn" (click)="guardarVehiculo()" [disabled]="saving()">
-                      {{ saving() ? 'Guardando...' : 'Guardar vehículo' }}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
+          </section>
         </section>
       </div>
     </section>
-  </div>
+  </section>
 
-  <!-- CONFIRM -->
-  <p-dialog [visible]="confirmVisible()" (visibleChange)="confirmVisible.set($event)" [modal]="true" [closable]="true"
-    [dismissableMask]="true" [style]="{ width: '28rem' }" [header]="confirmTitle()" (onHide)="onConfirmHide()">
+  <ng-template #noClientes>
+    <div class="emptyInline">No hay clientes registrados.</div>
+  </ng-template>
 
-    <div class="confirm-body">
-      <div class="confirm-icon" [ngClass]="confirmSeverityClass()">
+  <ng-template #noVehiculos>
+    <div class="emptyInline">Este cliente aún no tiene vehículos registrados.</div>
+  </ng-template>
+
+  <p-dialog
+    [visible]="confirmVisible()"
+    (visibleChange)="confirmVisible.set($event)"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '28rem' }"
+    [header]="confirmTitle()"
+    (onHide)="onConfirmHide()">
+
+    <div class="confirmBody">
+      <div class="confirmIcon" [ngClass]="confirmSeverityClass()">
         {{ confirmIconSymbol() }}
       </div>
 
-      <div class="confirm-content">
-        <div class="confirm-title">{{ confirmTitle() }}</div>
-        <p class="confirm-message">{{ confirmMessage() }}</p>
+      <div class="confirmCopy">
+        <div class="confirmTitle">{{ confirmTitle() }}</div>
+        <p class="confirmMessage">{{ confirmMessage() }}</p>
       </div>
     </div>
 
     <ng-template pTemplate="footer">
-      <div class="dialog-footer">
-        <button type="button" class="ghost-btn ghost-btn--sm" (click)="confirmCancel()">
-          {{ confirmCancelLabel() }}
+      <div class="dialogFooter">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [label]="confirmCancelLabel()"
+          (click)="confirmCancel()">
         </button>
 
-        <button *ngIf="confirmAlternateLabel() as altLabel" type="button" class="alternate-btn"
+        <button
+          *ngIf="confirmAlternateLabel() as altLabel"
+          pButton
+          type="button"
+          severity="secondary"
+          [label]="altLabel"
           (click)="confirmAlternate()">
-          {{ altLabel }}
         </button>
 
-        <button type="button" class="confirm-btn" [class.is-danger]="confirmSeverity() === 'danger'"
-          [class.is-warning]="confirmSeverity() === 'warning'" [class.is-info]="confirmSeverity() === 'info'"
+        <button
+          pButton
+          type="button"
+          [label]="confirmConfirmLabel()"
+          [severity]="confirmSeverity() === 'danger' ? 'danger' : 'primary'"
           (click)="confirmAccept()">
-          {{ confirmConfirmLabel() }}
         </button>
       </div>
     </ng-template>
