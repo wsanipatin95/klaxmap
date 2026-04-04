@@ -55,10 +55,10 @@
 .noticePill {
   display: inline-flex;
   align-items: center;
-  min-height: 1.75rem;
-  padding: 0 0.55rem;
+  min-height: 1.6rem;
+  padding: 0 0.5rem;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   border: 1px solid transparent;
 }
@@ -89,7 +89,7 @@
 
 .tiposWorkspace {
   display: grid;
-  grid-template-columns: minmax(16.5rem, 20rem) minmax(0, 1fr);
+  grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
   gap: 0.7rem;
   align-items: stretch;
   min-width: 0;
@@ -109,8 +109,8 @@
 .sidebarPanel,
 .editorPanel {
   display: grid;
-  gap: 0.58rem;
-  padding: 0.7rem;
+  gap: 0.55rem;
+  padding: 0.68rem;
   overflow: hidden;
   min-height: 0;
   border-radius: 0.9rem;
@@ -128,7 +128,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.4rem;
+  min-height: 1.35rem;
   padding: 0 0.42rem;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
@@ -150,8 +150,11 @@
 .listScroll,
 .miniListScroll,
 .pickerList {
-  display: grid;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  align-items: stretch;
+  align-content: flex-start;
 }
 
 .typeRow,
@@ -161,14 +164,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.42rem;
-  padding: 0.48rem 0.56rem;
+  gap: 0.35rem;
+  padding: 0.38rem 0.46rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.72rem;
+  border-radius: 0.68rem;
   background: #ffffff;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  align-self: flex-start;
+  min-height: auto;
 }
 
 .typeRow:hover,
@@ -184,7 +189,7 @@
 .pickerRow.selected {
   border-color: #7b0061;
   background: #fff6fb;
-  box-shadow: 0 8px 18px rgba(123, 0, 97, 0.08);
+  box-shadow: 0 6px 14px rgba(123, 0, 97, 0.08);
 }
 
 .typeRow__main,
@@ -201,8 +206,8 @@
 .checkRow__main strong,
 .pickerRow__main strong {
   color: #0f172a;
-  font-size: 0.74rem;
-  line-height: 1.12;
+  font-size: 0.73rem;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -213,8 +218,8 @@
 .checkRow__main span,
 .pickerRow__main span {
   color: #64748b;
-  font-size: 0.67rem;
-  line-height: 1.12;
+  font-size: 0.66rem;
+  line-height: 1.1;
 }
 
 .typeRow__side,
@@ -222,7 +227,7 @@
 .pickerRow__side {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.28rem;
   justify-content: flex-end;
   flex-wrap: wrap;
 }
@@ -237,18 +242,18 @@
 .pickerRow__side span {
   color: #64748b;
   font-size: 0.64rem;
-  line-height: 1.1;
+  line-height: 1.08;
 }
 
 .miniBadge {
   display: inline-flex;
   align-items: center;
-  min-height: 1.32rem;
-  padding: 0 0.42rem;
+  min-height: 1.2rem;
+  padding: 0 0.38rem;
   border-radius: 999px;
   background: #fdf4f9;
   color: #7b0061;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -270,72 +275,21 @@
   line-height: 1.2;
 }
 
-.pickerField {
+.articleField {
   display: grid;
   gap: 0.28rem;
 }
 
-.pickerTrigger {
-  min-height: 2rem;
-  padding: 0.45rem 0.58rem;
-  border-radius: 0.62rem;
-  border: 1px solid #dbe2ea;
-  background: #ffffff;
-  cursor: pointer;
-  text-align: left;
-}
-
-.pickerSelection {
+.articleControl {
   display: grid;
-  gap: 0.03rem;
-}
-
-.pickerSelection strong {
-  color: #0f172a;
-  font-size: 0.74rem;
-  line-height: 1.1;
-}
-
-.pickerSelection span,
-.pickerPlaceholder {
-  color: #64748b;
-  font-size: 0.68rem;
-  line-height: 1.12;
-}
-
-.pickerActionsInline {
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  flex-wrap: wrap;
 }
 
-.selectedInline {
-  display: grid;
-  gap: 0.02rem;
-  padding: 0.38rem 0.46rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.62rem;
-  background: #f8fafc;
-}
-
-.selectedInline span {
-  color: #64748b;
-  font-size: 0.62rem;
-  line-height: 1.1;
-}
-
-.selectedInline strong {
-  color: #0f172a;
-  font-size: 0.72rem;
-  line-height: 1.1;
-}
-
-.selectedInline small {
-  color: #64748b;
-  font-size: 0.65rem;
-  line-height: 1.1;
+.articleInput[readonly] {
+  cursor: default;
+  text-overflow: ellipsis;
 }
 
 .subCard {
@@ -344,7 +298,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 0.82rem;
   background: #ffffff;
-  padding: 0.6rem;
+  padding: 0.58rem;
 }
 
 .subCard--muted {
@@ -358,14 +312,14 @@
 
 .attrTable {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.32rem;
 }
 
 .attrHead,
 .attrRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.45rem;
+  gap: 0.4rem;
   align-items: center;
 }
 
@@ -462,6 +416,11 @@
 .pickerDialog {
   display: grid;
   gap: 0.6rem;
+}
+
+.pickerDialogTools {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .vistaDialogGrid {
@@ -614,5 +573,9 @@
   .pickerRow__side {
     justify-content: flex-start;
     justify-items: start;
+  }
+
+  .articleControl {
+    grid-template-columns: 1fr;
   }
 }

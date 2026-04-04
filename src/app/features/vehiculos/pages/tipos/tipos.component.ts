@@ -163,6 +163,23 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     );
   });
 
+  readonly selectedArticuloInputValue = computed(() => {
+    const articulo = this.selectedArticulo();
+    if (!articulo) return '';
+    return (
+      articulo.articulo?.trim() ||
+      articulo.artcod?.trim() ||
+      `Artículo #${articulo.idActInventario}`
+    );
+  });
+
+  readonly selectedArticuloHint = computed(() => {
+    const articulo = this.selectedArticulo();
+    if (!articulo) return '';
+    const code = articulo.artcod?.trim() || `ART ${articulo.idActInventario}`;
+    return `${code} · ID ${articulo.idActInventario}`;
+  });
+
   readonly checklistDisponibles = computed(() => {
     const assignedIds = new Set(
       this.checklistAsignado().map((x) => x.idVehVehiculoCheckListFk)
@@ -237,6 +254,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   constructor() {
     this.ensureAtLeastOneAtributoRow();
     this.ensureAtLeastOneVistaAtributoRow();
+    this.resetMainFormForNew();
+    this.resetVistaFormForNew();
 
     this.form.valueChanges.subscribe(() => {
       this.updateMainDirtyState();
@@ -530,7 +549,9 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Eliminar tipo',
-        message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".\n\nEsta acción no se puede deshacer.`,
+        message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".
+
+Esta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -579,7 +600,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        message: 'Hay cambios sin guardar.Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -641,6 +662,13 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.buscarArticulosRemoto(this.articuloQuery().trim());
   }
 
+  onArticuloDialogVisibleChange(visible: boolean): void {
+    this.articuloPanelOpen.set(visible);
+    if (!visible) {
+      this.articuloQuery.set('');
+    }
+  }
+
   buscarArticulosRemoto(query: string): void {
     if (this.articuloSearchTimer) {
       clearTimeout(this.articuloSearchTimer);
@@ -649,7 +677,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.articuloSearchTimer = setTimeout(() => {
       this.articuloLoading.set(true);
 
-      this.repo.listarArticulos(query, 0, 100, false)
+      this.repo
+        .listarArticulos(query, 0, 100, false)
         .pipe(finalize(() => this.articuloLoading.set(false)))
         .subscribe({
           next: (res) => {
@@ -682,9 +711,14 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   }
 
   clearArticuloSelection(): void {
-    if (this.form.controls.art.value == null) return;
+    if (this.form.controls.art.value == null) {
+      this.closeArticuloPanel();
+      return;
+    }
+
     this.form.controls.art.setValue(null);
     this.selectedArticuloFallback.set(null);
+    this.closeArticuloPanel();
     this.updateMainDirtyState();
   }
 
@@ -758,7 +792,9 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Quitar checklist',
-        message: `Se quitará "${label}" de este tipo de vehículo.\n\nEsta acción no se puede deshacer.`,
+        message: `Se quitará "${label}" de este tipo de vehículo.
+
+Esta acción no se puede deshacer.`,
         confirmLabel: 'Quitar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -894,7 +930,9 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Eliminar vista',
-        message: `Se eliminará "${vista.vista || `Vista #${vista.idVehTipoVehiculoVista}`}".\n\nEsta acción no se puede deshacer.`,
+        message: `Se eliminará "${vista.vista || `Vista #${vista.idVehTipoVehiculoVista}`}".
+
+Esta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -938,7 +976,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar en la vista.\n\nSi continúas, se perderán.',
+        message: 'Hay cambios sin guardar en la vista.Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -979,7 +1017,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   limpiarVistaStructure(): void {
     const alreadyEmpty =
-      (this.vistaStructureBase64() ?? null) === '' && (this.vistaStructurePreview() ?? null) === null;
+      (this.vistaStructureBase64() ?? null) === '' &&
+      (this.vistaStructurePreview() ?? null) === null;
 
     if (alreadyEmpty) return;
 
@@ -1070,7 +1109,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       this.openConfirm(
         {
           title: 'Descartar cambios',
-          message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+          message: 'Hay cambios sin guardar.Si continúas, se perderán.',
           confirmLabel: 'Descartar',
           cancelLabel: 'Seguir',
           severity: 'warning',
@@ -1104,7 +1143,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar.\n\nSi continúas, se perderán.',
+        message: 'Hay cambios sin guardar.Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -1146,7 +1185,9 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       this.atributosFormArray.push(this.createAtributoRow('', ''));
     } else {
       for (const [key, value] of entries) {
-        this.atributosFormArray.push(this.createAtributoRow(key, this.stringifyAtributoValue(value)));
+        this.atributosFormArray.push(
+          this.createAtributoRow(key, this.stringifyAtributoValue(value))
+        );
       }
     }
 
@@ -1346,12 +1387,14 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         const exact = items.find((x) => x.idActInventario === artId) ?? items[0] ?? null;
         if (!exact) return;
 
-        const merged = [exact, ...this.articulos().filter((x) => x.idActInventario !== exact.idActInventario)];
+        const merged = [
+          exact,
+          ...this.articulos().filter((x) => x.idActInventario !== exact.idActInventario),
+        ];
         this.articulos.set(merged);
         this.selectedArticuloFallback.set(exact);
       },
       error: () => {
-        // Best effort: dejamos visible el fallback por ID.
       },
     });
   }

@@ -181,44 +181,38 @@
               </small>
             </label>
 
-            <div class="pickerField">
-              <label>
+            <div class="articleField">
+              <label for="tipo-articulo-input">
                 <span>Artículo</span>
               </label>
 
-              <button type="button" class="pickerTrigger" (click)="openArticuloPanel()">
-                <ng-container *ngIf="selectedArticulo() as articulo; else noArticulo">
-                  <div class="pickerSelection">
-                    <strong>{{ articulo.artcod || ('ART ' + articulo.idActInventario) }}</strong>
-                    <span>{{ articulo.articulo || ('Artículo #' + articulo.idActInventario) }}</span>
-                  </div>
-                </ng-container>
-
-                <ng-template #noArticulo>
-                  <span class="pickerPlaceholder">Selecciona un artículo</span>
-                </ng-template>
-              </button>
-
-              <div class="pickerActionsInline" *ngIf="selectedArticulo() as articulo">
-                <div class="selectedInline">
-                  <span>Seleccionado</span>
-                  <strong>{{ articulo.artcod || ('ART ' + articulo.idActInventario) }}</strong>
-                  <small>{{ articulo.articulo || ('Artículo #' + articulo.idActInventario) }}</small>
-                </div>
+              <div class="articleControl">
+                <input
+                  id="tipo-articulo-input"
+                  pInputText
+                  class="articleInput"
+                  [value]="selectedArticuloInputValue()"
+                  readonly
+                  placeholder="Selecciona un artículo"
+                />
 
                 <button
                   pButton
                   type="button"
                   severity="secondary"
                   [text]="true"
-                  label="Quitar"
-                  (click)="clearArticuloSelection()">
+                  icon="pi pi-search"
+                  aria-label="Buscar artículo"
+                  (click)="openArticuloPanel()">
                 </button>
               </div>
 
-              <small class="fieldHint">
-                Visible también al editar aunque el artículo no venga en la primera carga del catálogo.
+              <small class="fieldHint" *ngIf="selectedArticuloHint() as articuloHint; else articuloHintEmpty">
+                {{ articuloHint }}
               </small>
+              <ng-template #articuloHintEmpty>
+                <small class="fieldHint">Usa la lupa para buscar y elegir un artículo.</small>
+              </ng-template>
             </div>
 
             <section class="subCard cols-full">
@@ -472,7 +466,7 @@
 
   <p-dialog
     [visible]="articuloPanelOpen()"
-    (visibleChange)="articuloPanelOpen.set($event)"
+    (visibleChange)="onArticuloDialogVisibleChange($event)"
     [modal]="true"
     [closable]="true"
     [dismissableMask]="true"
@@ -488,6 +482,18 @@
           [ngModelOptions]="{ standalone: true }"
           placeholder="Buscar por código, nombre o ID..."
         />
+      </div>
+
+      <div class="pickerDialogTools" *ngIf="selectedArticulo()">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          icon="pi pi-times"
+          label="Quitar selección"
+          (click)="clearArticuloSelection()">
+        </button>
       </div>
 
       <div class="pickerLoading" *ngIf="articuloLoading()">Cargando artículos...</div>
