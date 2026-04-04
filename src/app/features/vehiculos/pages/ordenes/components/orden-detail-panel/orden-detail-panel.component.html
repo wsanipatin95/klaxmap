@@ -51,7 +51,6 @@
       </div>
     </section>
 
-    <!-- RESUMEN -->
     <section class="panelCard" *ngIf="activeTab()==='resumen'">
       <div class="sectionHead">
         <h4>Vista rápida</h4>
@@ -84,7 +83,6 @@
       </div>
     </section>
 
-    <!-- CHECKLIST -->
     <section class="panelCard" *ngIf="activeTab()==='checklist'">
       <div class="sectionHead sectionHead--compact">
         <div>
@@ -128,10 +126,8 @@
       </div>
     </section>
 
-    <!-- EJECUCION -->
     <section class="panelCard panelCard--execution" *ngIf="activeTab()==='ejecucion'">
       <div class="executionWorkbench executionWorkbench--merged">
-        <!-- IZQUIERDA: TRABAJOS -->
         <aside class="execColumn execColumn--jobs">
           <div class="sectionHead sectionHead--compact">
             <div>
@@ -173,25 +169,31 @@
           </div>
         </aside>
 
-        <!-- DERECHA: PANEL PERSISTENTE -->
-        <section class="execWorkspace" *ngIf="selectedTrabajoId; else noTrabajoContext">
+        <section class="execWorkspace">
           <section class="workbenchCard workbenchCard--full">
-            <!-- HEADER PERSISTENTE -->
             <div class="sectionHead sectionHead--compact sectionHead--withTabs">
               <div class="sectionHead__titleBlock">
                 <h4>
-                  {{ executionTab()==='detalle' ? 'Detalle del trabajo' : 'Detalle del hallazgo' }}
+                  {{ executionTab()==='detalle' ? (editingTrabajoId ? 'Detalle del trabajo' : 'Nuevo trabajo') : 'Detalle del hallazgo' }}
                 </h4>
 
-                <div class="secondaryCell"
-                  *ngIf="executionTab()==='detalle' && selectedTrabajoActual() as trabajoActual">
-                  {{ trabajoActual.tipoTrabajo || 'TRABAJO' }} · {{ trabajoActual.estadoTrabajo || 'PENDIENTE' }}
-                </div>
+                <ng-container *ngIf="executionTab()==='detalle'">
+                  <div class="secondaryCell" *ngIf="selectedTrabajoActual() as trabajoActual; else nuevoTrabajoHint">
+                    {{ trabajoActual.tipoTrabajo || 'TRABAJO' }} · {{ trabajoActual.estadoTrabajo || 'PENDIENTE' }}
+                  </div>
+                  <ng-template #nuevoTrabajoHint>
+                    <div class="secondaryCell">Completa los datos del trabajo y guarda para iniciar la ejecución.</div>
+                  </ng-template>
+                </ng-container>
 
-                <div class="secondaryCell"
-                  *ngIf="executionTab()==='hallazgos' && selectedTrabajoActual() as trabajoActual">
-                  Sobre: {{ trabajoActual.tipoTrabajo || 'TRABAJO' }}
-                </div>
+                <ng-container *ngIf="executionTab()==='hallazgos'">
+                  <div class="secondaryCell" *ngIf="selectedTrabajoActual() as trabajoActual; else hallazgoSinTrabajo">
+                    Sobre: {{ trabajoActual.tipoTrabajo || 'TRABAJO' }}
+                  </div>
+                  <ng-template #hallazgoSinTrabajo>
+                    <div class="secondaryCell">Selecciona o guarda un trabajo antes de registrar hallazgos.</div>
+                  </ng-template>
+                </ng-container>
               </div>
 
               <div class="inlineTabs">
@@ -222,9 +224,7 @@
               </div>
             </div>
 
-            <!-- SOLO CAMBIA EL CONTENIDO DE ABAJO -->
             <div class="executionContent">
-              <!-- DETALLE -->
               <section *ngIf="executionTab()==='detalle'" class="executionPane">
                 <div class="editorGrid editorGrid--compact">
                   <div class="editorField span-4">
@@ -281,10 +281,8 @@
                 </div>
               </section>
 
-              <!-- HALLAZGOS -->
               <section *ngIf="executionTab()==='hallazgos'" class="executionPane">
                 <div class="hallazgoWorkbench">
-                  <!-- lista hallazgos -->
                   <section class="hallazgoPane hallazgoPane--list">
                     <div class="sectionHead sectionHead--compact">
                       <div>
@@ -293,7 +291,7 @@
                       </div>
 
                       <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo"
-                        (click)="iniciarNuevoHallazgo()">
+                        [disabled]="!selectedTrabajoId" (click)="iniciarNuevoHallazgo()">
                       </button>
                     </div>
 
@@ -323,7 +321,6 @@
                     </div>
                   </section>
 
-                  <!-- formulario + tabs internos -->
                   <section class="hallazgoPane hallazgoPane--editor">
                     <div class="editorGrid editorGrid--compact">
                       <div class="editorField span-4">
@@ -416,7 +413,6 @@
       </div>
     </section>
 
-    <!-- REPUESTOS -->
     <section class="panelCard panelCard--execution" *ngIf="activeTab()==='repuestos'">
       <div class="executionWorkbench executionWorkbench--merged">
         <aside class="execColumn execColumn--jobs">
@@ -567,8 +563,6 @@
       </div>
     </section>
 
-
-    <!-- COMERCIAL -->
     <section class="panelCard" *ngIf="activeTab()==='comercial'">
       <app-orden-comercial-panel [orden]="orden" [clienteNombre]="clienteNombre" [vehiculoNombre]="vehiculoNombre"
         [repuestos]="repuestos" [facturasOt]="facturasOt" [selectedFacturaOt]="selectedFacturaOt"
@@ -590,14 +584,6 @@
   <app-vehiculos-empty-state icon="pi pi-check-square" title="Sin checklist"
     subtitle="No hay checklist configurado para esta orden.">
   </app-vehiculos-empty-state>
-</ng-template>
-
-<ng-template #noTrabajoContext>
-  <section class="workbenchCard">
-    <app-vehiculos-empty-state icon="pi pi-cog" title="Sin trabajo activo"
-      subtitle="Selecciona o crea un trabajo para continuar con la ejecución.">
-    </app-vehiculos-empty-state>
-  </section>
 </ng-template>
 
 <ng-template #noRepuestos>
@@ -723,7 +709,6 @@
   </ng-template>
 
   <ng-container *ngIf="selectedHallazgoEnContexto() as hallazgoCtx">
-    <!-- MODAL MARCAS -->
     <section class="hallazgoChildPanel hallazgoChildPanel--modal" *ngIf="hallazgoInnerTab()==='marcas'">
       <div class="childGrid childGrid--modal">
         <section class="childPane childPane--modalList">
@@ -775,7 +760,6 @@
       </div>
     </section>
 
-    <!-- MODAL FOTOS -->
     <section class="hallazgoChildPanel hallazgoChildPanel--modal" *ngIf="hallazgoInnerTab()==='fotos'">
       <div class="childGrid childGrid--modal">
         <section class="childPane childPane--modalList">

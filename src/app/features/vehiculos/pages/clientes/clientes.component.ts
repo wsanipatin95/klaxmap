@@ -38,6 +38,7 @@ type ClienteLookupState = 'idle' | 'searching' | 'found' | 'not_found';
     DialogModule,
     ButtonModule,
     TextareaModule,
+    VehiculosPageHeaderComponent,
   ],
   templateUrl: './clientes.component.html',
   styleUrl: './clientes.component.scss',
