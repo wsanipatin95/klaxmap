@@ -1,311 +1,293 @@
-<app-vehiculos-page-header
-  title="Facturación por órdenes"
-  subtitle="Vista compacta para consultar facturas emitidas desde OT, revisar su detalle comercial y resumir cartera y cobros sin desperdicio de espacio.">
-  <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-arrow-left" label="Volver"
-    (click)="volver()"></button>
-  <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-briefcase" label="Órdenes"
-    (click)="irAOrdenes()"></button>
-  <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-file" label="Factura manual"
-    (click)="abrirDrawer()"></button>
-</app-vehiculos-page-header>
+<div class="vehPageShell vehPageShell--facturacion">
+  <app-vehiculos-page-header
+    title="Facturación por órdenes"
+    subtitle="Vista compacta para consultar facturas emitidas desde OT, revisar su detalle comercial y resumir cartera y cobros sin desperdicio de espacio.">
+    <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-arrow-left" label="Volver"
+      (click)="volver()"></button>
+    <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-briefcase" label="Órdenes"
+      (click)="irAOrdenes()"></button>
+  </app-vehiculos-page-header>
 
-<section class="toolbarCard toolbarCard--dense">
-  <div class="searchBox">
-    <i class="pi pi-search"></i>
-    <input pInputText type="text" [(ngModel)]="q"
-      placeholder="Buscar por número, cliente, RUC, DNI o cualquier texto de la factura..." (keyup.enter)="cargar()">
-  </div>
+  <section class="toolbarCard toolbarCard--dense toolbarCard--principal">
+    <div class="searchBox">
+      <i class="pi pi-search"></i>
+      <input pInputText type="text" [(ngModel)]="q"
+        placeholder="Buscar por número, cliente, RUC, DNI o cualquier texto de la factura..." (keyup.enter)="cargar()">
+    </div>
 
-  <div class="quickActions">
-    <div class="compactTabs" role="tablist" aria-label="Filtros rápidos de facturas">
-      <button type="button" class="compactTab" *ngFor="let filter of quickFilters"
-        [class.active]="quickFilter() === filter.key" (click)="setQuickFilter(filter.key)">
-        {{ filter.label }}
+    <div class="quickActions">
+      <div class="compactTabs" role="tablist" aria-label="Filtros rápidos de facturas">
+        <button type="button" class="compactTab" *ngFor="let filter of quickFilters"
+          [class.active]="quickFilter() === filter.key" (click)="setQuickFilter(filter.key)">
+          {{ filter.label }}
+        </button>
+      </div>
+
+      <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()">
       </button>
     </div>
+  </section>
 
-    <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()">
-    </button>
-  </div>
-</section>
+  <section class="noticeStrip" *ngIf="loading() || saving() || facturaActual()">
+    <span class="noticePill is-info" *ngIf="loading()">Cargando</span>
+    <span class="noticePill is-info" *ngIf="saving()">Guardando</span>
 
-<section class="metricStrip">
-  <article class="metricPill">
-    <span>Listado</span>
-    <strong>{{ filteredFacturas().length }}</strong>
-  </article>
+    <ng-container *ngIf="facturaActual() as factura">
+      <span class="noticePill is-neutral">{{ facturaNumber(factura) }}</span>
+      <span class="noticePill is-neutral">{{ facturaCliente(factura) }}</span>
+      <span class="noticePill" [class.is-danger]="severityEstado(factura.sriEstado) === 'danger'"
+        [class.is-success]="severityEstado(factura.sriEstado) !== 'danger'">
+        {{ factura.sriEstado || 'ACTIVA' }}
+      </span>
+    </ng-container>
+  </section>
 
-  <article class="metricPill">
-    <span>Facturado</span>
-    <strong>{{ formatMoney(totalFacturadoListado()) }}</strong>
-  </article>
-
-  <article class="metricPill">
-    <span>Cobrado</span>
-    <strong>{{ formatMoney(totalCobradoListado()) }}</strong>
-  </article>
-
-  <article class="metricPill metricPill--accent">
-    <span>Saldo</span>
-    <strong>{{ formatMoney(saldoPendienteListado()) }}</strong>
-  </article>
-</section>
-
-<section class="facturacionWorkspace">
-  <aside class="facturaSidebar contentCard">
-    <div class="sectionHead sectionHead--compact">
-      <div>
-        <h4>Facturas OT</h4>
-        <div class="secondaryCell">{{ filteredFacturas().length }} visibles · {{ facturas().length }} totales</div>
-      </div>
-    </div>
-
-    <div class="scrollList facturaScroll" *ngIf="filteredFacturas().length; else noFacturas">
-      <article class="facturaRow" *ngFor="let item of filteredFacturas()"
-        [class.selected]="selectedFactura()?.idFacVenta === item.idFacVenta" (click)="seleccionarFactura(item)">
-        <div class="facturaRow__top">
-          <div class="facturaRow__copy">
-            <strong>{{ facturaNumber(item) }}</strong>
-            <span>{{ facturaCliente(item) }}</span>
-            <span>{{ formatDateShort(item.fecEmi) }} · {{ item.ruc || item.dni || '-' }}</span>
-          </div>
-
-          <p-tag [value]="item.sriEstado || 'ACTIVA'" [severity]="severityEstado(item.sriEstado)"></p-tag>
-        </div>
-
-        <div class="facturaRow__meta">
-          <span>Total</span>
-          <strong>{{ formatMoney(item.total) }}</strong>
-        </div>
-
-        <div class="facturaRow__meta">
-          <span>Saldo</span>
-          <strong>{{ formatMoney(item.cxcDeuda) }}</strong>
-        </div>
-
-        <div class="facturaRow__meta facturaRow__meta--tiny">
-          <span>{{ (item.cuotas || 0) > 1 || (item.entrada || 0) > 0 ? 'Crédito' : 'Condición' }}</span>
-          <strong>{{ (item.cuotas || 0) > 1 ? (item.cuotas + ' cuotas') : ((item.entrada || 0) > 0 ? 'Con entrada' : 'Contado') }}</strong>
-        </div>
-      </article>
-    </div>
-  </aside>
-
-  <section class="facturaMain contentCard" *ngIf="facturaActual() as factura; else noFacturaSeleccionada">
-    <article class="detailHero">
-      <div class="detailHero__copy">
-        <h3>{{ facturaNumber(factura) }}</h3>
-        <p>{{ facturaCliente(factura) }} · {{ formatDateShort(factura.fecEmi) }}</p>
-      </div>
-
-      <div class="detailHero__meta">
-        <p-tag [value]="factura.sriEstado || 'ACTIVA'" [severity]="severityEstado(factura.sriEstado)"></p-tag>
-      </div>
+  <section class="metricStrip">
+    <article class="metricPill">
+      <span>Listado</span>
+      <strong>{{ filteredFacturas().length }}</strong>
     </article>
 
-    <section class="contextStrip">
-      <article class="contextPill">
-        <span>Cliente</span>
-        <strong>{{ facturaCliente(factura) }}</strong>
-      </article>
+    <article class="metricPill">
+      <span>Facturado</span>
+      <strong>{{ formatMoney(totalFacturadoListado()) }}</strong>
+    </article>
 
-      <article class="contextPill">
-        <span>Documento</span>
-        <strong>{{ factura.ruc || factura.dni || '-' }}</strong>
-      </article>
+    <article class="metricPill">
+      <span>Cobrado</span>
+      <strong>{{ formatMoney(totalCobradoListado()) }}</strong>
+    </article>
 
-      <article class="contextPill">
-        <span>Total</span>
-        <strong>{{ formatMoney(factura.total) }}</strong>
-      </article>
+    <article class="metricPill metricPill--accent">
+      <span>Saldo</span>
+      <strong>{{ formatMoney(saldoPendienteListado()) }}</strong>
+    </article>
+  </section>
 
-      <article class="contextPill contextPill--accent">
-        <span>Saldo</span>
-        <strong>{{ formatMoney(factura.cxcDeuda) }}</strong>
-      </article>
-    </section>
-
-    <section class="panelCard panelCard--compact" *ngIf="ordenesFactura().length">
+  <section class="facturacionWorkspace">
+    <aside class="facturaSidebar contentCard">
       <div class="sectionHead sectionHead--compact">
         <div>
-          <h4>Órdenes relacionadas</h4>
-          <div class="secondaryCell">La factura se originó desde estas relaciones OT/factura</div>
+          <h4>Facturas OT</h4>
+          <div class="secondaryCell">{{ filteredFacturas().length }} visibles · {{ facturas().length }} totales</div>
         </div>
       </div>
 
-      <div class="miniGrid miniGrid--ot">
-        <article class="miniItem" *ngFor="let item of ordenesFactura()">
-          <span>OT</span>
-          <strong>#{{ item.idVehOrdenTrabajoFk }}</strong>
-          <small>{{ item.tipoFacturacion || 'FACTURACIÓN' }}{{ item.motivoFacturacion ? (' · ' + item.motivoFacturacion) : '' }}</small>
+      <div class="scrollList facturaScroll" *ngIf="filteredFacturas().length; else noFacturas">
+        <article class="facturaRow" *ngFor="let item of filteredFacturas()"
+          [class.selected]="selectedFactura()?.idFacVenta === item.idFacVenta" (click)="seleccionarFactura(item)">
+          <div class="facturaRow__top">
+            <div class="facturaRow__copy">
+              <strong>{{ facturaNumber(item) }}</strong>
+              <span>{{ facturaCliente(item) }}</span>
+              <span>{{ formatDateShort(item.fecEmi) }} · {{ item.ruc || item.dni || '-' }}</span>
+            </div>
+
+            <p-tag [value]="item.sriEstado || 'ACTIVA'" [severity]="severityEstado(item.sriEstado)"></p-tag>
+          </div>
+
+          <div class="facturaRow__meta">
+            <span>Total</span>
+            <strong>{{ formatMoney(item.total) }}</strong>
+          </div>
+
+          <div class="facturaRow__meta">
+            <span>Saldo</span>
+            <strong>{{ formatMoney(item.cxcDeuda) }}</strong>
+          </div>
+
+          <div class="facturaRow__meta facturaRow__meta--tiny">
+            <span>{{ (item.cuotas || 0) > 1 || (item.entrada || 0) > 0 ? 'Crédito' : 'Condición' }}</span>
+            <strong>{{ (item.cuotas || 0) > 1 ? (item.cuotas + ' cuotas') : ((item.entrada || 0) > 0 ? 'Con entrada' : 'Contado') }}</strong>
+          </div>
         </article>
       </div>
-    </section>
+    </aside>
 
-    <section class="panelCard panelCard--compact" *ngIf="facturaDetalleItems().length; else noDetalleFactura">
-      <div class="sectionHead sectionHead--compact">
-        <div>
-          <h4>Detalle facturado</h4>
-          <div class="secondaryCell">{{ facturaDetalleItems().length }} línea(s) registradas</div>
-        </div>
-      </div>
-
-      <div class="lineTable lineTable--view">
-        <div class="lineTable__head lineTable__head--view">
-          <div>Detalle</div>
-          <div>Cant.</div>
-          <div>P. unit.</div>
-          <div>% IVA</div>
-          <div>Desc.</div>
-          <div>Subtotal</div>
-          <div>Total</div>
+    <section class="facturaMain contentCard" *ngIf="facturaActual() as factura; else noFacturaSeleccionada">
+      <article class="detailHero">
+        <div class="detailHero__copy">
+          <h3>{{ facturaNumber(factura) }}</h3>
+          <p>{{ facturaCliente(factura) }} · {{ formatDateShort(factura.fecEmi) }}</p>
         </div>
 
-        <div class="lineTable__body">
-          <div class="lineTable__row lineTable__row--view" *ngFor="let item of facturaDetalleItems()">
-            <div class="lineTable__cell lineTable__cell--main">
-              <strong>{{ detalleLabel(item) }}</strong>
+        <div class="detailHero__meta">
+          <p-tag [value]="factura.sriEstado || 'ACTIVA'" [severity]="severityEstado(factura.sriEstado)"></p-tag>
+        </div>
+      </article>
+
+      <section class="contextStrip">
+        <article class="contextPill">
+          <span>Cliente</span>
+          <strong>{{ facturaCliente(factura) }}</strong>
+        </article>
+
+        <article class="contextPill">
+          <span>Documento</span>
+          <strong>{{ factura.ruc || factura.dni || '-' }}</strong>
+        </article>
+
+        <article class="contextPill">
+          <span>Total</span>
+          <strong>{{ formatMoney(factura.total) }}</strong>
+        </article>
+
+        <article class="contextPill contextPill--accent">
+          <span>Saldo</span>
+          <strong>{{ formatMoney(factura.cxcDeuda) }}</strong>
+        </article>
+      </section>
+
+      <section class="panelCard panelCard--compact" *ngIf="ordenesFactura().length">
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Órdenes relacionadas</h4>
+            <div class="secondaryCell">La factura se originó desde estas relaciones OT/factura</div>
+          </div>
+        </div>
+
+        <div class="miniGrid miniGrid--ot">
+          <article class="miniItem" *ngFor="let item of ordenesFactura()">
+            <span>OT</span>
+            <strong>#{{ item.idVehOrdenTrabajoFk }}</strong>
+            <small>{{ item.tipoFacturacion || 'FACTURACIÓN' }}{{ item.motivoFacturacion ? (' · ' + item.motivoFacturacion) : '' }}</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="panelCard panelCard--compact" *ngIf="facturaDetalleItems().length; else noDetalleFactura">
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Detalle facturado</h4>
+            <div class="secondaryCell">{{ facturaDetalleItems().length }} línea(s) registradas</div>
+          </div>
+        </div>
+
+        <div class="lineTable lineTable--view">
+          <div class="lineTable__head lineTable__head--view">
+            <div>Detalle</div>
+            <div>Cant.</div>
+            <div>P. unit.</div>
+            <div>% IVA</div>
+            <div>Desc.</div>
+            <div>Subtotal</div>
+            <div>Total</div>
+          </div>
+
+          <div class="lineTable__body">
+            <div class="lineTable__row lineTable__row--view" *ngFor="let item of facturaDetalleItems()">
+              <div class="lineTable__cell lineTable__cell--main">
+                <strong>{{ detalleLabel(item) }}</strong>
+              </div>
+              <div class="lineTable__cell">{{ detalleCantidad(item) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(detallePrecio(item)) }}</div>
+              <div class="lineTable__cell">{{ detalleIvaPct(item) }}%</div>
+              <div class="lineTable__cell">{{ formatMoney(detalleDescuento(item)) }}</div>
+              <div class="lineTable__cell">{{ formatMoney(detalleSubtotal(item)) }}</div>
+              <div class="lineTable__cell lineTable__cell--total">{{ formatMoney(detalleTotal(item)) }}</div>
             </div>
-            <div class="lineTable__cell">{{ detalleCantidad(item) }}</div>
-            <div class="lineTable__cell">{{ formatMoney(detallePrecio(item)) }}</div>
-            <div class="lineTable__cell">{{ detalleIvaPct(item) }}%</div>
-            <div class="lineTable__cell">{{ formatMoney(detalleDescuento(item)) }}</div>
-            <div class="lineTable__cell">{{ formatMoney(detalleSubtotal(item)) }}</div>
-            <div class="lineTable__cell lineTable__cell--total">{{ formatMoney(detalleTotal(item)) }}</div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="summaryGrid">
-      <article class="summaryItem">
-        <span>Subtotal 0%</span>
-        <strong>{{ formatMoney(factura.baseCero) }}</strong>
-      </article>
-
-      <article class="summaryItem">
-        <span>Subtotal IVA</span>
-        <strong>{{ formatMoney(factura.baseImponible) }}</strong>
-      </article>
-
-      <article class="summaryItem">
-        <span>IVA</span>
-        <strong>{{ formatMoney(factura.iva) }}</strong>
-      </article>
-
-      <article class="summaryItem">
-        <span>Cobrado</span>
-        <strong>{{ formatMoney(cobradoFactura(factura)) }}</strong>
-      </article>
-
-      <article class="summaryItem summaryItem--accent">
-        <span>Total</span>
-        <strong>{{ formatMoney(factura.total) }}</strong>
-      </article>
-    </section>
-
-    <section class="dualDetailGrid">
-      <section class="panelCard panelCard--compact">
-        <div class="sectionHead sectionHead--compact">
-          <div>
-            <h4>Cartera</h4>
-            <div class="secondaryCell">{{ facturaCxcItems().length }} cuota(s) / registro(s)</div>
-          </div>
-        </div>
-
-        <div class="miniGrid" *ngIf="facturaCxcItems().length; else noCartera">
-          <article class="miniItem" *ngFor="let item of facturaCxcItems()">
-            <span>Vence</span>
-            <strong>{{ formatDateShort(item?.fecha) }}</strong>
-            <small>Saldo {{ formatMoney(item?.saldo ?? item?.valor ?? 0) }}</small>
-          </article>
         </div>
       </section>
 
-      <section class="panelCard panelCard--compact">
-        <div class="sectionHead sectionHead--compact">
-          <div>
-            <h4>Resumen de cobros</h4>
-            <div class="secondaryCell">{{ cobrosFactura().length }} cobro(s) aplicado(s)</div>
-          </div>
-        </div>
+      <section class="summaryGrid">
+        <article class="summaryItem">
+          <span>Subtotal 0%</span>
+          <strong>{{ formatMoney(factura.baseCero) }}</strong>
+        </article>
 
-        <div class="miniGrid" *ngIf="cobrosFactura().length; else noCobrosFactura">
-          <article class="miniItem" *ngFor="let item of cobrosFactura()">
-            <span>{{ formatDateShort(item.fecha) }}</span>
-            <strong>{{ formatMoney(item.valor) }}</strong>
-            <small>
-              {{ item.concepto || 'Sin concepto' }}{{ item.idFacArqueoCajaFk ? (' · Caja ' + item.idFacArqueoCajaFk) : '' }}
-            </small>
-          </article>
-        </div>
+        <article class="summaryItem">
+          <span>Subtotal IVA</span>
+          <strong>{{ formatMoney(factura.baseImponible) }}</strong>
+        </article>
+
+        <article class="summaryItem">
+          <span>IVA</span>
+          <strong>{{ formatMoney(factura.iva) }}</strong>
+        </article>
+
+        <article class="summaryItem">
+          <span>Cobrado</span>
+          <strong>{{ formatMoney(cobradoFactura(factura)) }}</strong>
+        </article>
+
+        <article class="summaryItem summaryItem--accent">
+          <span>Total</span>
+          <strong>{{ formatMoney(factura.total) }}</strong>
+        </article>
+      </section>
+
+      <section class="dualDetailGrid">
+        <section class="panelCard panelCard--compact">
+          <div class="sectionHead sectionHead--compact">
+            <div>
+              <h4>Cartera</h4>
+              <div class="secondaryCell">{{ facturaCxcItems().length }} cuota(s) / registro(s)</div>
+            </div>
+          </div>
+
+          <div class="miniGrid" *ngIf="facturaCxcItems().length; else noCartera">
+            <article class="miniItem" *ngFor="let item of facturaCxcItems()">
+              <span>Vence</span>
+              <strong>{{ formatDateShort(item?.fecha) }}</strong>
+              <small>Saldo {{ formatMoney(item?.saldo ?? item?.valor ?? 0) }}</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="panelCard panelCard--compact">
+          <div class="sectionHead sectionHead--compact">
+            <div>
+              <h4>Resumen de cobros</h4>
+              <div class="secondaryCell">{{ cobrosFactura().length }} cobro(s) aplicado(s)</div>
+            </div>
+          </div>
+
+          <div class="miniGrid" *ngIf="cobrosFactura().length; else noCobrosFactura">
+            <article class="miniItem" *ngFor="let item of cobrosFactura()">
+              <span>{{ formatDateShort(item.fecha) }}</span>
+              <strong>{{ formatMoney(item.valor) }}</strong>
+              <small>
+                {{ item.concepto || 'Sin concepto' }}{{ item.idFacArqueoCajaFk ? (' · Caja ' + item.idFacArqueoCajaFk) : '' }}
+              </small>
+            </article>
+          </div>
+        </section>
       </section>
     </section>
   </section>
-</section>
 
-<ng-template #noFacturas>
-  <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas"
-    subtitle="Todavía no hay facturas que coincidan con la búsqueda o con el filtro aplicado.">
-  </app-vehiculos-empty-state>
-</ng-template>
-
-<ng-template #noFacturaSeleccionada>
-  <section class="facturaMain contentCard">
-    <app-vehiculos-empty-state icon="pi pi-file-edit" title="Sin factura seleccionada"
-      subtitle="Selecciona una factura del listado para revisar su detalle, sus OT relacionadas y el resumen de cobros.">
+  <ng-template #noFacturas>
+    <app-vehiculos-empty-state icon="pi pi-file" title="Sin facturas"
+      subtitle="Todavía no hay facturas que coincidan con la búsqueda o con el filtro aplicado.">
     </app-vehiculos-empty-state>
-  </section>
-</ng-template>
+  </ng-template>
 
-<ng-template #noDetalleFactura>
-  <section class="panelCard panelCard--compact">
-    <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado"
-      subtitle="La factura seleccionada no devolvió líneas de detalle desde el backend.">
-    </app-vehiculos-empty-state>
-  </section>
-</ng-template>
-
-<ng-template #noCartera>
-  <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cartera"
-    subtitle="No hay cuotas o saldos pendientes asociados a esta factura.">
-  </app-vehiculos-empty-state>
-</ng-template>
-
-<ng-template #noCobrosFactura>
-  <app-vehiculos-empty-state icon="pi pi-money-bill" title="Sin cobros registrados"
-    subtitle="Esta factura todavía no tiene cobros asociados o el backend no devolvió resultados.">
-  </app-vehiculos-empty-state>
-</ng-template>
-
-<app-vehiculos-form-drawer [visible]="drawerVisible()" [dirty]="dirty()" [saving]="saving()"
-  title="Factura manual" subtitle="Usa esta opción cuando necesites registrar una factura puntual desde la vista comercial."
-  (visibleChange)="drawerVisible.set($event)" (requestClose)="cerrarDrawer()" (requestSave)="submit()">
-  <form class="vehForm" [formGroup]="facturaForm">
-    <section class="formSection">
-      <h4 class="formSectionTitle">Datos principales</h4>
-      <div class="grid cols-2">
-        <label><span>ID OT</span><input pInputText type="number" formControlName="idVehOrdenTrabajoFk"></label>
-        <label><span>IDs repuestos (coma)</span><input pInputText formControlName="idsVehOrdenTrabajoRepuesto"></label>
-        <label><span>Tipo facturación</span><input pInputText formControlName="tipoFacturacion"></label>
-        <label><span>DNI</span><input pInputText type="number" formControlName="dni"></label>
-        <label><span>CEN</span><input pInputText type="number" formControlName="cen"></label>
-        <label><span>Punto emisión</span><input pInputText type="number" formControlName="idAdmPtoemi"></label>
-        <label><span>Entrada</span><input pInputText type="number" formControlName="entrada"></label>
-        <label><span>Cuotas</span><input pInputText type="number" formControlName="cuotas"></label>
-        <label><span>Fecha primer vencimiento</span><input type="date" formControlName="fechaPrimerVencimiento"></label>
-        <label><span>ID comp. aut.</span><input pInputText type="number" formControlName="idTaxCompAutFk"></label>
-      </div>
-
-      <div class="toggleGrid">
-        <label class="toggleItem"><input type="checkbox" formControlName="credito"><span>Venta a crédito</span></label>
-        <label class="toggleItem"><input type="checkbox" formControlName="usarPrecioRepuesto"><span>Usar precio del repuesto registrado</span></label>
-      </div>
+  <ng-template #noFacturaSeleccionada>
+    <section class="facturaMain contentCard">
+      <app-vehiculos-empty-state icon="pi pi-file-edit" title="Sin factura seleccionada"
+        subtitle="Selecciona una factura del listado para revisar su detalle, sus OT relacionadas y el resumen de cobros.">
+      </app-vehiculos-empty-state>
     </section>
+  </ng-template>
 
-    <label>
-      <span>Observación</span>
-      <textarea pTextarea rows="4" formControlName="observacion"></textarea>
-    </label>
-  </form>
-</app-vehiculos-form-drawer>
+  <ng-template #noDetalleFactura>
+    <section class="panelCard panelCard--compact">
+      <app-vehiculos-empty-state icon="pi pi-list" title="Sin detalle facturado"
+        subtitle="La factura seleccionada no devolvió líneas de detalle desde el backend.">
+      </app-vehiculos-empty-state>
+    </section>
+  </ng-template>
+
+  <ng-template #noCartera>
+    <app-vehiculos-empty-state icon="pi pi-wallet" title="Sin cartera"
+      subtitle="No hay cuotas o saldos pendientes asociados a esta factura.">
+    </app-vehiculos-empty-state>
+  </ng-template>
+
+  <ng-template #noCobrosFactura>
+    <app-vehiculos-empty-state icon="pi pi-money-bill" title="Sin cobros registrados"
+      subtitle="Esta factura todavía no tiene cobros asociados o el backend no devolvió resultados.">
+    </app-vehiculos-empty-state>
+  </ng-template>
+</div>

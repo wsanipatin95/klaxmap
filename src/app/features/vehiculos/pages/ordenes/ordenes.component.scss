@@ -2,6 +2,7 @@
 
 :host {
   display: block;
+  min-width: 0;
 }
 
 :host ::ng-deep .p-button {
@@ -9,11 +10,8 @@
   font-weight: 700;
 }
 
-.ordenesLayout {
-  display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
+.vehPageShell--ordenes {
+  min-width: 0;
 }
 
 .toolbarCard--compact {
@@ -21,45 +19,182 @@
   padding-bottom: 0.7rem;
 }
 
+.toolbarCard--principal {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.toolbarActions--principal {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.microStats {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.microStat {
+  display: inline-grid;
+  gap: 0.04rem;
+  min-width: 4.3rem;
+  padding: 0.38rem 0.52rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+}
+
+.microStat small {
+  color: #64748b;
+  font-size: 0.62rem;
+  line-height: 1.08;
+}
+
+.microStat strong {
+  color: #0f172a;
+  font-size: 0.76rem;
+  line-height: 1.1;
+}
+
+.noticeStrip {
+  display: flex;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.noticePill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.72rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  font-size: 0.69rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.noticePill.is-info {
+  background: #fdf4f9;
+  color: #7b0061;
+  border-color: #f3c7df;
+}
+
+.noticePill.is-success {
+  background: #ecfdf3;
+  color: #027a48;
+  border-color: #abefc6;
+}
+
+.noticePill.is-danger {
+  background: #fff1f2;
+  color: #b42318;
+  border-color: #fecdd3;
+}
+
+.noticePill.is-neutral {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.ordenesLayout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: stretch;
+  min-height: clamp(32rem, calc(100vh - 13.2rem), 48rem);
+}
+
 .backlogCard,
 .workspaceCard {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 0.92rem;
-  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 .backlogCard {
   position: sticky;
   top: 0.5rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.workspaceCard {
+  display: grid;
+  align-content: start;
+  padding: 0.62rem;
+  overflow: auto;
+}
+
+.workspaceCard > app-orden-detail-panel {
+  display: block;
+  min-width: 0;
 }
 
 .backlogCard__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 0.85rem;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.62rem 0.72rem;
   border-bottom: 1px solid #eef2f7;
+}
+
+.backlogCard__title {
+  display: grid;
+  gap: 0.06rem;
+  min-width: 0;
+}
+
+.backlogCard__headerMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.panelHint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.3rem;
+  padding: 0 0.4rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 700;
 }
 
 .backlogCard__header h3 {
   margin: 0;
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   color: #0f172a;
 }
 
 .backlogCard__body {
   display: grid;
   gap: 0.55rem;
-  max-height: calc(100vh - 11.3rem);
   overflow: auto;
-  padding: 0.75rem;
 }
 
-.workspaceCard {
-  padding: 0.75rem;
-  min-width: 0;
+.backlogCard__body--compact {
+  gap: 0.38rem;
+  padding: 0.5rem;
+  max-height: calc(100vh - 10rem);
 }
 
 .jiraLikeRow {
@@ -68,11 +203,23 @@
   background: #ffffff;
   padding: 0.72rem 0.8rem;
   cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.jiraLikeRow:hover {
+  border-color: #d98bbb;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
 }
 
 .jiraLikeRow.selected {
   border-color: #7b0061;
   box-shadow: 0 10px 24px rgba(123, 0, 97, 0.12);
+}
+
+.jiraLikeRow--compact {
+  padding: 0.48rem 0.56rem;
+  border-radius: 0.72rem;
 }
 
 .rowHeader,
@@ -83,7 +230,18 @@
   gap: 0.55rem;
 }
 
+.rowHeader--compact {
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
 .rowCopy {
+  min-width: 0;
+}
+
+.rowCopy--compact {
+  display: grid;
+  gap: 0.08rem;
   min-width: 0;
 }
 
@@ -93,10 +251,21 @@
   flex: 0 0 auto;
 }
 
+.rowActions--compact {
+  gap: 0.16rem;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
 .primaryCell {
   color: #0f172a;
   font-weight: 700;
   line-height: 1.2;
+}
+
+.primaryCell--compact {
+  font-size: 0.72rem;
+  line-height: 1.08;
 }
 
 .secondaryCell {
@@ -105,8 +274,24 @@
   line-height: 1.35;
 }
 
+.secondaryCell--compact {
+  font-size: 0.67rem;
+  line-height: 1.18;
+}
+
 .rowDetail {
   margin-top: 0.45rem;
+}
+
+.rowDetail--compact {
+  margin-top: 0.2rem;
+}
+
+.rowLineClamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .drawerForm {
@@ -252,98 +437,6 @@
   grid-column: span 2;
 }
 
-@media (max-width: 1180px) {
-  .ordenesLayout {
-    grid-template-columns: 1fr;
-  }
-
-  .backlogCard {
-    position: static;
-  }
-
-  .backlogCard__body {
-    max-height: none;
-  }
-}
-
-@media (max-width: 960px) {
-
-  .drawerGrid,
-  .kvRow {
-    grid-template-columns: 1fr;
-  }
-
-  .span-12,
-  .span-8,
-  .span-6,
-  .span-4,
-  .span-3,
-  .span-2 {
-    grid-column: span 1;
-  }
-}
-
-.ordenesLayout {
-  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
-}
-
-.backlogCard__header {
-  padding: 0.62rem 0.72rem;
-}
-
-.backlogCard__header h3 {
-  font-size: 0.88rem;
-}
-
-.backlogCard__body--compact {
-  gap: 0.38rem;
-  padding: 0.5rem;
-  max-height: calc(100vh - 10rem);
-}
-
-.jiraLikeRow--compact {
-  padding: 0.48rem 0.56rem;
-  border-radius: 0.72rem;
-}
-
-.rowHeader--compact {
-  gap: 0.4rem;
-  align-items: flex-start;
-}
-
-.rowCopy--compact {
-  display: grid;
-  gap: 0.08rem;
-  min-width: 0;
-}
-
-.primaryCell--compact {
-  font-size: 0.72rem;
-  line-height: 1.08;
-}
-
-.secondaryCell--compact {
-  font-size: 0.67rem;
-  line-height: 1.18;
-}
-
-.rowActions--compact {
-  gap: 0.16rem;
-  flex-wrap: nowrap;
-  align-items: flex-start;
-}
-
-.rowDetail--compact {
-  margin-top: 0.2rem;
-}
-
-.rowLineClamp {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 :host ::ng-deep .backlogCard .p-tag {
   font-size: 0.62rem;
   padding: 0.16rem 0.34rem;
@@ -360,4 +453,45 @@
   width: 1.7rem;
   min-width: 1.7rem;
   padding: 0;
+}
+
+@media (max-width: 1180px) {
+  .toolbarCard--principal,
+  .ordenesLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .ordenesLayout {
+    min-height: auto;
+  }
+
+  .backlogCard {
+    position: static;
+  }
+
+  .backlogCard__body,
+  .backlogCard__body--compact,
+  .workspaceCard {
+    max-height: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .drawerGrid,
+  .kvRow {
+    grid-template-columns: 1fr;
+  }
+
+  .span-12,
+  .span-8,
+  .span-6,
+  .span-4,
+  .span-3,
+  .span-2 {
+    grid-column: span 1;
+  }
+
+  .microStats {
+    display: none;
+  }
 }
