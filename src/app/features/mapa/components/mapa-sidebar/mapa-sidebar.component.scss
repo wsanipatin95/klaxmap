@@ -14,6 +14,13 @@
   color: #334155;
 }
 
+.sidebar-geo-search {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #eef2f7;
+}
+
 .sidebar-sections {
   flex: 1 1 auto;
   min-height: 0;
@@ -113,6 +120,14 @@
   border-top: 1px solid #d8dee6;
   background: #eef2f7;
   padding: 0.2rem;
+}
+
+.places-search-caption {
+  margin-bottom: 0.18rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #64748b;
 }
 
 .sidebar-splitter {

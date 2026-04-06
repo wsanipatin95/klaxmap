@@ -1,4 +1,8 @@
-<app-mapa-layout [propertiesOpen]="ui.propertiesOpen()">
+<app-mapa-layout
+  [propertiesOpen]="ui.propertiesOpen()"
+  [sidebarMode]="ui.sidebarMode()"
+  (sidebarBackdropRequested)="onSidebarBackdropRequested()"
+>
   <app-mapa-toolbar
     slot="toolbar"
     [selectedName]="selectedElemento()?.nombre ?? null"
@@ -6,6 +10,7 @@
     [editSessionActive]="editSessionActive()"
     [editSessionDirty]="editSessionDirty()"
     [editSessionElementName]="editSessionElementName()"
+    [sidebarMode]="ui.sidebarMode()"
     (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()"
     (importRequested)="abrirImportacion()"
@@ -18,6 +23,8 @@
     (drawLineModeRequested)="onToolbarDrawLineMode()"
     (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
     (measureModeRequested)="onToolbarMeasureMode()"
+    (sidebarToggleRequested)="onToolbarSidebarToggle()"
+    (sidebarCompactRequested)="onToolbarSidebarCompactToggle()"
   />
 
   <app-mapa-sidebar
@@ -31,8 +38,16 @@
     [searchLoading]="ui.loading()"
     [searchResultCount]="(filtros.q() || '').trim() ? elementosCanvas().length : 0"
     [searchResultIndex]="(filtros.q() || '').trim() ? searchResultIndex() : -1"
+    [geoSearchValue]="geoSearchValue()"
+    [geoSearchLoading]="geoSearchLoading()"
+    [geoSearchHasSearched]="geoSearchHasSearched()"
+    [geoSearchError]="geoSearchError()"
+    [geoSearchResults]="geoSearchResults()"
     [hiddenNodeIds]="hiddenNodeIds()"
     [hiddenElementoIds]="hiddenElementoIds()"
+    (geoSearchRequested)="onGeoSearchRequested($event)"
+    (geoSearchClear)="clearGeoSearch()"
+    (geoSearchResultSelected)="onGeoSearchResultSelected($event)"
     (searchRequested)="onSearchRequested($event)"
     (searchClear)="clearSearch()"
     (searchPrev)="onSearchPrev()"

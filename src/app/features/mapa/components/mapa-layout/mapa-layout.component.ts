@@ -1,4 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+
+import { MapaSidebarMode } from '../../store/mapa-ui.store';
 
 @Component({
   selector: 'app-mapa-layout',
@@ -8,4 +10,7 @@ import { Component, Input } from '@angular/core';
 })
 export class MapaLayoutComponent {
   @Input() propertiesOpen = false;
+  @Input() sidebarMode: MapaSidebarMode = 'expanded';
+
+  @Output() sidebarBackdropRequested = new EventEmitter<void>();
 }

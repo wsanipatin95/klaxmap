@@ -146,3 +146,19 @@
     right: 1rem;
   }
 }
+
+@media (max-width: 860px) {
+  .mapa-quick-info {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 3.2rem;
+    max-width: none;
+    font-size: 0.72rem;
+  }
+
+  .mapa-success,
+  .mapa-error {
+    right: 0.75rem;
+    width: min(360px, calc(100vw - 1.5rem));
+  }
+}

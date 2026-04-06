@@ -18,6 +18,7 @@ import type {
   MapaGeomTipo,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
 import { parseWktGeometry } from '../../utils/mapa-geometry.utils';
 import {
@@ -71,6 +72,22 @@ interface MeasureState {
   points: L.LatLng[];
   previewPoint: L.LatLng | null;
   finished: boolean;
+}
+
+interface LabelCollisionBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+interface LabelCandidate {
+  elemento: MapaElemento;
+  layer: L.Layer;
+  anchor: L.LatLng;
+  name: string;
+  priority: number;
+  selected: boolean;
 }
 
 @Component({
@@ -174,7 +191,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private readonly DEFAULT_FILL = '#f3aad6';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
-  private readonly LABELS_MIN_ZOOM = 16;
+  private readonly LABELS_MIN_ZOOM = 13;
   private readonly LABELS_MAX_VISIBLE = 60;
   private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 24;
   private readonly MEASURE_STROKE = '#f59e0b';
@@ -189,6 +206,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private baseLayer!: L.TileLayer;
   private readonly drawnItems = new L.FeatureGroup();
   private readonly measureLayer = new L.FeatureGroup();
+  private readonly searchLayer = new L.FeatureGroup();
   private readonly labelsLayer = new L.LayerGroup();
   private readonly renderedLayers = new Map<number, L.Layer>();
   private readonly elementBoundsCache = new Map<number, CachedElementBounds>();
@@ -327,6 +345,44 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.measureStarted = false;
     this.measureDistanceText = '0 m';
     this.measureLayer.clearLayers();
+  }
+
+  clearTemporarySearchMarker() {
+    this.searchLayer.clearLayers();
+  }
+
+  centerOnCoordinate(lat: number, lng: number, zoom = 17) {
+    if (!this.map) {
+      return;
+    }
+
+    this.map.setView([lat, lng], Math.max(this.currentZoom, zoom));
+    this.updateViewBounds();
+    this.scheduleRender();
+  }
+
+  focusOnSearchResult(result: MapaGeoSearchResult) {
+    if (!this.map) {
+      return;
+    }
+
+    this.renderSearchResult(result);
+
+    const bounds = result.bounds
+      ? L.latLngBounds(
+          [result.bounds.south, result.bounds.west],
+          [result.bounds.north, result.bounds.east]
+        )
+      : null;
+
+    if (bounds?.isValid?.()) {
+      this.map.fitBounds(bounds.pad(0.25), { maxZoom: 17 });
+    } else {
+      this.centerOnCoordinate(result.lat, result.lng, 17);
+    }
+
+    this.updateViewBounds();
+    this.scheduleRender();
   }
 
   centerOnElemento(id: number | null) {
@@ -475,6 +531,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     this.drawnItems.addTo(this.map);
     this.measureLayer.addTo(this.map);
+    this.searchLayer.addTo(this.map);
     this.labelsLayer.addTo(this.map);
 
     this.map.on('click', (event: L.LeafletMouseEvent) => {
@@ -1155,7 +1212,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   }
 
   private shouldShowPersistentLabels(): boolean {
-    return this.labelsVisible && this.currentZoom >= this.LABELS_MIN_ZOOM;
+    return this.getDynamicLabelBudget() > 0;
   }
 
   private renderVisibleLabels(renderedElementos: MapaElemento[]) {
@@ -1166,21 +1223,18 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     const viewBounds = this.currentViewBounds;
-    if (!viewBounds) {
+    if (!viewBounds || !this.map) {
       return;
     }
 
-    const maxLabels = this.performanceModeEnabled
-      ? this.LABELS_PERFORMANCE_MAX_VISIBLE
-      : this.LABELS_MAX_VISIBLE;
+    const budget = this.getDynamicLabelBudget();
+    if (budget <= 0) {
+      return;
+    }
 
-    let painted = 0;
+    const candidates: LabelCandidate[] = [];
 
     for (const elemento of renderedElementos) {
-      if (painted >= maxLabels) {
-        break;
-      }
-
       const name = (elemento.nombre || '').trim();
       if (!name) {
         continue;
@@ -1196,15 +1250,148 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         continue;
       }
 
-      const label = L.marker(anchor, {
+      candidates.push({
+        elemento,
+        layer,
+        anchor,
+        name,
+        selected: elemento.idGeoElemento === this.selectedElementoId,
+        priority: this.getLabelPriority(elemento, anchor),
+      });
+    }
+
+    candidates.sort((a, b) => {
+      return (
+        b.priority - a.priority ||
+        a.name.length - b.name.length ||
+        a.elemento.idGeoElemento - b.elemento.idGeoElemento
+      );
+    });
+
+    const placedBoxes: LabelCollisionBox[] = [];
+    let painted = 0;
+
+    for (const candidate of candidates) {
+      if (painted >= budget) {
+        break;
+      }
+
+      const point = this.map.latLngToContainerPoint(candidate.anchor);
+      const box = this.estimateLabelCollisionBox(point, candidate.name, candidate.selected);
+
+      if (!this.isLabelBoxInsideViewport(box)) {
+        continue;
+      }
+
+      if (this.hasLabelCollision(box, placedBoxes)) {
+        continue;
+      }
+
+      const label = L.marker(candidate.anchor, {
         interactive: false,
-        zIndexOffset: 1200,
-        icon: this.createPersistentLabelIcon(name),
+        zIndexOffset: candidate.selected ? 1500 : 1200,
+        icon: this.createPersistentLabelIcon(candidate.name, candidate.selected),
       });
 
       this.labelsLayer.addLayer(label);
+      placedBoxes.push(box);
       painted += 1;
     }
+  }
+
+  private getDynamicLabelBudget(): number {
+    if (!this.labelsVisible) {
+      return 0;
+    }
+
+    const zoom = this.currentZoom;
+
+    if (zoom < this.LABELS_MIN_ZOOM) {
+      return 0;
+    }
+
+    if (this.performanceModeEnabled) {
+      if (zoom < 14) return 4;
+      if (zoom < 15) return 8;
+      if (zoom < 16) return 12;
+      if (zoom < 17) return 18;
+      return this.LABELS_PERFORMANCE_MAX_VISIBLE;
+    }
+
+    if (zoom < 14) return 8;
+    if (zoom < 15) return 16;
+    if (zoom < 16) return 28;
+    if (zoom < 17) return 42;
+    return this.LABELS_MAX_VISIBLE;
+  }
+
+  private getLabelPriority(elemento: MapaElemento, anchor: L.LatLng): number {
+    let score = 0;
+
+    if (elemento.idGeoElemento === this.selectedElementoId) {
+      score += 1000;
+    }
+
+    if (elemento.geomTipo === 'polygon') {
+      score += 60;
+    } else if (elemento.geomTipo === 'linestring') {
+      score += 40;
+    } else {
+      score += 20;
+    }
+
+    const center = this.map.getCenter();
+    const distance = this.map.distance(center, anchor);
+    score += Math.max(0, 5000 - distance) / 100;
+
+    const drawOrder = Number(elemento.ordenDibujo ?? 0);
+    score += Math.max(0, drawOrder);
+
+    return score;
+  }
+
+  private estimateLabelCollisionBox(
+    point: L.Point,
+    text: string,
+    selected: boolean
+  ): LabelCollisionBox {
+    const zoom = this.currentZoom;
+    const charWidth = zoom >= 16 ? 7.2 : zoom >= 15 ? 6.5 : 5.8;
+    const width = Math.min(230, Math.max(72, text.length * charWidth + 24 + (selected ? 12 : 0)));
+    const height = selected ? 34 : 30;
+
+    return {
+      left: point.x - width / 2,
+      right: point.x + width / 2,
+      top: point.y - height - 18,
+      bottom: point.y - 4,
+    };
+  }
+
+  private isLabelBoxInsideViewport(box: LabelCollisionBox): boolean {
+    const size = this.map.getSize();
+    return (
+      box.right >= 0 &&
+      box.left <= size.x &&
+      box.bottom >= 0 &&
+      box.top <= size.y
+    );
+  }
+
+  private hasLabelCollision(box: LabelCollisionBox, placed: LabelCollisionBox[]): boolean {
+    for (const current of placed) {
+      const separated =
+        box.right < current.left ||
+        box.left > current.right ||
+        box.bottom < current.top ||
+        box.top > current.bottom;
+
+      if (!separated) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private getLabelAnchor(layer: L.Layer, elemento: MapaElemento): L.LatLng | null {
@@ -1223,10 +1410,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     return this.tryGetLayerLatLng(layer);
   }
 
-  private createPersistentLabelIcon(text: string): L.DivIcon {
+  private createPersistentLabelIcon(text: string, selected = false): L.DivIcon {
     return L.divIcon({
       className: 'mapa-element-label-host',
-      html: `<div class="mapa-element-label">${this.escapeHtml(text)}</div>`,
+      html: `<div class="mapa-element-label${selected ? ' is-selected' : ''}">${this.escapeHtml(text)}</div>`,
       iconSize: [0, 0],
       iconAnchor: [0, 0],
     });
@@ -2155,12 +2342,76 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     return Math.max(100, Math.min(700, snapped));
   }
 
+  private renderSearchResult(result: MapaGeoSearchResult) {
+    this.searchLayer.clearLayers();
+
+    const latlng = L.latLng(result.lat, result.lng);
+
+    if (result.bounds) {
+      const rectangle = L.rectangle(
+        [
+          [result.bounds.south, result.bounds.west],
+          [result.bounds.north, result.bounds.east],
+        ],
+        {
+          color: '#2563eb',
+          weight: 2,
+          opacity: 0.9,
+          fillColor: '#60a5fa',
+          fillOpacity: 0.08,
+          dashArray: '8 6',
+          renderer: this.vectorRenderer,
+        }
+      );
+      this.searchLayer.addLayer(rectangle);
+    }
+
+    const halo = L.circleMarker(latlng, {
+      radius: 16,
+      color: '#2563eb',
+      weight: 2,
+      fillColor: '#93c5fd',
+      fillOpacity: 0.18,
+      renderer: this.vectorRenderer,
+    });
+
+    const marker = L.marker(latlng, {
+      zIndexOffset: 2200,
+      icon: this.createSearchMarkerIcon(),
+    });
+
+    marker.bindTooltip(result.label, {
+      permanent: false,
+      direction: 'top',
+      opacity: 0.98,
+      className: 'mapa-search-result-tooltip',
+      offset: L.point(0, -12),
+    });
+
+    this.searchLayer.addLayer(halo);
+    this.searchLayer.addLayer(marker);
+    marker.openTooltip();
+  }
+
+  private createSearchMarkerIcon(): L.DivIcon {
+    return L.divIcon({
+      className: 'mapa-search-marker-host',
+      html: `
+        <div class="mapa-search-marker">
+          <span class="mapa-search-marker-core"></span>
+        </div>
+      `,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+    });
+  }
+
   private escapeHtml(value: string): string {
     return value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\"/g, '&quot;')
+      .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 

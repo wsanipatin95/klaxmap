@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 
-import { MapaUiStore, MapaToolMode } from '../../store/mapa-ui.store';
+import { MapaSidebarMode, MapaToolMode, MapaUiStore } from '../../store/mapa-ui.store';
 import { SessionStore } from '../../../seg/store/session.store';
 
 @Component({
@@ -21,6 +21,7 @@ export class MapaToolbarComponent {
   @Input() editSessionActive = false;
   @Input() editSessionDirty = false;
   @Input() editSessionElementName: string | null = null;
+  @Input() sidebarMode: MapaSidebarMode = 'expanded';
 
   @Output() refreshRequested = new EventEmitter<void>();
   @Output() exportRequested = new EventEmitter<void>();
@@ -34,6 +35,8 @@ export class MapaToolbarComponent {
   @Output() drawLineModeRequested = new EventEmitter<void>();
   @Output() drawPolygonModeRequested = new EventEmitter<void>();
   @Output() measureModeRequested = new EventEmitter<void>();
+  @Output() sidebarToggleRequested = new EventEmitter<void>();
+  @Output() sidebarCompactRequested = new EventEmitter<void>();
 
   readonly editarTipoElemento = computed(() =>
     this.sessionStore.hasCompanyPrivilege('etm_red_red')
@@ -50,6 +53,22 @@ export class MapaToolbarComponent {
 
   isActive(mode: MapaToolMode): boolean {
     return this.ui.toolMode() === mode;
+  }
+
+  get sidebarHidden(): boolean {
+    return this.sidebarMode === 'hidden';
+  }
+
+  get sidebarCompact(): boolean {
+    return this.sidebarMode === 'compact';
+  }
+
+  sidebarToggleTitle(): string {
+    return this.sidebarHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
+  }
+
+  sidebarCompactTitle(): string {
+    return this.sidebarCompact ? 'Expandir panel lateral' : 'Comprimir panel lateral';
   }
 
   modeName(mode: MapaToolMode): string {

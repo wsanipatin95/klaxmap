@@ -1,7 +1,20 @@
-<div class="mapa-layout" [class.properties-open]="propertiesOpen">
+<div
+  class="mapa-layout"
+  [class.properties-open]="propertiesOpen"
+  [class.sidebar-expanded]="sidebarMode === 'expanded'"
+  [class.sidebar-compact]="sidebarMode === 'compact'"
+  [class.sidebar-hidden]="sidebarMode === 'hidden'"
+>
   <aside class="sidebar">
     <ng-content select="[slot=sidebar]"></ng-content>
   </aside>
+
+  <button
+    type="button"
+    class="sidebar-backdrop"
+    aria-label="Cerrar panel lateral"
+    (click)="sidebarBackdropRequested.emit()"
+  ></button>
 
   <header class="toolbar">
     <ng-content select="[slot=toolbar]"></ng-content>

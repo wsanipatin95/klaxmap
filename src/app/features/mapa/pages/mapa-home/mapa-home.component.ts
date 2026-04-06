@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { MapaUiStore } from '../../store/mapa-ui.store';
 import { MapaSelectionStore } from '../../store/mapa-selection.store';
@@ -36,6 +37,7 @@ import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog
 
 import { MapaCrudFacade } from '../../application/mapa-crud.facade';
 import { MapaInteractionFacade } from '../../application/mapa-interaction.facade';
+import { MapaGeocodeService } from '../../services/mapa-geocode.service';
 
 import type {
   TreeCreateNodeRequest,
@@ -43,6 +45,7 @@ import type {
   TreeElementoVisibilityChange,
   TreeNodeVisibilityChange,
 } from '../../components/mapa-tree/mapa-tree.component';
+import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
 
 @Component({
   selector: 'app-mapa-home',
@@ -74,6 +77,7 @@ export class MapaHomeComponent {
   readonly crud = inject(MapaCrudFacade);
   readonly interaction = inject(MapaInteractionFacade);
   readonly router = inject(Router);
+  readonly geocode = inject(MapaGeocodeService);
 
   @ViewChild('importDialog') importDialog?: MapaImportDialogComponent;
   @ViewChild('exportDialog') exportDialog?: MapaExportDialogComponent;
@@ -115,6 +119,12 @@ export class MapaHomeComponent {
   readonly successVisible = signal(false);
   readonly successTitle = signal('');
   readonly successText = signal('');
+
+  readonly geoSearchValue = signal('');
+  readonly geoSearchLoading = signal(false);
+  readonly geoSearchHasSearched = signal(false);
+  readonly geoSearchResults = signal<MapaGeoSearchResult[]>([]);
+  readonly geoSearchError = signal<string | null>(null);
 
   readonly elementosCanvas = computed(() => {
     const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
@@ -181,6 +191,73 @@ export class MapaHomeComponent {
 
   constructor() {
     this.crud.loadAll();
+
+    if (typeof window !== 'undefined' && window.innerWidth < 860) {
+      this.ui.setSidebarHidden(true);
+    }
+  }
+
+  async onGeoSearchRequested(query: string) {
+    const trimmed = (query || '').trim();
+
+    this.geoSearchValue.set(trimmed);
+    this.geoSearchHasSearched.set(false);
+    this.geoSearchResults.set([]);
+    this.geoSearchError.set(null);
+
+    if (!trimmed) {
+      this.mapCanvas?.clearTemporarySearchMarker();
+      return;
+    }
+
+    this.geoSearchLoading.set(true);
+    this.geoSearchHasSearched.set(true);
+
+    try {
+      const results = await firstValueFrom(this.geocode.search(trimmed));
+      this.geoSearchResults.set(results);
+
+      if (!results.length) {
+        this.geoSearchError.set('No se encontraron ubicaciones para la búsqueda ingresada.');
+        return;
+      }
+
+      if (results.length === 1 && results[0].source === 'coordinates') {
+        this.onGeoSearchResultSelected(results[0]);
+      }
+    } catch {
+      this.geoSearchError.set('No se pudo consultar la ubicación en este momento.');
+    } finally {
+      this.geoSearchLoading.set(false);
+    }
+  }
+
+  onGeoSearchResultSelected(result: MapaGeoSearchResult) {
+    this.geoSearchValue.set(result.label);
+    this.geoSearchError.set(null);
+    this.mapCanvas?.focusOnSearchResult(result);
+    this.closeSidebarIfMobile();
+  }
+
+  clearGeoSearch() {
+    this.geoSearchValue.set('');
+    this.geoSearchLoading.set(false);
+    this.geoSearchHasSearched.set(false);
+    this.geoSearchResults.set([]);
+    this.geoSearchError.set(null);
+    this.mapCanvas?.clearTemporarySearchMarker();
+  }
+
+  onToolbarSidebarToggle() {
+    this.ui.toggleSidebar();
+  }
+
+  onToolbarSidebarCompactToggle() {
+    this.ui.toggleSidebarCompact();
+  }
+
+  onSidebarBackdropRequested() {
+    this.ui.setSidebarHidden(true);
   }
 
   onSearchRequested(q: string) {
@@ -962,6 +1039,12 @@ export class MapaHomeComponent {
     }
 
     return parts.join(' · ');
+  }
+
+  private closeSidebarIfMobile() {
+    if (typeof window !== 'undefined' && window.innerWidth < 860) {
+      this.ui.setSidebarHidden(true);
+    }
   }
 
   private confirmDiscardGeometryChanges(onConfirm?: () => void) {

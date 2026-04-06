@@ -1,0 +1,79 @@
+<section class="geo-search-card" aria-label="Búsqueda geográfica">
+  <div class="geo-search-header">
+    <div class="geo-search-title">Ir a una ubicación</div>
+    <div class="geo-search-subtitle">
+      Busca direcciones o pega coordenadas GPS
+    </div>
+  </div>
+
+  <form class="geo-search-form" (submit)="submitSearch($event)">
+    <div class="geo-search-input-wrap">
+      <input
+        type="text"
+        class="geo-search-input"
+        [ngModel]="draftValue"
+        (ngModelChange)="onDraftChange($event)"
+        (keydown)="onKeydown($event)"
+        name="geoSearch"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Ej: Av. Amazonas y Colón, Quito o -0.22985, -78.52495"
+      />
+
+      <button
+        type="submit"
+        class="geo-search-submit"
+        [disabled]="loading"
+        aria-label="Buscar ubicación"
+      >
+        <span *ngIf="!loading">Buscar</span>
+        <span *ngIf="loading">Buscando…</span>
+      </button>
+    </div>
+
+    <div class="geo-search-actions">
+      <button
+        type="button"
+        class="geo-search-clear"
+        [disabled]="loading && !draftValue"
+        (click)="clear()"
+      >
+        X
+      </button>
+    </div>
+  </form>
+
+  <div class="geo-search-panel" *ngIf="showPanel">
+    <div class="geo-search-state" *ngIf="loading">
+      Consultando ubicación…
+    </div>
+
+    <div class="geo-search-state geo-search-state--error" *ngIf="!loading && errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <div class="geo-search-state" *ngIf="showEmptyState">
+      No se encontraron coincidencias para tu búsqueda.
+    </div>
+
+    <div class="geo-search-results" *ngIf="!loading && results.length">
+      <button
+        type="button"
+        class="geo-search-result"
+        *ngFor="let item of results"
+        (click)="selectResult(item)"
+      >
+        <span class="geo-search-result-main">
+          <span class="geo-search-result-label">{{ item.label }}</span>
+          <span class="geo-search-result-subtitle" *ngIf="item.subtitle">
+            {{ item.subtitle }}
+          </span>
+        </span>
+
+        <span class="geo-search-result-tag" [class.is-coordinate]="item.source === 'coordinates'">
+          {{ item.source === 'coordinates' ? 'GPS' : 'Dirección' }}
+        </span>
+      </button>
+    </div>
+  </div>
+</section>

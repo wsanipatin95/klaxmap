@@ -1,4 +1,17 @@
 <div #shell class="sidebar-shell">
+  <div class="sidebar-geo-search">
+    <app-mapa-geo-search
+      [value]="geoSearchValue"
+      [loading]="geoSearchLoading"
+      [results]="geoSearchResults"
+      [hasSearched]="geoSearchHasSearched"
+      [errorMessage]="geoSearchError"
+      (searchRequested)="geoSearchRequested.emit($event)"
+      (clearRequested)="geoSearchClear.emit()"
+      (resultSelected)="geoSearchResultSelected.emit($event)"
+    />
+  </div>
+
   <div class="sidebar-sections">
     <section
       class="sidebar-pane pane-places"
@@ -44,11 +57,14 @@
           </div>
 
           <div class="places-search">
+            <div class="places-search-caption">Buscar elementos del inventario</div>
+
             <app-mapa-search
               [value]="searchValue"
               [loading]="searchLoading"
               [resultCount]="searchResultCount"
               [currentIndex]="searchResultIndex"
+              [placeholder]="'Buscar elementos, códigos o etiquetas'"
               (searchRequested)="searchRequested.emit($event)"
               (clearRequested)="searchClear.emit()"
               (prevRequested)="searchPrev.emit()"

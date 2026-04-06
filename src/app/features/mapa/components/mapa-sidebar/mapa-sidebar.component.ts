@@ -15,6 +15,7 @@ import type {
   MapaNodo,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
 import {
   MapaTreeComponent,
   TreeCreateNodeRequest,
@@ -22,6 +23,7 @@ import {
   TreeElementoVisibilityChange,
   TreeNodeVisibilityChange,
 } from '../mapa-tree/mapa-tree.component';
+import { MapaGeoSearchComponent } from '../mapa-geo-search/mapa-geo-search.component';
 import { MapaSearchComponent } from '../mapa-search/mapa-search.component';
 import { MapaCapasPanelComponent } from '../mapa-capas-panel/mapa-capas-panel.component';
 import {
@@ -35,6 +37,7 @@ import {
   imports: [
     CommonModule,
     MapaTreeComponent,
+    MapaGeoSearchComponent,
     MapaSearchComponent,
     MapaCapasPanelComponent,
   ],
@@ -55,9 +58,17 @@ export class MapaSidebarComponent {
   @Input() searchLoading = false;
   @Input() searchResultCount = 0;
   @Input() searchResultIndex = -1;
+  @Input() geoSearchValue = '';
+  @Input() geoSearchLoading = false;
+  @Input() geoSearchHasSearched = false;
+  @Input() geoSearchError: string | null = null;
+  @Input() geoSearchResults: MapaGeoSearchResult[] = [];
   @Input() hiddenNodeIds: number[] = [];
   @Input() hiddenElementoIds: number[] = [];
 
+  @Output() geoSearchRequested = new EventEmitter<string>();
+  @Output() geoSearchClear = new EventEmitter<void>();
+  @Output() geoSearchResultSelected = new EventEmitter<MapaGeoSearchResult>();
   @Output() searchRequested = new EventEmitter<string>();
   @Output() searchClear = new EventEmitter<void>();
   @Output() searchPrev = new EventEmitter<void>();
