@@ -86,7 +86,7 @@ export class MapaSidebarComponent {
   @Output() treeEditGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeDeleteElementoRequested = new EventEmitter<MapaElemento>();
 
-  readonly topPanePercent = signal(60);
+  readonly topPanePercent = signal(68);
   private resizing = false;
 
   isExpanded(key: MapaSidebarSectionKey): boolean {
@@ -123,7 +123,7 @@ export class MapaSidebarComponent {
     }
 
     const rawPercent = ((event.clientY - rect.top) / rect.height) * 100;
-    const clamped = Math.max(20, Math.min(80, rawPercent));
+    const clamped = Math.max(24, Math.min(82, rawPercent));
     this.topPanePercent.set(clamped);
   }
 }

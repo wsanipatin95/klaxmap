@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -194,7 +194,13 @@ export class MapaHomeComponent {
 
     if (typeof window !== 'undefined' && window.innerWidth < 860) {
       this.ui.setSidebarHidden(true);
+      this.scheduleMapLayoutRefresh(120);
     }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.scheduleMapLayoutRefresh(120);
   }
 
   async onGeoSearchRequested(query: string) {
@@ -250,14 +256,20 @@ export class MapaHomeComponent {
 
   onToolbarSidebarToggle() {
     this.ui.toggleSidebar();
+    this.scheduleMapLayoutRefresh();
+    this.scheduleMapLayoutRefresh(280);
   }
 
   onToolbarSidebarCompactToggle() {
     this.ui.toggleSidebarCompact();
+    this.scheduleMapLayoutRefresh();
+    this.scheduleMapLayoutRefresh(280);
   }
 
   onSidebarBackdropRequested() {
     this.ui.setSidebarHidden(true);
+    this.scheduleMapLayoutRefresh();
+    this.scheduleMapLayoutRefresh(280);
   }
 
   onSearchRequested(q: string) {
@@ -1044,7 +1056,31 @@ export class MapaHomeComponent {
   private closeSidebarIfMobile() {
     if (typeof window !== 'undefined' && window.innerWidth < 860) {
       this.ui.setSidebarHidden(true);
+      this.scheduleMapLayoutRefresh();
+      this.scheduleMapLayoutRefresh(280);
     }
+  }
+
+  private scheduleMapLayoutRefresh(delay = 0) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const run = () => {
+      window.dispatchEvent(new Event('resize'));
+      this.mapCanvas?.refreshMapLayout?.();
+
+      window.requestAnimationFrame(() => {
+        this.mapCanvas?.refreshMapLayout?.();
+      });
+    };
+
+    if (delay > 0) {
+      window.setTimeout(run, delay);
+      return;
+    }
+
+    run();
   }
 
   private confirmDiscardGeometryChanges(onConfirm?: () => void) {

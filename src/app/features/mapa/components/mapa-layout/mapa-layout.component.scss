@@ -5,10 +5,10 @@
 }
 
 .mapa-layout {
-  --sidebar-width-expanded: 320px;
-  --sidebar-width-compact: 244px;
-  --toolbar-height: 42px;
-  --status-height: 34px;
+  --sidebar-width-expanded: 292px;
+  --sidebar-width-compact: 208px;
+  --toolbar-height: 40px;
+  --status-height: 32px;
 
   display: grid;
   grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr);
@@ -17,8 +17,11 @@
     'sidebar toolbar'
     'sidebar canvas'
     'status status';
+  min-height: 100svh;
+  height: 100svh;
+  min-height: 100dvh;
   height: 100dvh;
-  background: #020617;
+  background: #d8dee7;
 }
 
 .mapa-layout.sidebar-compact {
@@ -35,6 +38,8 @@
   min-height: var(--toolbar-height);
   background: #eef2f7;
   border-bottom: 1px solid #cbd5e1;
+  position: relative;
+  z-index: 60;
 }
 
 .sidebar {
@@ -49,6 +54,7 @@
     opacity 0.2s ease,
     transform 0.24s ease,
     box-shadow 0.24s ease;
+  will-change: transform, width;
 }
 
 .mapa-layout.sidebar-hidden .sidebar {
@@ -62,9 +68,10 @@
   grid-area: canvas;
   position: relative;
   overflow: hidden;
-  background: #0f172a;
+  background: #d8dee7;
   min-width: 0;
   min-height: 0;
+  isolation: isolate;
 }
 
 .canvas-surface {
@@ -73,6 +80,7 @@
   z-index: 1;
   min-width: 0;
   min-height: 0;
+  background: #d8dee7;
 }
 
 .properties-host {
@@ -91,6 +99,8 @@
   min-width: 0;
   background: #111827;
   border-top: 1px solid #1e293b;
+  position: relative;
+  z-index: 50;
 }
 
 .sidebar-backdrop {
@@ -99,15 +109,15 @@
 
 @media (max-width: 1200px) {
   .mapa-layout {
-    --sidebar-width-expanded: 300px;
-    --sidebar-width-compact: 232px;
+    --sidebar-width-expanded: 280px;
+    --sidebar-width-compact: 196px;
   }
 }
 
 @media (max-width: 960px) {
   .mapa-layout {
-    --sidebar-width-expanded: 280px;
-    --sidebar-width-compact: 224px;
+    --sidebar-width-expanded: 268px;
+    --sidebar-width-compact: 188px;
   }
 }
 
@@ -121,17 +131,24 @@
       'status';
   }
 
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+  }
+
   .sidebar {
     position: fixed;
     top: var(--toolbar-height);
     left: 0;
     bottom: var(--status-height);
-    z-index: 40;
-    width: min(86vw, 360px);
-    max-width: calc(100vw - 2rem);
+    z-index: 55;
+    width: min(82vw, 320px);
+    max-width: calc(100vw - 1.25rem);
     transform: translateX(-110%);
     box-shadow: 0 22px 50px rgba(15, 23, 42, 0.28);
     border-right: 1px solid #cbd5e1;
+    opacity: 1;
   }
 
   .mapa-layout.sidebar-expanded .sidebar {
@@ -139,12 +156,12 @@
   }
 
   .mapa-layout.sidebar-compact .sidebar {
-    width: min(72vw, 300px);
+    width: min(70vw, 276px);
     transform: translateX(0);
   }
 
   .mapa-layout.sidebar-hidden .sidebar {
-    width: min(86vw, 360px);
+    width: min(82vw, 320px);
     opacity: 1;
     transform: translateX(-110%);
     border-right: 1px solid #cbd5e1;
@@ -153,10 +170,10 @@
   .sidebar-backdrop {
     position: fixed;
     inset: var(--toolbar-height) 0 var(--status-height) 0;
-    z-index: 35;
+    z-index: 54;
     display: block;
     border: 0;
-    background: rgba(15, 23, 42, 0.35);
+    background: rgba(15, 23, 42, 0.28);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;

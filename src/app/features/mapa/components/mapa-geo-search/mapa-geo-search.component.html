@@ -1,51 +1,52 @@
-<section class="geo-search-card" aria-label="Búsqueda geográfica">
-  <div class="geo-search-header">
-    <div class="geo-search-title">Ir a una ubicación</div>
-    <div class="geo-search-subtitle">
-      Busca direcciones o pega coordenadas GPS
-    </div>
-  </div>
-
+<section class="geo-search-inline" aria-label="Búsqueda geográfica">
   <form class="geo-search-form" (submit)="submitSearch($event)">
-    <div class="geo-search-input-wrap">
-      <input
-        type="text"
-        class="geo-search-input"
-        [ngModel]="draftValue"
-        (ngModelChange)="onDraftChange($event)"
-        (keydown)="onKeydown($event)"
-        name="geoSearch"
-        autocomplete="off"
-        spellcheck="false"
-        placeholder="Ej: Av. Amazonas y Colón, Quito o -0.22985, -78.52495"
-      />
+    <button
+      type="submit"
+      class="geo-search-trigger"
+      [disabled]="loading"
+      aria-label="Buscar ubicación"
+      title="Buscar ubicación"
+    >
+      <i class="pi pi-map-marker" aria-hidden="true"></i>
+    </button>
 
-      <button
-        type="submit"
-        class="geo-search-submit"
-        [disabled]="loading"
-        aria-label="Buscar ubicación"
-      >
-        <span *ngIf="!loading">Buscar</span>
-        <span *ngIf="loading">Buscando…</span>
-      </button>
-    </div>
+    <input
+      type="text"
+      class="geo-search-input"
+      [ngModel]="draftValue"
+      (ngModelChange)="onDraftChange($event)"
+      (keydown)="onKeydown($event)"
+      name="geoSearch"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Buscar dirección o coordenadas GPS"
+    />
 
-    <div class="geo-search-actions">
-      <button
-        type="button"
-        class="geo-search-clear"
-        [disabled]="loading && !draftValue"
-        (click)="clear()"
-      >
-        X
-      </button>
-    </div>
+    <button
+      type="submit"
+      class="geo-search-submit"
+      [disabled]="loading"
+      aria-label="Buscar"
+    >
+      <span *ngIf="!loading">Ir</span>
+      <span *ngIf="loading">...</span>
+    </button>
+
+    <button
+      type="button"
+      class="geo-search-clear"
+      [disabled]="loading && !draftValue"
+      (click)="clear()"
+      aria-label="Limpiar búsqueda"
+      title="Limpiar"
+    >
+      ×
+    </button>
   </form>
 
   <div class="geo-search-panel" *ngIf="showPanel">
     <div class="geo-search-state" *ngIf="loading">
-      Consultando ubicación…
+      Buscando ubicación...
     </div>
 
     <div class="geo-search-state geo-search-state--error" *ngIf="!loading && errorMessage">
@@ -53,7 +54,7 @@
     </div>
 
     <div class="geo-search-state" *ngIf="showEmptyState">
-      No se encontraron coincidencias para tu búsqueda.
+      No se encontraron coincidencias.
     </div>
 
     <div class="geo-search-results" *ngIf="!loading && results.length">
@@ -71,7 +72,7 @@
         </span>
 
         <span class="geo-search-result-tag" [class.is-coordinate]="item.source === 'coordinates'">
-          {{ item.source === 'coordinates' ? 'GPS' : 'Dirección' }}
+          {{ item.source === 'coordinates' ? 'GPS' : 'DIR' }}
         </span>
       </button>
     </div>

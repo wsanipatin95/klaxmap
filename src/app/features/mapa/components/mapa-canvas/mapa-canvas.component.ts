@@ -3,8 +3,10 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
   ViewChild,
@@ -98,7 +100,7 @@ interface LabelCandidate {
   styleUrl: './mapa-canvas.component.scss',
   encapsulation: ViewEncapsulation.None,
 })
-export class MapaCanvasComponent implements AfterViewInit, OnChanges {
+export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
 
   @Input() elementos: MapaElemento[] = [];
@@ -192,8 +194,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
   private readonly LABELS_MIN_ZOOM = 13;
-  private readonly LABELS_MAX_VISIBLE = 60;
-  private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 24;
+  private readonly LABELS_MAX_VISIBLE = 80;
+  private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 50;
   private readonly MEASURE_STROKE = '#f59e0b';
   private readonly MEASURE_FILL = '#fde68a';
 
@@ -214,9 +216,11 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
   private activeDrawHandler: any = null;
   private renderFrameId: number | null = null;
+  private resizeRefreshFrameId: number | null = null;
   private currentViewBounds: L.LatLngBounds | null = null;
   private hasInitialAutoFit = false;
   private drawPluginAvailable = false;
+  private resizeObserver: ResizeObserver | null = null;
 
   private editSession: {
     active: boolean;
@@ -260,6 +264,31 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     this.fitInitialBoundsIfNeeded();
     this.scheduleRender();
     this.syncToolMode();
+    this.setupResizeObserver();
+    this.scheduleMapResizeRefresh();
+  }
+
+  ngOnDestroy(): void {
+    if (this.renderFrameId != null) {
+      window.cancelAnimationFrame(this.renderFrameId);
+    }
+
+    if (this.resizeRefreshFrameId != null) {
+      window.cancelAnimationFrame(this.resizeRefreshFrameId);
+    }
+
+    this.resizeObserver?.disconnect();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.scheduleMapResizeRefresh();
+  }
+
+  @HostListener('window:orientationchange')
+  onWindowOrientationChange() {
+    this.scheduleMapResizeRefresh();
+    window.setTimeout(() => this.scheduleMapResizeRefresh(), 180);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -292,6 +321,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       this.updateViewBounds();
       this.scheduleRender();
     }
+  }
+
+  refreshMapLayout(preserveView = true) {
+    this.scheduleMapResizeRefresh(preserveView);
   }
 
   toggleBasemapMenu() {
@@ -584,6 +617,49 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
         this.geometryCreated.emit({ wkt, geomTipo });
       });
     }
+  }
+
+  private setupResizeObserver() {
+    if (typeof ResizeObserver === 'undefined' || !this.mapContainer?.nativeElement) {
+      return;
+    }
+
+    const container = this.mapContainer.nativeElement;
+    this.resizeObserver = new ResizeObserver(() => {
+      this.scheduleMapResizeRefresh();
+    });
+
+    this.resizeObserver.observe(container);
+
+    if (container.parentElement) {
+      this.resizeObserver.observe(container.parentElement);
+    }
+  }
+
+  private scheduleMapResizeRefresh(preserveView = true) {
+    if (!this.map) {
+      return;
+    }
+
+    if (this.resizeRefreshFrameId != null) {
+      window.cancelAnimationFrame(this.resizeRefreshFrameId);
+    }
+
+    this.resizeRefreshFrameId = window.requestAnimationFrame(() => {
+      this.resizeRefreshFrameId = null;
+
+      const center = preserveView ? this.map.getCenter() : null;
+      const zoom = preserveView ? this.map.getZoom() : null;
+
+      this.map.invalidateSize({ pan: false });
+
+      if (center && zoom != null) {
+        this.map.setView(center, zoom, { animate: false });
+      }
+
+      this.updateViewBounds();
+      this.scheduleRender();
+    });
   }
 
   private updateViewBounds() {
@@ -1311,17 +1387,19 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     }
 
     if (this.performanceModeEnabled) {
-      if (zoom < 14) return 4;
-      if (zoom < 15) return 8;
-      if (zoom < 16) return 12;
-      if (zoom < 17) return 18;
+      if (zoom < 13) return 8;
+      if (zoom < 14) return 14;
+      if (zoom < 15) return 20;
+      if (zoom < 16) return 28;
+      if (zoom < 17) return 34;
       return this.LABELS_PERFORMANCE_MAX_VISIBLE;
     }
 
-    if (zoom < 14) return 8;
-    if (zoom < 15) return 16;
-    if (zoom < 16) return 28;
-    if (zoom < 17) return 42;
+    if (zoom < 13) return 16;
+    if (zoom < 14) return 28;
+    if (zoom < 15) return 42;
+    if (zoom < 16) return 60;
+    if (zoom < 17) return 84;
     return this.LABELS_MAX_VISIBLE;
   }
 
@@ -1342,7 +1420,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
 
     const center = this.map.getCenter();
     const distance = this.map.distance(center, anchor);
-    score += Math.max(0, 5000 - distance) / 100;
+    score += Math.max(0, 7000 - distance) / 80;
 
     const drawOrder = Number(elemento.ordenDibujo ?? 0);
     score += Math.max(0, drawOrder);
@@ -1356,14 +1434,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
     selected: boolean
   ): LabelCollisionBox {
     const zoom = this.currentZoom;
-    const charWidth = zoom >= 16 ? 7.2 : zoom >= 15 ? 6.5 : 5.8;
-    const width = Math.min(230, Math.max(72, text.length * charWidth + 24 + (selected ? 12 : 0)));
-    const height = selected ? 34 : 30;
+    const charWidth = zoom >= 16 ? 6.6 : zoom >= 15 ? 5.9 : 5.1;
+    const width = Math.min(190, Math.max(56, text.length * charWidth + 18 + (selected ? 10 : 0)));
+    const height = selected ? 30 : 26;
 
     return {
       left: point.x - width / 2,
       right: point.x + width / 2,
-      top: point.y - height - 18,
+      top: point.y - height - 14,
       bottom: point.y - 4,
     };
   }
@@ -2411,7 +2489,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
+      .replace(/\"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 

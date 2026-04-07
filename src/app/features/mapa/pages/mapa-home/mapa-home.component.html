@@ -10,7 +10,6 @@
     [editSessionActive]="editSessionActive()"
     [editSessionDirty]="editSessionDirty()"
     [editSessionElementName]="editSessionElementName()"
-    [sidebarMode]="ui.sidebarMode()"
     (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()"
     (importRequested)="abrirImportacion()"
@@ -23,8 +22,6 @@
     (drawLineModeRequested)="onToolbarDrawLineMode()"
     (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
     (measureModeRequested)="onToolbarMeasureMode()"
-    (sidebarToggleRequested)="onToolbarSidebarToggle()"
-    (sidebarCompactRequested)="onToolbarSidebarCompactToggle()"
   />
 
   <app-mapa-sidebar
@@ -100,6 +97,40 @@
     [selectedName]="selectedElemento()?.nombre ?? null"
   />
 </app-mapa-layout>
+
+<div class="mapa-sidebar-fab-group">
+  <button
+    type="button"
+    class="mapa-sidebar-fab"
+    [attr.aria-label]="ui.sidebarOpen() ? 'Ocultar panel lateral' : 'Mostrar panel lateral'"
+    [attr.title]="ui.sidebarOpen() ? 'Ocultar panel lateral' : 'Mostrar panel lateral'"
+    (click)="onToolbarSidebarToggle()"
+  >
+    <i
+      class="pi"
+      [class.pi-bars]="!ui.sidebarOpen()"
+      [class.pi-times]="ui.sidebarOpen()"
+      aria-hidden="true"
+    ></i>
+  </button>
+
+  <button
+    type="button"
+    class="mapa-sidebar-fab mapa-sidebar-fab--secondary"
+    [class.is-active]="ui.sidebarCompact()"
+    [disabled]="!ui.sidebarOpen()"
+    aria-label="Comprimir o expandir panel lateral"
+    title="Comprimir o expandir panel lateral"
+    (click)="onToolbarSidebarCompactToggle()"
+  >
+    <i
+      class="pi"
+      [class.pi-angle-double-left]="!ui.sidebarCompact()"
+      [class.pi-angle-double-right]="ui.sidebarCompact()"
+      aria-hidden="true"
+    ></i>
+  </button>
+</div>
 
 <div class="mapa-quick-info">
   {{ quickInfo() }}
