@@ -3,6 +3,41 @@
     <button
       type="button"
       class="tool-btn"
+      [class.active]="!sidebarHidden"
+      [attr.title]="sidebarToggleTitle()"
+      [attr.aria-label]="sidebarToggleTitle()"
+      (click)="sidebarToggleRequested.emit()"
+    >
+      <i
+        class="pi"
+        [class.pi-bars]="sidebarHidden"
+        [class.pi-times]="!sidebarHidden"
+        aria-hidden="true"
+      ></i>
+    </button>
+
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="sidebarCompact && !sidebarHidden"
+      [disabled]="sidebarHidden"
+      [attr.title]="sidebarCompactTitle()"
+      [attr.aria-label]="sidebarCompactTitle()"
+      (click)="sidebarCompactRequested.emit()"
+    >
+      <i
+        class="pi"
+        [class.pi-angle-double-left]="!sidebarCompact"
+        [class.pi-angle-double-right]="sidebarCompact"
+        aria-hidden="true"
+      ></i>
+    </button>
+
+    <span class="tool-separator" aria-hidden="true"></span>
+
+    <button
+      type="button"
+      class="tool-btn"
       [class.active]="isActive('select')"
       title="Seleccionar elementos"
       aria-label="Seleccionar elementos"
