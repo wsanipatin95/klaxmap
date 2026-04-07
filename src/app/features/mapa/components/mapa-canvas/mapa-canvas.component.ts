@@ -193,9 +193,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   private readonly DEFAULT_FILL = '#f3aad6';
   private readonly EDIT_STROKE = '#2563eb';
   private readonly EDIT_FILL = '#60a5fa';
-  private readonly LABELS_MIN_ZOOM = 13;
-  private readonly LABELS_MAX_VISIBLE = 80;
-  private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 50;
+  private readonly LABELS_MIN_ZOOM = 12;
+  private readonly LABELS_MAX_VISIBLE = 110;
+  private readonly LABELS_PERFORMANCE_MAX_VISIBLE = 56;
   private readonly MEASURE_STROKE = '#f59e0b';
   private readonly MEASURE_FILL = '#fde68a';
 
@@ -221,6 +221,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   private hasInitialAutoFit = false;
   private drawPluginAvailable = false;
   private resizeObserver: ResizeObserver | null = null;
+  private lastTooltipOpenedElementoId: number | null = null;
 
   private editSession: {
     active: boolean;
@@ -433,6 +434,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         this.map.fitBounds(bounds.pad(0.3));
         this.updateViewBounds();
         this.openTooltipForLayer(selected);
+        this.lastTooltipOpenedElementoId = id;
         return;
       }
     }
@@ -441,6 +443,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       this.map.panTo((selected as any).getLatLng());
       this.updateViewBounds();
       this.openTooltipForLayer(selected);
+      this.lastTooltipOpenedElementoId = id;
     }
   }
 
@@ -1226,6 +1229,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     this.applySelectionStyle();
     this.renderVisibleLabels(renderQueue);
+    this.syncSelectedTooltip();
   }
 
   private bindLayerInteraction(
@@ -1280,7 +1284,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     anyLayer.bindTooltip(safeName, {
       direction,
-      sticky: true,
+      sticky: false,
       permanent: false,
       opacity: 0.96,
       className: 'mapa-element-tooltip',
@@ -1387,23 +1391,23 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
 
     if (this.performanceModeEnabled) {
-      if (zoom < 13) return 8;
-      if (zoom < 14) return 14;
-      if (zoom < 15) return 20;
-      if (zoom < 16) return 28;
-      if (zoom < 17) return 34;
+      if (zoom < 13) return 10;
+      if (zoom < 14) return 16;
+      if (zoom < 15) return 24;
+      if (zoom < 16) return 32;
+      if (zoom < 17) return 40;
       return this.LABELS_PERFORMANCE_MAX_VISIBLE;
     }
 
-    if (zoom < 13) return 16;
-    if (zoom < 14) return 28;
-    if (zoom < 15) return 42;
-    if (zoom < 16) return 60;
-    if (zoom < 17) return 84;
+    if (zoom < 13) return 18;
+    if (zoom < 14) return 30;
+    if (zoom < 15) return 46;
+    if (zoom < 16) return 64;
+    if (zoom < 17) return 88;
     return this.LABELS_MAX_VISIBLE;
   }
 
-  private getLabelPriority(elemento: MapaElemento, anchor: L.LatLng): number {
+  private getLabelPriority(elemento: MapaElemento, _anchor: L.LatLng): number {
     let score = 0;
 
     if (elemento.idGeoElemento === this.selectedElementoId) {
@@ -1418,10 +1422,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       score += 20;
     }
 
-    const center = this.map.getCenter();
-    const distance = this.map.distance(center, anchor);
-    score += Math.max(0, 7000 - distance) / 80;
-
     const drawOrder = Number(elemento.ordenDibujo ?? 0);
     score += Math.max(0, drawOrder);
 
@@ -1434,14 +1434,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     selected: boolean
   ): LabelCollisionBox {
     const zoom = this.currentZoom;
-    const charWidth = zoom >= 16 ? 6.6 : zoom >= 15 ? 5.9 : 5.1;
-    const width = Math.min(190, Math.max(56, text.length * charWidth + 18 + (selected ? 10 : 0)));
-    const height = selected ? 30 : 26;
+    const charWidth = zoom >= 16 ? 6.3 : zoom >= 15 ? 5.6 : 4.9;
+    const width = Math.min(180, Math.max(52, text.length * charWidth + 16 + (selected ? 8 : 0)));
+    const height = selected ? 28 : 24;
 
     return {
       left: point.x - width / 2,
       right: point.x + width / 2,
-      top: point.y - height - 14,
+      top: point.y - height - 12,
       bottom: point.y - 4,
     };
   }
@@ -1503,6 +1503,34 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (typeof anyLayer.openTooltip === 'function') {
       anyLayer.openTooltip();
     }
+  }
+
+  private closeTooltipForLayer(layer: L.Layer | null) {
+    if (!layer) return;
+    const anyLayer = layer as any;
+    if (typeof anyLayer.closeTooltip === 'function') {
+      anyLayer.closeTooltip();
+    }
+  }
+
+  private syncSelectedTooltip() {
+    const selectedId = this.selectedElementoId ?? null;
+
+    if (selectedId === this.lastTooltipOpenedElementoId) {
+      return;
+    }
+
+    if (this.lastTooltipOpenedElementoId != null) {
+      this.closeTooltipForLayer(this.renderedLayers.get(this.lastTooltipOpenedElementoId) ?? null);
+    }
+
+    this.lastTooltipOpenedElementoId = selectedId;
+
+    if (selectedId == null) {
+      return;
+    }
+
+    this.openTooltipForLayer(this.renderedLayers.get(selectedId) ?? null);
   }
 
   private shouldRenderElement(el: MapaElemento): boolean {
@@ -1735,7 +1763,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         if (typeof anyLayer.bringToFront === 'function') {
           anyLayer.bringToFront();
         }
-        this.openTooltipForLayer(layer);
       } else if (typeof anyLayer.closeTooltip === 'function') {
         anyLayer.closeTooltip();
       }
@@ -2489,7 +2516,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\"/g, '&quot;')
+      .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
 
