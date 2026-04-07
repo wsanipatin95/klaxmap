@@ -1,10 +1,11 @@
-import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
 
 import { NavbarComponent } from '../navbar/navbar.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
+import { MapaChromeService } from '../../core/services/mapa-chrome.service';
 import { SidebarService } from '../../core/services/sidebar.service';
 
 @Component({
@@ -18,21 +19,23 @@ export class AppLayoutComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly sidebarService = inject(SidebarService);
+  readonly mapaChromeService = inject(MapaChromeService);
+
   readonly isCollapsed = this.sidebarService.isCollapsed;
   readonly isMobileVisible = this.sidebarService.isMobileVisible;
-  readonly isMapaRouteActive = signal(this.isMapaRoute(this.router.url));
-  readonly mapaChromeHidden = signal(this.isMapaRoute(this.router.url));
+  readonly isMapaRouteActive = this.mapaChromeService.isMapaRouteActive;
+  readonly mapaChromeHidden = this.mapaChromeService.hidden;
 
   constructor() {
+    this.mapaChromeService.syncRoute(this.router.url);
+
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
-        const isMapa = this.isMapaRoute(this.router.url);
-        this.isMapaRouteActive.set(isMapa);
-        this.mapaChromeHidden.set(isMapa);
+        this.mapaChromeService.syncRoute(this.router.url);
       });
   }
 
@@ -41,19 +44,11 @@ export class AppLayoutComponent {
   }
 
   toggleMapaChrome() {
-    if (!this.isMapaRouteActive()) {
-      return;
-    }
-
-    this.mapaChromeHidden.update((hidden) => !hidden);
+    this.mapaChromeService.toggle();
   }
 
   showMapaChrome() {
-    if (!this.isMapaRouteActive()) {
-      return;
-    }
-
-    this.mapaChromeHidden.set(false);
+    this.mapaChromeService.show();
   }
 
   @HostListener('window:keydown.escape')
@@ -61,10 +56,5 @@ export class AppLayoutComponent {
     if (this.isMapaRouteActive() && this.mapaChromeHidden()) {
       this.showMapaChrome();
     }
-  }
-
-  private isMapaRoute(url: string): boolean {
-    const cleanUrl = (url || '').split('?')[0].split('#')[0];
-    return cleanUrl === '/app/mapa' || cleanUrl.startsWith('/app/mapa/');
   }
 }

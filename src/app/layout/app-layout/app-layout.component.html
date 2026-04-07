@@ -3,25 +3,6 @@
   [class.layout-wrapper--mapa]="isMapaRouteActive()"
   [class.layout-wrapper--mapa-chrome-hidden]="isMapaRouteActive() && mapaChromeHidden()"
 >
-  @if (isMapaRouteActive()) {
-    <button
-      type="button"
-      class="mapa-chrome-toggle"
-      [class.is-floating]="mapaChromeHidden()"
-      [attr.aria-pressed]="!mapaChromeHidden()"
-      [attr.aria-label]="mapaChromeHidden() ? 'Mostrar menú principal' : 'Ocultar menú principal'"
-      (click)="toggleMapaChrome()"
-    >
-      <span class="mapa-chrome-toggle-icon" aria-hidden="true">
-        {{ mapaChromeHidden() ? '☰' : '✕' }}
-      </span>
-      <span class="mapa-chrome-toggle-label">
-        {{ mapaChromeHidden() ? 'Mostrar' : 'Ocultar' }}
-      </span>
-      <span class="mapa-chrome-toggle-hint">Esc</span>
-    </button>
-  }
-
   @if (!isMapaRouteActive() || !mapaChromeHidden()) {
     <app-navbar />
   }
