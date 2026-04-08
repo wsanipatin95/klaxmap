@@ -51,6 +51,11 @@ export class SidebarComponent {
     const items: MenuItem[] = [
       { label: 'Principal', isDivider: true }
     ];
+    items.push({
+      label: 'Inicio',
+      icon: 'pi pi-home',
+      route: '/app/dashboard',
+    });
 
     if (this.env.company === 'inno') {
       items.push({
