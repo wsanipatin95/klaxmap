@@ -70,19 +70,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   private repo = inject(VehiculosRepository);
   private router = inject(Router);
   private articuloSearchTimer: ReturnType<typeof setTimeout> | null = null;
-
-  readonly VEHICLE_TYPE_OPTIONS = [
-    'AUTO',
-    'MOTO',
-    'TRICICLO_ELECTRICO',
-    'BICICLETA_ELECTRICA',
-    'CAMIONETA',
-    'CAMION',
-    'SUV',
-    'BUS',
-    'FURGON',
-    'OTRO',
-  ];
+  private allowVistaDialogClose = false;
 
   readonly VISTA_OPTIONS = [
     'FRENTE',
@@ -127,7 +115,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
   readonly currentSubtitle = computed(() => {
     if (this.mode() === 'crear') {
-      return 'Catálogo base, vistas y checklist';
+      return 'Completa los datos principales del tipo';
     }
 
     const current = this.selected();
@@ -196,12 +184,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     const articulo = this.selectedArticulo();
     if (!articulo) return '';
 
-    const codigo = articulo.artcod?.trim() || '';
     const nombre = articulo.articulo?.trim() || '';
-
-    if (codigo && nombre && nombre.toLowerCase() !== codigo.toLowerCase()) {
-      return `${codigo} · ${nombre}`;
-    }
+    const codigo = articulo.artcod?.trim() || '';
 
     if (nombre) return nombre;
     if (codigo) return codigo;
@@ -495,7 +479,10 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   }
 
   guardarTipo(): void {
-    if (this.form.invalid) {
+    const rawName = this.form.controls.tipoVehiculo.value?.trim() || '';
+    this.form.controls.tipoVehiculo.setValue(rawName, { emitEvent: false });
+
+    if (this.form.invalid || !rawName) {
       this.form.markAllAsTouched();
       this.error.set('Completa los campos obligatorios del tipo.');
       this.success.set(null);
@@ -504,7 +491,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
     const payload: VehTipoVehiculoGuardarRequest = {
       art: this.normalizeArticuloId(this.form.controls.art.value),
-      tipoVehiculo: this.form.controls.tipoVehiculo.value?.trim() || null,
+      tipoVehiculo: rawName,
       atributos: this.buildAtributosObject(this.atributosFormArray),
     };
 
@@ -523,7 +510,6 @@ export class VehiculosTiposComponent implements PendingChangesAware {
 
             this.success.set('Tipo creado.');
             this.formDirty.set(false);
-            this.cargarTipos();
 
             if (newId) {
               const optimistic: VehTipoVehiculo = {
@@ -535,14 +521,16 @@ export class VehiculosTiposComponent implements PendingChangesAware {
                 atributos: payload.atributos ?? null,
               };
 
-              this.selected.set(optimistic);
-              this.mode.set('editar');
-              this.activeTab.set('vistas');
-              this.populateMainForm(optimistic);
+              this.reloadTiposAndKeepSelection(
+                optimistic.idVehTipoVehiculo,
+                optimistic,
+                'vistas'
+              );
             } else {
               this.mode.set('crear');
               this.activeTab.set('edicion');
               this.refreshMainSnapshot();
+              this.cargarTipos();
             }
           },
           error: (err) => {
@@ -580,9 +568,12 @@ export class VehiculosTiposComponent implements PendingChangesAware {
             tipoVehiculo: payload.tipoVehiculo ?? null,
             atributos: payload.atributos ?? null,
           };
-          this.selected.set(updatedCurrent);
-          this.populateMainForm(updatedCurrent);
-          this.cargarTipos();
+
+          this.reloadTiposAndKeepSelection(
+            updatedCurrent.idVehTipoVehiculo,
+            updatedCurrent,
+            this.activeTab()
+          );
         },
         error: (err) => {
           console.error(err);
@@ -598,9 +589,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     this.openConfirm(
       {
         title: 'Eliminar tipo',
-        message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".
-
-Esta acción no se puede deshacer.`,
+        message: `Se eliminará "${current.tipoVehiculo || `Tipo #${current.idVehTipoVehiculo}`}".\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -819,17 +808,7 @@ Esta acción no se puede deshacer.`,
       return 'Sin artículo relacionado';
     }
 
-    const codigo = articulo.artcod?.trim() || '';
-    const nombre = articulo.articulo?.trim() || '';
-
-    if (codigo && nombre && nombre.toLowerCase() !== codigo.toLowerCase()) {
-      return `${codigo} · ${nombre}`;
-    }
-
-    if (nombre) return nombre;
-    if (codigo) return codigo;
-
-    return `Art. ${articulo.idActInventario}`;
+    return articulo.articulo?.trim() || articulo.artcod?.trim() || `Art. ${articulo.idActInventario}`;
   }
 
   checklistNombre(id: number): string {
@@ -889,9 +868,7 @@ Esta acción no se puede deshacer.`,
     this.openConfirm(
       {
         title: 'Quitar checklist',
-        message: `Se quitará "${label}" de este tipo de vehículo.
-
-Esta acción no se puede deshacer.`,
+        message: `Se quitará "${label}" de este tipo de vehículo.\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Quitar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -929,16 +906,16 @@ Esta acción no se puede deshacer.`,
     }
 
     this.vistaDialogMode.set('crear');
-    this.vistaDialogVisible.set(true);
     this.selectedVista.set(null);
     this.resetVistaFormForNew();
+    this.openVistaDialog();
   }
 
   editarVista(vista: VehTipoVehiculoVista): void {
     this.vistaDialogMode.set('editar');
-    this.vistaDialogVisible.set(true);
     this.selectedVista.set(vista);
     this.populateVistaForm(vista);
+    this.openVistaDialog();
   }
 
   seleccionarVista(vista: VehTipoVehiculoVista): void {
@@ -979,7 +956,7 @@ Esta acción no se puede deshacer.`,
         .subscribe({
           next: () => {
             this.success.set('Vista creada.');
-            this.vistaDialogVisible.set(false);
+            this.closeVistaDialog();
             this.resetVistaFormForNew();
             this.cargarVistas(selected.idVehTipoVehiculo);
           },
@@ -1008,7 +985,7 @@ Esta acción no se puede deshacer.`,
       .subscribe({
         next: () => {
           this.success.set('Vista actualizada.');
-          this.vistaDialogVisible.set(false);
+          this.closeVistaDialog();
           this.populateVistaForm({
             ...currentVista,
             ...payload,
@@ -1027,9 +1004,7 @@ Esta acción no se puede deshacer.`,
     this.openConfirm(
       {
         title: 'Eliminar vista',
-        message: `Se eliminará "${vista.vista || `Vista #${vista.idVehTipoVehiculoVista}`}".
-
-Esta acción no se puede deshacer.`,
+        message: `Se eliminará "${vista.vista || `Vista #${vista.idVehTipoVehiculoVista}`}".\n\nEsta acción no se puede deshacer.`,
         confirmLabel: 'Eliminar',
         cancelLabel: 'Cancelar',
         severity: 'danger',
@@ -1064,9 +1039,24 @@ Esta acción no se puede deshacer.`,
     );
   }
 
+  onVistaDialogVisibleChange(visible: boolean): void {
+    if (visible) {
+      this.vistaDialogVisible.set(true);
+      return;
+    }
+
+    if (this.allowVistaDialogClose) {
+      this.allowVistaDialogClose = false;
+      this.vistaDialogVisible.set(false);
+      return;
+    }
+
+    this.onVistaCancel();
+  }
+
   onVistaCancel(): void {
     if (!this.vistaDirty()) {
-      this.vistaDialogVisible.set(false);
+      this.closeVistaDialog();
       return;
     }
 
@@ -1084,7 +1074,7 @@ Esta acción no se puede deshacer.`,
         } else {
           this.resetVistaFormForNew();
         }
-        this.vistaDialogVisible.set(false);
+        this.closeVistaDialog();
       }
     );
   }
@@ -1251,6 +1241,63 @@ Esta acción no se puede deshacer.`,
         action();
       }
     );
+  }
+
+  private reloadTiposAndKeepSelection(
+    targetId: number | null,
+    fallback: VehTipoVehiculo | null,
+    nextTab: TiposPanelTab
+  ): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.repo
+      .listarTipos(this.q().trim(), 0, 100, false)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (res) => {
+          const items = res.items ?? [];
+          this.tipos.set(items);
+
+          const matched =
+            targetId != null
+              ? items.find((x) => x.idVehTipoVehiculo === targetId) ?? null
+              : null;
+
+          const nextSelected = matched ?? fallback ?? null;
+          this.selected.set(nextSelected);
+
+          if (!nextSelected) {
+            this.mode.set('crear');
+            this.activeTab.set('edicion');
+            this.vistas.set([]);
+            this.checklistAsignado.set([]);
+            this.selectedVista.set(null);
+            this.resetMainFormForNew();
+            return;
+          }
+
+          this.mode.set('editar');
+          this.activeTab.set(nextTab);
+          this.populateMainForm(nextSelected);
+          this.cargarVistas(nextSelected.idVehTipoVehiculo);
+          this.cargarChecklistAsignado(nextSelected.idVehTipoVehiculo);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set(err?.message || 'No se pudo refrescar el tipo de vehículo.');
+        },
+      });
+  }
+
+  private openVistaDialog(): void {
+    this.allowVistaDialogClose = false;
+    this.vistaDialogVisible.set(true);
+  }
+
+  private closeVistaDialog(): void {
+    this.allowVistaDialogClose = true;
+    this.vistaDialogVisible.set(false);
   }
 
   private resetMainFormForNew(): void {
@@ -1476,10 +1523,7 @@ Esta acción no se puede deshacer.`,
     if (id == null) return null;
 
     const artcod = item.artcod?.trim() || null;
-    const articulo =
-      item.articulo?.trim() ||
-      artcod ||
-      `Artículo relacionado #${id}`;
+    const articulo = item.articulo?.trim() || artcod || `Artículo relacionado #${id}`;
 
     return {
       idActInventario: id,

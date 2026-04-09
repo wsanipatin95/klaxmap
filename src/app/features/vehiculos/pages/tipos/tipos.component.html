@@ -1,7 +1,7 @@
 <div class="vehPageShell">
   <app-vehiculos-page-header
     title="Tipos de vehículo"
-    subtitle="Catálogo maestro, vistas estructurales y checklist por tipo">
+    subtitle="Nombre, artículo y configuración del tipo">
     <button
       pButton
       type="button"
@@ -87,8 +87,8 @@
     <aside class="contentCard sidebarPanel">
       <div class="sectionHead sectionHead--compact">
         <div>
-          <h4>Listado</h4>
-          <div class="secondaryCell">{{ tipos().length }} tipo(s)</div>
+          <h4>Tipos registrados</h4>
+          <div class="secondaryCell">{{ tipos().length }} registro(s)</div>
         </div>
 
         <span class="panelHint" *ngIf="selected() as selectedItem">
@@ -105,12 +105,12 @@
           (click)="seleccionarTipo(item)">
           <div class="typeRow__main">
             <strong>{{ item.tipoVehiculo || ('Tipo #' + item.idVehTipoVehiculo) }}</strong>
-            <span>ID {{ item.idVehTipoVehiculo }} · {{ typeRowArticuloText(item) }}</span>
+            <span>{{ typeRowArticuloText(item) }}</span>
           </div>
 
           <div class="typeRow__side">
             <span class="miniBadge">
-              {{ (item.atributos ? (item.atributos | keyvalue).length : 0) }} atr
+              {{ (item.atributos ? (item.atributos | keyvalue).length : 0) }} detalle(s)
             </span>
           </div>
         </button>
@@ -166,22 +166,22 @@
       </div>
 
       <div class="editorScroll" *ngIf="mode() === 'crear' || activeTab() === 'edicion'">
-        <form class="vehForm">
-          <div class="grid cols-2">
-            <label>
+        <form class="vehForm vehForm--tipos">
+          <div class="mainFields">
+            <label class="fieldBlock fieldBlock--tipo">
               <span>Tipo</span>
-              <select [formControl]="form.controls.tipoVehiculo">
-                <option value="">Selecciona un tipo</option>
-                <option *ngFor="let option of VEHICLE_TYPE_OPTIONS" [value]="option">
-                  {{ option }}
-                </option>
-              </select>
+              <input
+                pInputText
+                [formControl]="form.controls.tipoVehiculo"
+                placeholder="Escribe el nombre del tipo"
+                autocomplete="off"
+              />
               <small class="fieldError" *ngIf="form.controls.tipoVehiculo.invalid && form.controls.tipoVehiculo.touched">
-                Debes seleccionar un tipo de vehículo.
+                Debes escribir el nombre del tipo.
               </small>
             </label>
 
-            <div class="articleField">
+            <div class="articleField fieldBlock fieldBlock--articulo">
               <label for="tipo-articulo-input">
                 <span>Artículo</span>
               </label>
@@ -213,55 +213,51 @@
                 {{ articuloHint }}
               </small>
               <ng-template #articuloHintEmpty>
-                <small class="fieldHint">Usa la lupa para buscar y elegir un artículo.</small>
+                <small class="fieldHint">Busca y elige un artículo.</small>
               </ng-template>
             </div>
+          </div>
 
-            <section class="subCard cols-full">
-              <div class="sectionHead sectionHead--compact">
-                <div>
-                  <h4>Atributos</h4>
-                  <div class="secondaryCell">Pares atributo / valor sin JSON manual</div>
-                </div>
+          <section class="subCard cols-full">
+            <div class="sectionHead sectionHead--compact">
+              <div>
+                <h4>Detalles adicionales</h4>
+                <div class="secondaryCell">Información complementaria del tipo</div>
+              </div>
+
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                icon="pi pi-plus"
+                label="Agregar fila"
+                (click)="addAtributoRow()">
+              </button>
+            </div>
+
+            <div class="attrTable">
+              <div class="attrHead">
+                <span>Nombre</span>
+                <span>Detalle</span>
+                <span></span>
+              </div>
+
+              <div class="attrRow" *ngFor="let row of atributosFormArray.controls; let i = index">
+                <input pInputText [formControl]="row.controls.key" placeholder="Ej. Color" />
+                <input pInputText [formControl]="row.controls.value" placeholder="Ej. Rojo" />
 
                 <button
                   pButton
                   type="button"
-                  severity="secondary"
+                  severity="danger"
                   [text]="true"
-                  icon="pi pi-plus"
-                  label="Atributo"
-                  (click)="addAtributoRow()">
+                  icon="pi pi-times"
+                  (click)="removeAtributoRow(i)">
                 </button>
               </div>
-
-              <div class="attrTable">
-                <div class="attrHead">
-                  <span>Atributo</span>
-                  <span>Valor</span>
-                  <span></span>
-                </div>
-
-                <div class="attrRow" *ngFor="let row of atributosFormArray.controls; let i = index">
-                  <input pInputText [formControl]="row.controls.key" placeholder="Ej. usaBateria" />
-                  <input pInputText [formControl]="row.controls.value" placeholder="Ej. true, 60V, { ... }" />
-
-                  <button
-                    pButton
-                    type="button"
-                    severity="danger"
-                    [text]="true"
-                    icon="pi pi-times"
-                    (click)="removeAtributoRow(i)">
-                  </button>
-                </div>
-              </div>
-
-              <small class="fieldHint">
-                Se aceptan texto, números, true/false y JSON.
-              </small>
-            </section>
-          </div>
+            </div>
+          </section>
 
           <div class="editorActions">
             <button
@@ -292,7 +288,7 @@
             <div class="sectionHead sectionHead--compact">
               <div>
                 <h4>Vistas</h4>
-                <div class="secondaryCell">Superficies estructurales del tipo</div>
+                <div class="secondaryCell">Imágenes y posiciones del tipo</div>
               </div>
 
               <button
@@ -312,12 +308,12 @@
                 (click)="seleccionarVista(vista)">
                 <div class="vistaRow__main">
                   <strong>{{ vista.vista || 'Vista' }}</strong>
-                  <span>Ord {{ vista.orden || '-' }} · {{ vista.observaciones || 'Sin observaciones' }}</span>
+                  <span>Orden {{ vista.orden || '-' }} · {{ vista.observaciones || 'Sin descripción' }}</span>
                 </div>
 
                 <div class="vistaRow__side">
                   <span class="miniBadge" [class.optional]="!vista.estructura">
-                    {{ vista.estructura ? 'Imagen' : 'Vacía' }}
+                    {{ vista.estructura ? 'Con imagen' : 'Sin imagen' }}
                   </span>
 
                   <button
@@ -345,7 +341,7 @@
           <section class="subCard" *ngIf="selectedVista() as currentVista">
             <div class="sectionHead sectionHead--compact">
               <div>
-                <h4>Preview</h4>
+                <h4>Vista previa</h4>
                 <div class="secondaryCell">{{ currentVista.vista || 'Vista seleccionada' }}</div>
               </div>
             </div>
@@ -357,8 +353,8 @@
 
               <ng-template #noImage>
                 <div class="emptyPreview">
-                  <strong>Sin imagen estructural</strong>
-                  <p>Sube una imagen para usarla luego en marcación de hallazgos.</p>
+                  <strong>Sin imagen</strong>
+                  <p>Sube una imagen cuando la necesites para esta vista.</p>
                 </div>
               </ng-template>
             </div>
@@ -370,8 +366,8 @@
               </article>
 
               <article class="metaItem">
-                <span>Observaciones</span>
-                <strong>{{ currentVista.observaciones || 'Sin observaciones' }}</strong>
+                <span>Descripción</span>
+                <strong>{{ currentVista.observaciones || 'Sin descripción' }}</strong>
               </article>
             </div>
           </section>
@@ -384,7 +380,7 @@
             <div class="sectionHead sectionHead--compact">
               <div>
                 <h4>Checklist asignado</h4>
-                <div class="secondaryCell">Ítems disponibles para este tipo</div>
+                <div class="secondaryCell">Elementos disponibles para este tipo</div>
               </div>
             </div>
 
@@ -426,9 +422,7 @@
               <article class="checkRow" *ngFor="let rel of checklistAsignado()">
                 <div class="checkRow__main">
                   <strong>{{ checklistNombre(rel.idVehVehiculoCheckListFk) }}</strong>
-                  <span>
-                    {{ checklistCategoria(rel.idVehVehiculoCheckListFk) }} · Rel #{{ rel.idVehVehiculoCheckListVehiculo }}
-                  </span>
+                  <span>{{ checklistCategoria(rel.idVehVehiculoCheckListFk) }}</span>
                 </div>
 
                 <button
@@ -446,7 +440,7 @@
 
           <section class="subCard subCard--muted" *ngIf="checklistDisponibles().length === 0">
             <div class="emptyInline">
-              Todos los checklist del catálogo ya están asignados a este tipo.
+              Todos los checklist disponibles ya están asignados a este tipo.
             </div>
           </section>
         </section>
@@ -508,8 +502,8 @@
           [class.selected]="isArticuloSelected(item)"
           (click)="seleccionarArticulo(item)">
           <div class="pickerRow__main">
-            <strong>{{ item.artcod || ('ART ' + item.idActInventario) }}</strong>
-            <span>{{ item.articulo }}</span>
+            <strong>{{ item.articulo || item.artcod || ('ART ' + item.idActInventario) }}</strong>
+            <span>{{ item.artcod || ('ID ' + item.idActInventario) }}</span>
           </div>
 
           <div class="pickerRow__side">
@@ -527,7 +521,7 @@
 
   <p-dialog
     [visible]="vistaDialogVisible()"
-    (visibleChange)="vistaDialogVisible.set($event)"
+    (visibleChange)="onVistaDialogVisibleChange($event)"
     [modal]="true"
     [closable]="true"
     [dismissableMask]="false"
@@ -539,12 +533,12 @@
           <div class="sectionHead sectionHead--compact">
             <div>
               <h4>Datos</h4>
-              <div class="secondaryCell">Solo usa valores del combo en nombre de vista</div>
+              <div class="secondaryCell">Selecciona la vista y completa los datos básicos</div>
             </div>
           </div>
 
           <form class="vehForm">
-            <div class="grid cols-2">
+            <div class="grid cols-2 compactGrid">
               <label>
                 <span>Vista</span>
                 <select [formControl]="vistaForm.controls.vista">
@@ -563,20 +557,20 @@
                 <input pInputText type="number" min="1" [formControl]="vistaForm.controls.orden" />
               </label>
 
-              <label class="cols-full">
-                <span>Observaciones</span>
+              <label class="cols-full compactWideField">
+                <span>Descripción</span>
                 <input
                   pInputText
                   [formControl]="vistaForm.controls.observaciones"
-                  placeholder="Describe la vista o su uso..."
+                  placeholder="Describe esta vista"
                 />
               </label>
 
               <section class="subCard cols-full">
                 <div class="sectionHead sectionHead--compact">
                   <div>
-                    <h4>Atributos de la vista</h4>
-                    <div class="secondaryCell">Metadatos adicionales</div>
+                    <h4>Detalles de la vista</h4>
+                    <div class="secondaryCell">Información adicional</div>
                   </div>
 
                   <button
@@ -585,21 +579,21 @@
                     severity="secondary"
                     [text]="true"
                     icon="pi pi-plus"
-                    label="Atributo"
+                    label="Agregar fila"
                     (click)="addVistaAtributoRow()">
                   </button>
                 </div>
 
                 <div class="attrTable">
                   <div class="attrHead">
-                    <span>Atributo</span>
-                    <span>Valor</span>
+                    <span>Nombre</span>
+                    <span>Detalle</span>
                     <span></span>
                   </div>
 
                   <div class="attrRow" *ngFor="let row of vistaAtributosFormArray.controls; let i = index">
-                    <input pInputText [formControl]="row.controls.key" placeholder="Ej. aspectRatio" />
-                    <input pInputText [formControl]="row.controls.value" placeholder='Ej. 16:9 o {"zoom":1.2}' />
+                    <input pInputText [formControl]="row.controls.key" placeholder="Ej. Ángulo" />
+                    <input pInputText [formControl]="row.controls.value" placeholder="Ej. 45°" />
 
                     <button
                       pButton
@@ -620,7 +614,7 @@
           <div class="sectionHead sectionHead--compact">
             <div>
               <h4>Imagen</h4>
-              <div class="secondaryCell">Sube la imagen y revisa el preview</div>
+              <div class="secondaryCell">Sube la imagen y revisa la vista previa</div>
             </div>
           </div>
 
@@ -646,7 +640,7 @@
             <ng-template #emptyUpload>
               <div class="emptyPreview">
                 <strong>Sin imagen cargada</strong>
-                <p>Selecciona un archivo de imagen para visualizar la estructura del vehículo.</p>
+                <p>Selecciona un archivo para esta vista.</p>
               </div>
             </ng-template>
           </div>
