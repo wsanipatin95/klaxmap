@@ -6,6 +6,8 @@ export type BooleanLike = boolean | number | null;
 export interface VehTipoVehiculo {
   idVehTipoVehiculo: number;
   art?: number | null;
+  artcod?: string | null;
+  articulo?: string | null;
   tipoVehiculo?: string | null;
   atributos?: JsonMap | null;
   usuGen?: number | null;

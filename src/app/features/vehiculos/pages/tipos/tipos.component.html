@@ -105,7 +105,7 @@
           (click)="seleccionarTipo(item)">
           <div class="typeRow__main">
             <strong>{{ item.tipoVehiculo || ('Tipo #' + item.idVehTipoVehiculo) }}</strong>
-            <span>ID {{ item.idVehTipoVehiculo }} · Art {{ item.art || '-' }}</span>
+            <span>ID {{ item.idVehTipoVehiculo }} · {{ typeRowArticuloText(item) }}</span>
           </div>
 
           <div class="typeRow__side">
@@ -191,7 +191,9 @@
                   id="tipo-articulo-input"
                   pInputText
                   class="articleInput"
-                  [value]="selectedArticuloInputValue()"
+                  [ngModel]="selectedArticuloInputValue()"
+                  [ngModelOptions]="{ standalone: true }"
+                  [title]="selectedArticuloInputValue()"
                   readonly
                   placeholder="Selecciona un artículo"
                 />
@@ -503,7 +505,7 @@
           type="button"
           class="pickerRow"
           *ngFor="let item of filteredArticulos()"
-          [class.selected]="form.controls.art.value === item.idActInventario"
+          [class.selected]="isArticuloSelected(item)"
           (click)="seleccionarArticulo(item)">
           <div class="pickerRow__main">
             <strong>{{ item.artcod || ('ART ' + item.idActInventario) }}</strong>
@@ -512,7 +514,7 @@
 
           <div class="pickerRow__side">
             <small>{{ item.precio4 ?? item.artmay ?? item.artmen ?? '-' }}</small>
-            <span *ngIf="form.controls.art.value === item.idActInventario">Seleccionado</span>
+            <span *ngIf="isArticuloSelected(item)">Seleccionado</span>
           </div>
         </button>
 

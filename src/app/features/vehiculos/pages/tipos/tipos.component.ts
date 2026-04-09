@@ -40,6 +40,16 @@ type VistaAtributoRowForm = FormGroup<{
   value: FormControl<string>;
 }>;
 
+type ArticuloLike = {
+  art?: number | string | null;
+  idActInventario?: number | string | null;
+  artcod?: string | null;
+  articulo?: string | null;
+  precio4?: number | null;
+  artmay?: number | null;
+  artmen?: number | null;
+};
+
 @Component({
   selector: 'app-vehiculos-tipos',
   standalone: true,
@@ -149,35 +159,65 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   });
 
   readonly selectedArticulo = computed(() => {
-    const art = this.form.controls.art.value;
-    if (art == null) return null;
+    const selectedId = this.normalizeArticuloId(this.form.controls.art.value);
+    if (selectedId == null) {
+      return null;
+    }
 
-    return (
-      this.articulos().find((x) => x.idActInventario === art) ??
-      this.selectedArticuloFallback() ??
-      ({
-        idActInventario: art,
-        artcod: `ART ${art}`,
-        articulo: `Artículo #${art}`,
-      } as VehArticuloCatalogo)
-    );
+    const fromCatalog =
+      this.articulos().find(
+        (x) => this.normalizeArticuloId(x.idActInventario) === selectedId
+      ) ?? null;
+    if (fromCatalog) {
+      return fromCatalog;
+    }
+
+    const fromSelected = this.normalizeArticuloLike(this.selected());
+    if (fromSelected && fromSelected.idActInventario === selectedId) {
+      return fromSelected;
+    }
+
+    const fallback = this.selectedArticuloFallback();
+    if (
+      fallback &&
+      this.normalizeArticuloId(fallback.idActInventario) === selectedId
+    ) {
+      return fallback;
+    }
+
+    return {
+      idActInventario: selectedId,
+      artcod: `ART ${selectedId}`,
+      articulo: `Artículo relacionado #${selectedId}`,
+    } as VehArticuloCatalogo;
   });
 
   readonly selectedArticuloInputValue = computed(() => {
     const articulo = this.selectedArticulo();
     if (!articulo) return '';
-    return (
-      articulo.articulo?.trim() ||
-      articulo.artcod?.trim() ||
-      `Artículo #${articulo.idActInventario}`
-    );
+
+    const codigo = articulo.artcod?.trim() || '';
+    const nombre = articulo.articulo?.trim() || '';
+
+    if (codigo && nombre && nombre.toLowerCase() !== codigo.toLowerCase()) {
+      return `${codigo} · ${nombre}`;
+    }
+
+    if (nombre) return nombre;
+    if (codigo) return codigo;
+
+    return `Artículo relacionado #${articulo.idActInventario}`;
   });
 
   readonly selectedArticuloHint = computed(() => {
     const articulo = this.selectedArticulo();
     if (!articulo) return '';
-    const code = articulo.artcod?.trim() || `ART ${articulo.idActInventario}`;
-    return `${code} · ID ${articulo.idActInventario}`;
+
+    const codigo = articulo.artcod?.trim() || `ART ${articulo.idActInventario}`;
+    const nombre = articulo.articulo?.trim() || '';
+    return nombre
+      ? `${codigo} · ID ${articulo.idActInventario}`
+      : `ID ${articulo.idActInventario}`;
   });
 
   readonly checklistDisponibles = computed(() => {
@@ -204,7 +244,6 @@ export class VehiculosTiposComponent implements PendingChangesAware {
   });
 
   readonly selectedChecklistToAssign = signal<number | null>(null);
-
   readonly currentVistasCount = computed(() => this.vistas().length);
   readonly currentChecklistCount = computed(() => this.checklistAsignado().length);
 
@@ -343,7 +382,10 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .subscribe({
         next: (res) => {
           this.articulos.set(res.items ?? []);
-          this.ensureSelectedArticuloVisible(this.form.controls.art.value);
+          this.ensureSelectedArticuloVisible(
+            this.form.controls.art.value,
+            this.selected()
+          );
           this.updateMainDirtyState();
         },
         error: (err) => {
@@ -461,7 +503,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
     }
 
     const payload: VehTipoVehiculoGuardarRequest = {
-      art: this.form.controls.art.value,
+      art: this.normalizeArticuloId(this.form.controls.art.value),
       tipoVehiculo: this.form.controls.tipoVehiculo.value?.trim() || null,
       atributos: this.buildAtributosObject(this.atributosFormArray),
     };
@@ -477,6 +519,7 @@ export class VehiculosTiposComponent implements PendingChangesAware {
         .subscribe({
           next: (res: any) => {
             const newId = res?.idVehTipoVehiculo ?? res?.data?.idVehTipoVehiculo ?? null;
+            const currentArticulo = this.selectedArticulo();
 
             this.success.set('Tipo creado.');
             this.formDirty.set(false);
@@ -486,6 +529,8 @@ export class VehiculosTiposComponent implements PendingChangesAware {
               const optimistic: VehTipoVehiculo = {
                 idVehTipoVehiculo: Number(newId),
                 art: payload.art ?? null,
+                artcod: currentArticulo?.artcod ?? null,
+                articulo: currentArticulo?.articulo ?? null,
                 tipoVehiculo: payload.tipoVehiculo ?? null,
                 atributos: payload.atributos ?? null,
               };
@@ -524,10 +569,14 @@ export class VehiculosTiposComponent implements PendingChangesAware {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
+          const currentArticulo = this.selectedArticulo();
+
           this.success.set('Tipo actualizado.');
           const updatedCurrent: VehTipoVehiculo = {
             ...current,
             art: payload.art ?? null,
+            artcod: currentArticulo?.artcod ?? null,
+            articulo: currentArticulo?.articulo ?? null,
             tipoVehiculo: payload.tipoVehiculo ?? null,
             atributos: payload.atributos ?? null,
           };
@@ -600,7 +649,7 @@ Esta acción no se puede deshacer.`,
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar.Si continúas, se perderán.',
+        message: 'Hay cambios sin guardar. Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -685,7 +734,14 @@ Esta acción no se puede deshacer.`,
             const items = res.items ?? [];
             const selected = this.selectedArticulo();
 
-            if (selected && !items.some((x) => x.idActInventario === selected.idActInventario)) {
+            if (
+              selected &&
+              !items.some(
+                (x) =>
+                  this.normalizeArticuloId(x.idActInventario) ===
+                  this.normalizeArticuloId(selected.idActInventario)
+              )
+            ) {
               this.articulos.set([selected, ...items]);
             } else {
               this.articulos.set(items);
@@ -723,16 +779,57 @@ Esta acción no se puede deshacer.`,
   }
 
   seleccionarArticulo(item: VehArticuloCatalogo): void {
-    const current = this.form.controls.art.value;
-    if (current === item.idActInventario) {
+    const nextId = this.normalizeArticuloId(item.idActInventario);
+    const currentId = this.normalizeArticuloId(this.form.controls.art.value);
+
+    if (nextId == null) {
+      return;
+    }
+
+    if (currentId === nextId) {
       this.closeArticuloPanel();
       return;
     }
 
-    this.form.controls.art.setValue(item.idActInventario);
-    this.selectedArticuloFallback.set(item);
+    this.form.controls.art.setValue(nextId);
+    this.selectedArticuloFallback.set({
+      ...item,
+      idActInventario: nextId,
+      artcod: item.artcod ?? null,
+      articulo:
+        item.articulo?.trim() ||
+        item.artcod?.trim() ||
+        `Artículo relacionado #${nextId}`,
+    });
+
     this.closeArticuloPanel();
     this.updateMainDirtyState();
+  }
+
+  isArticuloSelected(item: VehArticuloCatalogo): boolean {
+    return (
+      this.normalizeArticuloId(this.form.controls.art.value) ===
+      this.normalizeArticuloId(item.idActInventario)
+    );
+  }
+
+  typeRowArticuloText(item: VehTipoVehiculo): string {
+    const articulo = this.normalizeArticuloLike(item);
+    if (!articulo) {
+      return 'Sin artículo relacionado';
+    }
+
+    const codigo = articulo.artcod?.trim() || '';
+    const nombre = articulo.articulo?.trim() || '';
+
+    if (codigo && nombre && nombre.toLowerCase() !== codigo.toLowerCase()) {
+      return `${codigo} · ${nombre}`;
+    }
+
+    if (nombre) return nombre;
+    if (codigo) return codigo;
+
+    return `Art. ${articulo.idActInventario}`;
   }
 
   checklistNombre(id: number): string {
@@ -976,7 +1073,7 @@ Esta acción no se puede deshacer.`,
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar en la vista.Si continúas, se perderán.',
+        message: 'Hay cambios sin guardar en la vista. Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -1109,7 +1206,7 @@ Esta acción no se puede deshacer.`,
       this.openConfirm(
         {
           title: 'Descartar cambios',
-          message: 'Hay cambios sin guardar.Si continúas, se perderán.',
+          message: 'Hay cambios sin guardar. Si continúas, se perderán.',
           confirmLabel: 'Descartar',
           cancelLabel: 'Seguir',
           severity: 'warning',
@@ -1143,7 +1240,7 @@ Esta acción no se puede deshacer.`,
     this.openConfirm(
       {
         title: 'Descartar cambios',
-        message: 'Hay cambios sin guardar.Si continúas, se perderán.',
+        message: 'Hay cambios sin guardar. Si continúas, se perderán.',
         confirmLabel: 'Descartar',
         cancelLabel: 'Seguir',
         severity: 'warning',
@@ -1174,7 +1271,7 @@ Esta acción no se puede deshacer.`,
 
   private populateMainForm(item: VehTipoVehiculo): void {
     this.form.reset({
-      art: item.art ?? null,
+      art: this.normalizeArticuloId(item.art ?? null),
       tipoVehiculo: item.tipoVehiculo ?? '',
     });
 
@@ -1193,7 +1290,7 @@ Esta acción no se puede deshacer.`,
 
     this.articuloQuery.set('');
     this.articuloPanelOpen.set(false);
-    this.ensureSelectedArticuloVisible(item.art ?? null);
+    this.ensureSelectedArticuloVisible(this.form.controls.art.value, item);
 
     this.refreshMainSnapshot();
   }
@@ -1328,7 +1425,7 @@ Esta acción no se puede deshacer.`,
 
   private createMainSnapshot(): string {
     return JSON.stringify({
-      art: this.form.controls.art.value ?? null,
+      art: this.normalizeArticuloId(this.form.controls.art.value),
       tipoVehiculo: (this.form.controls.tipoVehiculo.value ?? '').trim(),
       atributos: this.buildAtributosObject(this.atributosFormArray),
     });
@@ -1363,39 +1460,97 @@ Esta acción no se puede deshacer.`,
     this.vistaDirty.set(this.createVistaSnapshot() !== this.initialVistaSnapshot);
   }
 
-  private ensureSelectedArticuloVisible(artId: number | null | undefined): void {
-    if (artId == null) {
+  private normalizeArticuloId(
+    value: number | string | null | undefined
+  ): number | null {
+    if (value == null || value === '') return null;
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private normalizeArticuloLike(item?: ArticuloLike | null): VehArticuloCatalogo | null {
+    if (!item) return null;
+
+    const id = this.normalizeArticuloId(item.idActInventario ?? item.art ?? null);
+    if (id == null) return null;
+
+    const artcod = item.artcod?.trim() || null;
+    const articulo =
+      item.articulo?.trim() ||
+      artcod ||
+      `Artículo relacionado #${id}`;
+
+    return {
+      idActInventario: id,
+      artcod,
+      articulo,
+      precio4: item.precio4 ?? null,
+      artmay: item.artmay ?? null,
+      artmen: item.artmen ?? null,
+    };
+  }
+
+  private ensureSelectedArticuloVisible(
+    artId: number | string | null | undefined,
+    source?: ArticuloLike | null
+  ): void {
+    const normalizedId = this.normalizeArticuloId(artId);
+
+    if (normalizedId == null) {
       this.selectedArticuloFallback.set(null);
       return;
     }
 
-    const existing = this.articulos().find((x) => x.idActInventario === artId) ?? null;
+    const existing =
+      this.articulos().find(
+        (x) => this.normalizeArticuloId(x.idActInventario) === normalizedId
+      ) ?? null;
+
     if (existing) {
       this.selectedArticuloFallback.set(existing);
       return;
     }
 
-    this.selectedArticuloFallback.set({
-      idActInventario: artId,
-      artcod: `ART ${artId}`,
-      articulo: `Artículo #${artId}`,
-    } as VehArticuloCatalogo);
+    const normalizedSource = this.normalizeArticuloLike(source);
+    if (
+      normalizedSource &&
+      this.normalizeArticuloId(normalizedSource.idActInventario) === normalizedId
+    ) {
+      this.selectedArticuloFallback.set(normalizedSource);
+    } else {
+      this.selectedArticuloFallback.set({
+        idActInventario: normalizedId,
+        artcod: `ART ${normalizedId}`,
+        articulo: `Artículo relacionado #${normalizedId}`,
+      } as VehArticuloCatalogo);
+    }
 
-    this.repo.listarArticulos(String(artId), 0, 25, false).subscribe({
+    this.repo.listarArticulos(String(normalizedId), 0, 25, false).subscribe({
       next: (res) => {
         const items = res.items ?? [];
-        const exact = items.find((x) => x.idActInventario === artId) ?? items[0] ?? null;
+        const exact =
+          items.find(
+            (x) => this.normalizeArticuloId(x.idActInventario) === normalizedId
+          ) ??
+          items[0] ??
+          null;
+
         if (!exact) return;
 
         const merged = [
           exact,
-          ...this.articulos().filter((x) => x.idActInventario !== exact.idActInventario),
+          ...this.articulos().filter(
+            (x) =>
+              this.normalizeArticuloId(x.idActInventario) !==
+              this.normalizeArticuloId(exact.idActInventario)
+          ),
         ];
+
         this.articulos.set(merged);
         this.selectedArticuloFallback.set(exact);
       },
-      error: () => {
-      },
+      error: () => {},
     });
   }
 }
