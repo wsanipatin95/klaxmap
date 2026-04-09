@@ -456,8 +456,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   editarOrden(item: VehOrdenTrabajo) {
-    if (this.isOrdenAnulada(item)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y solo puede verse en modo consulta.');
+    if (this.isOrdenBloqueada(item)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y solo puede verse en modo consulta.');
       return;
     }
 
@@ -521,8 +521,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   async eliminarOrden(item: VehOrdenTrabajo) {
-    if (this.isOrdenAnulada(item)) {
-      this.notify.warn('Acción no permitida', 'Una OT anulada ya no se puede eliminar.');
+    if (this.isOrdenBloqueada(item)) {
+      this.notify.warn('Acción no permitida', 'Una OT finalizada o anulada ya no se puede eliminar.');
       return;
     }
 
@@ -768,10 +768,10 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   severityEstado(estado?: string | null) {
-    const v = (estado || '').toUpperCase();
-    if (v.includes('ENTREG')) return 'success';
+    const v = this.normalizeEstadoOrden({ estadoOrden: estado } as VehOrdenTrabajo);
+    if (v.includes('FINALIZ') || v.includes('ENTREG')) return 'success';
     if (v.includes('FACTUR')) return 'info';
-    if (v.includes('PEND') || v.includes('ESPERA')) return 'warn';
+    if (v.includes('DEVUELT') || v.includes('PEND') || v.includes('ESPERA') || v.includes('PROCESO')) return 'warn';
     if (v.includes('ANUL')) return 'danger';
     return 'secondary';
   }
@@ -862,8 +862,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   abrirChild(mode: Exclude<ChildDrawerMode, null>) {
     const orden = this.selectedOrden();
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
     if (!orden) {
@@ -1121,8 +1121,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   abrirComercialDrawer(mode: Exclude<ComercialDrawerMode, null>) {
     const orden = this.selectedOrden();
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite operaciones comerciales.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite operaciones comerciales.');
       return;
     }
     if (!orden) {
@@ -1629,13 +1629,78 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.comercialDirty.set(this.createComercialSnapshot() !== this.initialComercialSnapshot);
   }
 
+  normalizeEstadoOrden(item?: VehOrdenTrabajo | null): string {
+    return String(item?.estadoOrden || 'RECIBIDO').trim().toUpperCase();
+  }
+
   isOrdenAnulada(item?: VehOrdenTrabajo | null): boolean {
-    return (item?.estadoOrden || '').toUpperCase() === 'ANULADO';
+    return this.normalizeEstadoOrden(item) === 'ANULADO';
+  }
+
+  isOrdenFinalizada(item?: VehOrdenTrabajo | null): boolean {
+    return this.normalizeEstadoOrden(item) === 'FINALIZADO';
+  }
+
+  isOrdenBloqueada(item?: VehOrdenTrabajo | null): boolean {
+    return this.isOrdenAnulada(item) || this.isOrdenFinalizada(item);
+  }
+
+  canMutateOrden(item?: VehOrdenTrabajo | null): boolean {
+    const estado = this.normalizeEstadoOrden(item);
+    return estado === 'RECIBIDO' || estado === 'EN_PROCESO' || estado === 'DEVUELTO';
+  }
+
+  canFinalizeOrden(item?: VehOrdenTrabajo | null): boolean {
+    const estado = this.normalizeEstadoOrden(item);
+    return estado !== 'ANULADO' && estado !== 'FINALIZADO';
+  }
+
+  canDevolverOrden(item?: VehOrdenTrabajo | null): boolean {
+    const estado = this.normalizeEstadoOrden(item);
+    return estado !== 'ANULADO' && estado !== 'DEVUELTO';
+  }
+
+  async finalizarOrden(item: VehOrdenTrabajo) {
+    if (!this.canFinalizeOrden(item)) {
+      this.notify.warn('Acción no disponible', 'Esta orden ya no se puede finalizar.');
+      return;
+    }
+
+    let ok = false;
+
+    try {
+      ok = await this.confirm.confirmFinalize(`la orden #${item.idVehOrdenTrabajo}`);
+    } catch {
+      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
+      return;
+    }
+
+    if (!ok) return;
+    this.actualizarEstadoOrden(item, 'FINALIZADO', 'Orden finalizada', 'La OT quedó finalizada y ahora está en solo lectura.');
+  }
+
+  async devolverOrden(item: VehOrdenTrabajo) {
+    if (!this.canDevolverOrden(item)) {
+      this.notify.warn('Acción no disponible', 'Esta orden ya no se puede devolver.');
+      return;
+    }
+
+    let ok = false;
+
+    try {
+      ok = await this.confirm.confirmReturn(`la orden #${item.idVehOrdenTrabajo}`);
+    } catch {
+      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
+      return;
+    }
+
+    if (!ok) return;
+    this.actualizarEstadoOrden(item, 'DEVUELTO', 'Orden devuelta', 'La OT volvió a estado devuelto y se reactivaron las acciones.');
   }
 
   async anularOrden(item: VehOrdenTrabajo) {
-    if (this.isOrdenAnulada(item)) {
-      this.notify.warn('Orden ya anulada', 'La OT ya está anulada.');
+    if (this.isOrdenBloqueada(item)) {
+      this.notify.warn('Acción no disponible', 'La OT finalizada o anulada ya no permite esta acción.');
       return;
     }
 
@@ -1649,30 +1714,38 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     }
 
     if (!ok) return;
+    this.actualizarEstadoOrden(item, 'ANULADO', 'Orden anulada', 'La OT quedó anulada y bloqueada.');
+  }
 
+  private actualizarEstadoOrden(
+    item: VehOrdenTrabajo,
+    estadoOrden: 'FINALIZADO' | 'DEVUELTO' | 'ANULADO',
+    successTitle: string,
+    successMessage: string,
+  ) {
     this.saving.set(true);
     this.repo.editarOrden({
       idVehOrdenTrabajo: item.idVehOrdenTrabajo,
-      cambios: { estadoOrden: 'ANULADO' },
+      cambios: { estadoOrden },
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.notify.success('Orden anulada', 'La OT quedó anulada y bloqueada.');
+          this.notify.success(successTitle, successMessage);
 
           if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-            const updated = { ...item, estadoOrden: 'ANULADO' };
+            const updated = { ...item, estadoOrden };
             this.selectedOrden.set(updated);
             this.cargarDetalle(updated);
           }
 
           if (this.editingOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-            this.editingOrden.set({ ...item, estadoOrden: 'ANULADO' });
+            this.editingOrden.set({ ...item, estadoOrden });
           }
 
           this.cargar();
         },
-        error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
+        error: (err) => this.notify.error('No se pudo actualizar el estado de la orden', err?.message),
       });
   }
 
@@ -1790,8 +1863,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
 
@@ -1856,8 +1929,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
 
@@ -1906,8 +1979,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
 
@@ -1957,8 +2030,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
 
@@ -1994,8 +2067,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite registrar movimientos.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
       return;
     }
 
@@ -2094,8 +2167,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (this.isOrdenAnulada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está anulada y ya no permite operaciones comerciales.');
+    if (this.isOrdenBloqueada(orden)) {
+      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite operaciones comerciales.');
       return;
     }
 

@@ -194,6 +194,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Input() facturaDetalle: VehFacturaDetalleResponse | null = null;
   @Input() cobrosFactura: VehCobro[] = [];
   @Input() workflowResultado: VehFacturacionWorkflowResultado | null = null;
+  @Input() readonlyMode = false;
 
   @Input() checklistLabelMap: Record<number, string> = {};
   @Input() trabajoLabelMap: Record<number, string> = {};
@@ -369,6 +370,13 @@ export class OrdenDetailPanelComponent implements OnChanges {
     this.hallazgoInnerTab.set(tab);
   }
 
+  readonlyStateLabel(): string {
+    const estado = String(this.orden?.estadoOrden || '').trim().toUpperCase();
+    if (estado === 'FINALIZADO') return 'Orden finalizada · solo consulta';
+    if (estado === 'ANULADO') return 'Orden anulada · solo consulta';
+    return 'Solo consulta';
+  }
+
   openHallazgoMediaModal(tab: HallazgoInnerTab) {
     this.hallazgoInnerTab.set(tab);
     this.hallazgoMediaModalVisible.set(true);
@@ -533,6 +541,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   saveChecklistTable() {
+    if (this.readonlyMode) return;
     const payload: ChecklistBulkRow[] = this.checklistRows().map((row) => ({
       relationId: row.relationId,
       label: row.label,
@@ -613,6 +622,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   iniciarNuevoTrabajo() {
+    if (this.readonlyMode) return;
     this.selectedTrabajoId = null;
     this.editingTrabajoId = null;
     this.trabajoDraft = this.createEmptyTrabajoDraft();
@@ -627,6 +637,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   guardarTrabajo() {
+    if (this.readonlyMode) return;
     if (!this.trabajoDraft.descripcionInicial.trim()) return;
 
     this.pendingResetKind = 'trabajo';
@@ -663,6 +674,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   iniciarNuevoHallazgo() {
+    if (this.readonlyMode) return;
     if (!this.selectedTrabajoId) return;
     this.editingHallazgoId = null;
     this.hallazgoDraft = this.createEmptyHallazgoDraft();
@@ -679,6 +691,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   guardarHallazgo() {
+    if (this.readonlyMode) return;
     if (!this.selectedTrabajoId) return;
     if (!this.hallazgoDraft.descripcion.trim()) return;
 
@@ -753,6 +766,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   onFotoSelected(event: Event) {
+    if (this.readonlyMode) return;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -776,6 +790,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   guardarFoto() {
+    if (this.readonlyMode) return;
     const hallazgo = this.selectedHallazgoEnContexto();
     if (!hallazgo) return;
     if (!this.fotoDraft.fotoBase64) return;
@@ -856,11 +871,13 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   onRepuestoQueryInput(value: string) {
+    if (this.readonlyMode) return;
     this.repuestoQuery = value ?? '';
     this.articuloQueryChange.emit(this.repuestoQuery.trim());
   }
 
   seleccionarArticuloCatalogo(item: VehArticuloCatalogo) {
+    if (this.readonlyMode) return;
     this.repuestoDraft = {
       ...this.repuestoDraft,
       art: item.idActInventario,
@@ -870,6 +887,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   iniciarNuevoRepuesto() {
+    if (this.readonlyMode) return;
     this.selectedRepuestoId = null;
     this.editingRepuestoId = null;
     this.repuestoDraft = this.createEmptyRepuestoDraft();
@@ -881,6 +899,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   guardarRepuesto() {
+    if (this.readonlyMode) return;
     if (!this.repuestoDraft.art) return;
     if (!this.repuestoDraft.cantidad || this.repuestoDraft.cantidad <= 0) return;
 
@@ -898,6 +917,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   eliminarRepuestoSeleccionado() {
+    if (this.readonlyMode) return;
     const repuesto = this.selectedRepuestoActual();
     if (!repuesto) return;
     if (!this.repuestoEditable(repuesto)) return;
@@ -1099,6 +1119,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
   }
 
   openRepuestoArticuloModal() {
+    if (this.readonlyMode) return;
     this.repuestoArticuloModalVisible.set(true);
     this.articuloQueryChange.emit((this.repuestoQuery || '').trim());
   }

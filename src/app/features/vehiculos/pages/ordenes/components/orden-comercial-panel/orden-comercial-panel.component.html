@@ -6,11 +6,11 @@
         <div class="secondaryCell">{{ facturasOt.length }} registrada(s)</div>
       </div>
 
-      <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva" (click)="openNuevaFactura()">
+      <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva" [disabled]="readonlyMode" (click)="openNuevaFactura()">
       </button>
     </div>
 
-    <article class="shortcutCard" [class.active]="mode === 'new'" (click)="openNuevaFactura()">
+    <article class="shortcutCard" [class.active]="mode === 'new'" [class.shortcutCard--disabled]="readonlyMode" (click)="openNuevaFactura()">
       <div class="shortcutCard__copy">
         <strong>Nueva factura</strong>
         <span>{{ pendingLines.length }} repuesto(s) pendiente(s)</span>
@@ -60,7 +60,7 @@
           </div>
 
           <button pButton type="button" size="small" icon="pi pi-check" label="Emitir factura"
-            [disabled]="!canEmitFactura()" (click)="emitirFactura()">
+            [disabled]="readonlyMode || !canEmitFactura()" (click)="emitirFactura()">
           </button>
         </div>
 
@@ -90,7 +90,7 @@
           <div class="editorField span-12">
             <label>Notas</label>
             <textarea pTextarea rows="2" [(ngModel)]="comercialDraft.observacionFactura"
-              [ngModelOptions]="{ standalone: true }" placeholder="Observación interna o comercial">
+              [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode" placeholder="Observación interna o comercial">
     </textarea>
           </div>
         </div>
@@ -98,7 +98,7 @@
         <div class="lineToolbar">
           <label class="checkboxLabel">
             <input type="checkbox" [checked]="allPendingSelected()"
-              (change)="toggleAllPending($any($event.target).checked)">
+              [disabled]="readonlyMode" (change)="toggleAllPending($any($event.target).checked)">
             Seleccionar todos
           </label>
 
@@ -120,7 +120,7 @@
           <div class="lineTable__body">
             <div class="lineTable__row" *ngFor="let line of pendingLines">
               <div class="lineTable__cell lineTable__cell--check">
-                <input type="checkbox" [(ngModel)]="line.selected" [ngModelOptions]="{ standalone: true }">
+                <input type="checkbox" [(ngModel)]="line.selected" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
               </div>
 
               <div class="lineTable__cell lineTable__cell--main">

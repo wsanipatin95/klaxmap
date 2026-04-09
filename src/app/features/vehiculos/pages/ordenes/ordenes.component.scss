@@ -63,6 +63,12 @@
   line-height: 1.08;
 }
 
+.estadoActionStrip {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .noticeStrip {
   display: flex;
   gap: 0.34rem;
@@ -253,8 +259,9 @@
 
 .rowActions--compact {
   gap: 0.14rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .primaryCell {

@@ -65,6 +65,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
   @Input() cobrosFactura: VehCobro[] = [];
   @Input() articulosCatalogo: VehArticuloCatalogo[] = [];
   @Input() facturaDetalle: VehFacturaDetalleResponse | null = null;
+  @Input() readonlyMode = false;
   @Output() selectFactura = new EventEmitter<VehFactura>();
   @Output() createFactura = new EventEmitter<FacturaComercialSavePayload>();
   @Output() openCobro = new EventEmitter<void>();
@@ -98,6 +99,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
   }
 
   openNuevaFactura() {
+    if (this.readonlyMode) return;
     this.mode = 'new';
     if (!this.pendingLines.length) {
       this.rebuildPendingLines();
@@ -144,6 +146,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
   }
 
   toggleAllPending(checked: boolean) {
+    if (this.readonlyMode) return;
     this.pendingLines = this.pendingLines.map((line) => ({ ...line, selected: checked }));
   }
 
@@ -198,6 +201,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
   }
 
   emitirFactura() {
+    if (this.readonlyMode) return;
     if (!this.orden) return;
 
     const lineas = this.selectedLines();

@@ -51,10 +51,20 @@
       <span class="noticePill is-neutral">OT #{{ ordenActual.idVehOrdenTrabajo }}</span>
       <span class="noticePill is-neutral">{{ ordenActual.tipoServicio || 'SERVICIO' }}</span>
       <span class="noticePill is-neutral">{{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
-      <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="!isOrdenAnulada(ordenActual)">
+      <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="isOrdenFinalizada(ordenActual)" [class.is-neutral]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
         {{ ordenActual.estadoOrden || 'RECIBIDO' }}
       </span>
     </ng-container>
+  </section>
+
+  <section class="estadoActionStrip" *ngIf="selectedOrden() as ordenActual">
+    <button pButton type="button" severity="success" icon="pi pi-check-circle" label="Finalizar orden"
+      [disabled]="!canFinalizeOrden(ordenActual)" (click)="finalizarOrden(ordenActual)">
+    </button>
+
+    <button pButton type="button" severity="secondary" icon="pi pi-replay" label="Devolver orden"
+      [disabled]="!canDevolverOrden(ordenActual)" (click)="devolverOrden(ordenActual)">
+    </button>
   </section>
 
   <div class="ordenesLayout">
@@ -98,15 +108,23 @@
               <p-tag [value]="item.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(item.estadoOrden)"></p-tag>
 
               <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
-                [disabled]="isOrdenAnulada(item)" (click)="editarOrden(item); $event.stopPropagation()">
+                [disabled]="isOrdenBloqueada(item)" (click)="editarOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="success" icon="pi pi-check-circle"
+                [disabled]="!canFinalizeOrden(item)" (click)="finalizarOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="secondary" icon="pi pi-replay"
+                [disabled]="!canDevolverOrden(item)" (click)="devolverOrden(item); $event.stopPropagation()">
               </button>
 
               <button pButton type="button" size="small" [text]="true" severity="warn" icon="pi pi-ban"
-                [disabled]="isOrdenAnulada(item)" (click)="anularOrden(item); $event.stopPropagation()">
+                [disabled]="isOrdenBloqueada(item)" (click)="anularOrden(item); $event.stopPropagation()">
               </button>
 
               <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
-                [disabled]="isOrdenAnulada(item)" (click)="eliminarOrden(item); $event.stopPropagation()">
+                [disabled]="isOrdenBloqueada(item)" (click)="eliminarOrden(item); $event.stopPropagation()">
               </button>
             </div>
           </div>
@@ -129,6 +147,7 @@
         [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
         [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
         [articuloLabelMap]="articuloLabelMap()" [articulosCatalogo]="articulosCatalogo()"
+        [readonlyMode]="isOrdenBloqueada(selectedOrden())"
         (saveChecklist)="guardarChecklistMasivo($event)" (saveTrabajo)="guardarTrabajoWorkbench($event)"
         (saveHallazgo)="guardarHallazgoWorkbench($event)" (saveFoto)="guardarFotoWorkbench($event)"
         (saveRepuesto)="guardarRepuestoWorkbench($event)" (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
@@ -153,7 +172,7 @@
     (saveAndClose)="guardarOrden($event, true)">
   </app-orden-main-form-drawer>
 
-  <app-vehiculos-form-drawer [visible]="childDrawerVisible()" [dirty]="childDirty()" [saving]="saving()"
+  <app-vehiculos-form-drawer [visible]="childDrawerVisible()" [dirty]="childDirty()" [saving]="saving() || isOrdenBloqueada(selectedOrden())"
     [title]="childDrawerTitle()" [subtitle]="childDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
     (visibleChange)="$event ? childDrawerVisible.set(true) : cerrarChildDrawer()" (requestClose)="cerrarChildDrawer()"
     (requestSave)="submitChild()">
@@ -467,7 +486,7 @@
     </form>
   </app-vehiculos-form-drawer>
 
-  <app-vehiculos-form-drawer [visible]="comercialDrawerVisible()" [dirty]="comercialDirty()" [saving]="saving()"
+  <app-vehiculos-form-drawer [visible]="comercialDrawerVisible()" [dirty]="comercialDirty()" [saving]="saving() || isOrdenBloqueada(selectedOrden())"
     [title]="comercialDrawerTitle()" [subtitle]="comercialDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
     (visibleChange)="$event ? comercialDrawerVisible.set(true) : cerrarComercialDrawer()"
     (requestClose)="cerrarComercialDrawer()" (requestSave)="submitComercial()">

@@ -35,6 +35,36 @@ export class VehiculosConfirmService {
     });
   }
 
+  confirmFinalize(label: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.confirmation.confirm({
+        header: 'Finalizar orden',
+        message: `¿Seguro que deseas finalizar ${label}? Luego quedará en solo lectura.`,
+        icon: 'pi pi-check-circle',
+        acceptLabel: 'Finalizar',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-success',
+        accept: () => resolve(true),
+        reject: () => resolve(false),
+      });
+    });
+  }
+
+  confirmReturn(label: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.confirmation.confirm({
+        header: 'Devolver orden',
+        message: `¿Seguro que deseas devolver ${label} a trabajo activo?`,
+        icon: 'pi pi-replay',
+        acceptLabel: 'Devolver',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-warning',
+        accept: () => resolve(true),
+        reject: () => resolve(false),
+      });
+    });
+  }
+
   confirmLeaveEdit(): Promise<boolean> {
     return new Promise((resolve) => {
       this.confirmation.confirm({
