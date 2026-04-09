@@ -76,6 +76,7 @@ export type HallazgoWorkbenchSavePayload = {
   aprobadoCliente: number;
   fechaAprobacion?: string | null;
   observaciones?: string | null;
+  atributos?: Record<string, unknown> | null;
 };
 
 export type FotoWorkbenchSavePayload = {
@@ -340,6 +341,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
         this.selectedFotoId = this.fotos[0]?.idVehOrdenTrabajoHallazgoFoto ?? null;
       }
     }
+
     if (changes['repuestos']) {
       const current = this.selectedRepuestoActual();
       if (!current) {
@@ -492,7 +494,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
     const raw = String(value).trim();
     if (!raw) return 'Sin fecha';
 
-    const date = new Date(raw);
+    const date = new Date(raw.includes('T') ? raw : `${raw}T00:00:00`);
     if (Number.isNaN(date.getTime())) {
       return this.formatDateShort(raw);
     }
@@ -694,6 +696,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
       aprobadoCliente: this.hallazgoDraft.aprobadoCliente ? 1 : 0,
       fechaAprobacion: this.toTimestamp(this.hallazgoDraft.fechaAprobacion),
       observaciones: this.hallazgoDraft.observaciones || null,
+      atributos: null,
     });
   }
 
@@ -815,6 +818,7 @@ export class OrdenDetailPanelComponent implements OnChanges {
 
     this.selectedTrabajoId = this.trabajos[0]?.idVehOrdenTrabajoTrabajo ?? null;
   }
+
   repuestosListado(): VehOrdenTrabajoRepuesto[] {
     return this.repuestos ?? [];
   }

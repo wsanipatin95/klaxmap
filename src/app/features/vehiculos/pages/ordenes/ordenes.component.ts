@@ -125,7 +125,12 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   readonly TIPO_AUTORIZACION_OPTIONS = ['ADICIONAL', 'CAMBIO_REPUESTO', 'SERVICIO_EXTRA', 'ENTREGA', 'OTRO'];
   readonly ESTADO_AUTORIZACION_OPTIONS = ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'ANULADO'];
   readonly TIPO_FACTURACION_OPTIONS = ['PARCIAL', 'TOTAL'];
-  private readonly MAIN_DRAWER_PAGE_SIZE = 50;
+
+  private readonly MAIN_DRAWER_PAGE_SIZE = 100;
+  private detalleLoadSeq = 0;
+  private hallazgoLoadSeq = 0;
+  private facturaLoadSeq = 0;
+
   q = '';
   loading = signal(false);
   saving = signal(false);
@@ -418,7 +423,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   cargar() {
     this.loading.set(true);
-    this.repo.listarOrdenes(this.q, 0, 50, false)
+    this.repo.listarOrdenes(this.q, 0, this.MAIN_DRAWER_PAGE_SIZE, false)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
@@ -426,6 +431,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.ordenes.set(items);
           const current = this.selectedOrden();
           if (!current) return;
+
           const found = items.find((x) => x.idVehOrdenTrabajo === current.idVehOrdenTrabajo) ?? null;
           this.selectedOrden.set(found);
           if (found) {
@@ -480,11 +486,10 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    if (!this.editingOrden()) {
-      return;
-    }
+    const ok = this.editingOrden()
+      ? await this.confirm.confirmLeaveEdit()
+      : await this.confirm.confirmDiscard();
 
-    const ok = await this.confirm.confirmLeaveEdit();
     if (!ok) return;
 
     this.finalizeMainDrawerClose();
@@ -555,6 +560,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   cargarDetalle(item: VehOrdenTrabajo) {
+    const loadSeq = ++this.detalleLoadSeq;
+
     forkJoin({
       checklist: this.repo.listarOrdenChecklists({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
       trabajos: this.repo.listarOrdenTrabajos({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
@@ -580,6 +587,15 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         facturasOt,
         checklistOpciones,
       }) => {
+        const currentSelection = this.selectedOrden();
+        if (
+          loadSeq !== this.detalleLoadSeq ||
+          !currentSelection ||
+          currentSelection.idVehOrdenTrabajo !== item.idVehOrdenTrabajo
+        ) {
+          return;
+        }
+
         this.checklist.set(checklist.items ?? []);
         this.trabajos.set(trabajos.items ?? []);
         this.hallazgos.set(hallazgos.items ?? []);
@@ -598,13 +614,21 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
               .join(' · ') ||
             'Vehículo',
           );
+
           this.repo.listarChecklistsVehiculo({ idVehTipoVehiculoFk: checklistOpciones.vehiculo.idVehTipoVehiculoFk }).subscribe({
-            next: (r) => this.checklistOpciones.set(r.items ?? []),
-            error: () => this.checklistOpciones.set([]),
+            next: (r) => {
+              if (loadSeq !== this.detalleLoadSeq) return;
+              this.checklistOpciones.set(r.items ?? []);
+            },
+            error: () => {
+              if (loadSeq !== this.detalleLoadSeq) return;
+              this.checklistOpciones.set([]);
+            },
           });
 
           this.repo.listarVistas({ idVehTipoVehiculoFk: checklistOpciones.vehiculo.idVehTipoVehiculoFk }).subscribe({
             next: (r) => {
+              if (loadSeq !== this.detalleLoadSeq) return;
               const items = r.items ?? [];
               this.vistas.set(items);
               const currentVista = this.selectedVista();
@@ -614,6 +638,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
               this.selectedVista.set(selectedVista);
             },
             error: () => {
+              if (loadSeq !== this.detalleLoadSeq) return;
               this.vistas.set([]);
               this.selectedVista.set(null);
             },
@@ -689,11 +714,20 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   cargarHallazgoDetalle(idVehOrdenTrabajoHallazgo: number) {
+    const hallazgoSeq = ++this.hallazgoLoadSeq;
+
     forkJoin({
       marcas: this.repo.listarHallazgoMarcas({ idVehOrdenTrabajoHallazgoFk: idVehOrdenTrabajoHallazgo }),
       fotos: this.repo.listarHallazgoFotos({ idVehOrdenTrabajoHallazgoFk: idVehOrdenTrabajoHallazgo }),
     }).subscribe({
       next: ({ marcas, fotos }) => {
+        if (
+          hallazgoSeq !== this.hallazgoLoadSeq ||
+          this.selectedHallazgo()?.idVehOrdenTrabajoHallazgo !== idVehOrdenTrabajoHallazgo
+        ) {
+          return;
+        }
+
         this.marcas.set(marcas.items ?? []);
         this.fotos.set(fotos.items ?? []);
       },
@@ -711,6 +745,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   }
 
   seleccionarFacturaOt(item: VehFactura, _activar = true) {
+    const facturaSeq = ++this.facturaLoadSeq;
     this.selectedFacturaOt.set(item);
 
     forkJoin({
@@ -718,6 +753,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       cobros: this.repo.listarCobros('', 0, 100, true, { idFacVenta: item.idFacVenta }),
     }).subscribe({
       next: ({ detalle, cobros }) => {
+        if (
+          facturaSeq !== this.facturaLoadSeq ||
+          this.selectedFacturaOt()?.idFacVenta !== item.idFacVenta
+        ) {
+          return;
+        }
+
         this.facturaDetalle.set(detalle);
         this.cobrosFactura.set(cobros.items ?? []);
       },
@@ -732,6 +774,46 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (v.includes('PEND') || v.includes('ESPERA')) return 'warn';
     if (v.includes('ANUL')) return 'danger';
     return 'secondary';
+  }
+
+  formatDateFriendly(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const safe = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const date = new Date(safe);
+
+    if (Number.isNaN(date.getTime())) {
+      return raw.slice(0, 10);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
+
+  formatDateTimeFriendly(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const safe = raw.includes('T') ? raw : `${raw}T00:00:00`;
+    const date = new Date(safe);
+
+    if (Number.isNaN(date.getTime())) {
+      return this.formatDateFriendly(raw);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
   }
 
   clienteNombreSeleccionado(): string {
@@ -913,7 +995,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (mode === 'checklist') {
       if (this.checklistForm.invalid) {
         this.checklistForm.markAllAsTouched();
-        this.notify.warn('Formulario incompleto', 'Debes seleccionar un checklist relacionado.');
+        this.notify.warn('Formulario incompleto', 'Debes seleccionar un ítem del checklist.');
         return;
       }
 
@@ -926,7 +1008,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     } else if (mode === 'trabajo') {
       if (this.trabajoForm.invalid) {
         this.trabajoForm.markAllAsTouched();
-        this.notify.warn('Formulario incompleto', 'Tipo y descripción inicial son obligatorios.');
+        this.notify.warn('Formulario incompleto', 'Tipo y descripción son obligatorios.');
         return;
       }
 
@@ -988,7 +1070,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     } else if (mode === 'autorizacion') {
       if (this.autorizacionForm.invalid) {
         this.autorizacionForm.markAllAsTouched();
-        this.notify.warn('Formulario incompleto', 'La descripción de la autorización es obligatoria.');
+        this.notify.warn('Formulario incompleto', 'La descripción es obligatoria.');
         return;
       }
 
@@ -1058,8 +1140,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
     this.comercialDrawerMode.set(mode);
     this.comercialDrawerVisible.set(true);
-
-  
 
     if (mode === 'factura') {
       this.facturaForm.reset({
@@ -1137,7 +1217,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (mode === 'factura') {
       if (this.facturaForm.invalid) {
         this.facturaForm.markAllAsTouched();
-        this.notify.warn('Formulario incompleto', 'Debes indicar la OT.');
+        this.notify.warn('Formulario incompleto', 'Debes indicar la orden.');
         return;
       }
 
@@ -1291,11 +1371,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   childDrawerTitle() {
     switch (this.childMode()) {
-      case 'checklist': return 'Agregar checklist';
+      case 'checklist': return 'Agregar ítem';
       case 'trabajo': return 'Agregar trabajo';
       case 'hallazgo': return 'Agregar hallazgo';
       case 'repuesto': return 'Agregar repuesto';
-      case 'autorizacion': return 'Agregar autorización';
+      case 'autorizacion': return 'Agregar aprobación';
       case 'foto': return 'Agregar evidencia';
       default: return 'Nuevo registro relacionado';
     }
@@ -1303,12 +1383,12 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   childDrawerSubtitle() {
     switch (this.childMode()) {
-      case 'checklist': return 'Mantén la recepción y la inspección dentro de la misma OT.';
-      case 'trabajo': return 'Registra actividades del técnico sin salir del contexto de la orden.';
-      case 'hallazgo': return 'Diagnóstico, daño o novedad detectada durante el proceso.';
-      case 'repuesto': return 'Pieza, insumo o material relacionado a la ejecución de la OT.';
-      case 'autorizacion': return 'Aprobaciones del cliente para adicionales, cambios o reparaciones.';
-      case 'foto': return 'Sube evidencia real del hallazgo dentro de la misma pantalla operativa.';
+      case 'checklist': return 'Registra el resultado del checklist para esta orden.';
+      case 'trabajo': return 'Describe lo solicitado, lo realizado y el resultado.';
+      case 'hallazgo': return 'Daño, novedad o diagnóstico detectado durante el trabajo.';
+      case 'repuesto': return 'Pieza o material usado durante la orden.';
+      case 'autorizacion': return 'Control de aprobaciones del cliente.';
+      case 'foto': return 'Sube una imagen relacionada con el hallazgo seleccionado.';
       default: return 'La acción cambia según el punto del flujo donde te encuentres.';
     }
   }
@@ -1324,9 +1404,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   comercialDrawerSubtitle() {
     switch (this.comercialDrawerMode()) {
-      case 'factura': return 'Genera la factura manualmente sin abandonar el contexto de la orden.';
-      case 'cobro': return 'Registra el cobro inicial o total directamente desde la misma OT.';
-      case 'contabilizar': return 'Lanza el asiento contable de la factura seleccionada.';
+      case 'factura': return 'Crea la factura sin salir de la orden.';
+      case 'cobro': return 'Registra un cobro sobre la factura seleccionada.';
+      case 'contabilizar': return 'Envía la factura al proceso contable.';
       default: return 'Centro comercial operativo del taller.';
     }
   }
@@ -1505,11 +1585,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     if (!value) return null;
     if (value.includes('T')) return value;
     return `${value}T00:00:00-05:00`;
-  }
-
-  private toIsoStartOfDayWithOffset(value?: string | null) {
-    if (!value) return null;
-    return value.includes('T') ? value : `${value}T00:00:00-05:00`;
   }
 
   private createChildSnapshot(): string {
@@ -1706,6 +1781,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         },
       });
   }
+
   guardarChecklistMasivo(rows: ChecklistBulkRow[]) {
     const orden = this.selectedOrden();
 
@@ -1835,7 +1911,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       return;
     }
 
-    const base = {
+    const base: VehOrdenTrabajoHallazgoGuardarRequest = {
+      idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
       idVehOrdenTrabajoTrabajoFk: payload.idVehOrdenTrabajoTrabajoFk ?? null,
       tipoHallazgo: payload.tipoHallazgo || null,
       categoria: payload.categoria || null,
@@ -1847,6 +1924,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       aprobadoCliente: Number(payload.aprobadoCliente ?? 0),
       fechaAprobacion: payload.fechaAprobacion || null,
       observaciones: payload.observaciones?.trim() || null,
+      atributos: payload.atributos ?? {},
     };
 
     const request$ = payload.idVehOrdenTrabajoHallazgo
@@ -1854,10 +1932,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         idVehOrdenTrabajoHallazgo: payload.idVehOrdenTrabajoHallazgo,
         cambios: base,
       })
-      : this.repo.crearHallazgo({
-        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-        ...base,
-      });
+      : this.repo.crearHallazgo(base);
 
     this.saving.set(true);
     request$
@@ -1995,6 +2070,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         error: (err) => this.notify.error('No se pudo eliminar el repuesto', err?.message),
       });
   }
+
   ordenClienteDisplay(item?: VehOrdenTrabajo | null): string {
     if (!item) return 'Cliente';
     return item.nombre || item.ruc || `Cliente #${item.dni}`;
@@ -2053,5 +2129,4 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         error: (err) => this.notify.error('No se pudo crear la factura', err?.message),
       });
   }
-
 }

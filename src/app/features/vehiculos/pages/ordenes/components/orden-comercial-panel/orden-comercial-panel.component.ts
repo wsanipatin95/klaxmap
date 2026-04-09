@@ -40,7 +40,6 @@ export type FacturaComercialLineaDraft = {
   selected: boolean;
 };
 
-
 @Component({
   selector: 'app-orden-comercial-panel',
   standalone: true,
@@ -243,6 +242,8 @@ export class OrdenComercialPanelComponent implements OnChanges {
   formatMoney(value?: number | null): string {
     const amount = Number(value || 0);
     return new Intl.NumberFormat('es-EC', {
+      style: 'currency',
+      currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
@@ -250,7 +251,10 @@ export class OrdenComercialPanelComponent implements OnChanges {
 
   formatPct(value?: number | null): string {
     const pct = this.normalizeIva(value);
-    return `${this.formatMoney(pct)}%`;
+    return `${new Intl.NumberFormat('es-EC', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(pct)}%`;
   }
 
   formatDateShort(value?: string | null): string {
@@ -269,6 +273,25 @@ export class OrdenComercialPanelComponent implements OnChanges {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+    }).format(date);
+  }
+
+  formatDateTimeShort(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+    const raw = String(value).trim();
+    if (!raw) return 'Sin fecha';
+
+    const date = new Date(raw.includes('T') ? raw : `${raw}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return this.formatDateShort(raw);
+    }
+
+    return new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(date);
   }
 
@@ -377,6 +400,7 @@ export class OrdenComercialPanelComponent implements OnChanges {
       selected,
     };
   }
+
   private sumMoney(values: number[]): number {
     return this.money(values.reduce((acc, value) => acc + Number(value || 0), 0));
   }

@@ -19,7 +19,6 @@ import {
   VehTipoVehiculo,
 } from '../../../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
-import { VehiculosConfirmService } from '../../../../services/vehiculos-confirm.service';
 
 type UsuarioPickerTarget = 'recepcion' | 'tecnico' | null;
 
@@ -48,7 +47,6 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   private fb = inject(FormBuilder);
   private repo = inject(VehiculosRepository);
   private notify = inject(NotifyService);
-  private confirm = inject(VehiculosConfirmService);
 
   @Input() visible = false;
   @Input() saving = false;
@@ -71,6 +69,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   ];
 
   dirty = signal(false);
+  submittedAttempt = signal(false);
 
   clientePickerVisible = signal(false);
   clientesBuscar = signal('');
@@ -104,7 +103,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     idCliVehiculoFk: [null as number | null, Validators.required],
     tipoServicio: ['REPARACION', Validators.required],
     estadoOrden: [{ value: 'RECIBIDO', disabled: true }, Validators.required],
-    fechaIngreso: [''],
+    fechaIngreso: ['', Validators.required],
     fechaPrometida: [''],
     kilometrajeIngreso: [null as number | null],
     nivelCombustible: [''],
@@ -187,7 +186,9 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
   }
 
   subtitle(): string {
-    return '';
+    return this.isEditing()
+      ? 'Actualiza los datos principales de la orden.'
+      : 'Completa los datos básicos para registrar la orden.';
   }
 
   onVisibleChange(next: boolean) {
@@ -196,24 +197,24 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       return;
     }
 
-    void this.onRequestClose();
+    this.requestClose.emit();
   }
 
-  async onRequestClose() {
-    if (!this.dirty()) {
-      this.requestClose.emit();
-      return;
-    }
+  onRequestClose() {
+    this.requestClose.emit();
+  }
 
-    if (this.isEditing()) {
-      this.requestClose.emit();
-      return;
-    }
+  isControlInvalid(controlName: keyof typeof this.form.controls): boolean {
+    const control = this.form.controls[controlName];
+    return !!control && control.invalid && (control.touched || this.submittedAttempt());
+  }
 
-    const action = await this.confirm.confirmSaveBeforeClose();
-    if (action === 'save') {
-      this.submit(true);
-    }
+  showClienteError(): boolean {
+    return this.isControlInvalid('dni');
+  }
+
+  showVehiculoError(): boolean {
+    return this.isControlInvalid('idCliVehiculoFk');
   }
 
   clienteLabel(): string {
@@ -225,7 +226,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     }
 
     const dni = this.form.controls.dni.value;
-    return dni ? `Cliente #${dni}` : 'Sin cliente';
+    return dni ? `Cliente #${dni}` : 'Elegir cliente';
   }
 
   vehiculoLabel(): string {
@@ -235,13 +236,15 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     }
 
     const idCliVehiculo = this.form.controls.idCliVehiculoFk.value;
-    return idCliVehiculo ? `Vehículo #${idCliVehiculo}` : 'Sin vehículo';
+    return idCliVehiculo ? `Vehículo #${idCliVehiculo}` : 'Elegir vehículo';
   }
 
   submit(closeAfterSave = false) {
+    this.submittedAttempt.set(true);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.notify.warn('Formulario incompleto', 'Cliente, vehículo y tipo de servicio son obligatorios.');
+      this.notify.warn('Formulario incompleto', 'Cliente, vehículo, servicio y fecha de ingreso son obligatorios.');
       return;
     }
 
@@ -572,7 +575,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       idCliVehiculoFk: item.idCliVehiculoFk,
       tipoServicio: item.tipoServicio || 'REPARACION',
       estadoOrden: item.estadoOrden || 'RECIBIDO',
-      fechaIngreso: this.toDate(item.fechaIngreso),
+      fechaIngreso: this.toDate(item.fechaIngreso) || this.todayDateInput(),
       fechaPrometida: this.toDate(item.fechaPrometida),
       kilometrajeIngreso: item.kilometrajeIngreso ?? null,
       nivelCombustible: item.nivelCombustible || '',
@@ -622,7 +625,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       idCliVehiculoFk: null,
       tipoServicio: 'REPARACION',
       estadoOrden: 'RECIBIDO',
-      fechaIngreso: '',
+      fechaIngreso: this.todayDateInput(),
       fechaPrometida: '',
       kilometrajeIngreso: null,
       nivelCombustible: '',
@@ -780,6 +783,14 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     return `${value}T00:00:00-05:00`;
   }
 
+  private todayDateInput(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private createSnapshot(): string {
     return JSON.stringify({
       form: this.form.getRawValue(),
@@ -789,6 +800,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
 
   private refreshSnapshot() {
     this.initialSnapshot = this.createSnapshot();
+    this.submittedAttempt.set(false);
     this.dirty.set(false);
     this.dirtyChange.emit(false);
   }

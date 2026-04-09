@@ -7,6 +7,10 @@
         <p *ngIf="orden.fallaReportada || orden.detalleCliente || orden.observaciones">
           {{ orden.fallaReportada || orden.detalleCliente || orden.observaciones }}
         </p>
+
+        <small class="heroMeta">
+          Ingreso: {{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen) }}
+        </small>
       </div>
 
       <div class="detailHero__meta">
@@ -27,7 +31,7 @@
       </article>
 
       <article class="contextPill">
-        <span>Recepción</span>
+        <span>Recibe</span>
         <strong>{{ responsableRecepcionNombre }}</strong>
       </article>
 
@@ -67,15 +71,15 @@
       <div class="metricGrid">
         <article class="metric"><span>Pendientes de facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
         </article>
-        <article class="metric"><span>Facturas OT</span><strong>{{ facturasOt.length }}</strong></article>
+        <article class="metric"><span>Facturas</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="metric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
-        <article class="metric"><span>Relaciones factura</span><strong>{{ ordenFacturas.length }}</strong></article>
+        <article class="metric"><span>Relaciones</span><strong>{{ ordenFacturas.length }}</strong></article>
       </div>
 
       <div class="kvGrid">
-        <article class="kvItem"><span>Ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen)
+        <article class="kvItem"><span>Fecha de ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen)
             }}</strong></article>
-        <article class="kvItem"><span>Promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong>
+        <article class="kvItem"><span>Fecha promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong>
         </article>
         <article class="kvItem"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong></article>
         <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{
@@ -101,7 +105,7 @@
             <input type="checkbox" [checked]="allChecklistChecked()"
               (change)="onToggleAllChecklist($any($event.target).checked)">
           </div>
-          <div class="checkCell checkCell--item">Checklist</div>
+          <div class="checkCell checkCell--item">Punto a revisar</div>
           <div class="checkCell checkCell--obs">Observación</div>
         </div>
 
@@ -182,7 +186,7 @@
                     {{ trabajoActual.tipoTrabajo || 'TRABAJO' }} · {{ trabajoActual.estadoTrabajo || 'PENDIENTE' }}
                   </div>
                   <ng-template #nuevoTrabajoHint>
-                    <div class="secondaryCell">Completa los datos del trabajo y guarda para iniciar la ejecución.</div>
+                    <div class="secondaryCell">Completa los datos y guarda el trabajo.</div>
                   </ng-template>
                 </ng-container>
 
@@ -199,7 +203,7 @@
               <div class="inlineTabs">
                 <button class="subTabButton" [class.active]="executionTab()==='detalle'"
                   (click)="setExecutionTab('detalle')">
-                  Detalle
+                  Trabajo
                 </button>
 
                 <button class="subTabButton" [class.active]="executionTab()==='hallazgos'"
@@ -252,13 +256,13 @@
                   </div>
 
                   <div class="editorField span-12">
-                    <label>Descripción inicial</label>
+                    <label>Pedido del cliente</label>
                     <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionInicial"
                       [ngModelOptions]="{ standalone: true }"></textarea>
                   </div>
 
                   <div class="editorField span-6">
-                    <label>Descripción realizada</label>
+                    <label>Trabajo realizado</label>
                     <textarea pTextarea rows="2" [(ngModel)]="trabajoDraft.descripcionRealizada"
                       [ngModelOptions]="{ standalone: true }"></textarea>
                   </div>
@@ -275,7 +279,7 @@
                   </div>
 
                   <div class="editorField span-6">
-                    <label>Observaciones</label>
+                    <label>Notas</label>
                     <input pInputText [(ngModel)]="trabajoDraft.observaciones" [ngModelOptions]="{ standalone: true }">
                   </div>
                 </div>
@@ -331,7 +335,7 @@
                       </div>
 
                       <div class="editorField span-4">
-                        <label>Categoría</label>
+                        <label>Área</label>
                         <select [(ngModel)]="hallazgoDraft.categoria" [ngModelOptions]="{ standalone: true }">
                           <option *ngFor="let option of hallazgoCategoriaOptions" [value]="option">{{ option }}</option>
                         </select>
@@ -368,25 +372,25 @@
                           <label class="checkboxLabel">
                             <input type="checkbox" [(ngModel)]="hallazgoDraft.requiereCambio"
                               [ngModelOptions]="{ standalone: true }">
-                            Requiere cambio
+                            Necesita cambio
                           </label>
 
                           <label class="checkboxLabel">
                             <input type="checkbox" [(ngModel)]="hallazgoDraft.aprobadoCliente"
                               [ngModelOptions]="{ standalone: true }">
-                            Aprobado cliente
+                            Cliente aprobó
                           </label>
                         </div>
                       </div>
 
                       <div class="editorField span-6">
-                        <label>Motivo cambio</label>
+                        <label>Motivo del cambio</label>
                         <input pInputText [(ngModel)]="hallazgoDraft.motivoCambio"
                           [ngModelOptions]="{ standalone: true }">
                       </div>
 
                       <div class="editorField span-6">
-                        <label>Observaciones</label>
+                        <label>Notas</label>
                         <input pInputText [(ngModel)]="hallazgoDraft.observaciones"
                           [ngModelOptions]="{ standalone: true }">
                       </div>
@@ -513,7 +517,7 @@
                   </div>
 
                   <div class="editorField span-3">
-                    <label>Precio unitario</label>
+                    <label>Precio</label>
                     <input type="number" [(ngModel)]="repuestoDraft.precioUnitario"
                       [ngModelOptions]="{ standalone: true }" [disabled]="repuestoBloqueado()">
                   </div>
@@ -531,19 +535,19 @@
                   </div>
 
                   <div class="editorField span-6">
-                    <label>Motivo cambio</label>
+                    <label>Motivo</label>
                     <input pInputText [(ngModel)]="repuestoDraft.motivoCambio" [ngModelOptions]="{ standalone: true }"
                       [disabled]="repuestoBloqueado()">
                   </div>
 
                   <div class="editorField span-6">
-                    <label>Detalle instalación</label>
+                    <label>Instalación</label>
                     <input pInputText [(ngModel)]="repuestoDraft.detalleInstalacion"
                       [ngModelOptions]="{ standalone: true }" [disabled]="repuestoBloqueado()">
                   </div>
 
                   <div class="editorField span-12">
-                    <label>Observaciones</label>
+                    <label>Notas</label>
                     <textarea pTextarea rows="2" [(ngModel)]="repuestoDraft.observaciones"
                       [ngModelOptions]="{ standalone: true }" [disabled]="repuestoBloqueado()">
                 </textarea>
@@ -643,7 +647,7 @@
 
     <section class="childPane childPane--modalDetail">
       <div class="sectionHead sectionHead--compact">
-        <h4>Detalle artículo</h4>
+        <h4>Detalle del artículo</h4>
       </div>
 
       <div class="articleMetaGrid articleMetaGrid--single" *ngIf="selectedArticuloCatalogo() as articulo">

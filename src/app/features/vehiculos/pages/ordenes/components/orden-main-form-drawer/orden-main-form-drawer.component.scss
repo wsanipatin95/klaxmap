@@ -4,27 +4,39 @@
 
 .denseForm {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .compactCard {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.5rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.9rem;
+  border-radius: 0.88rem;
   background: #ffffff;
-  padding: 0.65rem 0.7rem;
+  padding: 0.6rem 0.65rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .compactCard--tight {
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
+  padding-top: 0.56rem;
+  padding-bottom: 0.56rem;
+}
+
+.introNote {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 0.68rem;
+  border: 1px solid #efe2ee;
+  background: #fff8fc;
+  color: #6b3a5d;
+  font-size: 0.72rem;
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 800;
   color: #0f172a;
   line-height: 1.1;
@@ -34,14 +46,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.55rem;
 }
 
 .denseGrid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-flow: row dense;
-  gap: 0.45rem 0.6rem;
+  gap: 0.42rem 0.55rem;
 }
 
 .denseGrid--top {
@@ -49,18 +61,18 @@
 }
 
 .denseGrid--dialog {
-  gap: 0.5rem 0.6rem;
+  gap: 0.45rem 0.55rem;
 }
 
 .field {
   min-width: 0;
   display: grid;
-  gap: 0.24rem;
+  gap: 0.22rem;
   align-content: start;
 }
 
 .fieldLabel {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #475569;
   line-height: 1.1;
@@ -69,6 +81,12 @@
 .requiredMark {
   color: #dc2626;
   font-weight: 800;
+}
+
+.fieldError {
+  color: #b42318;
+  font-size: 0.68rem;
+  line-height: 1.15;
 }
 
 .span-12 { grid-column: span 12; }
@@ -81,7 +99,7 @@
 
 .inlineAction {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.28rem;
   align-items: center;
   min-width: 0;
 }
@@ -99,61 +117,61 @@
 
 .miniActions {
   display: inline-flex;
-  gap: 0.2rem;
+  gap: 0.18rem;
   align-items: center;
 }
 
 .attrTable {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.36rem;
 }
 
 .attrHead,
 .attrRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.4rem;
+  gap: 0.36rem;
   align-items: center;
 }
 
 .attrHead {
   padding: 0 0.1rem;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: #64748b;
   font-weight: 700;
 }
 
 .dialogForm {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.65rem;
 }
 
 .dialogActions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.45rem;
+  gap: 0.42rem;
 }
 
 .pickerDialog {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.68rem;
 }
 
 .pickerToolbar {
   display: flex;
-  gap: 0.55rem;
+  gap: 0.48rem;
   align-items: center;
 }
 
 .searchBox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.2rem;
+  gap: 0.45rem;
+  min-height: 2rem;
   border: 1px solid #dbe2ea;
-  border-radius: 0.75rem;
+  border-radius: 0.72rem;
   background: #fff;
-  padding: 0 0.65rem;
+  padding: 0 0.62rem;
   flex: 1;
 }
 
@@ -169,12 +187,12 @@
 
 .pickerLoading {
   color: #64748b;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .pickerList {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.42rem;
   max-height: 22rem;
   overflow: auto;
 }
@@ -182,8 +200,8 @@
 .pickerRow {
   border: 1px solid #dbe2ea;
   background: #fff;
-  border-radius: 0.8rem;
-  padding: 0.65rem 0.75rem;
+  border-radius: 0.76rem;
+  padding: 0.58rem 0.68rem;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease;
@@ -201,18 +219,18 @@
 
 .pickerRowCopy strong {
   color: #334155;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .pickerRowCopy span {
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.73rem;
 }
 
 .emptyInline {
   color: #64748b;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.1rem;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.1rem;
 }
 
 input[pInputText],
@@ -226,7 +244,7 @@ input[type='date'],
 select,
 input[pInputText],
 textarea[pTextarea] {
-  border-radius: 0.68rem;
+  border-radius: 0.64rem;
 }
 
 :host ::ng-deep {
@@ -234,37 +252,37 @@ textarea[pTextarea] {
   .p-inputtextarea,
   .p-inputnumber-input {
     width: 100%;
-    min-height: 2.05rem;
-    border-radius: 0.68rem;
+    min-height: 1.92rem;
+    border-radius: 0.64rem;
     border-color: #dbe2ea;
-    font-size: 0.8rem;
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
+    font-size: 0.78rem;
+    padding-top: 0.26rem;
+    padding-bottom: 0.26rem;
   }
 
   textarea.p-inputtextarea {
-    min-height: 4rem;
+    min-height: 3.5rem;
     resize: vertical;
   }
 
   .p-button {
-    border-radius: 0.68rem;
+    border-radius: 0.64rem;
     font-weight: 700;
   }
 
   .p-button.p-button-sm {
-    padding: 0.38rem 0.52rem;
-    font-size: 0.74rem;
+    padding: 0.34rem 0.48rem;
+    font-size: 0.72rem;
   }
 }
 
 input[type='date'],
 select {
-  min-height: 2.05rem;
+  min-height: 1.92rem;
   border: 1px solid #dbe2ea;
-  border-radius: 0.68rem;
-  padding: 0 0.6rem;
-  font-size: 0.8rem;
+  border-radius: 0.64rem;
+  padding: 0 0.56rem;
+  font-size: 0.78rem;
   background: #fff;
   color: #0f172a;
 }

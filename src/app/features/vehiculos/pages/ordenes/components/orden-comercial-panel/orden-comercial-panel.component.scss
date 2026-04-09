@@ -6,7 +6,7 @@
 .comercialWorkspace {
   display: grid;
   grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
-  gap: 0.65rem;
+  gap: 0.6rem;
   min-width: 0;
   align-items: start;
 }
@@ -26,27 +26,27 @@
 .workspaceCard {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 0.8rem;
+  border-radius: 0.78rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .comercialSidebar {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.62rem;
+  gap: 0.5rem;
+  padding: 0.58rem;
 }
 
 .workspaceCard {
   display: grid;
-  gap: 0.62rem;
-  padding: 0.7rem;
+  gap: 0.58rem;
+  padding: 0.62rem;
 }
 
 .sectionHead {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .sectionHead--compact {
@@ -56,19 +56,19 @@
 .sectionHead h4 {
   margin: 0;
   color: #0f172a;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   line-height: 1.1;
 }
 
 .secondaryCell {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   line-height: 1.2;
 }
 
 .actionWrap {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.32rem;
   flex-wrap: wrap;
 }
 
@@ -76,10 +76,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.7rem;
-  padding: 0.65rem 0.72rem;
+  gap: 0.65rem;
+  padding: 0.58rem 0.64rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
+  border-radius: 0.72rem;
   background: #f8fafc;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -99,12 +99,12 @@
 
 .shortcutCard__copy strong {
   color: #0f172a;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .shortcutCard__copy span {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .comercialScroll {
@@ -112,15 +112,15 @@
   overflow: auto;
   padding-right: 0.05rem;
   display: grid;
-  gap: 0.42rem;
+  gap: 0.38rem;
 }
 
 .facturaRow {
   display: grid;
-  gap: 0.35rem;
-  padding: 0.58rem 0.62rem;
+  gap: 0.32rem;
+  padding: 0.54rem 0.58rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.72rem;
+  border-radius: 0.68rem;
   background: #ffffff;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -140,7 +140,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.45rem;
+  gap: 0.42rem;
 }
 
 .facturaRow__copy {
@@ -151,21 +151,21 @@
 
 .facturaRow__copy strong {
   color: #0f172a;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   line-height: 1.15;
 }
 
 .facturaRow__copy span {
   color: #64748b;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
 }
 
 .facturaRow__meta {
   display: flex;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.45rem;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .facturaRow__meta strong {
@@ -175,61 +175,61 @@
 .contextGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 .contextItem {
   display: grid;
-  gap: 0.1rem;
-  padding: 0.58rem 0.62rem;
-  border-radius: 0.72rem;
+  gap: 0.08rem;
+  padding: 0.52rem 0.58rem;
+  border-radius: 0.68rem;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .contextItem span {
   color: #64748b;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
 }
 
 .contextItem strong {
   color: #0f172a;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   line-height: 1.2;
 }
 
 .editorGrid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0.42rem 0.5rem;
+  gap: 0.38rem 0.46rem;
 }
 
 .editorField {
   display: grid;
-  gap: 0.18rem;
+  gap: 0.16rem;
   min-width: 0;
 }
 
 .editorField label {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 700;
   color: #475569;
 }
 
 .editorField :is(input, textarea, select) {
   width: 100%;
-  min-height: 1.95rem;
+  min-height: 1.84rem;
   border: 1px solid #dbe2ea;
-  border-radius: 0.6rem;
-  padding: 0.32rem 0.52rem;
-  font-size: 0.76rem;
+  border-radius: 0.58rem;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.74rem;
   background: #fff;
   color: #0f172a;
 }
 
 .editorField textarea {
-  min-height: 3.2rem;
+  min-height: 3rem;
   resize: vertical;
 }
 
@@ -240,16 +240,16 @@
 .checkboxLabel {
   display: inline-flex;
   align-items: center;
-  gap: 0.34rem;
-  font-size: 0.74rem;
+  gap: 0.32rem;
+  font-size: 0.72rem;
   color: #334155;
   line-height: 1;
   white-space: nowrap;
 }
 
 .checkboxLabel input[type='checkbox'] {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.92rem;
+  height: 0.92rem;
   margin: 0;
 }
 
@@ -257,21 +257,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  padding: 0.5rem 0.6rem;
+  padding: 0.46rem 0.56rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.72rem;
+  border-radius: 0.68rem;
   background: #f8fafc;
   color: #475569;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
 }
 
 .lineTable {
   display: grid;
   gap: 0;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
+  border-radius: 0.72rem;
   overflow: hidden;
   background: #fff;
 }
@@ -279,17 +279,17 @@
 .lineTable__head,
 .lineTable__row {
   display: grid;
-  grid-template-columns: 2.6rem minmax(18rem, 1.5fr) repeat(6, minmax(6rem, 0.75fr));
-  gap: 0.45rem;
+  grid-template-columns: 2.4rem minmax(18rem, 1.5fr) repeat(6, minmax(6rem, 0.75fr));
+  gap: 0.4rem;
   align-items: center;
 }
 
 .lineTable__head {
-  padding: 0.52rem 0.62rem;
+  padding: 0.48rem 0.58rem;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   color: #475569;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
 }
 
@@ -299,7 +299,7 @@
 }
 
 .lineTable__row {
-  padding: 0.48rem 0.62rem;
+  padding: 0.44rem 0.58rem;
   border-bottom: 1px solid #eef2f7;
 }
 
@@ -309,7 +309,7 @@
 
 .lineTable__cell {
   color: #334155;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   min-width: 0;
 }
 
@@ -325,13 +325,13 @@
 
 .lineTable__cell--main strong {
   color: #0f172a;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   line-height: 1.15;
 }
 
 .lineTable__cell--main span {
   color: #64748b;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   line-height: 1.15;
 }
 
@@ -348,27 +348,27 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 .summaryItem {
   display: grid;
   gap: 0.08rem;
-  padding: 0.6rem 0.68rem;
-  border-radius: 0.72rem;
+  padding: 0.54rem 0.62rem;
+  border-radius: 0.68rem;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .summaryItem span {
   color: #64748b;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
 }
 
 .summaryItem strong {
   color: #0f172a;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   line-height: 1.15;
 }
 
@@ -379,38 +379,38 @@
 
 .cxcBlock {
   display: grid;
-  gap: 0.5rem;
-  padding-top: 0.15rem;
+  gap: 0.46rem;
+  padding-top: 0.12rem;
 }
 
 .miniGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.42rem;
+  gap: 0.38rem;
 }
 
 .miniItem {
   display: grid;
   gap: 0.08rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 0.68rem;
+  padding: 0.5rem 0.56rem;
+  border-radius: 0.64rem;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .miniItem span {
   color: #64748b;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
 }
 
 .miniItem strong {
   color: #0f172a;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .miniItem small {
   color: #475569;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
 }
 
 .span-12 { grid-column: span 12; }
@@ -418,15 +418,15 @@
 .span-2 { grid-column: span 2; }
 
 :host ::ng-deep .p-button {
-  min-height: 1.95rem;
-  font-size: 0.76rem;
-  padding: 0.34rem 0.62rem;
-  border-radius: 0.6rem;
+  min-height: 1.82rem;
+  font-size: 0.74rem;
+  padding: 0.3rem 0.56rem;
+  border-radius: 0.58rem;
 }
 
 :host ::ng-deep .p-tag {
-  font-size: 0.68rem;
-  padding: 0.2rem 0.42rem;
+  font-size: 0.66rem;
+  padding: 0.18rem 0.38rem;
 }
 
 @media (max-width: 1500px) {

@@ -11,6 +11,10 @@
 
   <form class="denseForm" [formGroup]="form">
     <section class="compactCard compactCard--tight">
+      <div class="introNote">
+        <span>Los campos con <strong>*</strong> son obligatorios.</span>
+      </div>
+
       <div class="denseGrid denseGrid--top">
         <div class="field span-5">
           <span class="fieldLabel">Cliente <span class="requiredMark">*</span></span>
@@ -34,6 +38,7 @@
               (click)="abrirCrearCliente()">
             </button>
           </div>
+          <small class="fieldError" *ngIf="showClienteError()">Debes seleccionar un cliente.</small>
         </div>
 
         <div class="field span-5">
@@ -56,49 +61,52 @@
               (click)="abrirCrearVehiculo()">
             </button>
           </div>
+          <small class="fieldError" *ngIf="showVehiculoError()">Debes seleccionar un vehículo.</small>
         </div>
 
         <div class="field span-2">
-          <span class="fieldLabel">Estado OT</span>
+          <span class="fieldLabel">Estado</span>
           <input pInputText [value]="form.getRawValue().estadoOrden || 'RECIBIDO'" readonly>
         </div>
 
         <div class="field span-3">
-          <span class="fieldLabel">Tipo servicio <span class="requiredMark">*</span></span>
+          <span class="fieldLabel">Servicio <span class="requiredMark">*</span></span>
           <select formControlName="tipoServicio">
             <option *ngFor="let option of TIPO_SERVICIO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
+          <small class="fieldError" *ngIf="isControlInvalid('tipoServicio')">Selecciona el servicio.</small>
         </div>
 
-        <div class="field span-2">
-          <span class="fieldLabel">Ingreso</span>
+        <div class="field span-3">
+          <span class="fieldLabel">Fecha de ingreso <span class="requiredMark">*</span></span>
           <input type="date" formControlName="fechaIngreso">
+          <small class="fieldError" *ngIf="isControlInvalid('fechaIngreso')">La fecha de ingreso es obligatoria.</small>
         </div>
 
         <div class="field span-2">
-          <span class="fieldLabel">Prometida</span>
+          <span class="fieldLabel">Fecha promesa</span>
           <input type="date" formControlName="fechaPrometida">
         </div>
 
         <div class="field span-2">
           <span class="fieldLabel">Km</span>
-          <input pInputText type="number" formControlName="kilometrajeIngreso">
+          <input pInputText type="number" formControlName="kilometrajeIngreso" placeholder="0">
         </div>
 
         <div class="field span-2">
           <span class="fieldLabel">Combustible</span>
-          <input pInputText formControlName="nivelCombustible">
+          <input pInputText formControlName="nivelCombustible" placeholder="Ej. 1/2 tanque">
         </div>
 
         <div class="field span-2">
           <span class="fieldLabel">Batería</span>
-          <input pInputText formControlName="nivelBateria">
+          <input pInputText formControlName="nivelBateria" placeholder="Ej. 80%">
         </div>
 
         <div class="field span-4">
-          <span class="fieldLabel">Responsable recepción</span>
+          <span class="fieldLabel">Recepción</span>
           <div class="inlineAction inlineAction--stackable">
-            <input pInputText [value]="responsableRecepcionSeleccionado()?.usuario || 'No asignado'" readonly>
+            <input pInputText [value]="responsableRecepcionSeleccionado()?.usuario || 'Sin asignar'" readonly>
             <div class="miniActions">
               <button
                 pButton
@@ -122,9 +130,9 @@
         </div>
 
         <div class="field span-4">
-          <span class="fieldLabel">Responsable técnico</span>
+          <span class="fieldLabel">Técnico</span>
           <div class="inlineAction inlineAction--stackable">
-            <input pInputText [value]="responsableTecnicoSeleccionado()?.usuario || 'No asignado'" readonly>
+            <input pInputText [value]="responsableTecnicoSeleccionado()?.usuario || 'Sin asignar'" readonly>
             <div class="miniActions">
               <button
                 pButton
@@ -150,79 +158,79 @@
     </section>
 
     <section class="compactCard">
-      <h4 class="sectionTitle">Recepción y diagnóstico</h4>
+      <h4 class="sectionTitle">Recepción del vehículo</h4>
 
       <div class="denseGrid">
         <div class="field span-6">
-          <span class="fieldLabel">Falla reportada</span>
-          <textarea pTextarea rows="3" formControlName="fallaReportada"></textarea>
+          <span class="fieldLabel">Motivo de ingreso</span>
+          <textarea pTextarea rows="3" formControlName="fallaReportada" placeholder="Describe el problema principal"></textarea>
         </div>
 
         <div class="field span-6">
-          <span class="fieldLabel">Detalle cliente</span>
-          <textarea pTextarea rows="3" formControlName="detalleCliente"></textarea>
+          <span class="fieldLabel">Lo que indica el cliente</span>
+          <textarea pTextarea rows="3" formControlName="detalleCliente" placeholder="Detalle adicional del cliente"></textarea>
         </div>
 
         <div class="field span-4">
-          <span class="fieldLabel">Síntomas reportados</span>
-          <textarea pTextarea rows="2" formControlName="sintomasReportados"></textarea>
+          <span class="fieldLabel">Síntomas</span>
+          <textarea pTextarea rows="2" formControlName="sintomasReportados" placeholder="Síntomas observados"></textarea>
         </div>
 
         <div class="field span-4">
-          <span class="fieldLabel">Ruidos reportados</span>
-          <textarea pTextarea rows="2" formControlName="ruidosReportados"></textarea>
+          <span class="fieldLabel">Ruidos</span>
+          <textarea pTextarea rows="2" formControlName="ruidosReportados" placeholder="Ruidos o vibraciones"></textarea>
         </div>
 
         <div class="field span-4">
           <span class="fieldLabel">Accesorios entregados</span>
-          <textarea pTextarea rows="2" formControlName="accesoriosEntregados"></textarea>
+          <textarea pTextarea rows="2" formControlName="accesoriosEntregados" placeholder="Llaves, cargador, casco, etc."></textarea>
         </div>
 
         <div class="field span-12">
-          <span class="fieldLabel">Condición de ingreso</span>
-          <textarea pTextarea rows="2" formControlName="condicionIngreso"></textarea>
+          <span class="fieldLabel">Estado al recibir</span>
+          <textarea pTextarea rows="2" formControlName="condicionIngreso" placeholder="Condición general del vehículo"></textarea>
         </div>
 
         <div class="field span-6">
           <span class="fieldLabel">Diagnóstico general</span>
-          <textarea pTextarea rows="3" formControlName="diagnosticoGeneral"></textarea>
+          <textarea pTextarea rows="3" formControlName="diagnosticoGeneral" placeholder="Resumen del diagnóstico"></textarea>
         </div>
 
         <div class="field span-6">
-          <span class="fieldLabel">Recomendación general</span>
-          <textarea pTextarea rows="3" formControlName="recomendacionGeneral"></textarea>
+          <span class="fieldLabel">Recomendación</span>
+          <textarea pTextarea rows="3" formControlName="recomendacionGeneral" placeholder="Sugerencias o próximos pasos"></textarea>
         </div>
 
         <div class="field span-12">
-          <span class="fieldLabel">Observaciones</span>
-          <textarea pTextarea rows="2" formControlName="observaciones"></textarea>
+          <span class="fieldLabel">Notas</span>
+          <textarea pTextarea rows="2" formControlName="observaciones" placeholder="Notas internas"></textarea>
         </div>
       </div>
     </section>
 
     <section class="compactCard">
       <div class="sectionHeadInline">
-        <h4 class="sectionTitle">Características adicionales</h4>
+        <h4 class="sectionTitle">Datos extra</h4>
         <button
           pButton
           type="button"
           size="small"
           icon="pi pi-plus"
-          label="Agregar fila"
+          label="Agregar"
           (click)="addAtributoRow()">
         </button>
       </div>
 
       <div class="attrTable">
         <div class="attrHead">
-          <span>Clave</span>
+          <span>Campo</span>
           <span>Valor</span>
           <span></span>
         </div>
 
         <div class="attrRow" *ngFor="let row of atributosRows.controls; let i = index" [formGroup]="row">
-          <input pInputText formControlName="key" placeholder="ej: prioridad">
-          <input pInputText formControlName="value" placeholder="ej: alta">
+          <input pInputText formControlName="key" placeholder="Ej. prioridad">
+          <input pInputText formControlName="value" placeholder="Ej. alta">
           <button
             pButton
             type="button"
@@ -316,7 +324,7 @@
       </div>
 
       <div class="field span-6">
-        <span class="fieldLabel">Email</span>
+        <span class="fieldLabel">Correo</span>
         <input pInputText formControlName="email">
       </div>
 
@@ -331,7 +339,7 @@
       </div>
 
       <div class="field span-12">
-        <span class="fieldLabel">Observación</span>
+        <span class="fieldLabel">Notas</span>
         <textarea pTextarea rows="3" formControlName="observacion"></textarea>
       </div>
     </div>
@@ -354,7 +362,7 @@
   <form class="dialogForm" [formGroup]="vehiculoCreateForm">
     <div class="denseGrid denseGrid--dialog">
       <div class="field span-4">
-        <span class="fieldLabel">Tipo vehículo <span class="requiredMark">*</span></span>
+        <span class="fieldLabel">Tipo <span class="requiredMark">*</span></span>
         <select formControlName="idVehTipoVehiculoFk">
           <option [ngValue]="null">Selecciona un tipo</option>
           <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">
@@ -419,7 +427,7 @@
       </div>
 
       <div class="field span-12">
-        <span class="fieldLabel">Observaciones</span>
+        <span class="fieldLabel">Notas</span>
         <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
       </div>
     </div>
@@ -438,7 +446,7 @@
   [closable]="true"
   [dismissableMask]="true"
   [style]="{ width: '56rem' }"
-  header="Seleccionar usuario responsable">
+  header="Seleccionar responsable">
   <div class="pickerDialog">
     <div class="pickerToolbar">
       <div class="searchBox">

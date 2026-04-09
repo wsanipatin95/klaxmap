@@ -1,7 +1,7 @@
 <div class="vehPageShell vehPageShell--ordenes">
   <app-vehiculos-page-header
     title="Órdenes de trabajo"
-    subtitle="Backlog operativo, ejecución técnica y comercial en un solo tablero.">
+    subtitle="Recepción, ejecución y cobro en una sola vista.">
     <button pButton type="button" severity="secondary" icon="pi pi-arrow-left" label="Volver" (click)="volver()"></button>
     <button pButton type="button" icon="pi pi-plus" label="Nueva OT" (click)="nuevo()"></button>
   </app-vehiculos-page-header>
@@ -11,13 +11,18 @@
   <div class="toolbarCard toolbarCard--compact toolbarCard--principal">
     <div class="searchBox">
       <i class="pi pi-search"></i>
-      <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar OT, estado o detalle..." (keyup.enter)="cargar()">
+      <input
+        pInputText
+        type="text"
+        [(ngModel)]="q"
+        placeholder="Buscar orden, cliente, placa o detalle..."
+        (keyup.enter)="cargar()">
     </div>
 
     <div class="toolbarActions toolbarActions--principal">
       <div class="microStats">
         <span class="microStat">
-          <small>OT</small>
+          <small>Órdenes</small>
           <strong>{{ ordenes().length }}</strong>
         </span>
 
@@ -45,6 +50,7 @@
     <ng-container *ngIf="selectedOrden() as ordenActual">
       <span class="noticePill is-neutral">OT #{{ ordenActual.idVehOrdenTrabajo }}</span>
       <span class="noticePill is-neutral">{{ ordenActual.tipoServicio || 'SERVICIO' }}</span>
+      <span class="noticePill is-neutral">{{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
       <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="!isOrdenAnulada(ordenActual)">
         {{ ordenActual.estadoOrden || 'RECIBIDO' }}
       </span>
@@ -55,8 +61,8 @@
     <section class="backlogCard">
       <div class="backlogCard__header">
         <div class="backlogCard__title">
-          <h3>Backlog</h3>
-          <span class="secondaryCell secondaryCell--compact">Órdenes visibles en la cola</span>
+          <h3>Órdenes</h3>
+          <span class="secondaryCell secondaryCell--compact">Cola visible de trabajo</span>
         </div>
 
         <div class="backlogCard__headerMeta">
@@ -83,8 +89,8 @@
                 {{ [item.marca, item.modelo, item.placa].filter(x => !!x).join(' · ') || 'Vehículo' }}
               </div>
 
-              <div class="secondaryCell secondaryCell--compact">
-                {{ item.estadoOrden || 'RECIBIDO' }} · {{ item.fechaIngreso || item.fecGen || 'Sin fecha' }}
+              <div class="secondaryCell secondaryCell--compact rowDateLine">
+                {{ item.estadoOrden || 'RECIBIDO' }} · {{ formatDateTimeFriendly(item.fechaIngreso || item.fecGen) }}
               </div>
             </div>
 
@@ -155,25 +161,28 @@
     <form *ngIf="childMode() === 'checklist'" [formGroup]="checklistForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-12">
-          <label>Checklist relacionado</label>
+          <label>Ítem <span class="requiredMark">*</span></label>
           <select formControlName="idVehVehiculoCheckListVehiculoFk">
-            <option [ngValue]="null">Selecciona un checklist</option>
+            <option [ngValue]="null">Selecciona un ítem</option>
             <option *ngFor="let item of checklistOpciones()" [ngValue]="item.idVehVehiculoCheckListVehiculo">
               {{ checklistLabelByRelation(item.idVehVehiculoCheckListVehiculo) }}
             </option>
           </select>
+          <small class="fieldError" *ngIf="checklistForm.controls.idVehVehiculoCheckListVehiculoFk.invalid && checklistForm.controls.idVehVehiculoCheckListVehiculoFk.touched">
+            Debes elegir un ítem.
+          </small>
         </div>
 
         <div class="drawerField span-4">
-          <label>Estado</label>
+          <label>Resultado</label>
           <select formControlName="estadoCheckList">
             <option *ngFor="let option of ESTADO_CHECKLIST_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
         <div class="drawerField span-12">
-          <label>Observaciones</label>
-          <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+          <label>Notas</label>
+          <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
         </div>
       </div>
     </form>
@@ -181,7 +190,7 @@
     <form *ngIf="childMode() === 'trabajo'" [formGroup]="trabajoForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>Tipo trabajo</label>
+          <label>Tipo <span class="requiredMark">*</span></label>
           <select formControlName="tipoTrabajo">
             <option *ngFor="let option of TIPO_TRABAJO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
@@ -205,12 +214,15 @@
         </div>
 
         <div class="drawerField span-12">
-          <label>Descripción inicial</label>
+          <label>Pedido del cliente <span class="requiredMark">*</span></label>
           <textarea pTextarea rows="3" formControlName="descripcionInicial"></textarea>
+          <small class="fieldError" *ngIf="trabajoForm.controls.descripcionInicial.invalid && trabajoForm.controls.descripcionInicial.touched">
+            Cuéntanos qué solicita el cliente.
+          </small>
         </div>
 
         <div class="drawerField span-12">
-          <label>Descripción realizada</label>
+          <label>Trabajo realizado</label>
           <textarea pTextarea rows="3" formControlName="descripcionRealizada"></textarea>
         </div>
 
@@ -225,7 +237,7 @@
         </div>
 
         <div class="drawerField span-6">
-          <label>Observaciones</label>
+          <label>Notas</label>
           <input pInputText formControlName="observaciones">
         </div>
       </div>
@@ -234,7 +246,7 @@
     <form *ngIf="childMode() === 'hallazgo'" [formGroup]="hallazgoForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-6">
-          <label>Trabajo relacionado</label>
+          <label>Trabajo</label>
           <select formControlName="idVehOrdenTrabajoTrabajoFk">
             <option [ngValue]="null">Sin trabajo relacionado</option>
             <option *ngFor="let item of trabajos()" [ngValue]="item.idVehOrdenTrabajoTrabajo">
@@ -244,22 +256,25 @@
         </div>
 
         <div class="drawerField span-3">
-          <label>Tipo hallazgo</label>
+          <label>Tipo</label>
           <select formControlName="tipoHallazgo">
             <option *ngFor="let option of TIPO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
         <div class="drawerField span-3">
-          <label>Categoría</label>
+          <label>Área</label>
           <select formControlName="categoria">
             <option *ngFor="let option of CATEGORIA_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
         <div class="drawerField span-12">
-          <label>Descripción</label>
+          <label>Descripción <span class="requiredMark">*</span></label>
           <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
+          <small class="fieldError" *ngIf="hallazgoForm.controls.descripcion.invalid && hallazgoForm.controls.descripcion.touched">
+            Describe el hallazgo.
+          </small>
         </div>
 
         <div class="drawerField span-3">
@@ -270,14 +285,14 @@
         </div>
 
         <div class="drawerField span-3">
-          <label>Estado hallazgo</label>
+          <label>Estado</label>
           <select formControlName="estadoHallazgo">
             <option *ngFor="let option of ESTADO_HALLAZGO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
         <div class="drawerField span-3">
-          <label>Fecha aprobación</label>
+          <label>Aprobación</label>
           <input type="date" formControlName="fechaAprobacion">
         </div>
 
@@ -288,31 +303,31 @@
           </label>
           <label class="checkboxLabel">
             <input type="checkbox" formControlName="aprobadoCliente">
-            Aprobado cliente
+            Cliente aprobó
           </label>
         </div>
 
         <div class="drawerField span-6">
-          <label>Motivo cambio</label>
+          <label>Motivo</label>
           <input pInputText formControlName="motivoCambio">
         </div>
 
         <div class="drawerField span-6">
-          <label>Observaciones</label>
+          <label>Notas</label>
           <input pInputText formControlName="observaciones">
         </div>
       </div>
 
       <div class="subSection">
         <div class="subSection__head">
-          <h4>Atributos</h4>
+          <h4>Datos extra</h4>
           <button pButton type="button" size="small" icon="pi pi-plus" label="Agregar"
             (click)="addHallazgoAtributoRow()"></button>
         </div>
 
         <div class="kvRows">
           <div class="kvRow" *ngFor="let row of hallazgoAtributosRows.controls; let i = index" [formGroup]="row">
-            <input pInputText formControlName="key" placeholder="Clave">
+            <input pInputText formControlName="key" placeholder="Campo">
             <input pInputText formControlName="value" placeholder="Valor">
             <button pButton type="button" size="small" severity="danger" icon="pi pi-trash"
               (click)="removeHallazgoAtributoRow(i)"></button>
@@ -331,17 +346,17 @@
         </div>
 
         <div class="drawerField span-4">
-          <label>ID artículo</label>
+          <label>Código</label>
           <input pInputText type="number" formControlName="art" readonly>
         </div>
 
         <div class="drawerField span-3">
-          <label>Cantidad</label>
+          <label>Cantidad <span class="requiredMark">*</span></label>
           <input pInputText type="number" formControlName="cantidad">
         </div>
 
         <div class="drawerField span-3">
-          <label>Precio unitario</label>
+          <label>Precio <span class="requiredMark">*</span></label>
           <input pInputText type="number" formControlName="precioUnitario">
         </div>
 
@@ -356,17 +371,17 @@
         </div>
 
         <div class="drawerField span-6">
-          <label>Motivo cambio</label>
+          <label>Motivo</label>
           <input pInputText formControlName="motivoCambio">
         </div>
 
         <div class="drawerField span-6">
-          <label>Detalle instalación</label>
+          <label>Instalación</label>
           <input pInputText formControlName="detalleInstalacion">
         </div>
 
         <div class="drawerField span-12">
-          <label>Observaciones</label>
+          <label>Notas</label>
           <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
         </div>
       </div>
@@ -375,7 +390,7 @@
     <form *ngIf="childMode() === 'autorizacion'" [formGroup]="autorizacionForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>Tipo autorización</label>
+          <label>Tipo</label>
           <select formControlName="tipoAutorizacion">
             <option *ngFor="let option of TIPO_AUTORIZACION_OPTIONS" [value]="option">{{ option }}</option>
           </select>
@@ -389,27 +404,27 @@
         </div>
 
         <div class="drawerField span-4">
-          <label>Fecha respuesta</label>
+          <label>Respuesta</label>
           <input type="date" formControlName="fechaRespuesta">
         </div>
 
         <div class="drawerField span-6">
-          <label>Referencia tabla</label>
+          <label>Referencia</label>
           <input pInputText formControlName="referenciaTabla">
         </div>
 
         <div class="drawerField span-6">
-          <label>Referencia ID</label>
+          <label>ID referencia</label>
           <input pInputText type="number" formControlName="referenciaId">
         </div>
 
         <div class="drawerField span-12">
-          <label>Descripción</label>
+          <label>Detalle <span class="requiredMark">*</span></label>
           <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
         </div>
 
         <div class="drawerField span-12">
-          <label>Observaciones</label>
+          <label>Notas</label>
           <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
         </div>
       </div>
@@ -418,7 +433,7 @@
     <form *ngIf="childMode() === 'foto'" [formGroup]="fotoForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>Etapa</label>
+          <label>Momento</label>
           <select formControlName="etapa">
             <option *ngFor="let option of ETAPA_FOTO_OPTIONS" [value]="option">{{ option }}</option>
           </select>
@@ -427,17 +442,17 @@
         <div class="drawerField span-8 checkboxField">
           <label class="checkboxLabel">
             <input type="checkbox" formControlName="principal">
-            Marcar como foto principal
+            Marcar como principal
           </label>
         </div>
 
         <div class="drawerField span-12">
-          <label>Descripción</label>
+          <label>Detalle</label>
           <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
         </div>
 
         <div class="drawerField span-12">
-          <label>Archivo imagen</label>
+          <label>Imagen</label>
           <input type="file" accept="image/*" (change)="onFotoSelected($event)">
         </div>
 
@@ -457,28 +472,27 @@
     (visibleChange)="$event ? comercialDrawerVisible.set(true) : cerrarComercialDrawer()"
     (requestClose)="cerrarComercialDrawer()" (requestSave)="submitComercial()">
 
-
     <form *ngIf="comercialDrawerMode() === 'factura'" [formGroup]="facturaForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>ID orden</label>
+          <label>Orden</label>
           <input pInputText type="number" formControlName="idVehOrdenTrabajoFk">
         </div>
 
         <div class="drawerField span-4">
-          <label>Tipo facturación</label>
+          <label>Tipo</label>
           <select formControlName="tipoFacturacion">
             <option *ngFor="let option of TIPO_FACTURACION_OPTIONS" [value]="option">{{ option }}</option>
           </select>
         </div>
 
         <div class="drawerField span-4">
-          <label>DNI cliente</label>
+          <label>Cliente</label>
           <input pInputText type="number" formControlName="dni">
         </div>
 
         <div class="drawerField span-6">
-          <label>IDs repuestos</label>
+          <label>Repuestos</label>
           <input pInputText formControlName="idsVehOrdenTrabajoRepuesto" placeholder="1,2,3">
         </div>
 
@@ -504,12 +518,12 @@
           </label>
           <label class="checkboxLabel">
             <input type="checkbox" formControlName="usarPrecioRepuesto">
-            Usar precio repuesto
+            Usar precio del repuesto
           </label>
         </div>
 
         <div class="drawerField span-12">
-          <label>Observación</label>
+          <label>Notas</label>
           <textarea pTextarea rows="3" formControlName="observacion"></textarea>
         </div>
       </div>
@@ -518,7 +532,7 @@
     <form *ngIf="comercialDrawerMode() === 'cobro'" [formGroup]="cobroForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>ID factura</label>
+          <label>Factura</label>
           <input pInputText type="number" formControlName="idFacVenta">
         </div>
 
@@ -538,13 +552,13 @@
         </div>
 
         <div class="drawerField span-6">
-          <label>Tra cash</label>
-          <input pInputText formControlName="traCash">
+          <label>Referencia</label>
+          <input pInputText formControlName="referenciaDatafast">
         </div>
 
         <div class="drawerField span-6">
-          <label>Referencia datafast</label>
-          <input pInputText formControlName="referenciaDatafast">
+          <label>Transacción</label>
+          <input pInputText formControlName="traCash">
         </div>
 
         <div class="drawerField span-6 checkboxField">
@@ -563,17 +577,17 @@
     <form *ngIf="comercialDrawerMode() === 'contabilizar'" [formGroup]="contabilizarForm" class="drawerForm">
       <div class="drawerGrid">
         <div class="drawerField span-4">
-          <label>ID factura</label>
+          <label>Factura</label>
           <input pInputText type="number" formControlName="idFacVenta">
         </div>
 
         <div class="drawerField span-4">
-          <label>ID tipo contable</label>
+          <label>Tipo contable</label>
           <input pInputText type="number" formControlName="idCntTipoFk">
         </div>
 
         <div class="drawerField span-4">
-          <label>Fecha contable</label>
+          <label>Fecha</label>
           <input type="date" formControlName="fechaContable">
         </div>
 

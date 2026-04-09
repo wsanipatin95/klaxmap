@@ -2,7 +2,7 @@
   <aside class="comercialSidebar">
     <div class="sectionHead sectionHead--compact">
       <div>
-        <h4>Facturas OT</h4>
+        <h4>Facturas</h4>
         <div class="secondaryCell">{{ facturasOt.length }} registrada(s)</div>
       </div>
 
@@ -30,7 +30,7 @@
           <div class="facturaRow__copy">
             <strong>{{ facturaNumber(item) }}</strong>
             <span>{{ facturaCliente(item) }}</span>
-            <span>{{ formatDateShort(item.fecEmi) }}</span>
+            <span>{{ formatDateTimeShort(item.fecEmi) }}</span>
           </div>
 
           <p-tag [value]="item.sriEstado || 'ACTIVA'" [severity]="severityEstado(item.sriEstado || 'ACTIVA')">
@@ -56,7 +56,7 @@
         <div class="sectionHead sectionHead--compact">
           <div>
             <h4>Nueva factura</h4>
-            <div class="secondaryCell">Cliente, vehículo y OT cargados automáticamente desde la orden</div>
+            <div class="secondaryCell">Cliente, vehículo y orden cargados automáticamente</div>
           </div>
 
           <button pButton type="button" size="small" icon="pi pi-check" label="Emitir factura"
@@ -76,19 +76,19 @@
           </article>
 
           <article class="contextItem">
-            <span>OT</span>
+            <span>Orden</span>
             <strong>#{{ orden.idVehOrdenTrabajo }}</strong>
           </article>
 
           <article class="contextItem">
-            <span>DNI</span>
+            <span>Identificación</span>
             <strong>{{ orden.dni }}</strong>
           </article>
         </div>
 
         <div class="editorGrid">
           <div class="editorField span-12">
-            <label>Observación</label>
+            <label>Notas</label>
             <textarea pTextarea rows="2" [(ngModel)]="comercialDraft.observacionFactura"
               [ngModelOptions]="{ standalone: true }" placeholder="Observación interna o comercial">
     </textarea>
@@ -172,7 +172,7 @@
         <div class="sectionHead sectionHead--compact">
           <div>
             <h4>{{ facturaNumber(factura) }}</h4>
-            <div class="secondaryCell">{{ formatDateShort(factura.fecEmi) }}</div>
+            <div class="secondaryCell">{{ formatDateTimeShort(factura.fecEmi) }}</div>
           </div>
         </div>
 
@@ -272,7 +272,7 @@
           <div class="miniGrid" *ngIf="cobrosFactura.length">
             <article class="miniItem" *ngFor="let item of cobrosFactura">
               <span>Cobro</span>
-              <strong>{{ formatDateShort(item.fecha) }}</strong>
+              <strong>{{ formatDateTimeShort(item.fecha) }}</strong>
               <small>{{ formatMoney(item.valor) }} · {{ item.concepto || 'Sin concepto' }}</small>
             </article>
           </div>
@@ -290,13 +290,13 @@
 
 <ng-template #noFacturas>
   <app-vehiculos-empty-state icon="pi pi-receipt" title="Sin facturas todavía"
-    subtitle="Usa el acceso de Nueva factura para emitir la primera factura de la OT.">
+    subtitle="Usa Nueva factura para emitir la primera factura de la orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noPendientes>
   <app-vehiculos-empty-state icon="pi pi-check-circle" title="Sin repuestos pendientes"
-    subtitle="Todos los repuestos ya están facturados o todavía no existen líneas comerciales para esta OT.">
+    subtitle="Todos los repuestos ya están facturados o todavía no existen líneas comerciales para esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
