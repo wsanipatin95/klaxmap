@@ -65,6 +65,7 @@ import {
   TrabajoWorkbenchSavePayload,
 } from './components/orden-detail-panel/orden-detail-panel.component';
 import { OrdenMainFormDrawerComponent } from './components/orden-main-form-drawer/orden-main-form-drawer.component';
+import { OrdenReportesPanelComponent } from './components/orden-reportes-panel/orden-reportes-panel.component';
 
 type ChildDrawerMode =
   | 'trabajo'
@@ -103,6 +104,7 @@ type AtributoRowForm = FormGroup<{
     VehiculosFormDrawerComponent,
     OrdenDetailPanelComponent,
     OrdenMainFormDrawerComponent,
+    OrdenReportesPanelComponent,
   ],
   templateUrl: './ordenes.component.html',
   styleUrl: './ordenes.component.scss',

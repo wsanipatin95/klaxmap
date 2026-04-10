@@ -1,0 +1,70 @@
+<section class="reportesCard">
+  <div class="reportesCard__copy">
+    <h3>Documentos</h3>
+    <p>Descarga la orden de ingreso, la orden de trabajo y el acta de entrega con datos o en blanco.</p>
+  </div>
+
+  <div class="reportesCard__actions">
+    <button pButton type="button" icon="pi pi-file" label="Ingreso"
+      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('ingreso')">
+    </button>
+
+    <button pButton type="button" icon="pi pi-file-edit" label="Trabajo"
+      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('trabajo')">
+    </button>
+
+    <button pButton type="button" severity="secondary" icon="pi pi-send" label="Entrega"
+      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('entrega')">
+    </button>
+
+    <button pButton type="button" severity="secondary" icon="pi pi-print" label="En blanco"
+      [disabled]="downloading()" (click)="openBlankDrawer()">
+    </button>
+  </div>
+</section>
+
+<app-vehiculos-form-drawer
+  [visible]="drawerVisible()"
+  [dirty]="false"
+  [saving]="downloading() || loadingTipos()"
+  title="Formatos en blanco"
+  subtitle="Elige el documento a imprimir. Para la orden de trabajo debes seleccionar el tipo de vehículo."
+  sizeClass="appDrawer appDrawer--md"
+  (visibleChange)="$event ? drawerVisible.set(true) : closeBlankDrawer()"
+  (requestClose)="closeBlankDrawer()"
+  (requestSave)="descargarBlank()">
+
+  <form [formGroup]="blankForm" class="reportForm">
+    <div class="reportField">
+      <label>Documento</label>
+      <select formControlName="formato" (change)="onFormatoChange($any($event.target).value)">
+        <option value="ingreso">Orden de ingreso</option>
+        <option value="trabajo">Orden de trabajo</option>
+        <option value="entrega">Acta de entrega</option>
+      </select>
+    </div>
+
+    <div class="reportField" *ngIf="blankForm.controls.formato.value === 'trabajo'">
+      <label>Tipo de vehículo <span class="requiredMark">*</span></label>
+      <select formControlName="idVehTipoVehiculo">
+        <option [ngValue]="null">Selecciona un tipo</option>
+        <option *ngFor="let tipo of tiposVehiculo()" [ngValue]="tipo.idVehTipoVehiculo">
+          {{ tipo.tipoVehiculo || ('Tipo #' + tipo.idVehTipoVehiculo) }}
+        </option>
+      </select>
+      <small class="fieldError" *ngIf="blankForm.controls.idVehTipoVehiculo.invalid && blankForm.controls.idVehTipoVehiculo.touched">
+        Debes elegir el tipo para cargar checklist y vistas.
+      </small>
+    </div>
+
+    <div class="reportHint">
+      <strong>{{ etiquetaFormato(blankForm.controls.formato.value) }}</strong>
+      <span *ngIf="blankForm.controls.formato.value === 'trabajo'">
+        Cargará checklist y vistas del tipo seleccionado, dejando el resto de campos para llenado manual.
+      </span>
+      <span *ngIf="blankForm.controls.formato.value !== 'trabajo'">
+        Generará el formato vacío listo para imprimir y llenar a mano.
+      </span>
+    </div>
+  </form>
+</app-vehiculos-form-drawer>
