@@ -11,6 +11,10 @@
     [editSessionDirty]="editSessionDirty()"
     [editSessionElementName]="editSessionElementName()"
     [sidebarMode]="ui.sidebarMode()"
+    [basemap]="selectedBasemap()"
+    [basemapOptions]="basemapOptions"
+    [labelsVisible]="labelsVisible()"
+    [locatingMyPosition]="locatingMyPosition()"
     (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()"
     (importRequested)="abrirImportacion()"
@@ -25,6 +29,9 @@
     (measureModeRequested)="onToolbarMeasureMode()"
     (sidebarToggleRequested)="onToolbarSidebarToggle()"
     (sidebarCompactRequested)="onToolbarSidebarCompactToggle()"
+    (myLocationRequested)="onToolbarMyLocationRequested()"
+    (basemapSelectRequested)="onToolbarBasemapSelect($event)"
+    (labelsToggleRequested)="onToolbarLabelsToggle()"
   />
 
   <app-mapa-sidebar
@@ -74,6 +81,8 @@
     [toolMode]="ui.toolMode()"
     [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
     [hiddenTipoIds]="capas.hiddenTipoIds()"
+    [basemap]="selectedBasemap()"
+    [labelsVisible]="labelsVisible()"
     (elementoSelected)="onElementoSelect($event)"
     (geometryCreated)="onGeometryCreated($event)"
     (editSessionStateChanged)="onEditSessionStateChanged($event)"
@@ -100,10 +109,6 @@
     [selectedName]="selectedElemento()?.nombre ?? null"
   />
 </app-mapa-layout>
-
-<div class="mapa-quick-info">
-  {{ quickInfo() }}
-</div>
 
 <app-mapa-import-dialog
   #importDialog

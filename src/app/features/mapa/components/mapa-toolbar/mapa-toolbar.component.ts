@@ -1,8 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, computed, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 
 import { MapaSidebarMode, MapaToolMode, MapaUiStore } from '../../store/mapa-ui.store';
+import {
+  BasemapKey,
+  MAPA_BASEMAP_OPTIONS,
+  MapaBasemapOption,
+  getMapaBasemapLabel,
+} from '../../models/mapa-basemap.models';
 import { SessionStore } from '../../../seg/store/session.store';
 
 @Component({
@@ -22,6 +28,10 @@ export class MapaToolbarComponent {
   @Input() editSessionDirty = false;
   @Input() editSessionElementName: string | null = null;
   @Input() sidebarMode: MapaSidebarMode = 'expanded';
+  @Input() basemap: BasemapKey = 'osm';
+  @Input() basemapOptions: ReadonlyArray<MapaBasemapOption> = MAPA_BASEMAP_OPTIONS;
+  @Input() labelsVisible = true;
+  @Input() locatingMyPosition = false;
 
   @Output() refreshRequested = new EventEmitter<void>();
   @Output() exportRequested = new EventEmitter<void>();
@@ -37,6 +47,11 @@ export class MapaToolbarComponent {
   @Output() measureModeRequested = new EventEmitter<void>();
   @Output() sidebarToggleRequested = new EventEmitter<void>();
   @Output() sidebarCompactRequested = new EventEmitter<void>();
+  @Output() myLocationRequested = new EventEmitter<void>();
+  @Output() basemapSelectRequested = new EventEmitter<BasemapKey>();
+  @Output() labelsToggleRequested = new EventEmitter<void>();
+
+  basemapMenuOpen = false;
 
   readonly editarTipoElemento = computed(() =>
     this.sessionStore.hasCompanyPrivilege('etm_red_red')
@@ -51,6 +66,11 @@ export class MapaToolbarComponent {
     return this.buildHelp(mode);
   });
 
+  @HostListener('document:click')
+  closeBasemapMenuFromDocument() {
+    this.basemapMenuOpen = false;
+  }
+
   isActive(mode: MapaToolMode): boolean {
     return this.ui.toolMode() === mode;
   }
@@ -61,6 +81,18 @@ export class MapaToolbarComponent {
 
   get sidebarCompact(): boolean {
     return this.sidebarMode === 'compact';
+  }
+
+  get basemapLabel(): string {
+    return getMapaBasemapLabel(this.basemap);
+  }
+
+  get labelsTitle(): string {
+    return this.labelsVisible ? 'Ocultar etiquetas inteligentes' : 'Mostrar etiquetas inteligentes';
+  }
+
+  get myLocationTitle(): string {
+    return this.locatingMyPosition ? 'Obteniendo ubicación actual...' : 'Ir a mi ubicación';
   }
 
   sidebarToggleTitle(): string {
@@ -89,6 +121,29 @@ export class MapaToolbarComponent {
       default:
         return 'Seleccionar elementos';
     }
+  }
+
+  toggleBasemapMenu(event: Event) {
+    event.stopPropagation();
+    this.basemapMenuOpen = !this.basemapMenuOpen;
+  }
+
+  selectBasemap(key: BasemapKey, event?: Event) {
+    event?.stopPropagation();
+    this.basemapMenuOpen = false;
+    this.basemapSelectRequested.emit(key);
+  }
+
+  onLabelsToggle() {
+    this.labelsToggleRequested.emit();
+  }
+
+  onMyLocationRequested() {
+    if (this.locatingMyPosition) {
+      return;
+    }
+
+    this.myLocationRequested.emit();
   }
 
   private buildHelp(mode: MapaToolMode) {

@@ -22,6 +22,8 @@ import type {
 } from '../../data-access/mapa.models';
 import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
 import type { MapaToolMode } from '../../store/mapa-ui.store';
+import type { BasemapKey } from '../../models/mapa-basemap.models';
+import { MAPA_BASEMAP_OPTIONS } from '../../models/mapa-basemap.models';
 import { parseWktGeometry } from '../../utils/mapa-geometry.utils';
 import {
   normalizeMapaColor,
@@ -36,21 +38,6 @@ export interface MapaEditSessionState {
   elementId: number | null;
   elementName: string | null;
   geomTipo: MapaGeomTipo | null;
-}
-
-type BasemapKey =
-  | 'osm'
-  | 'cartoLight'
-  | 'cartoDark'
-  | 'esriWorldImagery'
-  | 'googleSatellite'
-  | 'openTopo';
-
-interface BasemapOption {
-  key: BasemapKey;
-  label: string;
-  url: string;
-  options: L.TileLayerOptions;
 }
 
 interface ResolvedElementStyle {
@@ -108,6 +95,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() selectedElementoId: number | null = null;
   @Input() toolMode: MapaToolMode = 'select';
   @Input() hiddenTipoIds: number[] = [];
+  @Input() basemap: BasemapKey = 'osm';
+  @Input() labelsVisible = true;
   @Input() mapCenter: L.LatLngTuple = [-0.22985, -78.52495];
   @Input() mapZoom = 13;
 
@@ -116,75 +105,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Output() geometryCreated = new EventEmitter<{ wkt: string; geomTipo: MapaGeomTipo }>();
   @Output() editSessionStateChanged = new EventEmitter<MapaEditSessionState>();
 
-  readonly basemapOptions: BasemapOption[] = [
-    {
-      key: 'osm',
-      label: 'OpenStreetMap',
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      options: {
-        maxZoom: 20,
-        maxNativeZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      },
-    },
-    {
-      key: 'cartoLight',
-      label: 'Claro',
-      url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      options: {
-        subdomains: 'abcd',
-        maxZoom: 20,
-        maxNativeZoom: 20,
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      },
-    },
-    {
-      key: 'cartoDark',
-      label: 'Oscuro',
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      options: {
-        subdomains: 'abcd',
-        maxZoom: 20,
-        maxNativeZoom: 20,
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      },
-    },
-    {
-      key: 'esriWorldImagery',
-      label: 'Satélite Esri',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      options: {
-        maxZoom: 19,
-        maxNativeZoom: 19,
-        attribution: 'Tiles &copy; Esri',
-      },
-    },
-    {
-      key: 'googleSatellite',
-      label: 'Satélite Google',
-      url: 'https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga',
-      options: {
-        maxZoom: 20,
-        maxNativeZoom: 20,
-        attribution: 'Google imagery · verificar licencias antes de uso productivo',
-      },
-    },
-    {
-      key: 'openTopo',
-      label: 'Relieve',
-      url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-      options: {
-        maxZoom: 17,
-        maxNativeZoom: 17,
-        attribution:
-          'Map data &copy; OpenStreetMap contributors, SRTM | Map style &copy; OpenTopoMap',
-      },
-    },
-  ];
-
-  selectedBasemap: BasemapKey = 'osm';
-  basemapMenuOpen = false;
-  labelsVisible = true;
   measureActive = false;
   measureStarted = false;
   measureDistanceText = '0 m';
@@ -206,6 +126,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   private map!: L.Map;
   private baseLayer!: L.TileLayer;
+  private activeBasemapKey: BasemapKey = 'osm';
   private readonly drawnItems = new L.FeatureGroup();
   private readonly measureLayer = new L.FeatureGroup();
   private readonly searchLayer = new L.FeatureGroup();
@@ -279,6 +200,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
 
     this.resizeObserver?.disconnect();
+
+    if (this.map) {
+      this.map.remove();
+    }
   }
 
   @HostListener('window:resize')
@@ -317,6 +242,14 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       this.syncToolMode();
     }
 
+    if (changes['labelsVisible']) {
+      this.scheduleRender();
+    }
+
+    if (changes['basemap']) {
+      this.applyBasemap(this.basemap);
+    }
+
     if ((changes['mapCenter'] || changes['mapZoom']) && this.map) {
       this.map.setView(this.mapCenter, this.mapZoom);
       this.updateViewBounds();
@@ -326,48 +259,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   refreshMapLayout(preserveView = true) {
     this.scheduleMapResizeRefresh(preserveView);
-  }
-
-  toggleBasemapMenu() {
-    this.basemapMenuOpen = !this.basemapMenuOpen;
-  }
-
-  closeBasemapMenu() {
-    this.basemapMenuOpen = false;
-  }
-
-  setBasemap(key: BasemapKey) {
-    if (!this.map || this.selectedBasemap === key) {
-      this.basemapMenuOpen = false;
-      return;
-    }
-
-    const config = this.basemapOptions.find((item) => item.key === key);
-    if (!config) {
-      this.basemapMenuOpen = false;
-      return;
-    }
-
-    if (this.baseLayer) {
-      this.map.removeLayer(this.baseLayer);
-    }
-
-    this.baseLayer = L.tileLayer(config.url, config.options);
-    this.baseLayer.addTo(this.map);
-    this.selectedBasemap = key;
-    this.basemapMenuOpen = false;
-  }
-
-  currentBasemapLabel(): string {
-    return (
-      this.basemapOptions.find((item) => item.key === this.selectedBasemap)?.label ??
-      'Mapa'
-    );
-  }
-
-  toggleLabelsVisible() {
-    this.labelsVisible = !this.labelsVisible;
-    this.scheduleRender();
   }
 
   clearMeasurement() {
@@ -417,6 +308,21 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     this.updateViewBounds();
     this.scheduleRender();
+  }
+
+  focusOnCurrentLocation(lat: number, lng: number, accuracyMeters?: number | null) {
+    this.focusOnSearchResult({
+      id: 'current-location',
+      label:
+        accuracyMeters && Number.isFinite(accuracyMeters)
+          ? `Mi ubicación · precisión aprox. ${this.formatDistance(accuracyMeters)}`
+          : 'Mi ubicación actual',
+      subtitle: 'Ubicación obtenida desde el navegador',
+      lat,
+      lng,
+      bounds: null,
+      source: 'coordinates',
+    });
   }
 
   centerOnElemento(id: number | null) {
@@ -561,9 +467,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       maxZoom: 20,
     });
 
-    const defaultBasemap = this.basemapOptions.find((item) => item.key === this.selectedBasemap)!;
-    this.baseLayer = L.tileLayer(defaultBasemap.url, defaultBasemap.options);
-    this.baseLayer.addTo(this.map);
+    this.applyBasemap(this.basemap);
 
     this.drawnItems.addTo(this.map);
     this.measureLayer.addTo(this.map);
@@ -571,10 +475,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.labelsLayer.addTo(this.map);
 
     this.map.on('click', (event: L.LeafletMouseEvent) => {
-      if (this.basemapMenuOpen) {
-        this.closeBasemapMenu();
-      }
-
       if (this.toolMode === 'measure') {
         this.handleMeasureClick(event.latlng);
       }
@@ -620,6 +520,27 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         this.geometryCreated.emit({ wkt, geomTipo });
       });
     }
+  }
+
+  private applyBasemap(key: BasemapKey) {
+    if (!this.map) {
+      this.activeBasemapKey = key;
+      return;
+    }
+
+    if (this.baseLayer && this.activeBasemapKey === key) {
+      return;
+    }
+
+    const config = MAPA_BASEMAP_OPTIONS.find((item) => item.key === key) ?? MAPA_BASEMAP_OPTIONS[0];
+
+    if (this.baseLayer) {
+      this.map.removeLayer(this.baseLayer);
+    }
+
+    this.baseLayer = L.tileLayer(config.url, config.options);
+    this.baseLayer.addTo(this.map);
+    this.activeBasemapKey = config.key;
   }
 
   private setupResizeObserver() {
@@ -1855,6 +1776,15 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       );
     }
 
+    if (type === 'multilinestring' && Array.isArray(coords) && Array.isArray(coords[0])) {
+      return this.createLineLayer(
+        coords.map((line: number[][]) =>
+          line.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
+        ),
+        style
+      );
+    }
+
     if (type === 'polygon' && Array.isArray(coords) && Array.isArray(coords[0])) {
       const layer = L.polygon(
         coords.map((ring: number[][]) =>
@@ -1878,13 +1808,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       return layer;
     }
 
-    if (type === 'multilinestring' && Array.isArray(coords) && Array.isArray(coords[0])) {
-      return this.createLineLayer(
-        coords[0].map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number]),
-        style
-      );
-    }
-
     if (
       type === 'multipolygon' &&
       Array.isArray(coords) &&
@@ -1892,8 +1815,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       Array.isArray(coords[0][0])
     ) {
       const layer = L.polygon(
-        coords[0].map((ring: number[][]) =>
-          ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
+        coords.map((polygon: number[][][]) =>
+          polygon.map((ring: number[][]) =>
+            ring.map((pair: number[]) => [Number(pair[1]), Number(pair[0])] as [number, number])
+          )
         ),
         {
           color: style.colorStroke,
@@ -1961,10 +1886,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     return null;
   }
 
-  private createLineLayer(latlngs: L.LatLngExpression[] | L.LatLng[], style: ResolvedElementStyle): L.Layer {
+  private createLineLayer(latlngs: any, style: ResolvedElementStyle): L.Layer {
     const innerWeight = Math.max(1, style.strokeWidth);
     const outlineWeight = Math.max(innerWeight + 2, Math.round(innerWeight * 1.8));
-    const outline = L.polyline(latlngs as any, {
+    const outline = L.polyline(latlngs, {
       color: style.colorStroke,
       weight: outlineWeight,
       opacity: 0.96,
@@ -1974,7 +1899,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       renderer: this.vectorRenderer,
     });
 
-    const line = L.polyline(latlngs as any, {
+    const line = L.polyline(latlngs, {
       color: style.colorFill,
       weight: innerWeight,
       lineCap: 'round',
@@ -2004,11 +1929,15 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       return 'point';
     }
 
+    if (anyLayer instanceof L.Polygon) {
+      return 'polygon';
+    }
+
+    if (anyLayer instanceof L.Polyline) {
+      return 'linestring';
+    }
+
     if (typeof anyLayer.getLatLngs === 'function') {
-      const latlngs = anyLayer.getLatLngs();
-      if (Array.isArray(latlngs) && Array.isArray(latlngs[0])) {
-        return 'polygon';
-      }
       return 'linestring';
     }
 
@@ -2028,13 +1957,53 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
 
     if (geomTipo === 'linestring' && typeof anyLayer.getLatLngs === 'function') {
-      const latlngs = anyLayer.getLatLngs() as L.LatLng[];
-      const coords = latlngs.map((p) => `${p.lng} ${p.lat}`).join(', ');
+      const latlngs = anyLayer.getLatLngs() as any[];
+
+      if (Array.isArray(latlngs[0])) {
+        const parts = (latlngs as L.LatLng[][])
+          .filter((part) => Array.isArray(part) && part.length > 0)
+          .map((part) => `(${part.map((p) => `${p.lng} ${p.lat}`).join(', ')})`)
+          .join(', ');
+
+        return parts ? `MULTILINESTRING(${parts})` : null;
+      }
+
+      const coords = (latlngs as L.LatLng[]).map((p) => `${p.lng} ${p.lat}`).join(', ');
       return `LINESTRING(${coords})`;
     }
 
     if (geomTipo === 'polygon' && typeof anyLayer.getLatLngs === 'function') {
       const groups = anyLayer.getLatLngs() as any;
+
+      if (
+        Array.isArray(groups) &&
+        Array.isArray(groups[0]) &&
+        Array.isArray(groups[0][0]) &&
+        groups[0][0].length > 0 &&
+        this.isLatLng(groups[0][0][0])
+      ) {
+        const multiPolygonText = (groups as L.LatLng[][][])
+          .filter((polygon) => Array.isArray(polygon) && polygon.length > 0)
+          .map((polygon) => {
+            const ringText = polygon
+              .filter((ring) => Array.isArray(ring) && ring.length > 0)
+              .map((ring) => {
+                const closed =
+                  ring[0].lat === ring[ring.length - 1].lat &&
+                  ring[0].lng === ring[ring.length - 1].lng
+                    ? ring
+                    : [...ring, ring[0]];
+
+                return `(${closed.map((p) => `${p.lng} ${p.lat}`).join(', ')})`;
+              })
+              .join(', ');
+
+            return `(${ringText})`;
+          })
+          .join(', ');
+
+        return multiPolygonText ? `MULTIPOLYGON(${multiPolygonText})` : null;
+      }
 
       let rings: L.LatLng[][] = [];
 

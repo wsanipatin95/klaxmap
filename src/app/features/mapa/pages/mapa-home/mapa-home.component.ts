@@ -46,6 +46,10 @@ import type {
   TreeNodeVisibilityChange,
 } from '../../components/mapa-tree/mapa-tree.component';
 import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
+import {
+  BasemapKey,
+  MAPA_BASEMAP_OPTIONS,
+} from '../../models/mapa-basemap.models';
 import { getBranchNodeIds } from '../../utils/mapa-visibility.utils';
 
 @Component({
@@ -116,13 +120,17 @@ export class MapaHomeComponent {
 
   readonly elementosCanvas = this.view.elementosCanvas;
   readonly searchResultIndex = this.view.searchResultIndex;
-  readonly quickInfo = this.view.quickInfo;
 
   readonly geoSearchValue = this.geoSearch.value;
   readonly geoSearchLoading = this.geoSearch.loading;
   readonly geoSearchHasSearched = this.geoSearch.hasSearched;
   readonly geoSearchResults = this.geoSearch.results;
   readonly geoSearchError = this.geoSearch.error;
+
+  readonly basemapOptions = MAPA_BASEMAP_OPTIONS;
+  readonly selectedBasemap = signal<BasemapKey>('osm');
+  readonly labelsVisible = signal(true);
+  readonly locatingMyPosition = signal(false);
 
   readonly actionBusy = signal(false);
   readonly actionBusyTitle = signal('Guardando cambios');
@@ -171,6 +179,49 @@ export class MapaHomeComponent {
   onToolbarSidebarCompactToggle() {
     this.ui.toggleSidebarCompact();
     this.scheduleLayoutRefreshForSidebarChange();
+  }
+
+  onToolbarBasemapSelect(key: BasemapKey) {
+    this.selectedBasemap.set(key);
+  }
+
+  onToolbarLabelsToggle() {
+    this.labelsVisible.update((value) => !value);
+  }
+
+  onToolbarMyLocationRequested() {
+    if (this.locatingMyPosition()) {
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      this.crud.setError('Tu navegador no permite obtener la ubicación actual.');
+      return;
+    }
+
+    this.locatingMyPosition.set(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.locatingMyPosition.set(false);
+        this.mapCanvas?.focusOnCurrentLocation(
+          position.coords.latitude,
+          position.coords.longitude,
+          position.coords.accuracy
+        );
+        this.showSuccess('Ubicación actual', 'Se centró el mapa en tu ubicación actual.');
+        this.closeSidebarIfMobile();
+      },
+      (error) => {
+        this.locatingMyPosition.set(false);
+        this.crud.setError(this.resolveGeolocationError(error));
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000,
+      }
+    );
   }
 
   onSidebarBackdropRequested() {
@@ -779,7 +830,6 @@ export class MapaHomeComponent {
     }
 
     const run = () => {
-      window.dispatchEvent(new Event('resize'));
       this.mapCanvas?.refreshMapLayout?.();
 
       window.requestAnimationFrame(() => {
@@ -793,6 +843,19 @@ export class MapaHomeComponent {
     }
 
     run();
+  }
+
+  private resolveGeolocationError(error: { code?: number; message?: string }): string {
+    switch (error.code) {
+      case 1:
+        return 'No se pudo obtener tu ubicación porque el permiso fue denegado.';
+      case 2:
+        return 'No se pudo determinar tu ubicación actual.';
+      case 3:
+        return 'La ubicación tardó demasiado en responder. Intenta nuevamente.';
+      default:
+        return error.message || 'No se pudo obtener tu ubicación actual.';
+    }
   }
 
   private confirmDiscardGeometryChanges(onConfirm?: () => void) {

@@ -3,15 +3,33 @@
     <label class="layers-root-row">
       <input #rootToggle type="checkbox" [checked]="allVisible()" (change)="onRootToggle(rootToggle.checked)" />
       <span class="layers-expander">▾</span>
-      <span class="">Todos</span>
+      <span class="layers-root-name">Todos</span>
     </label>
 
     <div class="layers-children">
       <label class="layer-row" *ngFor="let t of tipos; trackBy: trackByTipo">
         <input type="checkbox" [checked]="visible(t.idGeoTipoElemento)" (change)="toggle(t.idGeoTipoElemento)" />
 
-        <span class="layer-preview" [ngClass]="previewShapeClass(t)" [ngStyle]="previewStyle(t)"
-          aria-hidden="true"></span>
+        <span
+          class="layer-preview"
+          [ngClass]="previewShapeClass(t)"
+          [ngStyle]="previewStyle(t)"
+          aria-hidden="true"
+        >
+          <ng-container *ngIf="showMaterialPreview(t)">
+            <span class="layer-preview-material" [class]="previewMaterialFamily(t)">
+              {{ previewMaterialGlyph(t) }}
+            </span>
+          </ng-container>
+
+          <ng-container *ngIf="showClassPreview(t)">
+            <i class="layer-preview-class" [class]="previewClass(t)"></i>
+          </ng-container>
+
+          <ng-container *ngIf="showUrlPreview(t)">
+            <img class="layer-preview-image" [src]="previewImageUrl(t)" alt="" />
+          </ng-container>
+        </span>
 
         <span class="layer-name">{{ t.nombre }}</span>
       </label>

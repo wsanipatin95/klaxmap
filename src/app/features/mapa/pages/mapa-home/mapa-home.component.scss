@@ -3,28 +3,6 @@
   height: 100%;
 }
 
-.mapa-quick-info {
-  position: fixed;
-  left: clamp(4.2rem, 52vw, 28rem);
-  right: clamp(1rem, 24vw, 20rem);
-  bottom: 2.85rem;
-  z-index: 500;
-  margin: 0 auto;
-  max-width: 40rem;
-  background: rgba(255, 255, 255, 0.94);
-  color: #475569;
-  border: 1px solid rgba(203, 213, 225, 0.92);
-  border-radius: 0.85rem;
-  padding: 0.5rem 0.76rem;
-  box-shadow:
-    0 10px 24px rgba(15, 23, 42, 0.1),
-    0 2px 8px rgba(15, 23, 42, 0.06);
-  font-size: 0.74rem;
-  line-height: 1.28;
-  pointer-events: none;
-  backdrop-filter: blur(8px);
-}
-
 .mapa-success,
 .mapa-error {
   position: fixed;
@@ -138,21 +116,4 @@
   font-size: 0.75rem;
   line-height: 1.45;
   color: #475569;
-}
-
-@media (max-width: 1280px) {
-  .mapa-quick-info {
-    left: 4.2rem;
-    right: 1rem;
-  }
-}
-
-@media (max-width: 860px) {
-  .mapa-quick-info {
-    left: 0.78rem;
-    right: 0.78rem;
-    bottom: 2.55rem;
-    max-width: none;
-    font-size: 0.71rem;
-  }
 }

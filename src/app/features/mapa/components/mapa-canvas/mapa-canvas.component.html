@@ -1,46 +1,4 @@
 <div class="mapa-canvas-shell">
-  <div class="mapa-overlay-top-right">
-    <div class="mapa-basemap-control">
-      <button
-        type="button"
-        class="mapa-basemap-trigger"
-        (click)="toggleBasemapMenu()"
-      >
-        <span class="mapa-basemap-trigger-label">{{ currentBasemapLabel() }}</span>
-        <span class="mapa-basemap-trigger-icon">{{ basemapMenuOpen ? '▴' : '▾' }}</span>
-      </button>
-
-      <div class="mapa-basemap-menu" *ngIf="basemapMenuOpen">
-        <button
-          type="button"
-          class="mapa-basemap-option"
-          *ngFor="let option of basemapOptions"
-          [class.active]="option.key === selectedBasemap"
-          (click)="setBasemap(option.key)"
-        >
-          <span class="mapa-basemap-option-title">{{ option.label }}</span>
-          <span class="mapa-basemap-option-check" *ngIf="option.key === selectedBasemap">
-            ✓
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="mapa-overlay-bottom-right">
-    <button
-      type="button"
-      class="mapa-toggle-chip mapa-toggle-chip--labels"
-      [class.active]="labelsVisible"
-      [attr.aria-pressed]="labelsVisible"
-      [attr.title]="labelsVisible ? 'Ocultar etiquetas inteligentes' : 'Mostrar etiquetas inteligentes'"
-      (click)="toggleLabelsVisible()"
-    >
-      <span class="mapa-toggle-chip-dot" [class.active]="labelsVisible" aria-hidden="true"></span>
-      <span class="mapa-toggle-chip-text">Etiquetas inteligentes</span>
-    </button>
-  </div>
-
   <div class="mapa-overlay-left" *ngIf="measureActive">
     <div class="mapa-measure-card">
       <div class="mapa-measure-title">Medición</div>

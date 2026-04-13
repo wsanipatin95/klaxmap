@@ -107,6 +107,58 @@
       <span class="tool-btn-glyph" aria-hidden="true">📏</span>
     </button>
 
+    <button
+      type="button"
+      class="tool-btn"
+      [class.active]="locatingMyPosition"
+      [disabled]="locatingMyPosition"
+      [attr.title]="myLocationTitle"
+      [attr.aria-label]="myLocationTitle"
+      (click)="onMyLocationRequested()"
+    >
+      <i class="pi pi-compass"></i>
+    </button>
+
+    <div class="toolbar-dropdown" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="tool-btn tool-btn--wide tool-btn--dropdown"
+        [class.active]="basemapMenuOpen"
+        [attr.title]="'Mapa base: ' + basemapLabel"
+        [attr.aria-label]="'Mapa base: ' + basemapLabel"
+        (click)="toggleBasemapMenu($event)"
+      >
+        <i class="pi pi-map"></i>
+        <span class="tool-btn-label">{{ basemapLabel }}</span>
+        <i class="pi pi-angle-down tool-btn-dropdown-icon" [class.is-open]="basemapMenuOpen"></i>
+      </button>
+
+      <div class="toolbar-dropdown-menu" *ngIf="basemapMenuOpen">
+        <button
+          type="button"
+          class="toolbar-dropdown-item"
+          *ngFor="let option of basemapOptions"
+          [class.active]="option.key === basemap"
+          (click)="selectBasemap(option.key, $event)"
+        >
+          <span class="toolbar-dropdown-item-text">{{ option.label }}</span>
+          <i class="pi pi-check" *ngIf="option.key === basemap"></i>
+        </button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="tool-btn tool-btn--wide"
+      [class.active]="labelsVisible"
+      [attr.title]="labelsTitle"
+      [attr.aria-label]="labelsTitle"
+      [attr.aria-pressed]="labelsVisible"
+      (click)="onLabelsToggle()"
+    >
+      <i class="pi pi-eye"></i>
+    </button>
+
     <span class="tool-separator" aria-hidden="true"></span>
 
     <button

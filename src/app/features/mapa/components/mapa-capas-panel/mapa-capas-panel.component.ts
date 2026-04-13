@@ -3,9 +3,18 @@ import { Component, Input, inject } from '@angular/core';
 import type { MapaTipoElemento } from '../../data-access/mapa.models';
 import { MapaCapasStore } from '../../store/mapa-capas.store';
 import {
-  normalizeMapaColor,
-  normalizeMapaColorOrDefault,
-} from '../../utils/mapa-color.utils';
+  MapaItemVisualPreview,
+  previewClassForVisual,
+  previewImageUrlForVisual,
+  previewMaterialFamilyForVisual,
+  previewMaterialGlyphForVisual,
+  previewShapeClassForVisual,
+  previewStyleForVisual,
+  resolveMapaTipoVisual,
+  showClassPreviewForVisual,
+  showMaterialPreviewForVisual,
+  showUrlPreviewForVisual,
+} from '../../utils/mapa-element-visual.utils';
 
 @Component({
   selector: 'app-mapa-capas-panel',
@@ -55,36 +64,43 @@ export class MapaCapasPanelComponent {
     this.hideAll();
   }
 
+  visual(tipo: MapaTipoElemento): MapaItemVisualPreview {
+    return resolveMapaTipoVisual(tipo);
+  }
+
   previewShapeClass(tipo: MapaTipoElemento): string {
-    const iconoFuente = String(tipo.iconoFuente || '').toLowerCase();
-
-    if (tipo.geometriaPermitida === 'linestring') return 'is-line';
-    if (tipo.geometriaPermitida === 'polygon') return 'is-polygon';
-    if (iconoFuente.includes('triangle')) return 'is-triangle';
-    if (iconoFuente.includes('target')) return 'is-target';
-    if (iconoFuente.includes('donut')) return 'is-donut';
-
-    return 'is-point';
+    return previewShapeClassForVisual(this.visual(tipo));
   }
 
   previewStyle(tipo: MapaTipoElemento): Record<string, string> {
-    const fill = normalizeMapaColorOrDefault(
-      tipo.colorFill ?? tipo.colorStroke ?? null,
-      '#f3aad6'
-    );
-    const stroke = normalizeMapaColorOrDefault(
-      tipo.colorStroke ?? tipo.colorFill ?? null,
-      '#7b0061'
-    );
-    const text = normalizeMapaColor(tipo.colorTexto, stroke) ?? stroke;
-    const strokeWidth = Math.max(1, Number(tipo.strokeWidth ?? 1) || 1);
+    return previewStyleForVisual(this.visual(tipo));
+  }
 
-    return {
-      '--preview-stroke': stroke,
-      '--preview-fill': fill,
-      '--preview-text': text,
-      '--preview-stroke-width': `${strokeWidth}`,
-      '--preview-stroke-width-px': `${strokeWidth}px`,
-    } as Record<string, string>;
+  previewMaterialFamily(tipo: MapaTipoElemento): string {
+    return previewMaterialFamilyForVisual(this.visual(tipo));
+  }
+
+  previewMaterialGlyph(tipo: MapaTipoElemento): string {
+    return previewMaterialGlyphForVisual(this.visual(tipo));
+  }
+
+  previewClass(tipo: MapaTipoElemento): string {
+    return previewClassForVisual(this.visual(tipo));
+  }
+
+  previewImageUrl(tipo: MapaTipoElemento): string {
+    return previewImageUrlForVisual(this.visual(tipo));
+  }
+
+  showMaterialPreview(tipo: MapaTipoElemento): boolean {
+    return showMaterialPreviewForVisual(this.visual(tipo));
+  }
+
+  showClassPreview(tipo: MapaTipoElemento): boolean {
+    return showClassPreviewForVisual(this.visual(tipo));
+  }
+
+  showUrlPreview(tipo: MapaTipoElemento): boolean {
+    return showUrlPreviewForVisual(this.visual(tipo));
   }
 }

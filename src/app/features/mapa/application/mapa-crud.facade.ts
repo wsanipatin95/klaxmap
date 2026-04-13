@@ -177,8 +177,9 @@ export class MapaCrudFacade {
     this.elementosRepo.crear(payload).subscribe({
       next: (resp) => {
         this.selection.setElemento(resp.data);
-        this.loadElementos();
-        onDone?.(resp.data);
+        this.loadElementos(() => {
+          onDone?.(resp.data);
+        });
       },
       error: (err) => {
         console.error('[MAPA][CREATE ELEMENTO] error:', err);
@@ -197,8 +198,9 @@ export class MapaCrudFacade {
     this.elementosRepo.editarGeometria(payload).subscribe({
       next: (resp) => {
         this.selection.setElemento(resp.data);
-        this.loadElementos();
-        onDone?.(resp.data);
+        this.loadElementos(() => {
+          onDone?.(resp.data);
+        });
       },
       error: (err) => {
         console.error('[MAPA][EDIT GEOMETRY] error:', err);
@@ -217,8 +219,9 @@ export class MapaCrudFacade {
         }
 
         this.visibility.clearElemento(id);
-        this.loadElementos();
-        onDone?.();
+        this.loadElementos(() => {
+          onDone?.();
+        });
       },
       error: (err) => {
         console.error('[MAPA][DELETE ELEMENTO] error:', err);
