@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { MapaUiStore } from '../store/mapa-ui.store';
@@ -32,6 +33,12 @@ export class MapaCrudFacade {
   private readonly tiposRepo = inject(MapaTiposRepository);
   private readonly elementosRepo = inject(MapaElementosRepository);
 
+  private pendingLoads = 0;
+  private nodosSeq = 0;
+  private tiposSeq = 0;
+  private elementosSeq = 0;
+  private refreshSeq = 0;
+
   readonly nodos = signal<MapaNodo[]>([]);
   readonly tipos = signal<MapaTipoElemento[]>([]);
   readonly elementos = signal<MapaElemento[]>([]);
@@ -40,64 +47,73 @@ export class MapaCrudFacade {
   readonly totalElementos = computed(() => this.elementos().length);
 
   loadAll() {
-    this.loadNodos();
-    this.loadTipos();
-    this.loadElementos();
+    this.refreshAll();
   }
 
   loadNodos() {
-    this.nodosRepo.listar({ all: true }).subscribe({
-      next: (data) => {
-        const items = Array.isArray(data)
-          ? data
-          : (data as PagedResponse<MapaNodo>).content ?? [];
+    const seq = ++this.nodosSeq;
+    this.beginLoading();
 
-        this.nodos.set(items);
-        this.visibility.prune(items, this.elementos());
-      },
-      error: (err) => {
-        console.error('[MAPA][NODOS] error:', err);
-        this.error.set(err?.message || 'No se pudo cargar nodos');
-      },
-    });
+    this.nodosRepo
+      .listar({ all: true })
+      .pipe(finalize(() => this.endLoading()))
+      .subscribe({
+        next: (data) => {
+          if (seq !== this.nodosSeq) {
+            return;
+          }
+
+          const items = this.parseListResult<MapaNodo>(data);
+          this.nodos.set(items);
+          this.visibility.prune(items, this.elementos());
+          this.syncSelectionWithData(items, this.elementos());
+        },
+        error: (err) => {
+          console.error('[MAPA][NODOS] error:', err);
+          this.error.set(err?.message || 'No se pudo cargar nodos');
+        },
+      });
   }
 
   loadTipos() {
-    this.tiposRepo.listar({ all: true }).subscribe({
-      next: (data) => {
-        const items = Array.isArray(data)
-          ? data
-          : (data as PagedResponse<MapaTipoElemento>).content ?? [];
+    const seq = ++this.tiposSeq;
+    this.beginLoading();
 
-        this.tipos.set(items);
-      },
-      error: (err) => {
-        console.error('[MAPA][TIPOS] error:', err);
-        this.error.set(err?.message || 'No se pudo cargar tipos');
-      },
-    });
+    this.tiposRepo
+      .listar({ all: true })
+      .pipe(finalize(() => this.endLoading()))
+      .subscribe({
+        next: (data) => {
+          if (seq !== this.tiposSeq) {
+            return;
+          }
+
+          this.tipos.set(this.parseListResult<MapaTipoElemento>(data));
+        },
+        error: (err) => {
+          console.error('[MAPA][TIPOS] error:', err);
+          this.error.set(err?.message || 'No se pudo cargar tipos');
+        },
+      });
   }
 
   loadElementos(onLoaded?: (items: MapaElemento[]) => void) {
-    this.ui.setLoading(true);
+    const seq = ++this.elementosSeq;
+    this.beginLoading();
 
     this.elementosRepo
-      .listar({
-        q: this.filtros.q(),
-        idRedNodoFk: this.filtros.idRedNodoFk(),
-        idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
-        visible: this.filtros.visible(),
-        all: true,
-      })
-      .pipe(finalize(() => this.ui.setLoading(false)))
+      .listar(this.buildElementosFilters())
+      .pipe(finalize(() => this.endLoading()))
       .subscribe({
         next: (data) => {
-          const items = Array.isArray(data)
-            ? data
-            : (data as PagedResponse<MapaElemento>).content ?? [];
+          if (seq !== this.elementosSeq) {
+            return;
+          }
 
+          const items = this.parseListResult<MapaElemento>(data);
           this.elementos.set(items);
           this.visibility.prune(this.nodos(), items);
+          this.syncSelectionWithData(this.nodos(), items);
           onLoaded?.(items);
         },
         error: (err) => {
@@ -108,9 +124,49 @@ export class MapaCrudFacade {
   }
 
   refreshAll(onElementosLoaded?: (items: MapaElemento[]) => void) {
-    this.loadNodos();
-    this.loadTipos();
-    this.loadElementos(onElementosLoaded);
+    const refreshSeq = ++this.refreshSeq;
+    const nodosSeq = ++this.nodosSeq;
+    const tiposSeq = ++this.tiposSeq;
+    const elementosSeq = ++this.elementosSeq;
+
+    this.beginLoading();
+
+    forkJoin({
+      nodos: this.nodosRepo.listar({ all: true }),
+      tipos: this.tiposRepo.listar({ all: true }),
+      elementos: this.elementosRepo.listar(this.buildElementosFilters()),
+    })
+      .pipe(finalize(() => this.endLoading()))
+      .subscribe({
+        next: ({ nodos, tipos, elementos }) => {
+          const requestStillCurrent =
+            refreshSeq === this.refreshSeq &&
+            nodosSeq === this.nodosSeq &&
+            tiposSeq === this.tiposSeq &&
+            elementosSeq === this.elementosSeq;
+
+          if (!requestStillCurrent) {
+            return;
+          }
+
+          const nextNodos = this.parseListResult<MapaNodo>(nodos);
+          const nextTipos = this.parseListResult<MapaTipoElemento>(tipos);
+          const nextElementos = this.parseListResult<MapaElemento>(elementos);
+
+          this.nodos.set(nextNodos);
+          this.tipos.set(nextTipos);
+          this.elementos.set(nextElementos);
+
+          this.visibility.prune(nextNodos, nextElementos);
+          this.syncSelectionWithData(nextNodos, nextElementos);
+
+          onElementosLoaded?.(nextElementos);
+        },
+        error: (err) => {
+          console.error('[MAPA][REFRESH] error:', err);
+          this.error.set(err?.message || 'No se pudo actualizar la información del mapa');
+        },
+      });
   }
 
   createElemento(
@@ -237,5 +293,44 @@ export class MapaCrudFacade {
 
   setError(message: string) {
     this.error.set(message);
+  }
+
+  private buildElementosFilters() {
+    return {
+      q: this.filtros.q(),
+      idRedNodoFk: this.filtros.idRedNodoFk(),
+      idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
+      visible: this.filtros.visible(),
+      all: true,
+    };
+  }
+
+  private parseListResult<T>(data: PagedResponse<T> | T[]): T[] {
+    return Array.isArray(data) ? data : data.content ?? [];
+  }
+
+  private syncSelectionWithData(nodos: MapaNodo[], elementos: MapaElemento[]) {
+    const selectedNodoId = this.selection.selectedNodo()?.idRedNodo ?? null;
+    if (selectedNodoId != null) {
+      const refreshedNodo = nodos.find((item) => item.idRedNodo === selectedNodoId) ?? null;
+      this.selection.setNodo(refreshedNodo);
+    }
+
+    const selectedElementoId = this.selection.selectedElemento()?.idGeoElemento ?? null;
+    if (selectedElementoId != null) {
+      const refreshedElemento =
+        elementos.find((item) => item.idGeoElemento === selectedElementoId) ?? null;
+      this.selection.setElemento(refreshedElemento);
+    }
+  }
+
+  private beginLoading() {
+    this.pendingLoads += 1;
+    this.ui.setLoading(true);
+  }
+
+  private endLoading() {
+    this.pendingLoads = Math.max(0, this.pendingLoads - 1);
+    this.ui.setLoading(this.pendingLoads > 0);
   }
 }

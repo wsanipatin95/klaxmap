@@ -1,5 +1,49 @@
 export type MapaGeomTipo = 'point' | 'linestring' | 'polygon';
 
+export type MapaMetadataPrimitive = string | number | boolean | null;
+export type MapaMetadataValue =
+  | MapaMetadataPrimitive
+  | MapaMetadataValue[]
+  | { [key: string]: MapaMetadataValue };
+export type MapaMetadata = Record<string, MapaMetadataValue>;
+
+export interface MapaGeoJsonPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
+export interface MapaGeoJsonLineString {
+  type: 'LineString';
+  coordinates: [number, number][];
+}
+
+export interface MapaGeoJsonPolygon {
+  type: 'Polygon';
+  coordinates: [number, number][][];
+}
+
+export interface MapaGeoJsonMultiLineString {
+  type: 'MultiLineString';
+  coordinates: [number, number][][];
+}
+
+export interface MapaGeoJsonMultiPolygon {
+  type: 'MultiPolygon';
+  coordinates: [number, number][][][];
+}
+
+export type MapaGeoJsonGeometry =
+  | MapaGeoJsonPoint
+  | MapaGeoJsonLineString
+  | MapaGeoJsonPolygon
+  | MapaGeoJsonMultiLineString
+  | MapaGeoJsonMultiPolygon;
+
+export type MapaGeometryPayload =
+  | MapaGeoJsonGeometry
+  | string
+  | ({ wkt: string } & Record<string, MapaMetadataValue | undefined>);
+
 export interface MapaNodo {
   idRedNodo: number;
   idRedNodoPadreFk?: number | null;
@@ -11,7 +55,7 @@ export interface MapaNodo {
   visible: boolean;
   pathCache?: string | null;
   nivel: number;
-  atributos?: Record<string, any> | null;
+  atributos?: MapaMetadata | null;
 }
 
 export interface MapaTipoElemento {
@@ -37,7 +81,7 @@ export interface MapaTipoElemento {
   requiereRevision: boolean;
   prioridadClasificacion: number;
   activo: boolean;
-  atributos?: Record<string, any> | null;
+  atributos?: MapaMetadata | null;
 }
 
 export interface MapaElemento {
@@ -59,11 +103,11 @@ export interface MapaElemento {
   origenRef?: string | null;
   styleUrl?: string | null;
 
-  kmlExtendedData?: Record<string, any> | null;
-  atributos?: Record<string, any> | null;
+  kmlExtendedData?: MapaMetadata | null;
+  atributos?: MapaMetadata | null;
 
   geomTipo: MapaGeomTipo;
-  geometria?: any;
+  geometria?: MapaGeometryPayload | null;
   wkt?: string | null;
   latLon?: string | null;
   bbox?: string | null;
@@ -123,7 +167,7 @@ export interface MapaNodoSaveRequest {
   tipoNodo: 'carpeta' | 'zona' | 'sitio' | 'nodo_fisico';
   orden?: number;
   visible?: boolean;
-  atributos?: Record<string, any> | null;
+  atributos?: MapaMetadata | null;
 }
 
 export interface MapaTipoElementoSaveRequest {
@@ -148,7 +192,7 @@ export interface MapaTipoElementoSaveRequest {
   requiereRevision?: boolean;
   prioridadClasificacion?: number;
   activo?: boolean;
-  atributos?: Record<string, any> | null;
+  atributos?: MapaMetadata | null;
 }
 
 export interface MapaElementoSaveRequest {
@@ -164,8 +208,8 @@ export interface MapaElementoSaveRequest {
   origen?: string;
   origenRef?: string | null;
   styleUrl?: string | null;
-  kmlExtendedData?: Record<string, any> | null;
-  atributos?: Record<string, any> | null;
+  kmlExtendedData?: MapaMetadata | null;
+  atributos?: MapaMetadata | null;
   wkt: string;
   latLon?: string | null;
   ordenDibujo?: number;
@@ -173,7 +217,7 @@ export interface MapaElementoSaveRequest {
 
 export interface MapaPatchRequest {
   id: number;
-  cambios: Record<string, any>;
+  cambios: Record<string, unknown>;
 }
 
 export interface MapaExportRequest {
@@ -197,6 +241,7 @@ export interface ListOrPageOptions {
   size?: number;
   all?: boolean;
 }
+
 export interface MapaElementoGeometriaRequest {
   id: number;
   wkt: string;
@@ -207,6 +252,7 @@ export interface MapaGeometryEditedEvent {
   wkt: string;
   geomTipo: MapaGeomTipo;
 }
+
 export interface MapaLegendItem {
   idGeoTipoElemento: number;
   nombre: string;

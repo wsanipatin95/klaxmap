@@ -65,6 +65,15 @@ export function getBranchNodeIds(rootId: number, nodos: MapaNodo[]): Set<number>
   return result;
 }
 
+export function getBranchElementos(
+  rootId: number,
+  nodos: MapaNodo[],
+  elementos: MapaElemento[]
+): MapaElemento[] {
+  const branchNodeIds = getBranchNodeIds(rootId, nodos);
+  return elementos.filter((elemento) => branchNodeIds.has(elemento.idRedNodoFk));
+}
+
 export function isNodeHidden(
   nodeId: number,
   nodos: MapaNodo[],

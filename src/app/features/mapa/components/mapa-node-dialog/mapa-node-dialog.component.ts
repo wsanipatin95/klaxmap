@@ -214,7 +214,6 @@ export class MapaNodeDialogComponent {
             tipoNodo: payload.tipoNodo,
             orden: payload.orden ?? 0,
             visible: payload.visible ?? true,
-            atributos: {},
           },
         });
       },
@@ -232,7 +231,7 @@ export class MapaNodeDialogComponent {
 
   handleSaveSuccess() {
     this.saving.set(false);
-    this.auditRefreshKey.update(v => v + 1);
+    this.auditRefreshKey.update((v) => v + 1);
     this.closeImmediately();
   }
 
@@ -294,7 +293,7 @@ export class MapaNodeDialogComponent {
       tipoNodo: raw.tipoNodo,
       orden: Number.isFinite(raw.orden) ? raw.orden : 0,
       visible: raw.visible ?? true,
-      atributos: {},
+      atributos: null,
     };
   }
 

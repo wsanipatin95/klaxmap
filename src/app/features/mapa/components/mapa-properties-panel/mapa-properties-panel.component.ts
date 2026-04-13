@@ -71,7 +71,7 @@ export class MapaPropertiesPanelComponent {
         this.tabs?.markSaved(resp.data);
         this.statusKind.set('success');
         this.statusMessage.set('Los cambios se guardaron correctamente.');
-        this.auditRefreshKey.update(v => v + 1);
+        this.auditRefreshKey.update((v) => v + 1);
         this.saved.emit(resp.data);
       },
       error: (err) => {
@@ -86,8 +86,10 @@ export class MapaPropertiesPanelComponent {
   eliminar() {
     if (!this.elemento || this.saving()) return;
 
-    this.repo.eliminar(this.elemento.idGeoElemento).subscribe({
-      next: () => this.deleted.emit(this.elemento!.idGeoElemento),
+    const id = this.elemento.idGeoElemento;
+
+    this.repo.eliminar(id).subscribe({
+      next: () => this.deleted.emit(id),
       error: (err) => console.error(err),
     });
   }

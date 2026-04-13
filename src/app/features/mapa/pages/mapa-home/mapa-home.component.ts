@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, ViewChild, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 
 import { MapaUiStore } from '../../store/mapa-ui.store';
 import { MapaSelectionStore } from '../../store/mapa-selection.store';
@@ -37,7 +36,8 @@ import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog
 
 import { MapaCrudFacade } from '../../application/mapa-crud.facade';
 import { MapaInteractionFacade } from '../../application/mapa-interaction.facade';
-import { MapaGeocodeService } from '../../services/mapa-geocode.service';
+import { MapaGeoSearchFacade } from '../../application/mapa-geo-search.facade';
+import { MapaHomeViewFacade } from '../../application/mapa-home-view.facade';
 
 import type {
   TreeCreateNodeRequest,
@@ -46,6 +46,7 @@ import type {
   TreeNodeVisibilityChange,
 } from '../../components/mapa-tree/mapa-tree.component';
 import type { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
+import { getBranchNodeIds } from '../../utils/mapa-visibility.utils';
 
 @Component({
   selector: 'app-mapa-home',
@@ -77,7 +78,8 @@ export class MapaHomeComponent {
   readonly crud = inject(MapaCrudFacade);
   readonly interaction = inject(MapaInteractionFacade);
   readonly router = inject(Router);
-  readonly geocode = inject(MapaGeocodeService);
+  readonly geoSearch = inject(MapaGeoSearchFacade);
+  readonly view = inject(MapaHomeViewFacade);
 
   @ViewChild('importDialog') importDialog?: MapaImportDialogComponent;
   @ViewChild('exportDialog') exportDialog?: MapaExportDialogComponent;
@@ -112,6 +114,16 @@ export class MapaHomeComponent {
 
   readonly totalElementos = this.crud.totalElementos;
 
+  readonly elementosCanvas = this.view.elementosCanvas;
+  readonly searchResultIndex = this.view.searchResultIndex;
+  readonly quickInfo = this.view.quickInfo;
+
+  readonly geoSearchValue = this.geoSearch.value;
+  readonly geoSearchLoading = this.geoSearch.loading;
+  readonly geoSearchHasSearched = this.geoSearch.hasSearched;
+  readonly geoSearchResults = this.geoSearch.results;
+  readonly geoSearchError = this.geoSearch.error;
+
   readonly actionBusy = signal(false);
   readonly actionBusyTitle = signal('Guardando cambios');
   readonly actionBusyText = signal('Espera un momento mientras se procesa la información.');
@@ -119,75 +131,6 @@ export class MapaHomeComponent {
   readonly successVisible = signal(false);
   readonly successTitle = signal('');
   readonly successText = signal('');
-
-  readonly geoSearchValue = signal('');
-  readonly geoSearchLoading = signal(false);
-  readonly geoSearchHasSearched = signal(false);
-  readonly geoSearchResults = signal<MapaGeoSearchResult[]>([]);
-  readonly geoSearchError = signal<string | null>(null);
-
-  readonly elementosCanvas = computed(() => {
-    const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
-
-    return this.elementos().filter((el) => {
-      if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) {
-        return false;
-      }
-
-      return this.visibility.isElementoVisible(el, this.nodos());
-    });
-  });
-
-  readonly searchResultIndex = computed(() => {
-    const results = this.getSearchNavigableItems();
-    const selectedId = this.selectedElemento()?.idGeoElemento ?? null;
-
-    if (!results.length || selectedId == null) {
-      return -1;
-    }
-
-    return results.findIndex((item) => item.idGeoElemento === selectedId);
-  });
-
-  readonly quickInfo = computed(() => {
-    const q = (this.filtros.q() || '').trim();
-    const nodo = this.selectedNodo();
-    const elemento = this.selectedElemento();
-
-    if (this.editSessionActive()) {
-      return this.editSessionDirty()
-        ? `Editando forma: ${this.editSessionElementName() || 'elemento'} · cambios pendientes`
-        : `Editando forma: ${this.editSessionElementName() || 'elemento'}`;
-    }
-
-    if (this.ui.toolMode() === 'measure') {
-      return 'Modo medición activo · haz clic para marcar puntos y doble clic para terminar';
-    }
-
-    if (this.ui.propertiesOpen()) {
-      return this.infoPanelDirty()
-        ? `Editando datos: ${elemento?.nombre || 'elemento'} · cambios pendientes`
-        : `Editando datos: ${elemento?.nombre || 'elemento'}`;
-    }
-
-    if (this.ui.loading()) {
-      return 'Actualizando mapa...';
-    }
-
-    if (q) {
-      return `Búsqueda: "${q}" · ${this.elementosCanvas().length} resultado(s)`;
-    }
-
-    if (elemento) {
-      return `Activo: ${elemento.nombre}`;
-    }
-
-    if (nodo) {
-      return `Nodo: ${nodo.nodo}`;
-    }
-
-    return 'Selecciona o dibuja un elemento';
-  });
 
   constructor() {
     this.crud.loadAll();
@@ -204,100 +147,60 @@ export class MapaHomeComponent {
   }
 
   async onGeoSearchRequested(query: string) {
-    const trimmed = (query || '').trim();
-
-    this.geoSearchValue.set(trimmed);
-    this.geoSearchHasSearched.set(false);
-    this.geoSearchResults.set([]);
-    this.geoSearchError.set(null);
-
-    if (!trimmed) {
-      this.mapCanvas?.clearTemporarySearchMarker();
-      return;
-    }
-
-    this.geoSearchLoading.set(true);
-    this.geoSearchHasSearched.set(true);
-
-    try {
-      const results = await firstValueFrom(this.geocode.search(trimmed));
-      this.geoSearchResults.set(results);
-
-      if (!results.length) {
-        this.geoSearchError.set('No se encontraron ubicaciones para la búsqueda ingresada.');
-        return;
-      }
-
-      if (results.length === 1 && results[0].source === 'coordinates') {
-        this.onGeoSearchResultSelected(results[0]);
-      }
-    } catch {
-      this.geoSearchError.set('No se pudo consultar la ubicación en este momento.');
-    } finally {
-      this.geoSearchLoading.set(false);
-    }
+    await this.geoSearch.search(query, {
+      onClearedEmptyQuery: () => this.mapCanvas?.clearTemporarySearchMarker(),
+      onAutoSelectCoordinates: (result) => this.onGeoSearchResultSelected(result),
+    });
   }
 
   onGeoSearchResultSelected(result: MapaGeoSearchResult) {
-    this.geoSearchValue.set(result.label);
-    this.geoSearchError.set(null);
+    this.geoSearch.select(result);
     this.mapCanvas?.focusOnSearchResult(result);
     this.closeSidebarIfMobile();
   }
 
   clearGeoSearch() {
-    this.geoSearchValue.set('');
-    this.geoSearchLoading.set(false);
-    this.geoSearchHasSearched.set(false);
-    this.geoSearchResults.set([]);
-    this.geoSearchError.set(null);
-    this.mapCanvas?.clearTemporarySearchMarker();
+    this.geoSearch.clear(() => this.mapCanvas?.clearTemporarySearchMarker());
   }
 
   onToolbarSidebarToggle() {
     this.ui.toggleSidebar();
-    this.scheduleMapLayoutRefresh();
-    this.scheduleMapLayoutRefresh(280);
+    this.scheduleLayoutRefreshForSidebarChange();
   }
 
   onToolbarSidebarCompactToggle() {
     this.ui.toggleSidebarCompact();
-    this.scheduleMapLayoutRefresh();
-    this.scheduleMapLayoutRefresh(280);
+    this.scheduleLayoutRefreshForSidebarChange();
   }
 
   onSidebarBackdropRequested() {
     this.ui.setSidebarHidden(true);
-    this.scheduleMapLayoutRefresh();
-    this.scheduleMapLayoutRefresh(280);
+    this.scheduleLayoutRefreshForSidebarChange();
   }
 
   onSearchRequested(q: string) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.filtros.setQ(q);
-        this.selection.setElemento(null);
-        this.interaction.closeContextMenu();
-        this.reloadElementosAndCenterFirstIfSearching();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.filtros.setQ(q);
+      this.selection.setElemento(null);
+      this.interaction.closeContextMenu();
+      this.crud.loadElementos((items) => {
+        this.view.centerFirstVisibleSearchResultIfNeeded(items, {
+          onSelect: (item) => this.selection.setElemento(item),
+          centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
+        });
+      });
+    });
   }
 
   clearSearch() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.filtros.setQ('');
-        this.selection.setElemento(null);
-        this.interaction.closeContextMenu();
-        this.crud.loadElementos((items) => {
-          setTimeout(() => this.mapCanvas?.centerOnElementos(items), 0);
-        });
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.filtros.setQ('');
+      this.selection.setElemento(null);
+      this.interaction.closeContextMenu();
+      this.crud.loadElementos((items) => {
+        this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
+      });
+    });
   }
 
   onSearchPrev() {
@@ -309,46 +212,33 @@ export class MapaHomeComponent {
   }
 
   onNodoSelect(nodo: MapaNodo | null) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.selection.setNodo(nodo);
-        this.interaction.closeContextMenu();
+    this.runGuarded(() => {
+      this.selection.setNodo(nodo);
+      this.interaction.closeContextMenu();
 
-        setTimeout(() => {
-          if (!nodo) {
-            this.mapCanvas?.centerOnElementos(this.elementosCanvas());
-            return;
-          }
+      this.defer(() => {
+        if (!nodo) {
+          this.mapCanvas?.centerOnElementos(this.elementosCanvas());
+          return;
+        }
 
-          const branchNodeIds = this.getBranchNodeIds(nodo.idRedNodo);
-          const branchElementos = this.elementosCanvas().filter((el) =>
-            branchNodeIds.has(el.idRedNodoFk)
-          );
-
-          this.mapCanvas?.centerOnElementos(branchElementos);
-        }, 0);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+        this.mapCanvas?.centerOnElementos(this.view.getVisibleBranchElementos(nodo.idRedNodo));
+      });
+    });
   }
 
   onTipoSelect(tipoId: number | null) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.filtros.setTipo(tipoId);
-        this.selection.setElemento(null);
-        this.interaction.closeContextMenu();
-        this.crud.loadElementos((items) => {
-          const visibles = this.filterCanvasVisible(items);
-          if (visibles.length) {
-            setTimeout(() => this.mapCanvas?.centerOnElementos(visibles), 0);
-          }
-        });
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.filtros.setTipo(tipoId);
+      this.selection.setElemento(null);
+      this.interaction.closeContextMenu();
+      this.crud.loadElementos((items) => {
+        const visibles = this.view.filterCanvasVisible(items);
+        if (visibles.length) {
+          this.defer(() => this.mapCanvas?.centerOnElementos(visibles));
+        }
+      });
+    });
   }
 
   onElementoSelect(item: MapaElemento | null) {
@@ -366,9 +256,9 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
-        setTimeout(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento), 0);
+        this.defer(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento));
       },
     });
   }
@@ -377,7 +267,7 @@ export class MapaHomeComponent {
     this.selection.setElemento(item);
     this.interaction.setInfoPanelDirty(false);
     this.crud.loadElementos(() => {
-      setTimeout(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento), 0);
+      this.defer(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento));
     });
     this.showSuccess('Información guardada', `Se actualizó "${item.nombre}" correctamente.`);
   }
@@ -386,67 +276,54 @@ export class MapaHomeComponent {
     this.interaction.onElementoDeleted(id);
     this.visibility.clearElemento(id);
     this.crud.loadElementos((items) => {
-      setTimeout(() => this.mapCanvas?.centerOnElementos(this.filterCanvasVisible(items)), 0);
+      this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
     });
   }
 
   onRefresh() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.crud.refreshAll((items) => {
-          this.centerFirstSearchResultIfNeeded(items);
-
-          if (!(this.filtros.q() || '').trim()) {
-            setTimeout(() => {
-              this.mapCanvas?.centerOnElementos(this.filterCanvasVisible(items));
-            }, 0);
-          }
+    this.runGuarded(() => {
+      this.crud.refreshAll((items) => {
+        const centeredBySearch = this.view.centerFirstVisibleSearchResultIfNeeded(items, {
+          onSelect: (item) => this.selection.setElemento(item),
+          centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
         });
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+
+        if (!centeredBySearch) {
+          this.defer(() => {
+            this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items));
+          });
+        }
+      });
+    });
   }
 
   abrirImportacion() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.importDialog?.open();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.importDialog?.open();
+    });
   }
 
   abrirExportacion() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        const prefill: Partial<MapaExportRequest> = {
-          q: this.filtros.q(),
-          idRedNodoFk: this.filtros.idRedNodoFk(),
-          idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
-          visible: this.filtros.visible(),
-          nombreDocumento: 'mapa_red_isp',
-        };
+    this.runGuarded(() => {
+      const prefill: Partial<MapaExportRequest> = {
+        q: this.filtros.q(),
+        idRedNodoFk: this.filtros.idRedNodoFk(),
+        idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
+        visible: this.filtros.visible(),
+        nombreDocumento: 'mapa_red_isp',
+      };
 
-        this.exportDialog?.open(prefill, {
-          resultCount: this.elementosCanvas().length,
-          filterSummary: this.buildExportSummary(),
-        });
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+      this.exportDialog?.open(prefill, {
+        resultCount: this.elementosCanvas().length,
+        filterSummary: this.view.buildExportSummary(),
+      });
+    });
   }
 
   irATiposElemento() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.router.navigate(['/app/mapa/tipos']);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.router.navigate(['/app/mapa/tipos']);
+    });
   }
 
   onImported() {
@@ -471,7 +348,7 @@ export class MapaHomeComponent {
       (created) => {
         this.createDialog?.handleSaveSuccess();
         this.showSuccess('Elemento guardado', `Se creó "${created.nombre}" correctamente.`);
-        setTimeout(() => this.mapCanvas?.centerOnElemento(created.idGeoElemento), 0);
+        this.defer(() => this.mapCanvas?.centerOnElemento(created.idGeoElemento));
       },
       (message) => {
         this.createDialog?.handleSaveError(message);
@@ -501,13 +378,9 @@ export class MapaHomeComponent {
   }
 
   onToolbarSelectMode() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.setSelectMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.ui.setSelectMode();
+    });
   }
 
   onToolbarEditGeometryMode() {
@@ -519,71 +392,51 @@ export class MapaHomeComponent {
     }
 
     if (this.editSessionActive() && this.editSessionElementId() !== elemento.idGeoElemento) {
-      this.interaction.runWithPendingGuards(
-        () => {
-          this.ui.closeProperties();
-          this.interaction.setInfoPanelDirty(false);
-          this.ui.setEditGeometryMode();
-          setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
-        },
-        (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-        (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-      );
+      this.runGuarded(() => {
+        this.ui.closeProperties();
+        this.interaction.setInfoPanelDirty(false);
+        this.ui.setEditGeometryMode();
+        this.defer(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento));
+      });
       return;
     }
 
     this.ui.closeProperties();
     this.interaction.setInfoPanelDirty(false);
     this.ui.setEditGeometryMode();
-    setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
+    this.defer(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento));
   }
 
   onToolbarDrawPointMode() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.ui.setDrawPointMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.ui.setDrawPointMode();
+    });
   }
 
   onToolbarDrawLineMode() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.ui.setDrawLineMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.ui.setDrawLineMode();
+    });
   }
 
   onToolbarDrawPolygonMode() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.ui.setDrawPolygonMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.ui.setDrawPolygonMode();
+    });
   }
 
   onToolbarMeasureMode() {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.ui.setMeasureMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.ui.setMeasureMode();
+    });
   }
 
   saveGeometryEdition() {
@@ -625,7 +478,7 @@ export class MapaHomeComponent {
             this.interaction.resetEditSessionState();
             this.ui.setSelectMode();
             this.showSuccess('Forma guardada', `Se actualizó la geometría de "${elementName}".`);
-            setTimeout(() => this.mapCanvas?.centerOnElemento(updated.idGeoElemento), 0);
+            this.defer(() => this.mapCanvas?.centerOnElemento(updated.idGeoElemento));
           },
           () => {
             this.actionBusy.set(false);
@@ -654,55 +507,39 @@ export class MapaHomeComponent {
   }
 
   centerContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.selection.setElemento(item);
-        this.mapCanvas?.centerOnElemento(item.idGeoElemento);
-        this.interaction.closeContextMenu();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.selection.setElemento(item);
+      this.mapCanvas?.centerOnElemento(item.idGeoElemento);
+      this.interaction.closeContextMenu();
+    });
   }
 
   editDataContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.interaction.openInfoPanelForElemento(item, this.nodos());
-        this.ui.setSelectMode();
-        this.interaction.closeContextMenu();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.interaction.openInfoPanelForElemento(item, this.nodos());
+      this.ui.setSelectMode();
+      this.interaction.closeContextMenu();
+    });
   }
 
   editGeometryContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.selection.setElemento(item);
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.ui.setEditGeometryMode();
-        this.interaction.closeContextMenu();
+    this.runGuarded(() => {
+      this.selection.setElemento(item);
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.ui.setEditGeometryMode();
+      this.interaction.closeContextMenu();
 
-        setTimeout(() => {
-          this.mapCanvas?.centerOnElemento(item.idGeoElemento);
-        }, 0);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+      this.defer(() => {
+        this.mapCanvas?.centerOnElemento(item.idGeoElemento);
+      });
+    });
   }
 
   deleteContextElemento(item: MapaElemento) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.confirmDeleteElemento(item);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.confirmDeleteElemento(item);
+    });
   }
 
   onTreeNodeVisibilityChange(event: TreeNodeVisibilityChange) {
@@ -717,7 +554,8 @@ export class MapaHomeComponent {
       return;
     }
 
-    const hiddenBranchIds = this.getBranchNodeIds(event.node.idRedNodo);
+    const hiddenBranchIds = getBranchNodeIds(event.node.idRedNodo, this.nodos());
+
     const selectedNodo = this.selectedNodo();
     const selectedElemento = this.selectedElemento();
 
@@ -756,58 +594,42 @@ export class MapaHomeComponent {
   }
 
   onTreeCreateNodeRequested(event: TreeCreateNodeRequest) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.nodeDialog?.openCreate(event.parent, event.tipo);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.nodeDialog?.openCreate(event.parent, event.tipo);
+    });
   }
 
   onTreeEditNodeRequested(node: MapaNodo) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.nodeDialog?.openEdit(node);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.nodeDialog?.openEdit(node);
+    });
   }
 
   onTreeDeleteNodeRequested(node: MapaNodo) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.confirmDeleteNode(node);
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+    this.runGuarded(() => {
+      this.confirmDeleteNode(node);
+    });
   }
 
   onTreeDrawElementRequested(event: TreeDrawElementRequest) {
-    this.interaction.runWithPendingGuards(
-      () => {
-        this.ui.closeProperties();
-        this.interaction.setInfoPanelDirty(false);
-        this.selection.setNodo(event.node);
-        this.selection.setElemento(null);
+    this.runGuarded(() => {
+      this.ui.closeProperties();
+      this.interaction.setInfoPanelDirty(false);
+      this.selection.setNodo(event.node);
+      this.selection.setElemento(null);
 
-        if (event.geomTipo === 'point') {
-          this.ui.setDrawPointMode();
-          return;
-        }
+      if (event.geomTipo === 'point') {
+        this.ui.setDrawPointMode();
+        return;
+      }
 
-        if (event.geomTipo === 'linestring') {
-          this.ui.setDrawLineMode();
-          return;
-        }
+      if (event.geomTipo === 'linestring') {
+        this.ui.setDrawLineMode();
+        return;
+      }
 
-        this.ui.setDrawPolygonMode();
-      },
-      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
-    );
+      this.ui.setDrawPolygonMode();
+    });
   }
 
   onTreeCenterElementoRequested(elemento: MapaElemento) {
@@ -816,9 +638,9 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
-        setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
+        this.defer(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento));
       },
     });
   }
@@ -829,7 +651,7 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
         this.interaction.openInfoPanelForElemento(elemento, this.nodos());
         this.ui.setSelectMode();
@@ -843,12 +665,12 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
         this.ui.closeProperties();
         this.interaction.setInfoPanelDirty(false);
         this.ui.setEditGeometryMode();
-        setTimeout(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento), 0);
+        this.defer(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento));
       },
     });
   }
@@ -867,13 +689,9 @@ export class MapaHomeComponent {
         this.showSuccess('Nodo guardado', `Se creó "${created.nodo}" correctamente.`);
         this.selection.setNodo(created);
 
-        setTimeout(() => {
-          const branchNodeIds = this.getBranchNodeIds(created.idRedNodo);
-          const branchElementos = this.elementosCanvas().filter((el) =>
-            branchNodeIds.has(el.idRedNodoFk)
-          );
-          this.mapCanvas?.centerOnElementos(branchElementos);
-        }, 0);
+        this.defer(() => {
+          this.mapCanvas?.centerOnElementos(this.view.getVisibleBranchElementos(created.idRedNodo));
+        });
       },
       (message) => {
         this.nodeDialog?.handleSaveError(message);
@@ -891,13 +709,9 @@ export class MapaHomeComponent {
         this.showSuccess('Nodo actualizado', `Se actualizó "${updated.nodo}" correctamente.`);
         this.selection.setNodo(updated);
 
-        setTimeout(() => {
-          const branchNodeIds = this.getBranchNodeIds(updated.idRedNodo);
-          const branchElementos = this.elementosCanvas().filter((el) =>
-            branchNodeIds.has(el.idRedNodoFk)
-          );
-          this.mapCanvas?.centerOnElementos(branchElementos);
-        }, 0);
+        this.defer(() => {
+          this.mapCanvas?.centerOnElementos(this.view.getVisibleBranchElementos(updated.idRedNodo));
+        });
       },
       (message) => {
         this.nodeDialog?.handleSaveError(message);
@@ -915,149 +729,48 @@ export class MapaHomeComponent {
     this.successText.set('');
   }
 
+  private runGuarded(action: () => void) {
+    this.interaction.runWithPendingGuards(
+      action,
+      (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      (onConfirm) => this.confirmDiscardInfoChanges(onConfirm)
+    );
+  }
+
   private showSuccess(title: string, text: string) {
     this.successTitle.set(title);
     this.successText.set(text);
     this.successVisible.set(true);
   }
 
-  private reloadElementosAndCenterFirstIfSearching() {
-    this.crud.loadElementos((items) => {
-      this.centerFirstSearchResultIfNeeded(items);
-    });
-  }
-
-  private centerFirstSearchResultIfNeeded(items: MapaElemento[]) {
-    if (!(this.filtros.q() || '').trim()) {
-      return;
-    }
-
-    const visibles = this.filterCanvasVisible(items);
-    if (visibles.length === 0) {
-      this.selection.setElemento(null);
-      return;
-    }
-
-    const first = visibles[0];
-    this.selection.setElemento(first);
-    setTimeout(() => this.mapCanvas?.centerOnElemento(first.idGeoElemento), 0);
-  }
-
   private navigateSearchResults(direction: 1 | -1) {
-    const results = this.getSearchNavigableItems();
-
-    if (!results.length) {
+    const nextItem = this.view.getNextSearchNavigationItem(direction);
+    if (!nextItem) {
       return;
     }
-
-    const currentId = this.selectedElemento()?.idGeoElemento ?? null;
-    const currentIndex =
-      currentId == null
-        ? -1
-        : results.findIndex((item) => item.idGeoElemento === currentId);
-
-    const nextIndex =
-      currentIndex < 0
-        ? direction > 0
-          ? 0
-          : results.length - 1
-        : (currentIndex + direction + results.length) % results.length;
-
-    const nextItem = results[nextIndex];
 
     this.interaction.selectElementoWithPendingGuard({
       item: nextItem,
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => setTimeout(() => this.mapCanvas?.centerOnElemento(id), 0),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
-        setTimeout(() => this.mapCanvas?.centerOnElemento(nextItem.idGeoElemento), 0);
+        this.defer(() => this.mapCanvas?.centerOnElemento(nextItem.idGeoElemento));
       },
     });
-  }
-
-  private getSearchNavigableItems(): MapaElemento[] {
-    if (!(this.filtros.q() || '').trim()) {
-      return [];
-    }
-
-    return this.elementosCanvas();
-  }
-
-  private filterCanvasVisible(items: MapaElemento[]): MapaElemento[] {
-    const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
-
-    return items.filter((el) => {
-      if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) {
-        return false;
-      }
-
-      return this.visibility.isElementoVisible(el, this.nodos());
-    });
-  }
-
-  private getBranchNodeIds(rootId: number): Set<number> {
-    const ids = new Set<number>();
-    const queue = [rootId];
-
-    while (queue.length) {
-      const current = queue.shift()!;
-      if (ids.has(current)) continue;
-
-      ids.add(current);
-
-      for (const node of this.nodos()) {
-        if ((node.idRedNodoPadreFk ?? null) === current) {
-          queue.push(node.idRedNodo);
-        }
-      }
-    }
-
-    return ids;
-  }
-
-  private buildExportSummary(): string {
-    const parts: string[] = [];
-
-    if ((this.filtros.q() || '').trim()) {
-      parts.push(`Búsqueda: "${this.filtros.q()}"`);
-    }
-
-    const nodoId = this.filtros.idRedNodoFk();
-    if (nodoId != null) {
-      const nodo = this.nodos().find((n) => n.idRedNodo === nodoId);
-      parts.push(`Nodo: ${nodo?.nodo ?? nodoId}`);
-    } else {
-      parts.push('Nodo: todos');
-    }
-
-    const tipoId = this.filtros.idGeoTipoElementoFk();
-    if (tipoId != null) {
-      const tipo = this.tipos().find((t) => t.idGeoTipoElemento === tipoId);
-      parts.push(`Tipo: ${tipo?.nombre ?? tipoId}`);
-    } else {
-      parts.push('Tipo: todos');
-    }
-
-    const visible = this.filtros.visible();
-    if (visible === true) {
-      parts.push('Visibilidad: sólo visibles');
-    } else if (visible === false) {
-      parts.push('Visibilidad: sólo no visibles');
-    } else {
-      parts.push('Visibilidad: todos');
-    }
-
-    return parts.join(' · ');
   }
 
   private closeSidebarIfMobile() {
     if (typeof window !== 'undefined' && window.innerWidth < 860) {
       this.ui.setSidebarHidden(true);
-      this.scheduleMapLayoutRefresh();
-      this.scheduleMapLayoutRefresh(280);
+      this.scheduleLayoutRefreshForSidebarChange();
     }
+  }
+
+  private scheduleLayoutRefreshForSidebarChange() {
+    this.scheduleMapLayoutRefresh();
+    this.scheduleMapLayoutRefresh(280);
   }
 
   private scheduleMapLayoutRefresh(delay = 0) {
@@ -1129,7 +842,7 @@ export class MapaHomeComponent {
       },
       () => {
         this.crud.deleteNodo(node.idRedNodo, () => {
-          setTimeout(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()), 0);
+          this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
         });
       }
     );
@@ -1157,9 +870,13 @@ export class MapaHomeComponent {
             this.interaction.closeInfoPanel();
           }
 
-          setTimeout(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()), 0);
+          this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
         });
       }
     );
+  }
+
+  private defer(action: () => void) {
+    setTimeout(action, 0);
   }
 }
