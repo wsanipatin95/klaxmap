@@ -284,3 +284,33 @@
     max-width: 11rem;
   }
 }
+
+
+.mapa-canvas-shell,
+.mapa-canvas,
+.leaflet-container,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-left,
+.leaflet-right {
+  overflow: visible !important;
+}
+
+.leaflet-control-layers {
+  position: relative;
+  z-index: 1400 !important;
+}
+
+.leaflet-control-layers-expanded {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+.leaflet-control-layers-list {
+  overflow: visible !important;
+  max-height: none !important;
+}
+.leaflet-control-container {
+  overflow: visible !important;
+}

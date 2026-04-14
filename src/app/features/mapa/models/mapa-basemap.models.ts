@@ -65,7 +65,7 @@ export const MAPA_BASEMAP_OPTIONS: readonly MapaBasemapOption[] = [
     options: {
       maxZoom: 20,
       maxNativeZoom: 20,
-      attribution: 'Google imagery · verificar licencias antes de uso productivo',
+      attribution: 'Google imagery ·',
     },
   },
   {

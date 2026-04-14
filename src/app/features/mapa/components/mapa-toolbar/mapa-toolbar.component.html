@@ -77,8 +77,8 @@
       type="button"
       class="tool-btn"
       [class.active]="isActive('draw-line')"
-      title="Crear línea"
-      aria-label="Crear línea"
+      title="Crear ruta"
+      aria-label="Crear ruta"
       (click)="drawLineModeRequested.emit()"
     >
       <i class="pi pi-minus"></i>
@@ -95,6 +95,8 @@
     >
       <i class="pi pi-stop"></i>
     </button>
+
+    <span class="tool-separator" aria-hidden="true"></span>
 
     <button
       type="button"
