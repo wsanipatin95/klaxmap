@@ -4,109 +4,169 @@
   [modal]="true"
   [closable]="!saving()"
   [dismissableMask]="!saving()"
-  [style]="{ width: '42rem' }"
-  header="Nuevo elemento"
+  [style]="{ width: '48rem', maxWidth: '96vw' }"
+  [contentStyle]="{ padding: '0', overflow: 'hidden' }"
+  [header]="dialogTitle()"
 >
-  <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="guardar()">
-    <div class="save-blocker" *ngIf="saving()">
-      <div class="save-blocker-card">
-        <div class="save-blocker-title">Guardando elemento...</div>
-        <div class="save-blocker-text">Espera un momento mientras se registra la información.</div>
-      </div>
+  <div class="dialog-shell">
+    <div class="dialog-view-scroll">
+      <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="save-blocker" *ngIf="saving()">
+          <div class="save-blocker-card">
+            <div class="save-blocker-title">Guardando elemento...</div>
+            <div class="save-blocker-text">Espera un momento mientras se registra la información.</div>
+          </div>
+        </div>
+
+        <fieldset class="dialog-fieldset" [disabled]="saving()">
+          <div class="mini-summary">
+            <span class="summary-chip" *ngIf="selectedNodo() as nodo">
+              Nodo: {{ nodo.nodo }}
+            </span>
+
+            <span class="summary-chip" *ngIf="selectedTipo() as tipo">
+              Tipo: {{ tipo.nombre }}
+            </span>
+          </div>
+
+          <div class="form-grid top-row">
+            <div class="field field-node">
+              <label for="elemento-nodo">Nodo</label>
+
+              <div class="node-picker" [class.is-locked]="nodeLocked()">
+                <p class="field-hint" *ngIf="nodeLocked()">
+                  Nodo fijado por el contexto actual.
+                </p>
+
+                <input
+                  *ngIf="!nodeLocked()"
+                  type="text"
+                  class="node-search-input"
+                  [value]="nodeSearch()"
+                  (input)="onNodeSearchInput(($any($event.target).value || ''))"
+                  placeholder="Buscar nodo..."
+                  autocomplete="off"
+                />
+
+                <select id="elemento-nodo" formControlName="idRedNodoFk">
+                  <option [ngValue]="null" *ngIf="!nodeLocked()">Seleccionar</option>
+
+                  <option *ngFor="let n of filteredNodos(); trackBy: trackByNodo" [ngValue]="n.idRedNodo">
+                    {{ n.nodo }}
+                  </option>
+                </select>
+              </div>
+
+              <p class="field-hint" *ngIf="!nodeLocked() && nodeSearch().trim() && filteredNodos().length === 0">
+                No hay nodos que coincidan con la búsqueda.
+              </p>
+
+              <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
+            </div>
+
+            <div class="field field-name">
+              <label for="elemento-nombre">Nombre</label>
+              <input
+                id="elemento-nombre"
+                type="text"
+                formControlName="nombre"
+                placeholder="Nombre"
+              />
+              <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="elemento-descripcion">Descripción</label>
+            <textarea
+              id="elemento-descripcion"
+              rows="4"
+              formControlName="descripcion"
+              placeholder="Descripción breve"
+            ></textarea>
+            <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label>Tipo</label>
+              <span class="field-hint">Selecciona una sola opción.</span>
+            </div>
+
+            <div class="tipo-groups" *ngIf="tiposAgrupados().length; else noTiposCompatibles">
+              <section class="tipo-group" *ngFor="let group of tiposAgrupados(); trackBy: trackByGrupo">
+                <div class="tipo-group-title">{{ group.agrupacion }}</div>
+
+                <div class="tipo-options">
+                  <label
+                    class="tipo-option"
+                    *ngFor="let tipo of group.tipos; trackBy: trackByTipo"
+                    [class.active]="isTipoSelected(tipo)"
+                  >
+                    <input
+                      type="radio"
+                      name="elemento-tipo"
+                      [checked]="isTipoSelected(tipo)"
+                      (change)="onTipoPicked(tipo.idGeoTipoElemento)"
+                    />
+
+                    <span class="tipo-option-preview">
+                      <span
+                        class="tipo-preview-shape"
+                        [ngClass]="previewShapeClass(tipo)"
+                        [ngStyle]="previewStyle(tipo)"
+                      >
+                        <span
+                          *ngIf="showMaterialPreview(tipo)"
+                          class="tipo-preview-material"
+                          [class]="previewMaterialFamily(tipo)"
+                        >
+                          {{ previewMaterialGlyph(tipo) }}
+                        </span>
+
+                        <i
+                          *ngIf="showClassPreview(tipo)"
+                          class="tipo-preview-class"
+                          [class]="previewClass(tipo)"
+                        ></i>
+
+                        <img
+                          *ngIf="showUrlPreview(tipo)"
+                          class="tipo-preview-image"
+                          [src]="previewImageUrl(tipo)"
+                          alt=""
+                        />
+                      </span>
+                    </span>
+
+                    <span class="tipo-option-copy">
+                      <span class="tipo-option-name">{{ tipo.nombre }}</span>
+                      <span class="tipo-option-code" *ngIf="tipo.codigo">{{ tipo.codigo }}</span>
+                    </span>
+                  </label>
+                </div>
+              </section>
+            </div>
+
+            <ng-template #noTiposCompatibles>
+              <div class="empty-state">
+                No hay tipos compatibles con la geometría actual.
+              </div>
+            </ng-template>
+
+            <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
+          </div>
+
+          <div class="wkt-box">
+            <div class="wkt-title">Geometría</div>
+            <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
+          </div>
+        </fieldset>
+
+        <p class="error" *ngIf="error() as err">{{ err }}</p>
+      </form>
     </div>
-
-    <fieldset class="dialog-fieldset" [disabled]="saving()">
-      <div class="mini-summary">
-        <span class="summary-chip">{{ geomLabel() }}</span>
-
-        <span class="summary-chip" *ngIf="selectedNodo() as nodo">
-          {{ nodo.nodo }}
-        </span>
-
-        <span class="summary-chip" *ngIf="selectedTipo() as tipo">
-          {{ tipo.nombre }}
-        </span>
-      </div>
-
-      <div class="form-grid two-cols">
-        <div class="field">
-          <label for="elemento-nodo">Nodo</label>
-          <select id="elemento-nodo" formControlName="idRedNodoFk">
-            <option [ngValue]="null">Seleccionar</option>
-            <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-              {{ n.nodo }}
-            </option>
-          </select>
-          <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
-        </div>
-
-        <div class="field">
-          <label for="elemento-tipo">Tipo</label>
-          <select
-            id="elemento-tipo"
-            formControlName="idGeoTipoElementoFk"
-            (change)="onTipoChange()"
-          >
-            <option [ngValue]="null">Seleccionar</option>
-            <option *ngFor="let t of tiposCompatibles()" [ngValue]="t.idGeoTipoElemento">
-              {{ t.nombre }}
-            </option>
-          </select>
-          <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="elemento-nombre">Nombre</label>
-        <input
-          id="elemento-nombre"
-          type="text"
-          formControlName="nombre"
-          placeholder="Nombre"
-        />
-        <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
-      </div>
-
-      <div class="field">
-        <label for="elemento-descripcion">Descripción</label>
-        <textarea
-          id="elemento-descripcion"
-          formControlName="descripcion"
-          placeholder="Descripción breve"
-        ></textarea>
-        <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
-      </div>
-
-      <div class="form-grid two-cols">
-        <div class="field">
-          <label for="elemento-estado">Estado</label>
-          <select id="elemento-estado" formControlName="estado">
-            <option value="activo">Activo</option>
-            <option value="planificado">Planificado</option>
-            <option value="pendiente_clasificar">Pendiente</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="elemento-orden">Orden</label>
-          <input id="elemento-orden" type="number" formControlName="ordenDibujo" />
-          <p class="field-error" *ngIf="controlError('ordenDibujo') as err">{{ err }}</p>
-        </div>
-      </div>
-
-      <label class="check-card">
-        <input type="checkbox" formControlName="visible" />
-        <span>Visible</span>
-      </label>
-
-      <div class="wkt-box">
-        <div class="wkt-title">Geometría</div>
-        <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
-      </div>
-    </fieldset>
-
-    <p class="error" *ngIf="error() as err">{{ err }}</p>
-  </form>
+  </div>
 
   <ng-template pTemplate="footer">
     <div class="dialog-footer">
