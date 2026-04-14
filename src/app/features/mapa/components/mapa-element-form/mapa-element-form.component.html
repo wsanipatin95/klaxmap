@@ -1,81 +1,144 @@
 <div class="element-form-shell" *ngIf="elemento as el">
-  <div class="element-form-head">
-    <div class="head-copy">
-      <h4>{{ el.nombre }}</h4>
-      <span class="head-meta">ID {{ el.idGeoElemento }}</span>
-    </div>
 
-    <span class="dirty-badge" *ngIf="hasUnsavedChanges()">Sin guardar</span>
-  </div>
+  <form class="element-form" (ngSubmit)="guardar()">
+    <div class="form-grid top-row">
+      <div class="field field-node">
+        <label for="elemento-nodo-edit">Nodo</label>
 
-  <fieldset class="form-fieldset" [disabled]="saving">
-    <div class="form-grid">
-      <div class="field span-2">
-        <label>Nombre</label>
+        <p-select
+          id="elemento-nodo-edit"
+          class="node-select"
+          [(ngModel)]="form.idRedNodoFk"
+          [options]="nodeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Buscar y seleccionar nodo"
+          [filter]="true"
+          filterBy="label"
+          filterPlaceholder="Buscar nodo..."
+          [showClear]="true"
+          [appendTo]="'body'"
+          [emptyMessage]="'No hay nodos disponibles'"
+          name="idRedNodoFk"
+          (ngModelChange)="onFieldChanged()"
+        >
+        </p-select>
+
+        <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
+      </div>
+
+      <div class="field field-name">
+        <label for="elemento-nombre-edit">Nombre</label>
         <input
+          id="elemento-nombre-edit"
           type="text"
           [(ngModel)]="form.nombre"
-          (ngModelChange)="onFieldChanged()"
+          name="nombre"
           placeholder="Nombre"
-        />
-      </div>
-
-      <div class="field span-2">
-        <label>Estado</label>
-        <select [(ngModel)]="form.estado" (ngModelChange)="onFieldChanged()">
-          <option value="activo">Activo</option>
-          <option value="planificado">Planificado</option>
-          <option value="pendiente_clasificar">Pendiente</option>
-        </select>
-      </div>
-
-      <div class="field span-4">
-        <label>Descripción</label>
-        <textarea
-          rows="4"
-          [(ngModel)]="form.descripcion"
           (ngModelChange)="onFieldChanged()"
-          placeholder="Descripción breve"
-        ></textarea>
-      </div>
-
-      <div class="field span-2">
-        <label>Nodo</label>
-        <select [(ngModel)]="form.idRedNodoFk" (ngModelChange)="onFieldChanged()">
-          <option *ngFor="let n of nodos" [ngValue]="n.idRedNodo">
-            {{ n.nodo }}
-          </option>
-        </select>
-      </div>
-
-      <div class="field span-2">
-        <label>Tipo</label>
-        <select [(ngModel)]="form.idGeoTipoElementoFk" (ngModelChange)="onFieldChanged()">
-          <option *ngFor="let t of tipos" [ngValue]="t.idGeoTipoElemento">
-            {{ t.nombre }}
-          </option>
-        </select>
+        />
+        <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
       </div>
     </div>
 
-    <label class="check-line">
-      <input type="checkbox" [(ngModel)]="form.visible" (ngModelChange)="onFieldChanged()" />
-      <span>Visible</span>
-    </label>
+    <div class="field">
+      <label for="elemento-descripcion-edit">Descripción</label>
+      <textarea
+        id="elemento-descripcion-edit"
+        rows="2"
+        [(ngModel)]="form.descripcion"
+        name="descripcion"
+        placeholder="Descripción breve"
+        (ngModelChange)="onFieldChanged()"
+      ></textarea>
+      <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
+    </div>
+
+    <div class="field">
+      <label>Tipo</label>
+
+      <div class="tipo-groups" *ngIf="tiposAgrupados.length; else noTiposCompatibles">
+        <section class="tipo-group" *ngFor="let group of tiposAgrupados; trackBy: trackByGrupo">
+          <div class="tipo-group-title">{{ group.agrupacion }}</div>
+
+          <div class="tipo-options">
+            <label
+              class="tipo-option"
+              *ngFor="let tipo of group.tipos; trackBy: trackByTipo"
+              [class.active]="isTipoSelected(tipo)"
+            >
+              <input
+                type="radio"
+                name="idGeoTipoElementoFk"
+                [checked]="isTipoSelected(tipo)"
+                (change)="onTipoPicked(tipo.idGeoTipoElemento)"
+              />
+
+              <span class="tipo-option-preview">
+                <span
+                  class="tipo-preview-shape"
+                  [ngClass]="previewShapeClass(tipo)"
+                  [ngStyle]="previewStyle(tipo)"
+                >
+                  <span
+                    *ngIf="showMaterialPreview(tipo)"
+                    class="tipo-preview-material"
+                    [class]="previewMaterialFamily(tipo)"
+                  >
+                    {{ previewMaterialGlyph(tipo) }}
+                  </span>
+
+                  <i
+                    *ngIf="showClassPreview(tipo)"
+                    class="tipo-preview-class"
+                    [class]="previewClass(tipo)"
+                  ></i>
+
+                  <img
+                    *ngIf="showUrlPreview(tipo)"
+                    class="tipo-preview-image"
+                    [src]="previewImageUrl(tipo)"
+                    alt=""
+                  />
+                </span>
+              </span>
+
+              <span class="tipo-option-name">{{ tipo.nombre }}</span>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <ng-template #noTiposCompatibles>
+        <div class="empty-state">
+          No hay tipos compatibles con la geometría actual.
+        </div>
+      </ng-template>
+
+      <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
+    </div>
+
+    <p class="error" *ngIf="error as err">{{ err }}</p>
 
     <div class="actions">
       <button
         type="button"
+        class="ghost-btn"
+        [disabled]="saving || !hasUnsavedChanges()"
+        (click)="discardChanges()"
+      >
+        Restaurar
+      </button>
+
+      <button
+        type="submit"
         class="save-btn"
-        [disabled]="!hasUnsavedChanges() || saving"
-        (click)="guardar()"
+        [disabled]="saving || !hasUnsavedChanges()"
       >
         {{ saving ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
-  </fieldset>
-
-  <p class="save-hint" *ngIf="saving">Guardando cambios del elemento...</p>
+  </form>
 </div>
 
 <app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>

@@ -75,11 +75,6 @@
         <section class="panel-view" *ngIf="activeTab() === 'edicion'">
           <div class="panel-view-scroll">
             <section class="panel-section">
-              <div class="section-head">
-                <h4>Datos del elemento</h4>
-                <p>Edita la información principal y guarda los cambios.</p>
-              </div>
-
               <app-mapa-properties-tabs
                 [elemento]="elemento"
                 [tipos]="tipos"
