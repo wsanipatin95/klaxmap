@@ -82,6 +82,7 @@ export interface MapaTipoElemento {
   prioridadClasificacion: number;
   activo: boolean;
   atributos?: MapaMetadata | null;
+  agrupacion?: string | null;
 }
 
 export interface MapaElemento {

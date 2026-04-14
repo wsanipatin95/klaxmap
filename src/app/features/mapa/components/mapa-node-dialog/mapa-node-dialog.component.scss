@@ -5,26 +5,26 @@
 .dialog-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: min(72vh, 44rem);
-  max-height: min(72vh, 44rem);
+  min-height: auto;
+  max-height: min(72vh, 40rem);
   overflow: hidden;
 }
 
 .dialog-shell.is-edit {
-  min-height: min(78vh, 48rem);
-  max-height: min(78vh, 48rem);
+  min-height: auto;
+  max-height: min(76vh, 44rem);
 }
 
 .dialog-tabs {
   display: flex;
   gap: 0.5rem;
-  padding: 0.9rem 1rem 0;
+  padding: 0.85rem 1rem 0;
   background: #ffffff;
   border-bottom: 1px solid #eef2f7;
 }
 
 .dialog-tab-btn {
-  min-height: 2.35rem;
+  min-height: 2.2rem;
   padding: 0 0.95rem;
   border-radius: 0.8rem;
   border: 1px solid #d8dee6;
@@ -59,14 +59,14 @@
   height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 1rem;
+  padding: 0.85rem 1rem 0.8rem;
 }
 
 .dialog-body {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .dialog-body.is-saving {
@@ -80,7 +80,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .save-blocker {
@@ -120,13 +120,14 @@
 .mini-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  margin-bottom: 0.1rem;
 }
 
 .summary-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 1.75rem;
+  min-height: 1.72rem;
   padding: 0 0.65rem;
   border-radius: 999px;
   border: 1px solid #d8dee6;
@@ -138,11 +139,12 @@
 
 .form-grid {
   display: grid;
-  gap: 0.7rem 0.8rem;
+  gap: 0.65rem 0.8rem;
 }
 
-.two-cols {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.code-name-row {
+  grid-template-columns: 12rem minmax(0, 1fr);
+  align-items: start;
 }
 
 .field {
@@ -150,6 +152,18 @@
   flex-direction: column;
   gap: 0.28rem;
   min-width: 0;
+}
+
+.field-code {
+  min-width: 0;
+}
+
+.field-name {
+  min-width: 0;
+}
+
+.field-tipo {
+  max-width: 17rem;
 }
 
 label {
@@ -180,7 +194,7 @@ select {
 
 textarea {
   resize: vertical;
-  min-height: 6.5rem;
+  min-height: 5.4rem;
 }
 
 input:focus,
@@ -197,25 +211,20 @@ textarea.ng-invalid.ng-touched {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
 }
 
-.check-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.4rem;
-  padding: 0 0.75rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.65rem;
+select:disabled,
+input:disabled,
+textarea:disabled {
   background: #f8fafc;
   color: #475569;
-  font-size: 0.72rem;
-  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
-.check-card input {
-  width: auto;
-  height: auto;
+.field-hint {
   margin: 0;
-  accent-color: #7b0061;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 .field-error {
@@ -279,13 +288,17 @@ textarea.ng-invalid.ng-touched {
 }
 
 @media (max-width: 768px) {
-  .two-cols {
+  .code-name-row {
     grid-template-columns: 1fr;
+  }
+
+  .field-tipo {
+    max-width: none;
   }
 
   .dialog-shell,
   .dialog-shell.is-edit {
-    min-height: min(78vh, 48rem);
-    max-height: min(78vh, 48rem);
+    min-height: auto;
+    max-height: min(82vh, 48rem);
   }
 }

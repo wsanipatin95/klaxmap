@@ -95,6 +95,8 @@ export class MapaNodeDialogComponent {
       { emitEvent: false }
     );
 
+    this.form.controls.tipoNodo.disable({ emitEvent: false });
+
     this.form.markAsPristine();
     this.form.markAsUntouched();
     this.visible.set(true);
@@ -122,6 +124,8 @@ export class MapaNodeDialogComponent {
       },
       { emitEvent: false }
     );
+
+    this.form.controls.tipoNodo.enable({ emitEvent: false });
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -298,6 +302,7 @@ export class MapaNodeDialogComponent {
   }
 
   private closeImmediately() {
+    this.form.controls.tipoNodo.enable({ emitEvent: false });
     this.visible.set(false);
     this.saving.set(false);
     this.error.set(null);

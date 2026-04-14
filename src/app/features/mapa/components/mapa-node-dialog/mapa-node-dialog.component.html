@@ -4,7 +4,7 @@
   [modal]="true"
   [closable]="!saving()"
   [dismissableMask]="!saving()"
-  [style]="{ width: isEditMode() ? '56rem' : '38rem', maxWidth: '96vw' }"
+  [style]="{ width: isEditMode() ? '52rem' : '42rem', maxWidth: '96vw' }"
   [contentStyle]="{ padding: '0', overflow: 'hidden' }"
   [header]="title()"
 >
@@ -55,15 +55,27 @@
                 </span>
               </div>
 
-              <div class="field">
-                <label for="node-nodo">Nombre</label>
-                <input
-                  id="node-nodo"
-                  type="text"
-                  formControlName="nodo"
-                  placeholder="Nombre"
-                />
-                <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
+              <div class="form-grid code-name-row">
+                <div class="field field-code">
+                  <label for="node-codigo">Código</label>
+                  <input
+                    id="node-codigo"
+                    type="text"
+                    formControlName="codigo"
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                <div class="field field-name">
+                  <label for="node-nodo">Nombre</label>
+                  <input
+                    id="node-nodo"
+                    type="text"
+                    formControlName="nodo"
+                    placeholder="Nombre"
+                  />
+                  <p class="field-error" *ngIf="controlError('nodo') as err">{{ err }}</p>
+                </div>
               </div>
 
               <div class="field">
@@ -77,40 +89,18 @@
                 <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
               </div>
 
-              <div class="form-grid two-cols">
-                <div class="field">
-                  <label for="node-tipo">Tipo</label>
-                  <select id="node-tipo" formControlName="tipoNodo">
-                    <option value="carpeta">Carpeta</option>
-                    <option value="zona">Zona</option>
-                    <option value="sitio">Sitio</option>
-                    <option value="nodo_fisico">Nodo físico</option>
-                  </select>
-                  <p class="field-error" *ngIf="controlError('tipoNodo') as err">{{ err }}</p>
-                </div>
-
-                <div class="field">
-                  <label for="node-codigo">Código</label>
-                  <input
-                    id="node-codigo"
-                    type="text"
-                    formControlName="codigo"
-                    placeholder="Opcional"
-                  />
-                </div>
-              </div>
-
-              <div class="form-grid two-cols">
-                <div class="field">
-                  <label for="node-orden">Orden</label>
-                  <input id="node-orden" type="number" formControlName="orden" />
-                  <p class="field-error" *ngIf="controlError('orden') as err">{{ err }}</p>
-                </div>
-
-                <label class="check-card">
-                  <input type="checkbox" formControlName="visible" />
-                  <span>Visible</span>
-                </label>
+              <div class="field field-tipo">
+                <label for="node-tipo">Tipo</label>
+                <select id="node-tipo" formControlName="tipoNodo">
+                  <option value="carpeta">Carpeta</option>
+                  <option value="zona">Zona</option>
+                  <option value="sitio">Sitio</option>
+                  <option value="nodo_fisico">Nodo físico</option>
+                </select>
+                <p class="field-hint" *ngIf="mode() === 'create'">
+                  El tipo se asigna automáticamente al crear este nodo.
+                </p>
+                <p class="field-error" *ngIf="controlError('tipoNodo') as err">{{ err }}</p>
               </div>
             </fieldset>
 
