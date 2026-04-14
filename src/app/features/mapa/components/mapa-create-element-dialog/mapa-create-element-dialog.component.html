@@ -4,7 +4,7 @@
   [modal]="true"
   [closable]="!saving()"
   [dismissableMask]="!saving()"
-  [style]="{ width: '48rem', maxWidth: '96vw' }"
+  [style]="{ width: '44rem', maxWidth: '94vw' }"
   [contentStyle]="{ padding: '0', overflow: 'hidden' }"
   [header]="dialogTitle()"
 >
@@ -19,47 +19,37 @@
         </div>
 
         <fieldset class="dialog-fieldset" [disabled]="saving()">
-          <div class="mini-summary">
-            <span class="summary-chip" *ngIf="selectedNodo() as nodo">
-              Nodo: {{ nodo.nodo }}
-            </span>
-
-            <span class="summary-chip" *ngIf="selectedTipo() as tipo">
-              Tipo: {{ tipo.nombre }}
-            </span>
-          </div>
-
           <div class="form-grid top-row">
             <div class="field field-node">
               <label for="elemento-nodo">Nodo</label>
 
-              <div class="node-picker" [class.is-locked]="nodeLocked()">
-                <p class="field-hint" *ngIf="nodeLocked()">
-                  Nodo fijado por el contexto actual.
-                </p>
+              <ng-container *ngIf="!nodeLocked(); else lockedNodeField">
+                <p-select
+                  id="elemento-nodo"
+                  class="node-select"
+                  formControlName="idRedNodoFk"
+                  [options]="nodosSelectOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Buscar y seleccionar nodo"
+                  [filter]="true"
+                  filterBy="label"
+                  filterPlaceholder="Buscar nodo..."
+                  [showClear]="true"
+                  [appendTo]="'body'"
+                  [emptyMessage]="'No hay nodos disponibles'"
+                >
+                </p-select>
+              </ng-container>
 
+              <ng-template #lockedNodeField>
                 <input
-                  *ngIf="!nodeLocked()"
+                  id="elemento-nodo-locked"
                   type="text"
-                  class="node-search-input"
-                  [value]="nodeSearch()"
-                  (input)="onNodeSearchInput(($any($event.target).value || ''))"
-                  placeholder="Buscar nodo..."
-                  autocomplete="off"
+                  [value]="selectedNodoDisplay()"
+                  disabled
                 />
-
-                <select id="elemento-nodo" formControlName="idRedNodoFk">
-                  <option [ngValue]="null" *ngIf="!nodeLocked()">Seleccionar</option>
-
-                  <option *ngFor="let n of filteredNodos(); trackBy: trackByNodo" [ngValue]="n.idRedNodo">
-                    {{ n.nodo }}
-                  </option>
-                </select>
-              </div>
-
-              <p class="field-hint" *ngIf="!nodeLocked() && nodeSearch().trim() && filteredNodos().length === 0">
-                No hay nodos que coincidan con la búsqueda.
-              </p>
+              </ng-template>
 
               <p class="field-error" *ngIf="controlError('idRedNodoFk') as err">{{ err }}</p>
             </div>
@@ -88,10 +78,7 @@
           </div>
 
           <div class="field">
-            <div class="field-head">
-              <label>Tipo</label>
-              <span class="field-hint">Selecciona una sola opción.</span>
-            </div>
+            <label>Tipo</label>
 
             <div class="tipo-groups" *ngIf="tiposAgrupados().length; else noTiposCompatibles">
               <section class="tipo-group" *ngFor="let group of tiposAgrupados(); trackBy: trackByGrupo">
@@ -139,10 +126,7 @@
                       </span>
                     </span>
 
-                    <span class="tipo-option-copy">
-                      <span class="tipo-option-name">{{ tipo.nombre }}</span>
-                      <span class="tipo-option-code" *ngIf="tipo.codigo">{{ tipo.codigo }}</span>
-                    </span>
+                    <span class="tipo-option-name">{{ tipo.nombre }}</span>
                   </label>
                 </div>
               </section>

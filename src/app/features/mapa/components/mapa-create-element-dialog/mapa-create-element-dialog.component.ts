@@ -17,6 +17,7 @@ import {
   type FormGroup,
 } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
 
 import type {
   MapaElementoSaveRequest,
@@ -56,22 +57,36 @@ interface TipoAgrupadoVm {
   tipos: MapaTipoElemento[];
 }
 
+interface NodoSelectOption {
+  value: number;
+  label: string;
+}
+
 @Component({
   selector: 'app-mapa-create-element-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DialogModule, MapaConfirmDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, DialogModule, SelectModule, MapaConfirmDialogComponent],
   templateUrl: './mapa-create-element-dialog.component.html',
   styleUrl: './mapa-create-element-dialog.component.scss',
 })
 export class MapaCreateElementDialogComponent {
-  @Input() nodos: MapaNodo[] = [];
-  @Input() tipos: MapaTipoElemento[] = [];
+  private readonly fb = inject(FormBuilder);
+
+  private readonly nodosState = signal<MapaNodo[]>([]);
+  private readonly tiposState = signal<MapaTipoElemento[]>([]);
+
+  @Input() set nodos(value: MapaNodo[] | null | undefined) {
+    this.nodosState.set(Array.isArray(value) ? value : []);
+  }
+
+  @Input() set tipos(value: MapaTipoElemento[] | null | undefined) {
+    this.tiposState.set(Array.isArray(value) ? value : []);
+    this.ensureTipoSelection();
+  }
 
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
-
-  private readonly fb = inject(FormBuilder);
 
   readonly visible = signal(false);
   readonly saving = signal(false);
@@ -79,9 +94,7 @@ export class MapaCreateElementDialogComponent {
   readonly currentWkt = signal<string | null>(null);
   readonly currentGeomTipo = signal<MapaGeomTipo | null>(null);
   readonly submittedAttempt = signal(false);
-
   readonly nodeLocked = signal(false);
-  readonly nodeSearch = signal('');
 
   readonly form: FormGroup<CreateElementoFormValue> = this.fb.group({
     idRedNodoFk: this.fb.control<number | null>(null, Validators.required),
@@ -96,21 +109,28 @@ export class MapaCreateElementDialogComponent {
     ordenDibujo: this.fb.nonNullable.control(0, [Validators.min(0)]),
   });
 
-  readonly geomDisplayLabel = computed(() => {
+  readonly dialogTitle = computed(() => {
     const geom = String(this.currentGeomTipo() || '').toLowerCase();
 
-    if (geom === 'linestring') return 'Ruta';
-    if (geom === 'polygon') return 'Polígono';
-    return 'Punto';
+    if (geom === 'linestring') return 'Nueva ruta';
+    if (geom === 'polygon') return 'Nuevo polígono';
+    return 'Nuevo punto';
   });
 
-  readonly dialogTitle = computed(() => `Nuevo elemento · ${this.geomDisplayLabel()}`);
+  readonly nodosSelectOptions = computed<NodoSelectOption[]>(() => {
+    return this.nodosState().map((n) => ({
+      value: n.idRedNodo,
+      label: n.nodo,
+    }));
+  });
 
   readonly tiposCompatibles = computed(() => {
     const geomTipo = this.currentGeomTipo();
-    if (!geomTipo) return this.tipos;
+    const tipos = this.tiposState();
 
-    return this.tipos.filter(
+    if (!geomTipo) return tipos;
+
+    return tipos.filter(
       (t) => t.geometriaPermitida === geomTipo || t.geometriaPermitida === 'mixed'
     );
   });
@@ -135,34 +155,6 @@ export class MapaCreateElementDialogComponent {
     return orderedGroups;
   });
 
-  readonly filteredNodos = computed(() => {
-    const q = this.normalizeText(this.nodeSearch());
-
-    if (!q) return this.nodos;
-
-    return this.nodos.filter((n) => {
-      return [
-        n.nodo,
-        n.codigo ?? '',
-        n.descripcion ?? '',
-        n.tipoNodo,
-        n.pathCache ?? '',
-      ].some((value) => this.normalizeText(value).includes(q));
-    });
-  });
-
-  readonly selectedNodo = computed(() => {
-    const nodeId = this.form.controls.idRedNodoFk.value;
-    if (nodeId == null) return null;
-    return this.nodos.find((n) => n.idRedNodo === nodeId) ?? null;
-  });
-
-  readonly selectedTipo = computed(() => {
-    const tipoId = this.form.controls.idGeoTipoElementoFk.value;
-    if (tipoId == null) return null;
-    return this.tipos.find((t) => t.idGeoTipoElemento === tipoId) ?? null;
-  });
-
   open(params: { wkt: string; geomTipo: MapaGeomTipo; nodoId?: number | null }) {
     this.visible.set(true);
     this.saving.set(false);
@@ -170,15 +162,8 @@ export class MapaCreateElementDialogComponent {
     this.submittedAttempt.set(false);
     this.currentWkt.set(params.wkt);
     this.currentGeomTipo.set(params.geomTipo);
-    this.nodeSearch.set('');
 
-    const tiposCompatibles = this.resolveTiposCompatibles(params.geomTipo);
-    const firstTipo = tiposCompatibles[0]?.idGeoTipoElemento ?? null;
-
-    const incomingNodeId =
-      params.nodoId != null && this.nodos.some((n) => n.idRedNodo === params.nodoId)
-        ? params.nodoId
-        : null;
+    const incomingNodeId = params.nodoId ?? null;
 
     this.form.controls.idRedNodoFk.enable({ emitEvent: false });
     this.form.controls.idGeoTipoElementoFk.enable({ emitEvent: false });
@@ -186,7 +171,7 @@ export class MapaCreateElementDialogComponent {
     this.form.reset(
       {
         idRedNodoFk: incomingNodeId,
-        idGeoTipoElementoFk: firstTipo,
+        idGeoTipoElementoFk: null,
         nombre: '',
         descripcion: '',
         estado: 'activo',
@@ -196,13 +181,15 @@ export class MapaCreateElementDialogComponent {
       { emitEvent: false }
     );
 
+    this.nodeLocked.set(incomingNodeId != null);
+
     if (incomingNodeId != null) {
-      this.nodeLocked.set(true);
       this.form.controls.idRedNodoFk.disable({ emitEvent: false });
     } else {
-      this.nodeLocked.set(false);
       this.form.controls.idRedNodoFk.enable({ emitEvent: false });
     }
+
+    this.ensureTipoSelection();
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -240,34 +227,6 @@ export class MapaCreateElementDialogComponent {
         this.closeImmediately();
       }
     );
-  }
-
-  onNodeSearchInput(value: string) {
-    this.nodeSearch.set(value);
-
-    if (this.nodeLocked()) {
-      return;
-    }
-
-    const selectedNodeId = this.form.controls.idRedNodoFk.value;
-    if (selectedNodeId == null) {
-      return;
-    }
-
-    const stillVisible = this.filteredNodos().some((n) => n.idRedNodo === selectedNodeId);
-    if (!stillVisible) {
-      this.form.controls.idRedNodoFk.setValue(null);
-    }
-  }
-
-  onTipoPicked(tipoId: number) {
-    if (this.form.controls.idGeoTipoElementoFk.value === tipoId) {
-      return;
-    }
-
-    this.form.controls.idGeoTipoElementoFk.setValue(tipoId);
-    this.form.controls.idGeoTipoElementoFk.markAsDirty();
-    this.error.set(null);
   }
 
   guardar() {
@@ -333,6 +292,16 @@ export class MapaCreateElementDialogComponent {
     this.error.set(message || 'No se pudo guardar el elemento.');
   }
 
+  selectedNodoDisplay(): string {
+    const nodeId = this.form.getRawValue().idRedNodoFk;
+    if (nodeId == null) return '';
+
+    const found = this.nodosState().find((n) => n.idRedNodo === nodeId);
+    if (found) return found.nodo;
+
+    return `Nodo #${nodeId}`;
+  }
+
   controlInvalid(name: keyof CreateElementoFormValue): boolean {
     const control = this.form.controls[name];
     return control.invalid && (control.touched || this.submittedAttempt());
@@ -371,6 +340,16 @@ export class MapaCreateElementDialogComponent {
 
   isTipoSelected(tipo: MapaTipoElemento): boolean {
     return this.form.controls.idGeoTipoElementoFk.value === tipo.idGeoTipoElemento;
+  }
+
+  onTipoPicked(tipoId: number) {
+    if (this.form.controls.idGeoTipoElementoFk.value === tipoId) {
+      return;
+    }
+
+    this.form.controls.idGeoTipoElementoFk.setValue(tipoId);
+    this.form.controls.idGeoTipoElementoFk.markAsDirty();
+    this.error.set(null);
   }
 
   visual(tipo: MapaTipoElemento): MapaItemVisualPreview {
@@ -413,9 +392,31 @@ export class MapaCreateElementDialogComponent {
     return showUrlPreviewForVisual(this.visual(tipo));
   }
 
-  trackByNodo = (_: number, item: MapaNodo) => item.idRedNodo;
   trackByTipo = (_: number, item: MapaTipoElemento) => item.idGeoTipoElemento;
   trackByGrupo = (_: number, item: TipoAgrupadoVm) => item.agrupacion;
+
+  private ensureTipoSelection() {
+    const geomTipo = this.currentGeomTipo();
+    if (!geomTipo) {
+      return;
+    }
+
+    const compatibles = this.resolveTiposCompatibles(geomTipo);
+    const currentId = this.form.controls.idGeoTipoElementoFk.value;
+
+    if (!compatibles.length) {
+      this.form.controls.idGeoTipoElementoFk.setValue(null, { emitEvent: false });
+      return;
+    }
+
+    const exists = compatibles.some((t) => t.idGeoTipoElemento === currentId);
+    if (!exists) {
+      this.form.controls.idGeoTipoElementoFk.setValue(
+        compatibles[0].idGeoTipoElemento,
+        { emitEvent: false }
+      );
+    }
+  }
 
   private buildPayload(): MapaElementoSaveRequest {
     const raw = this.form.getRawValue();
@@ -445,17 +446,29 @@ export class MapaCreateElementDialogComponent {
     this.currentWkt.set(null);
     this.currentGeomTipo.set(null);
     this.nodeLocked.set(false);
-    this.nodeSearch.set('');
 
     this.form.controls.idRedNodoFk.enable({ emitEvent: false });
     this.form.controls.idGeoTipoElementoFk.enable({ emitEvent: false });
+
+    this.form.reset(
+      {
+        idRedNodoFk: null,
+        idGeoTipoElementoFk: null,
+        nombre: '',
+        descripcion: '',
+        estado: 'activo',
+        visible: true,
+        ordenDibujo: 0,
+      },
+      { emitEvent: false }
+    );
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }
 
   private resolveTiposCompatibles(geomTipo: MapaGeomTipo): MapaTipoElemento[] {
-    return this.tipos.filter(
+    return this.tiposState().filter(
       (t) => t.geometriaPermitida === geomTipo || t.geometriaPermitida === 'mixed'
     );
   }
@@ -463,14 +476,6 @@ export class MapaCreateElementDialogComponent {
   private emptyToNull(value: string | null | undefined): string | null {
     const trimmed = (value ?? '').trim();
     return trimmed ? trimmed : null;
-  }
-
-  private normalizeText(value: string | null | undefined): string {
-    return String(value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toLowerCase();
   }
 
   private normalizeGrouping(value: string | null | undefined): string {
