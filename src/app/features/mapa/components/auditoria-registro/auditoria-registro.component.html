@@ -1,9 +1,6 @@
 <section class="audit-ledger" [class.is-compact]="compact">
   <header class="ledger-head">
-    <div class="ledger-head-copy">
-      <h3>{{ titulo }}</h3>
-      <p>{{ subtitulo }}</p>
-    </div>
+    <h3>{{ titulo }}</h3>
 
     <button
       type="button"
@@ -44,6 +41,14 @@
 
   <div class="table-wrap" *ngIf="hasRows()">
     <table class="audit-table">
+      <colgroup>
+        <col class="col-fecha" />
+        <col class="col-edicion" />
+        <col class="col-usuario" />
+        <col class="col-antes" />
+        <col class="col-despues" />
+      </colgroup>
+
       <thead>
         <tr>
           <th class="col-fecha">Fecha</th>
@@ -74,10 +79,10 @@
 
               <span
                 class="field-summary truncate-line"
-                *ngIf="oneLine(row.resumenHumano, 120) !== '—'"
-                [title]="row.resumenHumano || ''"
+                *ngIf="previewValue(row.resumenHumano, row.campoLabel, 120) !== '—'"
+                [title]="previewValue(row.resumenHumano, row.campoLabel, 120)"
               >
-                {{ oneLine(row.resumenHumano, 120) }}
+                {{ previewValue(row.resumenHumano, row.campoLabel, 120) }}
               </span>
             </div>
           </td>
@@ -89,18 +94,70 @@
           </td>
 
           <td class="col-antes">
-            <span class="value-text before truncate-line" [title]="row.valorAnterior || ''">
-              {{ oneLine(row.valorAnterior, 220) }}
-            </span>
+            <div class="cell-inline">
+              <span
+                class="value-text before truncate-line"
+                [title]="previewValue(row.valorAnterior, row.campoLabel, 110)"
+              >
+                {{ previewValue(row.valorAnterior, row.campoLabel, 110) }}
+              </span>
+
+              <button
+                type="button"
+                class="cell-more-btn"
+                *ngIf="canOpenDetail(row.valorAnterior, row.campoLabel, 110)"
+                (click)="openPopover($event, 'Antes · ' + row.campoLabel, fullValue(row.valorAnterior, row.campoLabel))"
+              >
+                Ver
+              </button>
+            </div>
           </td>
 
           <td class="col-despues">
-            <span class="value-text after truncate-line" [title]="row.valorNuevo || ''">
-              {{ oneLine(row.valorNuevo, 220) }}
-            </span>
+            <div class="cell-inline">
+              <span
+                class="value-text after truncate-line"
+                [title]="previewValue(row.valorNuevo, row.campoLabel, 110)"
+              >
+                {{ previewValue(row.valorNuevo, row.campoLabel, 110) }}
+              </span>
+
+              <button
+                type="button"
+                class="cell-more-btn"
+                *ngIf="canOpenDetail(row.valorNuevo, row.campoLabel, 110)"
+                (click)="openPopover($event, 'Después · ' + row.campoLabel, fullValue(row.valorNuevo, row.campoLabel))"
+              >
+                Ver
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
 </section>
+
+<div
+  class="popover-backdrop"
+  *ngIf="popover()"
+  (click)="closePopover()"
+></div>
+
+<div
+  class="cell-popover"
+  *ngIf="popover() as pop"
+  [style.left.px]="pop.x"
+  [style.top.px]="pop.y"
+  (click)="$event.stopPropagation()"
+>
+  <div class="popover-head">
+    <strong>{{ pop.title }}</strong>
+
+    <button type="button" class="popover-close" (click)="closePopover()">
+      ×
+    </button>
+  </div>
+
+  <pre>{{ pop.value }}</pre>
+</div>

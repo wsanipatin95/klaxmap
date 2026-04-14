@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { AuditoriaRepository } from '../../data-access/auditoria.repository';
@@ -8,6 +8,13 @@ import type {
   AuditoriaSupervisorItem,
   AuditoriaSupervisorResponse,
 } from '../../data-access/auditoria.models';
+
+interface AuditoriaCellPopover {
+  title: string;
+  value: string;
+  x: number;
+  y: number;
+}
 
 @Component({
   selector: 'app-auditoria-supervisor',
@@ -22,6 +29,7 @@ export class AuditoriaSupervisorComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<AuditoriaSupervisorResponse | null>(null);
+  readonly popover = signal<AuditoriaCellPopover | null>(null);
 
   readonly filtros = signal<AuditoriaSupervisorFilters>({
     q: '',
@@ -76,9 +84,15 @@ export class AuditoriaSupervisorComponent {
     this.buscar();
   }
 
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.closePopover();
+  }
+
   buscar(resetPage = true) {
     this.loading.set(true);
     this.error.set(null);
+    this.closePopover();
 
     const filtros = this.filtros();
     const payload: AuditoriaSupervisorFilters = {
@@ -154,22 +168,20 @@ export class AuditoriaSupervisorComponent {
     return item.idSegAuditoria;
   }
 
-  oneLine(value: string | null | undefined, max = 180): string {
-    const normalized = String(value ?? '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (!normalized) return '—';
-    return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized;
-  }
-
   displayUsuario(item: AuditoriaSupervisorItem): string {
     return item.usuarioLogin?.trim() || 'Sistema';
   }
 
   displayContexto(item: AuditoriaSupervisorItem): string {
-    const parts = [item.entidad, item.modulo, item.tablaLabel].filter((x) => String(x ?? '').trim());
-    return parts.join(' · ');
+    const parts = [item.entidad, item.modulo, item.tablaLabel]
+      .map((x) => String(x ?? '').trim())
+      .filter(Boolean);
+
+    return parts.join(' · ') || '—';
+  }
+
+  displayCampo(item: AuditoriaSupervisorItem): string {
+    return item.campoLabel?.trim() || item.campo?.trim() || 'Cambio';
   }
 
   operacionClass(value: string | null | undefined): string {
@@ -190,5 +202,195 @@ export class AuditoriaSupervisorComponent {
       (f.fechaHasta && f.fechaHasta.trim()) ||
       (f.size && f.size !== 25)
     );
+  }
+
+  previewValue(
+    value: string | null | undefined,
+    fieldLabel?: string | null,
+    max = 88
+  ): string {
+    const cleaned = this.extractUsefulValue(value, fieldLabel);
+    if (!cleaned) return '—';
+    return cleaned.length > max ? `${cleaned.slice(0, max)}…` : cleaned;
+  }
+
+  fullValue(value: string | null | undefined, fieldLabel?: string | null): string {
+    const normalized = this.normalizeValue(value);
+    if (!normalized) return 'Sin valor';
+
+    const pairs = this.parseStructuredPairs(normalized);
+    if (pairs.length) {
+      return pairs
+        .map((pair) => `${this.humanizePairKey(pair.key)}: ${pair.value || '—'}`)
+        .join('\n');
+    }
+
+    const field = this.normalizeFieldName(fieldLabel);
+    if (field.includes('geometria resumen')) {
+      const wkt = this.extractStructuredKey(normalized, 'wkt');
+      const geomTipo = this.extractStructuredKey(normalized, 'geomTipo');
+      if (wkt || geomTipo) {
+        return [geomTipo ? `Tipo: ${geomTipo}` : '', wkt ? `WKT: ${wkt}` : '']
+          .filter(Boolean)
+          .join('\n');
+      }
+    }
+
+    return normalized;
+  }
+
+  canOpenDetail(
+    value: string | null | undefined,
+    fieldLabel?: string | null,
+    max = 88
+  ): boolean {
+    const preview = this.previewValue(value, fieldLabel, max);
+    const full = this.fullValue(value, fieldLabel);
+    return full !== 'Sin valor' && (preview !== full || full.length > max);
+  }
+
+  openPopover(event: MouseEvent, title: string, value: string) {
+    event.stopPropagation();
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const boxWidth = 540;
+    const boxHeight = 360;
+    const margin = 16;
+
+    const desiredX = event.clientX + 12;
+    const desiredY = event.clientY + 12;
+
+    const x = Math.max(margin, Math.min(desiredX, viewportWidth - boxWidth - margin));
+    const y = Math.max(margin, Math.min(desiredY, viewportHeight - boxHeight - margin));
+
+    this.popover.set({
+      title,
+      value: value || 'Sin valor',
+      x,
+      y,
+    });
+  }
+
+  closePopover() {
+    this.popover.set(null);
+  }
+
+  private extractUsefulValue(
+    value: string | null | undefined,
+    fieldLabel?: string | null
+  ): string {
+    const normalized = this.normalizeValue(value);
+    if (!normalized) return '';
+
+    const field = this.normalizeFieldName(fieldLabel);
+
+    if (field.includes('geometria')) {
+      const wkt = this.extractWkt(normalized) || this.extractStructuredKey(normalized, 'wkt');
+      const geomTipo = this.extractStructuredKey(normalized, 'geomTipo');
+
+      if (field.includes('geometria resumen') && (wkt || geomTipo)) {
+        return [geomTipo, wkt].filter(Boolean).join(': ');
+      }
+
+      if (wkt) return wkt;
+    }
+
+    if (field.includes('resumen de edicion') || field.includes('registro completo')) {
+      const structured = this.summarizeStructured(normalized, 2);
+      if (structured) return structured;
+    }
+
+    const genericStructured = this.summarizeStructured(normalized, 2);
+    if (genericStructured) return genericStructured;
+
+    return normalized;
+  }
+
+  private summarizeStructured(value: string, limit: number): string | null {
+    const pairs = this.parseStructuredPairs(value);
+    if (!pairs.length) return null;
+
+    const compact = pairs
+      .slice(0, limit)
+      .map((pair) => `${this.humanizePairKey(pair.key)}: ${pair.value}`)
+      .join(' · ');
+
+    return pairs.length > limit ? `${compact}…` : compact;
+  }
+
+  private parseStructuredPairs(value: string): Array<{ key: string; value: string }> {
+    let source = value.trim();
+    if (!source) return [];
+
+    if (source.startsWith('{') && source.endsWith('}')) {
+      source = source.slice(1, -1).trim();
+    }
+
+    if (!source.includes('=') && !source.includes(':')) {
+      return [];
+    }
+
+    const parts = source
+      .split(/,(?=\s*[\w.-]+\s*[:=])/g)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    const pairs = parts
+      .map((part) => {
+        const match = part.match(/^([\w.-]+)\s*[:=]\s*(.+)$/);
+        if (!match) return null;
+
+        return {
+          key: match[1].trim(),
+          value: match[2].trim(),
+        };
+      })
+      .filter((item): item is { key: string; value: string } => !!item);
+
+    return pairs;
+  }
+
+  private extractStructuredKey(value: string, key: string): string | null {
+    const regex = new RegExp(`${key}\\s*[:=]\\s*(.+?)(?=,\\s*[\\w.-]+\\s*[:=]|\\}$)`, 'i');
+    const match = value.match(regex);
+    return match?.[1]?.trim() || null;
+  }
+
+  private extractWkt(value: string): string | null {
+    const match = value.match(
+      /\b(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON)\s*\(.+\)/i
+    );
+
+    return match?.[0]?.trim() || null;
+  }
+
+  private humanizePairKey(key: string): string {
+    const normalized = key.trim();
+
+    if (!normalized) return 'Campo';
+    if (/^idrednodofk$/i.test(normalized)) return 'Nodo';
+    if (/^idgeotipoelementofk$/i.test(normalized)) return 'Tipo';
+    if (/^geomtipo$/i.test(normalized)) return 'Tipo geom.';
+    if (/^wkt$/i.test(normalized)) return 'WKT';
+
+    return normalized
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/[_.-]+/g, ' ')
+      .trim();
+  }
+
+  private normalizeFieldName(value: string | null | undefined): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private normalizeValue(value: string | null | undefined): string {
+    return String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }
