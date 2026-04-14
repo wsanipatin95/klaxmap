@@ -14,8 +14,12 @@
     </div>
 
     <div class="context-actions">
-      <button  *ngIf="editarElemento()" type="button" class="menu-btn menu-btn--primary" (click)="onEditData(e)">
+      <button *ngIf="editarElemento()" type="button" class="menu-btn menu-btn--primary" (click)="onEditData(e)">
         Editar datos
+      </button>
+
+      <button type="button" class="menu-btn" (click)="onAudit(e)">
+        Auditoría
       </button>
 
       <button *ngIf="editarElemento()" type="button" class="menu-btn" (click)="onEditGeometry(e)">
@@ -26,7 +30,7 @@
         Centrar en mapa
       </button>
 
-      <button  *ngIf="editarElemento()" type="button" class="menu-btn menu-btn--danger" (click)="onDelete(e)">
+      <button *ngIf="editarElemento()" type="button" class="menu-btn menu-btn--danger" (click)="onDelete(e)">
         Eliminar
       </button>
     </div>

@@ -52,6 +52,8 @@ import {
 } from '../../models/mapa-basemap.models';
 import { getBranchNodeIds } from '../../utils/mapa-visibility.utils';
 
+type PropertiesRequestedTab = 'edicion' | 'historial';
+
 @Component({
   selector: 'app-mapa-home',
   standalone: true,
@@ -139,6 +141,7 @@ export class MapaHomeComponent {
   readonly successVisible = signal(false);
   readonly successTitle = signal('');
   readonly successText = signal('');
+  readonly propertiesRequestedTab = signal<PropertiesRequestedTab>('edicion');
 
   constructor() {
     this.crud.loadAll();
@@ -419,11 +422,13 @@ export class MapaHomeComponent {
     if (!this.ui.propertiesOpen()) return;
 
     if (!this.infoPanelDirty()) {
+      this.propertiesRequestedTab.set('edicion');
       this.interaction.closeInfoPanel();
       return;
     }
 
     this.confirmDiscardInfoChanges(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.interaction.closeInfoPanel();
     });
   }
@@ -444,6 +449,7 @@ export class MapaHomeComponent {
 
     if (this.editSessionActive() && this.editSessionElementId() !== elemento.idGeoElemento) {
       this.runGuarded(() => {
+        this.propertiesRequestedTab.set('edicion');
         this.ui.closeProperties();
         this.interaction.setInfoPanelDirty(false);
         this.ui.setEditGeometryMode();
@@ -452,6 +458,7 @@ export class MapaHomeComponent {
       return;
     }
 
+    this.propertiesRequestedTab.set('edicion');
     this.ui.closeProperties();
     this.interaction.setInfoPanelDirty(false);
     this.ui.setEditGeometryMode();
@@ -460,6 +467,7 @@ export class MapaHomeComponent {
 
   onToolbarDrawPointMode() {
     this.runGuarded(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.ui.setDrawPointMode();
@@ -468,6 +476,7 @@ export class MapaHomeComponent {
 
   onToolbarDrawLineMode() {
     this.runGuarded(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.ui.setDrawLineMode();
@@ -476,6 +485,7 @@ export class MapaHomeComponent {
 
   onToolbarDrawPolygonMode() {
     this.runGuarded(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.ui.setDrawPolygonMode();
@@ -484,6 +494,7 @@ export class MapaHomeComponent {
 
   onToolbarMeasureMode() {
     this.runGuarded(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.ui.setMeasureMode();
@@ -567,8 +578,14 @@ export class MapaHomeComponent {
 
   editDataContextElemento(item: MapaElemento) {
     this.runGuarded(() => {
-      this.interaction.openInfoPanelForElemento(item, this.nodos());
-      this.ui.setSelectMode();
+      this.openElementoPanel(item, 'edicion');
+      this.interaction.closeContextMenu();
+    });
+  }
+
+  auditContextElemento(item: MapaElemento) {
+    this.runGuarded(() => {
+      this.openElementoPanel(item, 'historial');
       this.interaction.closeContextMenu();
     });
   }
@@ -576,6 +593,7 @@ export class MapaHomeComponent {
   editGeometryContextElemento(item: MapaElemento) {
     this.runGuarded(() => {
       this.selection.setElemento(item);
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.ui.setEditGeometryMode();
@@ -622,6 +640,7 @@ export class MapaHomeComponent {
       this.selection.setElemento(null);
 
       if (this.ui.propertiesOpen()) {
+        this.propertiesRequestedTab.set('edicion');
         this.interaction.closeInfoPanel();
       }
     }
@@ -664,6 +683,7 @@ export class MapaHomeComponent {
 
   onTreeDrawElementRequested(event: TreeDrawElementRequest) {
     this.runGuarded(() => {
+      this.propertiesRequestedTab.set('edicion');
       this.ui.closeProperties();
       this.interaction.setInfoPanelDirty(false);
       this.selection.setNodo(event.node);
@@ -697,16 +717,14 @@ export class MapaHomeComponent {
   }
 
   onTreeEditDataElementoRequested(elemento: MapaElemento) {
-    this.interaction.selectElementoWithPendingGuard({
-      item: elemento,
-      nodos: this.nodos(),
-      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
-      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
-      afterSelect: () => {
-        this.interaction.openInfoPanelForElemento(elemento, this.nodos());
-        this.ui.setSelectMode();
-      },
+    this.runGuarded(() => {
+      this.openElementoPanel(elemento, 'edicion');
+    });
+  }
+
+  onTreeAuditElementoRequested(elemento: MapaElemento) {
+    this.runGuarded(() => {
+      this.openElementoPanel(elemento, 'historial');
     });
   }
 
@@ -718,6 +736,7 @@ export class MapaHomeComponent {
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
       centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
       afterSelect: () => {
+        this.propertiesRequestedTab.set('edicion');
         this.ui.closeProperties();
         this.interaction.setInfoPanelDirty(false);
         this.ui.setEditGeometryMode();
@@ -812,6 +831,22 @@ export class MapaHomeComponent {
     });
   }
 
+  private openElementoPanel(elemento: MapaElemento, tab: PropertiesRequestedTab) {
+    this.interaction.selectElementoWithPendingGuard({
+      item: elemento,
+      nodos: this.nodos(),
+      onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+      onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
+      afterSelect: () => {
+        this.propertiesRequestedTab.set(tab);
+        this.interaction.openInfoPanelForElemento(elemento, this.nodos());
+        this.ui.setSelectMode();
+        this.defer(() => this.mapCanvas?.centerOnElemento(elemento.idGeoElemento));
+      },
+    });
+  }
+
   private closeSidebarIfMobile() {
     if (typeof window !== 'undefined' && window.innerWidth < 860) {
       this.ui.setSidebarHidden(true);
@@ -888,6 +923,7 @@ export class MapaHomeComponent {
         severity: 'warning',
       },
       () => {
+        this.propertiesRequestedTab.set('edicion');
         this.interaction.closeInfoPanel();
         onConfirm?.();
       }
@@ -930,6 +966,7 @@ export class MapaHomeComponent {
           }
 
           if (this.selectedElemento()?.idGeoElemento === item.idGeoElemento) {
+            this.propertiesRequestedTab.set('edicion');
             this.interaction.closeInfoPanel();
           }
 

@@ -69,6 +69,7 @@
     (treeDrawElementRequested)="onTreeDrawElementRequested($event)"
     (treeCenterElementoRequested)="onTreeCenterElementoRequested($event)"
     (treeEditDataElementoRequested)="onTreeEditDataElementoRequested($event)"
+    (treeAuditElementoRequested)="onTreeAuditElementoRequested($event)"
     (treeEditGeometryElementoRequested)="onTreeEditGeometryElementoRequested($event)"
     (treeDeleteElementoRequested)="onTreeDeleteElementoRequested($event)"
   />
@@ -95,6 +96,7 @@
     [elemento]="selectedElemento()"
     [tipos]="tipos()"
     [nodos]="nodos()"
+    [requestedTab]="propertiesRequestedTab()"
     (saved)="onElementoUpdated($event)"
     (deleted)="onElementoDeleted($event)"
     (dirtyChange)="onPropertiesDirtyChange($event)"
@@ -142,6 +144,7 @@
   (closeRequested)="closeContextMenu()"
   (centerRequested)="centerContextElemento($event)"
   (editDataRequested)="editDataContextElemento($event)"
+  (auditRequested)="auditContextElemento($event)"
   (editGeometryRequested)="editGeometryContextElemento($event)"
   (deleteRequested)="deleteContextElemento($event)"
 ></app-mapa-context-menu>

@@ -3,7 +3,9 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   Output,
+  SimpleChanges,
   ViewChild,
   inject,
   signal,
@@ -19,7 +21,7 @@ import { MapaElementosRepository } from '../../data-access/elemento/mapa-element
 import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
-type PropertiesPanelTab = 'edicion' | 'historial';
+export type PropertiesPanelTab = 'edicion' | 'historial';
 
 @Component({
   selector: 'app-mapa-properties-panel',
@@ -28,13 +30,14 @@ type PropertiesPanelTab = 'edicion' | 'historial';
   templateUrl: './mapa-properties-panel.component.html',
   styleUrl: './mapa-properties-panel.component.scss',
 })
-export class MapaPropertiesPanelComponent {
+export class MapaPropertiesPanelComponent implements OnChanges {
   private readonly repo = inject(MapaElementosRepository);
 
   @Input() elemento: MapaElemento | null = null;
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() nodos: MapaNodo[] = [];
   @Input() open = false;
+  @Input() requestedTab: PropertiesPanelTab | null = null;
 
   @Output() saved = new EventEmitter<MapaElemento>();
   @Output() deleted = new EventEmitter<number>();
@@ -49,6 +52,21 @@ export class MapaPropertiesPanelComponent {
   readonly statusMessage = signal<string | null>(null);
   readonly activeTab = signal<PropertiesPanelTab>('edicion');
   readonly auditRefreshKey = signal(0);
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['elemento']) {
+      if (this.elemento) {
+        this.activeTab.set(this.requestedTab ?? 'edicion');
+      } else {
+        this.activeTab.set('edicion');
+      }
+      return;
+    }
+
+    if (changes['requestedTab'] && this.requestedTab) {
+      this.activeTab.set(this.requestedTab);
+    }
+  }
 
   setTab(tab: PropertiesPanelTab) {
     this.activeTab.set(tab);

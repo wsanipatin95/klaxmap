@@ -106,7 +106,7 @@
                 type="button"
                 class="cell-more-btn"
                 *ngIf="canOpenDetail(row.valorAnterior, row.campoLabel, 110)"
-                (click)="openPopover($event, 'Antes · ' + row.campoLabel, fullValue(row.valorAnterior, row.campoLabel))"
+                (click)="openDetail($event, 'Antes · ' + row.campoLabel, fullValue(row.valorAnterior, row.campoLabel))"
               >
                 Ver
               </button>
@@ -126,7 +126,7 @@
                 type="button"
                 class="cell-more-btn"
                 *ngIf="canOpenDetail(row.valorNuevo, row.campoLabel, 110)"
-                (click)="openPopover($event, 'Después · ' + row.campoLabel, fullValue(row.valorNuevo, row.campoLabel))"
+                (click)="openDetail($event, 'Después · ' + row.campoLabel, fullValue(row.valorNuevo, row.campoLabel))"
               >
                 Ver
               </button>
@@ -136,28 +136,18 @@
       </tbody>
     </table>
   </div>
-</section>
 
-<div
-  class="popover-backdrop"
-  *ngIf="popover()"
-  (click)="closePopover()"
-></div>
+  <div class="detail-backdrop" *ngIf="detail() as current" (click)="closeDetail()">
+    <div class="detail-dialog" (click)="$event.stopPropagation()">
+      <div class="detail-head">
+        <strong>{{ current.title }}</strong>
 
-<div
-  class="cell-popover"
-  *ngIf="popover() as pop"
-  [style.left.px]="pop.x"
-  [style.top.px]="pop.y"
-  (click)="$event.stopPropagation()"
->
-  <div class="popover-head">
-    <strong>{{ pop.title }}</strong>
+        <button type="button" class="detail-close" (click)="closeDetail()">
+          ×
+        </button>
+      </div>
 
-    <button type="button" class="popover-close" (click)="closePopover()">
-      ×
-    </button>
+      <pre>{{ current.value }}</pre>
+    </div>
   </div>
-
-  <pre>{{ pop.value }}</pre>
-</div>
+</section>

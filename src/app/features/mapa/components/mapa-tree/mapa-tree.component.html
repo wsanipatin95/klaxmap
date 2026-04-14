@@ -196,6 +196,9 @@
       <button *ngIf="editarElemento()" type="button" (click)="editDataElementoRequested.emit(el); closeContext()">
         Editar datos
       </button>
+      <button type="button" (click)="auditElementoRequested.emit(el); closeContext()">
+        Auditoría
+      </button>
       <button *ngIf="editarElemento()" type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
         Editar forma
       </button>

@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output,computed, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import type { MapaElemento } from '../../data-access/mapa.models';
 import { SessionStore } from '../../../seg/store/session.store';
+
 @Component({
   selector: 'app-mapa-context-menu',
   standalone: true,
@@ -17,9 +18,11 @@ export class MapaContextMenuComponent {
 
   @Output() closeRequested = new EventEmitter<void>();
   @Output() editDataRequested = new EventEmitter<MapaElemento>();
+  @Output() auditRequested = new EventEmitter<MapaElemento>();
   @Output() editGeometryRequested = new EventEmitter<MapaElemento>();
   @Output() deleteRequested = new EventEmitter<MapaElemento>();
   @Output() centerRequested = new EventEmitter<MapaElemento>();
+
   private sessionStore = inject(SessionStore);
 
   editarElemento = computed(() =>
@@ -32,6 +35,11 @@ export class MapaContextMenuComponent {
 
   onEditData(item: MapaElemento) {
     this.editDataRequested.emit(item);
+    this.close();
+  }
+
+  onAudit(item: MapaElemento) {
+    this.auditRequested.emit(item);
     this.close();
   }
 

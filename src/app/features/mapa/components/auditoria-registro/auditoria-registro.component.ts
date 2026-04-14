@@ -34,11 +34,9 @@ interface AuditoriaLedgerRow {
   idRegistro: string;
 }
 
-interface AuditoriaCellPopover {
+interface AuditoriaCellDetail {
   title: string;
   value: string;
-  x: number;
-  y: number;
 }
 
 @Component({
@@ -61,7 +59,7 @@ export class AuditoriaRegistroComponent implements OnChanges {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<AuditoriaRegistroResponse | null>(null);
-  readonly popover = signal<AuditoriaCellPopover | null>(null);
+  readonly detail = signal<AuditoriaCellDetail | null>(null);
 
   readonly rows = computed<AuditoriaLedgerRow[]>(() => {
     const audit = this.data();
@@ -102,7 +100,7 @@ export class AuditoriaRegistroComponent implements OnChanges {
 
   @HostListener('document:keydown.escape')
   onEscape() {
-    this.closePopover();
+    this.closeDetail();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -115,12 +113,13 @@ export class AuditoriaRegistroComponent implements OnChanges {
     if (!this.tabla || this.idRegistro == null || this.idRegistro === '') {
       this.data.set(null);
       this.error.set(null);
+      this.closeDetail();
       return;
     }
 
     this.loading.set(true);
     this.error.set(null);
-    this.closePopover();
+    this.closeDetail();
 
     this.repo
       .historialRegistro(this.tabla, this.idRegistro)
@@ -211,31 +210,17 @@ export class AuditoriaRegistroComponent implements OnChanges {
     return full !== 'Sin valor' && (preview !== full || full.length > max);
   }
 
-  openPopover(event: MouseEvent, title: string, value: string) {
+  openDetail(event: MouseEvent, title: string, value: string) {
     event.stopPropagation();
 
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const boxWidth = 540;
-    const boxHeight = 360;
-    const margin = 16;
-
-    const desiredX = event.clientX + 12;
-    const desiredY = event.clientY + 12;
-
-    const x = Math.max(margin, Math.min(desiredX, viewportWidth - boxWidth - margin));
-    const y = Math.max(margin, Math.min(desiredY, viewportHeight - boxHeight - margin));
-
-    this.popover.set({
+    this.detail.set({
       title,
       value: value || 'Sin valor',
-      x,
-      y,
     });
   }
 
-  closePopover() {
-    this.popover.set(null);
+  closeDetail() {
+    this.detail.set(null);
   }
 
   private isUsefulChange(cambio: AuditoriaCambio): boolean {

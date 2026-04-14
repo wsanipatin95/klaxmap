@@ -1,11 +1,13 @@
 :host {
   display: block;
+  position: relative;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
 .audit-ledger {
+  position: relative;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 0.32rem;
@@ -140,20 +142,20 @@
 }
 
 .col-fecha {
-  width: 5rem;
+  width: 7rem;
 }
 
 .col-edicion {
-  width: 5rem;
+  width: 7rem;
 }
 
 .col-usuario {
-  width: 5rem;
+  width: 7rem;
 }
 
 .col-antes,
 .col-despues {
-  width: 10rem;
+  width: 15rem;
 }
 
 .edit-cell {
@@ -294,28 +296,30 @@
   cursor: not-allowed;
 }
 
-.popover-backdrop {
-  position: fixed;
+.detail-backdrop {
+  position: absolute;
   inset: 0;
   z-index: 30;
-  background: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0.7rem;
+  background: rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(1px);
 }
 
-.cell-popover {
-  position: fixed;
-  z-index: 31;
-  width: min(540px, calc(100vw - 32px));
-  max-height: min(360px, calc(100vh - 32px));
+.detail-dialog {
+  width: min(38rem, 100%);
+  max-height: min(28rem, 100%);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   background: #ffffff;
   border: 1px solid #d8dee6;
-  border-radius: 0.7rem;
+  border-radius: 0.72rem;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
 }
 
-.popover-head {
+.detail-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -325,12 +329,12 @@
   background: #f8fafc;
 }
 
-.popover-head strong {
+.detail-head strong {
   font-size: 0.68rem;
   color: #334155;
 }
 
-.popover-close {
+.detail-close {
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 0.4rem;
@@ -341,7 +345,7 @@
   cursor: pointer;
 }
 
-.cell-popover pre {
+.detail-dialog pre {
   margin: 0;
   padding: 0.58rem;
   overflow: auto;

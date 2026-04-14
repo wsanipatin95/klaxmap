@@ -102,6 +102,7 @@ export class MapaTreeComponent implements OnChanges {
   @Output() drawElementRequested = new EventEmitter<TreeDrawElementRequest>();
   @Output() centerElementoRequested = new EventEmitter<MapaElemento>();
   @Output() editDataElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() auditElementoRequested = new EventEmitter<MapaElemento>();
   @Output() editGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() deleteElementoRequested = new EventEmitter<MapaElemento>();
 
@@ -402,7 +403,7 @@ export class MapaTreeComponent implements OnChanges {
       trimmed[trimmed.length - 1] = selected;
     }
 
-    this.performanceNotice = ``;
+    this.performanceNotice = '';
     return trimmed;
   }
 

@@ -83,6 +83,7 @@ export class MapaSidebarComponent {
   @Output() treeDrawElementRequested = new EventEmitter<TreeDrawElementRequest>();
   @Output() treeCenterElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeEditDataElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() treeAuditElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeEditGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeDeleteElementoRequested = new EventEmitter<MapaElemento>();
 
