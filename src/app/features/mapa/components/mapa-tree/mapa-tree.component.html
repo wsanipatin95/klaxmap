@@ -168,7 +168,7 @@
         Dibujar punto aquí
       </button>
       <button *ngIf="editarElemento()" type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'linestring' }); closeContext()">
-        Dibujar línea aquí
+        Dibujar ruta aquí
       </button>
       <button *ngIf="editarElemento()" type="button" (click)="drawElementRequested.emit({ node, geomTipo: 'polygon' }); closeContext()">
         Dibujar polígono aquí

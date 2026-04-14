@@ -3,7 +3,7 @@
     <div class="page-copy">
       <div class="eyebrow">Supervisor</div>
       <h2>Auditoría</h2>
-      <p>Vista global para monitorear cambios, responsables y trazabilidad del sistema.</p>
+      <p>Vista global compacta para monitorear cambios y trazabilidad del sistema.</p>
     </div>
 
     <div class="page-actions">
@@ -19,12 +19,8 @@
 
   <section class="panel filters-panel">
     <div class="panel-header">
-      <div>
-        <h3>Filtros</h3>
-        <p>Ajusta la búsqueda para encontrar movimientos específicos.</p>
-      </div>
-
-      <span class="filters-badge" *ngIf="hasFiltersApplied()">Filtros activos</span>
+      <h3>Filtros</h3>
+      <span class="filters-badge" *ngIf="hasFiltersApplied()">Activos</span>
     </div>
 
     <div class="filter-grid">
@@ -35,16 +31,6 @@
           [ngModel]="filtros().q"
           (ngModelChange)="setFiltro('q', $event)"
           placeholder="tabla, campo, antes, después..."
-        />
-      </label>
-
-      <label class="field">
-        <span>Usuario ID</span>
-        <input
-          type="number"
-          [ngModel]="filtros().usuario"
-          (ngModelChange)="setFiltro('usuario', $event === '' ? null : +$event)"
-          placeholder="Ej. 1"
         />
       </label>
 
@@ -73,16 +59,6 @@
       </label>
 
       <label class="field">
-        <span>ID registro</span>
-        <input
-          type="text"
-          [ngModel]="filtros().idRegistro"
-          (ngModelChange)="setFiltro('idRegistro', $event)"
-          placeholder="Ej. 25"
-        />
-      </label>
-
-      <label class="field">
         <span>Fecha desde</span>
         <input
           type="date"
@@ -100,8 +76,8 @@
         />
       </label>
 
-      <label class="field">
-        <span>Tamaño página</span>
+      <label class="field field-size">
+        <span>Página</span>
         <select
           [ngModel]="filtros().size"
           (ngModelChange)="setFiltro('size', +$event)"
@@ -123,25 +99,25 @@
     <article class="summary-card">
       <span class="summary-label">Resultados</span>
       <strong>{{ totalElements() }}</strong>
-      <small>movimientos encontrados</small>
+      <small>movimientos</small>
     </article>
 
     <article class="summary-card">
       <span class="summary-label">Creaciones</span>
       <strong>{{ totalInserciones() }}</strong>
-      <small>en la página actual</small>
+      <small>página actual</small>
     </article>
 
     <article class="summary-card">
       <span class="summary-label">Ediciones</span>
       <strong>{{ totalEdiciones() }}</strong>
-      <small>en la página actual</small>
+      <small>página actual</small>
     </article>
 
     <article class="summary-card">
       <span class="summary-label">Eliminaciones</span>
       <strong>{{ totalEliminaciones() }}</strong>
-      <small>en la página actual</small>
+      <small>página actual</small>
     </article>
   </section>
 
@@ -184,34 +160,36 @@
       <table class="audit-table">
         <thead>
           <tr>
-            <th>Fecha</th>
-            <th>Usuario</th>
-            <th>Contexto</th>
-            <th>Registro</th>
-            <th>Operación</th>
-            <th>Campo</th>
-            <th>Antes</th>
-            <th>Después</th>
-            <th>Resumen</th>
+            <th class="col-fecha">Fecha</th>
+            <th class="col-usuario">Usuario</th>
+            <th class="col-contexto">Contexto</th>
+            <th class="col-registro">Registro</th>
+            <th class="col-operacion">Operación</th>
+            <th class="col-campo">Campo</th>
+            <th class="col-antes">Antes</th>
+            <th class="col-despues">Después</th>
+            <th class="col-resumen">Resumen</th>
           </tr>
         </thead>
 
         <tbody>
           <tr *ngFor="let item of items(); trackBy: trackById">
             <td class="col-fecha">
-              <div class="date-main">{{ item.fechaHora | date:'yyyy-MM-dd' }}</div>
-              <div class="date-sub">{{ item.fechaHora | date:'HH:mm:ss' }}</div>
+              <span class="truncate-line" [title]="(item.fechaHora | date:'yyyy-MM-dd HH:mm:ss') || ''">
+                {{ item.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}
+              </span>
             </td>
 
-            <td class="col-user">
-              <strong>{{ item.usuarioLogin || ('Usuario ' + item.usuarioId) }}</strong>
-              <small *ngIf="item.usuarioId != null">#{{ item.usuarioId }}</small>
+            <td class="col-usuario">
+              <span class="truncate-line" [title]="displayUsuario(item)">
+                {{ displayUsuario(item) }}
+              </span>
             </td>
 
-            <td class="col-context">
-              <strong>{{ item.entidad }}</strong>
-              <small>{{ item.modulo }}</small>
-              <small>{{ item.tablaLabel }}</small>
+            <td class="col-contexto">
+              <span class="truncate-line" [title]="displayContexto(item)">
+                {{ displayContexto(item) }}
+              </span>
             </td>
 
             <td class="col-registro">
@@ -225,24 +203,27 @@
             </td>
 
             <td class="col-campo">
-              <strong>{{ item.campoLabel }}</strong>
-              <small *ngIf="item.campo && item.campo !== item.campoLabel">{{ item.campo }}</small>
+              <span class="truncate-line" [title]="item.campoLabel || item.campo || ''">
+                {{ item.campoLabel }}
+              </span>
             </td>
 
-            <td class="col-compare">
-              <div class="compare-box before" [title]="item.valorAnterior || ''">
-                {{ shortValue(item.valorAnterior) }}
-              </div>
+            <td class="col-antes">
+              <span class="value-text before truncate-line" [title]="item.valorAnterior || ''">
+                {{ oneLine(item.valorAnterior, 220) }}
+              </span>
             </td>
 
-            <td class="col-compare">
-              <div class="compare-box after" [title]="item.valorNuevo || ''">
-                {{ shortValue(item.valorNuevo) }}
-              </div>
+            <td class="col-despues">
+              <span class="value-text after truncate-line" [title]="item.valorNuevo || ''">
+                {{ oneLine(item.valorNuevo, 220) }}
+              </span>
             </td>
 
             <td class="col-resumen">
-              {{ item.resumenHumano }}
+              <span class="truncate-line" [title]="item.resumenHumano || ''">
+                {{ oneLine(item.resumenHumano, 220) }}
+              </span>
             </td>
           </tr>
         </tbody>

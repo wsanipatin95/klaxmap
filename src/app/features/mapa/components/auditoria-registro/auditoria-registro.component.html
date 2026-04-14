@@ -1,6 +1,6 @@
-<section class="audit-card" [class.is-compact]="compact">
-  <div class="audit-head">
-    <div class="audit-head-copy">
+<section class="audit-ledger" [class.is-compact]="compact">
+  <header class="ledger-head">
+    <div class="ledger-head-copy">
       <h3>{{ titulo }}</h3>
       <p>{{ subtitulo }}</p>
     </div>
@@ -13,102 +13,94 @@
     >
       {{ loading() ? 'Actualizando...' : 'Refrescar' }}
     </button>
-  </div>
+  </header>
 
-  <div class="audit-inline-status" *ngIf="loading() || error()">
+  <div class="ledger-inline-status" *ngIf="loading() || error()">
     <div class="status-chip info" *ngIf="loading()">Cargando historial...</div>
     <div class="status-chip error" *ngIf="error() as err">{{ err }}</div>
   </div>
 
   <div class="empty-card" *ngIf="!loading() && !error() && (idRegistro == null || idRegistro === '')">
     <div class="empty-title">Sin registro seleccionado</div>
-    <div class="empty-text">
-      Selecciona un registro para ver su historial.
-    </div>
+    <div class="empty-text">Selecciona un registro para ver su historial.</div>
   </div>
 
-  <div class="empty-card" *ngIf="!loading() && !error() && data() && data()!.historial.length === 0">
-    <div class="empty-title">Todavía no hay movimientos</div>
-    <div class="empty-text">
-      Este registro aún no tiene eventos de auditoría visibles.
-    </div>
+  <div class="empty-card" *ngIf="!loading() && !error() && data() && !hasRows()">
+    <div class="empty-title">Sin cambios visibles</div>
+    <div class="empty-text">Este registro aún no tiene cambios útiles para mostrar.</div>
   </div>
 
-  <div class="audit-summary-strip" *ngIf="data() as audit">
-    <div class="summary-chip">
-      <strong>{{ audit.entidad }}</strong>
+  <div class="ledger-context" *ngIf="data() as audit">
+    <div class="context-main">
+      <span class="context-title">{{ audit.entidad }}</span>
+      <span class="dot">·</span>
       <span>{{ audit.tablaLabel }}</span>
-    </div>
-
-    <div class="summary-chip">
-      <strong>Registro</strong>
-      <span>#{{ audit.idRegistro }}</span>
-    </div>
-
-    <div class="summary-chip">
-      <strong>Eventos</strong>
-      <span>{{ audit.totalEventos }}</span>
+      <span class="dot">·</span>
+      <span>Registro #{{ audit.idRegistro }}</span>
+      <span class="dot">·</span>
+      <span>{{ totalRows() }} cambio(s)</span>
     </div>
   </div>
 
-  <div class="timeline" *ngIf="data() as audit">
-    <article class="timeline-item" *ngFor="let grupo of audit.historial; trackBy: trackGrupo">
-      <div class="timeline-rail">
-        <div class="timeline-dot" [class]="grupoBadgeClass(grupo.operacion)"></div>
-        <div class="timeline-line"></div>
-      </div>
+  <div class="table-wrap" *ngIf="hasRows()">
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th class="col-fecha">Fecha</th>
+          <th class="col-edicion">Edición</th>
+          <th class="col-usuario">Usuario</th>
+          <th class="col-antes">Antes</th>
+          <th class="col-despues">Después</th>
+        </tr>
+      </thead>
 
-      <div class="timeline-body">
-        <header class="timeline-head">
-          <div class="timeline-title-wrap">
-            <div class="timeline-badges">
-              <span class="op-badge" [class]="grupoBadgeClass(grupo.operacion)">
-                {{ prettyOperacion(grupo.operacion) }}
+      <tbody>
+        <tr *ngFor="let row of rows(); trackBy: trackRow">
+          <td class="col-fecha">
+            <span class="truncate-line" [title]="(row.fechaHora | date:'yyyy-MM-dd HH:mm:ss') || ''">
+              {{ row.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}
+            </span>
+          </td>
+
+          <td class="col-edicion">
+            <div class="edit-cell">
+              <span class="field-name truncate-line" [title]="row.campoLabel">
+                {{ row.campoLabel }}
               </span>
-              <span class="meta-badge">
-                {{ grupo.usuarioLogin || ('Usuario ' + grupo.usuarioId) }}
+
+              <span class="op-badge" [class]="operacionClass(row.operacion)">
+                {{ displayOperacion(row.operacion, row.operacionLabel) }}
+              </span>
+
+              <span
+                class="field-summary truncate-line"
+                *ngIf="oneLine(row.resumenHumano, 120) !== '—'"
+                [title]="row.resumenHumano || ''"
+              >
+                {{ oneLine(row.resumenHumano, 120) }}
               </span>
             </div>
+          </td>
 
-            <h4>{{ grupo.resumenGeneral }}</h4>
+          <td class="col-usuario">
+            <span class="truncate-line" [title]="displayUsuario(row)">
+              {{ displayUsuario(row) }}
+            </span>
+          </td>
 
-            <p>
-              {{ grupo.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}
-              <span class="dot-sep">•</span>
-              {{ grupo.modulo }}
-              <span class="dot-sep">•</span>
-              {{ grupo.entidad }}
-            </p>
-          </div>
+          <td class="col-antes">
+            <span class="value-text before truncate-line" [title]="row.valorAnterior || ''">
+              {{ oneLine(row.valorAnterior, 220) }}
+            </span>
+          </td>
 
-          <span class="id-badge">#{{ grupo.idRegistro }}</span>
-        </header>
-
-        <div class="changes" *ngIf="hasUsefulChanges(grupo)">
-          <div class="change-row" *ngFor="let cambio of grupo.cambios; trackBy: trackCambio">
-            <div class="change-head">
-              <div class="change-field">{{ cambio.campoLabel }}</div>
-              <div class="change-summary">{{ cambio.resumenHumano }}</div>
-            </div>
-
-            <div class="change-values">
-              <div class="value-card before">
-                <span class="value-label">Antes</span>
-                <div class="value-box" [title]="cambio.valorAnterior || ''">
-                  {{ shortValue(cambio.valorAnterior) }}
-                </div>
-              </div>
-
-              <div class="value-card after">
-                <span class="value-label">Después</span>
-                <div class="value-box" [title]="cambio.valorNuevo || ''">
-                  {{ shortValue(cambio.valorNuevo) }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </article>
+          <td class="col-despues">
+            <span class="value-text after truncate-line" [title]="row.valorNuevo || ''">
+              {{ oneLine(row.valorNuevo, 220) }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </section>

@@ -17,7 +17,7 @@ import type {
   styleUrl: './auditoria-supervisor.component.scss',
 })
 export class AuditoriaSupervisorComponent {
-  private repo = inject(AuditoriaRepository);
+  private readonly repo = inject(AuditoriaRepository);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -86,7 +86,8 @@ export class AuditoriaSupervisorComponent {
       page: resetPage ? 0 : (filtros.page ?? 0),
     };
 
-    this.repo.listarSupervisor(payload)
+    this.repo
+      .listarSupervisor(payload)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (resp) => {
@@ -153,9 +154,22 @@ export class AuditoriaSupervisorComponent {
     return item.idSegAuditoria;
   }
 
-  shortValue(value: string | null | undefined, max = 180): string {
-    if (value == null || value === '') return '—';
-    return value.length > max ? value.slice(0, max) + '…' : value;
+  oneLine(value: string | null | undefined, max = 180): string {
+    const normalized = String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!normalized) return '—';
+    return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized;
+  }
+
+  displayUsuario(item: AuditoriaSupervisorItem): string {
+    return item.usuarioLogin?.trim() || 'Sistema';
+  }
+
+  displayContexto(item: AuditoriaSupervisorItem): string {
+    const parts = [item.entidad, item.modulo, item.tablaLabel].filter((x) => String(x ?? '').trim());
+    return parts.join(' · ');
   }
 
   operacionClass(value: string | null | undefined): string {
@@ -170,12 +184,11 @@ export class AuditoriaSupervisorComponent {
     const f = this.filtros();
     return !!(
       (f.q && f.q.trim()) ||
-      f.usuario != null ||
       (f.tabla && f.tabla.trim()) ||
       (f.operacion && f.operacion.trim()) ||
-      (f.idRegistro && f.idRegistro.trim()) ||
       (f.fechaDesde && f.fechaDesde.trim()) ||
-      (f.fechaHasta && f.fechaHasta.trim())
+      (f.fechaHasta && f.fechaHasta.trim()) ||
+      (f.size && f.size !== 25)
     );
   }
 }

@@ -1,12 +1,29 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { AuditoriaRepository } from 'src/app/features/adm/data-access/auditoria.repository';
 import type {
   AuditoriaCambio,
-  AuditoriaGrupo,
   AuditoriaRegistroResponse,
 } from 'src/app/features/adm/data-access/auditoria.models';
+
+interface AuditoriaLedgerRow {
+  rowId: string;
+  fechaHora: string | null;
+  usuarioLogin: string | null;
+  usuarioId: number | null;
+  operacion: string | null;
+  operacionLabel: string | null;
+  campo: string | null;
+  campoLabel: string;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
+  resumenHumano: string;
+  modulo: string;
+  entidad: string;
+  tablaLabel: string;
+  idRegistro: string;
+}
 
 @Component({
   selector: 'app-auditoria-registro',
@@ -16,7 +33,7 @@ import type {
   styleUrl: './auditoria-registro.component.scss',
 })
 export class AuditoriaRegistroComponent implements OnChanges {
-  private repo = inject(AuditoriaRepository);
+  private readonly repo = inject(AuditoriaRepository);
 
   @Input({ required: true }) tabla!: string;
   @Input() idRegistro: string | number | null = null;
@@ -28,6 +45,43 @@ export class AuditoriaRegistroComponent implements OnChanges {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<AuditoriaRegistroResponse | null>(null);
+
+  readonly rows = computed<AuditoriaLedgerRow[]>(() => {
+    const audit = this.data();
+    if (!audit) return [];
+
+    const result: AuditoriaLedgerRow[] = [];
+
+    for (const grupo of audit.historial ?? []) {
+      for (const cambio of grupo.cambios ?? []) {
+        if (!this.isUsefulChange(cambio)) {
+          continue;
+        }
+
+        result.push({
+          rowId: `${grupo.grupoId}::${cambio.idSegAuditoria}::${cambio.campo ?? 'campo'}`,
+          fechaHora: grupo.fechaHora,
+          usuarioLogin: grupo.usuarioLogin,
+          usuarioId: grupo.usuarioId,
+          operacion: grupo.operacion,
+          operacionLabel: grupo.operacionLabel,
+          campo: cambio.campo,
+          campoLabel: cambio.campoLabel || cambio.campo || 'Cambio',
+          valorAnterior: cambio.valorAnterior,
+          valorNuevo: cambio.valorNuevo,
+          resumenHumano: cambio.resumenHumano || '',
+          modulo: grupo.modulo,
+          entidad: grupo.entidad,
+          tablaLabel: grupo.tablaLabel,
+          idRegistro: grupo.idRegistro,
+        });
+      }
+    }
+
+    return result;
+  });
+
+  readonly totalRows = computed(() => this.rows().length);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['tabla'] || changes['idRegistro'] || changes['refreshKey']) {
@@ -45,7 +99,8 @@ export class AuditoriaRegistroComponent implements OnChanges {
     this.loading.set(true);
     this.error.set(null);
 
-    this.repo.historialRegistro(this.tabla, this.idRegistro)
+    this.repo
+      .historialRegistro(this.tabla, this.idRegistro)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (resp) => {
@@ -58,28 +113,25 @@ export class AuditoriaRegistroComponent implements OnChanges {
       });
   }
 
-  trackGrupo(_: number, item: AuditoriaGrupo) {
-    return item.grupoId;
+  trackRow(_: number, item: AuditoriaLedgerRow) {
+    return item.rowId;
   }
 
-  trackCambio(_: number, item: AuditoriaCambio) {
-    return item.idSegAuditoria;
+  displayUsuario(row: AuditoriaLedgerRow): string {
+    return row.usuarioLogin?.trim() || (row.usuarioId != null ? `Usuario ${row.usuarioId}` : 'Sistema');
   }
 
-  shortValue(value: string | null | undefined, max = 180): string {
-    if (value == null || value === '') return '—';
-    return value.length > max ? value.slice(0, max) + '…' : value;
-  }
+  displayOperacion(value: string | null | undefined, fallback?: string | null): string {
+    if (fallback && fallback.trim()) return fallback;
 
-  prettyOperacion(value: string | null | undefined): string {
     const op = String(value ?? '').toUpperCase();
     if (op === 'INSERT') return 'Creación';
     if (op === 'UPDATE') return 'Edición';
     if (op === 'DELETE') return 'Eliminación';
-    return value || 'Movimiento';
+    return 'Movimiento';
   }
 
-  grupoBadgeClass(value: string | null | undefined): string {
+  operacionClass(value: string | null | undefined): string {
     const op = String(value ?? '').toUpperCase();
     if (op === 'INSERT') return 'is-insert';
     if (op === 'UPDATE') return 'is-update';
@@ -87,7 +139,39 @@ export class AuditoriaRegistroComponent implements OnChanges {
     return 'is-default';
   }
 
-  hasUsefulChanges(grupo: AuditoriaGrupo): boolean {
-    return Array.isArray(grupo.cambios) && grupo.cambios.length > 0;
+  oneLine(value: string | null | undefined, max = 180): string {
+    const normalized = String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!normalized) return '—';
+    return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized;
+  }
+
+  hasRows(): boolean {
+    return this.rows().length > 0;
+  }
+
+  private isUsefulChange(cambio: AuditoriaCambio): boolean {
+    const before = this.cleanValue(cambio.valorAnterior);
+    const after = this.cleanValue(cambio.valorNuevo);
+    const resumen = this.cleanValue(cambio.resumenHumano);
+    const campo = this.cleanValue(cambio.campoLabel || cambio.campo);
+
+    if (!campo && !resumen && !before && !after) {
+      return false;
+    }
+
+    if (before === after && !resumen) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private cleanValue(value: string | null | undefined): string {
+    return String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

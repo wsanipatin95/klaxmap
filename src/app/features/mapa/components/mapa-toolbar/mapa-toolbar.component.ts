@@ -108,7 +108,7 @@ export class MapaToolbarComponent {
       case 'draw-point':
         return 'Crear punto';
       case 'draw-line':
-        return 'Crear línea';
+        return 'Crear ruta';
       case 'draw-polygon':
         return 'Crear polígono';
       case 'edit-geometry':
@@ -165,7 +165,7 @@ export class MapaToolbarComponent {
 
       case 'draw-line':
         return {
-          title: 'Crear línea',
+          title: 'Crear ruta',
           text: 'Haz clic para iniciar, sigue marcando puntos y termina con doble clic.',
         };
 
