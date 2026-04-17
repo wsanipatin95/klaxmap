@@ -18,7 +18,7 @@ export class MapaStatusbarComponent {
   modeLabel(mode: MapaToolMode): string {
     switch (mode) {
       case 'edit-geometry':
-        return 'Editar forma';
+        return 'Editar posicion';
       case 'draw-point':
         return 'Crear punto';
       case 'draw-line':

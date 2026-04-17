@@ -97,6 +97,7 @@ export class MapaHomeComponent {
   readonly nodos = this.crud.nodos;
   readonly tipos = this.crud.tipos;
   readonly elementos = this.crud.elementos;
+  readonly deletedElementos = this.crud.deletedElementos;
   readonly error = this.crud.error;
 
   readonly contextVisible = this.interaction.contextVisible;
@@ -122,6 +123,7 @@ export class MapaHomeComponent {
 
   readonly elementosCanvas = this.view.elementosCanvas;
   readonly searchResultIndex = this.view.searchResultIndex;
+  readonly deletedElementsVisible = this.ui.deletedElementsVisible;
 
   readonly geoSearchValue = this.geoSearch.value;
   readonly geoSearchLoading = this.geoSearch.loading;
@@ -179,17 +181,26 @@ export class MapaHomeComponent {
     this.scheduleLayoutRefreshForSidebarChange();
   }
 
-  onToolbarSidebarCompactToggle() {
-    this.ui.toggleSidebarCompact();
-    this.scheduleLayoutRefreshForSidebarChange();
-  }
-
   onToolbarBasemapSelect(key: BasemapKey) {
     this.selectedBasemap.set(key);
   }
 
   onToolbarLabelsToggle() {
     this.labelsVisible.update((value) => !value);
+  }
+
+  onDeletedElementsVisibilityChange(visible: boolean) {
+    this.ui.setDeletedElementsVisible(visible);
+
+    const selected = this.selectedElemento();
+    if (!visible && selected?.fecFin) {
+      this.selection.setElemento(null);
+      this.propertiesRequestedTab.set('edicion');
+      this.interaction.closeInfoPanel();
+      this.interaction.closeContextMenu();
+    }
+
+    this.defer(() => this.mapCanvas?.refreshMapLayout?.());
   }
 
   onToolbarMyLocationRequested() {
@@ -237,7 +248,7 @@ export class MapaHomeComponent {
       this.filtros.setQ(q);
       this.selection.setElemento(null);
       this.interaction.closeContextMenu();
-      this.crud.loadElementos((items) => {
+      this.crud.refreshAll((items) => {
         this.view.centerFirstVisibleSearchResultIfNeeded(items, {
           onSelect: (item) => this.selection.setElemento(item),
           centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
@@ -251,7 +262,7 @@ export class MapaHomeComponent {
       this.filtros.setQ('');
       this.selection.setElemento(null);
       this.interaction.closeContextMenu();
-      this.crud.loadElementos((items) => {
+      this.crud.refreshAll((items) => {
         this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
       });
     });
@@ -286,7 +297,7 @@ export class MapaHomeComponent {
       this.filtros.setTipo(tipoId);
       this.selection.setElemento(null);
       this.interaction.closeContextMenu();
-      this.crud.loadElementos((items) => {
+      this.crud.refreshAll((items) => {
         const visibles = this.view.filterCanvasVisible(items);
         if (visibles.length) {
           this.defer(() => this.mapCanvas?.centerOnElementos(visibles));
@@ -320,18 +331,21 @@ export class MapaHomeComponent {
   onElementoUpdated(item: MapaElemento) {
     this.selection.setElemento(item);
     this.interaction.setInfoPanelDirty(false);
-    this.crud.loadElementos(() => {
+    this.crud.refreshAll(() => {
       this.defer(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento));
     });
     this.showSuccess('Información guardada', `Se actualizó "${item.nombre}" correctamente.`);
   }
 
   onElementoDeleted(id: number) {
+    const deletedName = this.selectedElemento()?.nombre || 'elemento';
+
     this.interaction.onElementoDeleted(id);
     this.visibility.clearElemento(id);
-    this.crud.loadElementos((items) => {
+    this.crud.refreshAll((items) => {
       this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
     });
+    this.showSuccess('Elemento eliminado', `Se movió "${deletedName}" a la carpeta Eliminados.`);
   }
 
   onRefresh() {
@@ -616,7 +630,7 @@ export class MapaHomeComponent {
       event.node.idRedNodo,
       event.visible,
       this.nodos(),
-      this.elementos()
+      [...this.elementos(), ...this.deletedElementos()]
     );
 
     if (event.visible) {
@@ -747,6 +761,12 @@ export class MapaHomeComponent {
 
   onTreeDeleteElementoRequested(elemento: MapaElemento) {
     this.deleteContextElemento(elemento);
+  }
+
+  onTreeRestoreDeletedElementoRequested(elemento: MapaElemento) {
+    this.runGuarded(() => {
+      this.confirmRestoreElemento(elemento);
+    });
   }
 
   onCreateNodeSubmitted(payload: MapaNodoSaveRequest) {
@@ -934,15 +954,20 @@ export class MapaHomeComponent {
     this.confirmDialog?.open(
       {
         title: 'Eliminar nodo',
-        message: `Vas a eliminar el nodo "${node.nodo}".\n\nEsta acción no se puede deshacer.`,
+        message: `El nodo "${node.nodo}" se marcará como eliminado.\n\nMientras permanezca eliminado no aparecerá en el árbol principal.`,
         confirmLabel: 'Eliminar nodo',
         cancelLabel: 'Cancelar',
         severity: 'danger',
       },
       () => {
-        this.crud.deleteNodo(node.idRedNodo, () => {
-          this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
-        });
+        this.crud.deleteNodo(
+          node.idRedNodo,
+          () => {
+            this.showSuccess('Nodo eliminado', `Se eliminó lógicamente "${node.nodo}".`);
+            this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+          },
+          (message) => this.crud.setError(message)
+        );
       }
     );
   }
@@ -951,27 +976,54 @@ export class MapaHomeComponent {
     this.confirmDialog?.open(
       {
         title: 'Eliminar elemento',
-        message: `Vas a eliminar el elemento "${item.nombre}".\n\nEsta acción no se puede deshacer.`,
+        message: `El elemento "${item.nombre}" se moverá a la carpeta Eliminados.\n\nPodrás restaurarlo luego.`,
         confirmLabel: 'Eliminar elemento',
         cancelLabel: 'Cancelar',
         severity: 'danger',
       },
       () => {
-        this.crud.deleteElemento(item.idGeoElemento, () => {
-          this.interaction.closeContextMenu();
+        this.crud.deleteElemento(
+          item.idGeoElemento,
+          () => {
+            this.interaction.closeContextMenu();
 
-          if (this.editSessionElementId() === item.idGeoElemento) {
-            this.interaction.resetEditSessionState();
-            this.ui.setSelectMode();
-          }
+            if (this.editSessionElementId() === item.idGeoElemento) {
+              this.interaction.resetEditSessionState();
+              this.ui.setSelectMode();
+            }
 
-          if (this.selectedElemento()?.idGeoElemento === item.idGeoElemento) {
-            this.propertiesRequestedTab.set('edicion');
-            this.interaction.closeInfoPanel();
-          }
+            if (this.selectedElemento()?.idGeoElemento === item.idGeoElemento) {
+              this.propertiesRequestedTab.set('edicion');
+              this.interaction.closeInfoPanel();
+            }
 
-          this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
-        });
+            this.showSuccess('Elemento eliminado', `Se movió "${item.nombre}" a Eliminados.`);
+            this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+          },
+          (message) => this.crud.setError(message)
+        );
+      }
+    );
+  }
+
+  private confirmRestoreElemento(item: MapaElemento) {
+    this.confirmDialog?.open(
+      {
+        title: 'Restaurar elemento',
+        message: `El elemento "${item.nombre}" volverá a su ubicación original dentro del árbol.\n\n¿Deseas continuar?`,
+        confirmLabel: 'Restaurar',
+        cancelLabel: 'Cancelar',
+        severity: 'info',
+      },
+      () => {
+        this.crud.restoreElemento(
+          item.idGeoElemento,
+          (restored) => {
+            this.showSuccess('Elemento restaurado', `Se restauró "${restored.nombre}" correctamente.`);
+            this.defer(() => this.mapCanvas?.centerOnElemento(restored.idGeoElemento));
+          },
+          (message) => this.crud.setError(message)
+        );
       }
     );
   }

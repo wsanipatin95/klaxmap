@@ -229,6 +229,59 @@
   right: 2px;
 }
 
+.node-preview.is-deleted-folder {
+  border-color: #b42318;
+  background: #fee4e2;
+}
+
+.node-preview.is-deleted-folder::before {
+  border-color: #b42318;
+  background: #fef3f2;
+}
+
+.deleted-folder-row {
+  border-top: 1px dashed #d0d5dd;
+  margin-top: 0.18rem;
+  padding-top: 0.14rem;
+}
+
+.deleted-folder-count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.38rem;
+  padding: 0.02rem 0.32rem;
+  border-radius: 999px;
+  background: #fee4e2;
+  color: #b42318;
+  font-size: 0.58rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.deleted-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.34rem;
+  padding: 0.02rem 0.28rem;
+  border-radius: 999px;
+  background: #fff1f3;
+  color: #b42318;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.element-row.is-deleted .element-row-grid,
+.element-row-deleted .element-row-grid {
+  background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);
+}
+
+.element-row.is-deleted .element-name,
+.element-row-deleted .element-name {
+  color: #9f1239;
+}
+
 .node-row.active .node-preview.is-folder,
 .node-row.active .node-preview.is-zone,
 .node-row.active .node-preview.is-physical-node {

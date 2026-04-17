@@ -35,12 +35,14 @@
             <app-mapa-tree
               [nodos]="nodos"
               [elementos]="elementos"
+              [deletedElementos]="deletedElementos"
               [tipos]="tipos"
               [selectedNodoId]="selectedNodoId"
               [selectedElementoId]="selectedElementoId"
               [searchValue]="searchValue"
               [hiddenNodeIds]="hiddenNodeIds"
               [hiddenElementoIds]="hiddenElementoIds"
+              [deletedElementsVisible]="deletedElementsVisible"
               (nodoSelected)="nodoSelected.emit($event)"
               (elementoSelected)="treeElementoSelected.emit($event)"
               (nodeVisibilityChange)="treeNodeVisibilityChange.emit($event)"
@@ -54,6 +56,8 @@
               (auditElementoRequested)="treeAuditElementoRequested.emit($event)"
               (editGeometryElementoRequested)="treeEditGeometryElementoRequested.emit($event)"
               (deleteElementoRequested)="treeDeleteElementoRequested.emit($event)"
+              (restoreDeletedElementoRequested)="treeRestoreDeletedElementoRequested.emit($event)"
+              (deletedElementsVisibilityChange)="deletedElementsVisibilityChange.emit($event)"
             />
           </div>
 

@@ -22,6 +22,9 @@ export class MapaNodosApi {
     if (params.page != null) httpParams = httpParams.set('page', params.page);
     if (params.size != null) httpParams = httpParams.set('size', params.size);
     if (params.all != null) httpParams = httpParams.set('all', params.all);
+    if (params.includeDeleted != null)
+      httpParams = httpParams.set('includeDeleted', params.includeDeleted);
+    if (params.onlyDeleted != null) httpParams = httpParams.set('onlyDeleted', params.onlyDeleted);
 
     return this.http.get<ApiEnvelope<PagedResponse<MapaNodo> | MapaNodo[]>>(
       `${this.baseUrl}/listar`,
@@ -38,6 +41,10 @@ export class MapaNodosApi {
   }
 
   eliminar(id: number) {
-    return this.http.delete<ApiEnvelope<{ id: number }>>(`${this.baseUrl}/${id}`);
+    return this.http.delete<ApiEnvelope<MapaNodo>>(`${this.baseUrl}/${id}`);
+  }
+
+  restaurar(id: number) {
+    return this.http.patch<ApiEnvelope<MapaNodo>>(`${this.baseUrl}/${id}/restaurar`, {});
   }
 }

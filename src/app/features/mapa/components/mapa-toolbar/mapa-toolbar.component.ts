@@ -46,7 +46,6 @@ export class MapaToolbarComponent {
   @Output() drawPolygonModeRequested = new EventEmitter<void>();
   @Output() measureModeRequested = new EventEmitter<void>();
   @Output() sidebarToggleRequested = new EventEmitter<void>();
-  @Output() sidebarCompactRequested = new EventEmitter<void>();
   @Output() myLocationRequested = new EventEmitter<void>();
   @Output() basemapSelectRequested = new EventEmitter<BasemapKey>();
   @Output() labelsToggleRequested = new EventEmitter<void>();
@@ -99,10 +98,6 @@ export class MapaToolbarComponent {
     return this.sidebarHidden ? 'Mostrar panel lateral' : 'Ocultar panel lateral';
   }
 
-  sidebarCompactTitle(): string {
-    return this.sidebarCompact ? 'Expandir panel lateral' : 'Comprimir panel lateral';
-  }
-
   modeName(mode: MapaToolMode): string {
     switch (mode) {
       case 'draw-point':
@@ -112,7 +107,7 @@ export class MapaToolbarComponent {
       case 'draw-polygon':
         return 'Crear polígono';
       case 'edit-geometry':
-        return 'Editar forma';
+        return 'Editar posicion';
       case 'move':
         return 'Mover mapa';
       case 'measure':
@@ -177,7 +172,7 @@ export class MapaToolbarComponent {
 
       case 'edit-geometry':
         return {
-          title: 'Editar forma',
+          title: 'Editar posicion',
           text: this.selectedName
             ? `Elemento listo para edición: "${this.selectedName}".`
             : 'Primero selecciona un elemento para editar su forma.',

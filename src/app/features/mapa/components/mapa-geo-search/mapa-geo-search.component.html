@@ -1,28 +1,9 @@
 <section class="geo-search-inline" aria-label="Búsqueda geográfica">
   <form
     class="geo-search-form"
-    [class.has-menu-toggle]="mapaChrome.isMapaRouteActive()"
+    [class.has-clear]="hasValue"
     (submit)="submitSearch($event)"
   >
-    <button
-      type="button"
-      class="geo-search-menu-toggle"
-      [class.is-hidden]="!mapaChrome.isMapaRouteActive()"
-      [class.is-active]="!mapaChrome.hidden()"
-      [disabled]="!mapaChrome.isMapaRouteActive()"
-      [attr.aria-pressed]="!mapaChrome.hidden()"
-      [attr.aria-label]="chromeToggleTitle"
-      [attr.title]="chromeToggleTitle"
-      (click)="toggleMapaChrome()"
-    >
-      <i
-        class="pi"
-        [class.pi-bars]="mapaChrome.hidden()"
-        [class.pi-times]="!mapaChrome.hidden()"
-        aria-hidden="true"
-      ></i>
-    </button>
-
     <input
       type="text"
       class="geo-search-input"
@@ -46,6 +27,7 @@
     </button>
 
     <button
+      *ngIf="hasValue"
       type="button"
       class="geo-search-clear"
       [disabled]="loading && !draftValue"

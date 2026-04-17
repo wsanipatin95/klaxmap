@@ -37,11 +37,13 @@ export class MapaCrudFacade {
   private nodosSeq = 0;
   private tiposSeq = 0;
   private elementosSeq = 0;
+  private deletedElementosSeq = 0;
   private refreshSeq = 0;
 
   readonly nodos = signal<MapaNodo[]>([]);
   readonly tipos = signal<MapaTipoElemento[]>([]);
   readonly elementos = signal<MapaElemento[]>([]);
+  readonly deletedElementos = signal<MapaElemento[]>([]);
   readonly error = signal<string | null>(null);
 
   readonly totalElementos = computed(() => this.elementos().length);
@@ -65,8 +67,8 @@ export class MapaCrudFacade {
 
           const items = this.parseListResult<MapaNodo>(data);
           this.nodos.set(items);
-          this.visibility.prune(items, this.elementos());
-          this.syncSelectionWithData(items, this.elementos());
+          this.visibility.prune(items, this.getAllKnownElementos());
+          this.syncSelectionWithData(items, this.getAllKnownElementos());
         },
         error: (err) => {
           console.error('[MAPA][NODOS] error:', err);
@@ -112,8 +114,8 @@ export class MapaCrudFacade {
 
           const items = this.parseListResult<MapaElemento>(data);
           this.elementos.set(items);
-          this.visibility.prune(this.nodos(), items);
-          this.syncSelectionWithData(this.nodos(), items);
+          this.visibility.prune(this.nodos(), [...items, ...this.deletedElementos()]);
+          this.syncSelectionWithData(this.nodos(), [...items, ...this.deletedElementos()]);
           onLoaded?.(items);
         },
         error: (err) => {
@@ -123,11 +125,38 @@ export class MapaCrudFacade {
       });
   }
 
+  loadDeletedElementos(onLoaded?: (items: MapaElemento[]) => void) {
+    const seq = ++this.deletedElementosSeq;
+    this.beginLoading();
+
+    this.elementosRepo
+      .listar(this.buildDeletedElementosFilters())
+      .pipe(finalize(() => this.endLoading()))
+      .subscribe({
+        next: (data) => {
+          if (seq !== this.deletedElementosSeq) {
+            return;
+          }
+
+          const items = this.parseListResult<MapaElemento>(data);
+          this.deletedElementos.set(items);
+          this.visibility.prune(this.nodos(), [...this.elementos(), ...items]);
+          this.syncSelectionWithData(this.nodos(), [...this.elementos(), ...items]);
+          onLoaded?.(items);
+        },
+        error: (err) => {
+          console.error('[MAPA][ELEMENTOS ELIMINADOS] error:', err);
+          this.error.set(err?.message || 'No se pudo cargar elementos eliminados');
+        },
+      });
+  }
+
   refreshAll(onElementosLoaded?: (items: MapaElemento[]) => void) {
     const refreshSeq = ++this.refreshSeq;
     const nodosSeq = ++this.nodosSeq;
     const tiposSeq = ++this.tiposSeq;
     const elementosSeq = ++this.elementosSeq;
+    const deletedElementosSeq = ++this.deletedElementosSeq;
 
     this.beginLoading();
 
@@ -135,15 +164,17 @@ export class MapaCrudFacade {
       nodos: this.nodosRepo.listar({ all: true }),
       tipos: this.tiposRepo.listar({ all: true }),
       elementos: this.elementosRepo.listar(this.buildElementosFilters()),
+      deletedElementos: this.elementosRepo.listar(this.buildDeletedElementosFilters()),
     })
       .pipe(finalize(() => this.endLoading()))
       .subscribe({
-        next: ({ nodos, tipos, elementos }) => {
+        next: ({ nodos, tipos, elementos, deletedElementos }) => {
           const requestStillCurrent =
             refreshSeq === this.refreshSeq &&
             nodosSeq === this.nodosSeq &&
             tiposSeq === this.tiposSeq &&
-            elementosSeq === this.elementosSeq;
+            elementosSeq === this.elementosSeq &&
+            deletedElementosSeq === this.deletedElementosSeq;
 
           if (!requestStillCurrent) {
             return;
@@ -152,13 +183,15 @@ export class MapaCrudFacade {
           const nextNodos = this.parseListResult<MapaNodo>(nodos);
           const nextTipos = this.parseListResult<MapaTipoElemento>(tipos);
           const nextElementos = this.parseListResult<MapaElemento>(elementos);
+          const nextDeletedElementos = this.parseListResult<MapaElemento>(deletedElementos);
 
           this.nodos.set(nextNodos);
           this.tipos.set(nextTipos);
           this.elementos.set(nextElementos);
+          this.deletedElementos.set(nextDeletedElementos);
 
-          this.visibility.prune(nextNodos, nextElementos);
-          this.syncSelectionWithData(nextNodos, nextElementos);
+          this.visibility.prune(nextNodos, [...nextElementos, ...nextDeletedElementos]);
+          this.syncSelectionWithData(nextNodos, [...nextElementos, ...nextDeletedElementos]);
 
           onElementosLoaded?.(nextElementos);
         },
@@ -177,7 +210,7 @@ export class MapaCrudFacade {
     this.elementosRepo.crear(payload).subscribe({
       next: (resp) => {
         this.selection.setElemento(resp.data);
-        this.loadElementos(() => {
+        this.refreshAll(() => {
           onDone?.(resp.data);
         });
       },
@@ -198,7 +231,7 @@ export class MapaCrudFacade {
     this.elementosRepo.editarGeometria(payload).subscribe({
       next: (resp) => {
         this.selection.setElemento(resp.data);
-        this.loadElementos(() => {
+        this.refreshAll(() => {
           onDone?.(resp.data);
         });
       },
@@ -211,21 +244,48 @@ export class MapaCrudFacade {
     });
   }
 
-  deleteElemento(id: number, onDone?: () => void) {
+  deleteElemento(
+    id: number,
+    onDone?: (deleted: MapaElemento) => void,
+    onError?: (message: string) => void
+  ) {
     this.elementosRepo.eliminar(id).subscribe({
-      next: () => {
+      next: (resp) => {
         if (this.selection.selectedElemento()?.idGeoElemento === id) {
           this.selection.setElemento(null);
         }
 
         this.visibility.clearElemento(id);
-        this.loadElementos(() => {
-          onDone?.();
+        this.refreshAll(() => {
+          onDone?.(resp.data);
         });
       },
       error: (err) => {
         console.error('[MAPA][DELETE ELEMENTO] error:', err);
-        this.error.set(err?.message || 'No se pudo eliminar el elemento');
+        const message = err?.message || 'No se pudo eliminar el elemento';
+        this.error.set(message);
+        onError?.(message);
+      },
+    });
+  }
+
+  restoreElemento(
+    id: number,
+    onDone?: (restored: MapaElemento) => void,
+    onError?: (message: string) => void
+  ) {
+    this.elementosRepo.restaurar(id).subscribe({
+      next: (resp) => {
+        this.selection.setElemento(resp.data);
+        this.refreshAll(() => {
+          onDone?.(resp.data);
+        });
+      },
+      error: (err) => {
+        console.error('[MAPA][RESTORE ELEMENTO] error:', err);
+        const message = err?.message || 'No se pudo restaurar el elemento';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }
@@ -273,19 +333,45 @@ export class MapaCrudFacade {
     });
   }
 
-  deleteNodo(id: number, onDone?: () => void) {
+  deleteNodo(
+    id: number,
+    onDone?: (deleted: MapaNodo) => void,
+    onError?: (message: string) => void
+  ) {
     this.nodosRepo.eliminar(id).subscribe({
-      next: () => {
+      next: (resp) => {
         if (this.selection.selectedNodo()?.idRedNodo === id) {
           this.selection.setNodo(null);
         }
 
         this.refreshAll();
-        onDone?.();
+        onDone?.(resp.data);
       },
       error: (err) => {
         console.error('[MAPA][DELETE NODO] error:', err);
-        this.error.set(err?.message || 'No se pudo eliminar el nodo');
+        const message = err?.message || 'No se pudo eliminar el nodo';
+        this.error.set(message);
+        onError?.(message);
+      },
+    });
+  }
+
+  restoreNodo(
+    id: number,
+    onDone?: (restored: MapaNodo) => void,
+    onError?: (message: string) => void
+  ) {
+    this.nodosRepo.restaurar(id).subscribe({
+      next: (resp) => {
+        this.selection.setNodo(resp.data);
+        this.refreshAll();
+        onDone?.(resp.data);
+      },
+      error: (err) => {
+        console.error('[MAPA][RESTORE NODO] error:', err);
+        const message = err?.message || 'No se pudo restaurar el nodo';
+        this.error.set(message);
+        onError?.(message);
       },
     });
   }
@@ -305,6 +391,18 @@ export class MapaCrudFacade {
       idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
       visible: this.filtros.visible(),
       all: true,
+      includeDeleted: false,
+      onlyDeleted: false,
+    };
+  }
+
+  private buildDeletedElementosFilters() {
+    return {
+      q: this.filtros.q(),
+      idRedNodoFk: this.filtros.idRedNodoFk(),
+      idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
+      all: true,
+      onlyDeleted: true,
     };
   }
 
@@ -325,6 +423,10 @@ export class MapaCrudFacade {
         elementos.find((item) => item.idGeoElemento === selectedElementoId) ?? null;
       this.selection.setElemento(refreshedElemento);
     }
+  }
+
+  private getAllKnownElementos(): MapaElemento[] {
+    return [...this.elementos(), ...this.deletedElementos()];
   }
 
   private beginLoading() {

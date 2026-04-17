@@ -65,7 +65,7 @@ export class SidebarComponent {
       });
       if (this.auditoriaRed()) {
         items.push({
-          label: 'Auditoría',
+          label: 'Historial',
           icon: 'pi pi-history',
           route: '/app/adm/auditoria',
         });

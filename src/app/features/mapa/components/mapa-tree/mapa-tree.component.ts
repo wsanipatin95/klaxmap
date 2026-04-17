@@ -50,6 +50,11 @@ interface TreeNodeVm {
   hiddenElementCount: number;
 }
 
+interface DeletedFolderVm {
+  elementos: MapaElemento[];
+  visible: boolean;
+}
+
 export interface TreeNodeVisibilityChange {
   node: MapaNodo;
   visible: boolean;
@@ -81,16 +86,20 @@ type ContextKind = 'node' | 'element' | null;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapaTreeComponent implements OnChanges {
+  readonly DELETED_FOLDER_ID = -1;
+
   @ViewChild('treeScroll') treeScroll?: ElementRef<HTMLDivElement>;
 
   @Input() nodos: MapaNodo[] = [];
   @Input() elementos: MapaElemento[] = [];
+  @Input() deletedElementos: MapaElemento[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() selectedNodoId: number | null = null;
   @Input() selectedElementoId: number | null = null;
   @Input() searchValue = '';
   @Input() hiddenNodeIds: number[] = [];
   @Input() hiddenElementoIds: number[] = [];
+  @Input() deletedElementsVisible = false;
 
   @Output() nodoSelected = new EventEmitter<MapaNodo | null>();
   @Output() elementoSelected = new EventEmitter<MapaElemento>();
@@ -105,6 +114,8 @@ export class MapaTreeComponent implements OnChanges {
   @Output() auditElementoRequested = new EventEmitter<MapaElemento>();
   @Output() editGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() deleteElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() restoreDeletedElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() deletedElementsVisibilityChange = new EventEmitter<boolean>();
 
   readonly expandedIds = signal<number[]>([]);
   readonly contextVisible = signal(false);
@@ -121,6 +132,7 @@ export class MapaTreeComponent implements OnChanges {
   );
 
   tree: TreeNodeVm[] = [];
+  deletedFolder: DeletedFolderVm = { elementos: [], visible: false };
 
   performanceMode = false;
   performanceNotice = '';
@@ -131,6 +143,7 @@ export class MapaTreeComponent implements OnChanges {
   private readonly MAX_ELEMENTS_PER_NODE = 150;
 
   private treeElementos: MapaElemento[] = [];
+  private treeDeletedElementos: MapaElemento[] = [];
   private hiddenNodeSet = new Set<number>();
   private hiddenElementoSet = new Set<number>();
   private tipoMap = new Map<number, MapaTipoElemento>();
@@ -141,18 +154,21 @@ export class MapaTreeComponent implements OnChanges {
     const searchChanged = !!changes['searchValue'];
     const selectedNodoChanged = !!changes['selectedNodoId'];
     const selectedElementoChanged = !!changes['selectedElementoId'];
+    const deletedChanged = !!changes['deletedElementos'];
 
     this.hiddenNodeSet = new Set(this.hiddenNodeIds);
     this.hiddenElementoSet = new Set(this.hiddenElementoIds);
     this.tipoMap = new Map(this.tipos.map((t) => [t.idGeoTipoElemento, t]));
     this.performanceMode = this.elementos.length >= this.TREE_PERFORMANCE_THRESHOLD;
     this.treeElementos = this.selectElementosForTree();
+    this.treeDeletedElementos = this.selectDeletedElementosForTree();
 
     if (nodosChanged) {
       this.pruneExpandedIds();
     }
 
     this.rebuildTree();
+    this.rebuildDeletedFolder();
 
     if (nodosChanged) {
       this.ensureRootNodesExpanded();
@@ -160,23 +176,38 @@ export class MapaTreeComponent implements OnChanges {
 
     if (searchChanged && this.searchValue.trim()) {
       this.expandVisibleBranches();
+      if (this.deletedFolder.elementos.length) {
+        this.ensureDeletedFolderExpanded();
+      }
     }
 
     if ((selectedNodoChanged || selectedElementoChanged) && !this.searchValue.trim()) {
       this.ensureSelectionPathExpanded();
     }
 
-    if (nodosChanged || searchChanged || selectedNodoChanged || selectedElementoChanged) {
+    if (deletedChanged && this.deletedFolder.elementos.length && this.deletedElementsVisible) {
+      this.ensureDeletedFolderExpanded();
+    }
+
+    if (nodosChanged || searchChanged || selectedNodoChanged || selectedElementoChanged || deletedChanged) {
       this.requestScrollSelectionIntoView();
     }
   }
 
   get hasAnyTreeData(): boolean {
-    return this.nodos.length > 0 || this.treeElementos.length > 0;
+    return this.nodos.length > 0 || this.treeElementos.length > 0 || this.deletedElementos.length > 0;
   }
 
   get hasVisibleTreeData(): boolean {
-    return this.tree.length > 0;
+    return this.tree.length > 0 || this.deletedFolder.visible;
+  }
+
+  get hasDeletedFolder(): boolean {
+    return this.deletedFolder.elementos.length > 0;
+  }
+
+  get deletedFolderCountLabel(): string {
+    return `${this.deletedFolder.elementos.length}`;
   }
 
   selectAll() {
@@ -186,6 +217,9 @@ export class MapaTreeComponent implements OnChanges {
 
   expandAll() {
     this.expandVisibleBranches();
+    if (this.hasDeletedFolder) {
+      this.ensureDeletedFolderExpanded();
+    }
   }
 
   collapseAll() {
@@ -210,9 +244,21 @@ export class MapaTreeComponent implements OnChanges {
     this.requestScrollSelectionIntoView();
   }
 
+  toggleDeletedFolderExpanded(event?: Event) {
+    this.toggleExpanded(this.DELETED_FOLDER_ID, event);
+  }
+
   isExpanded(node: MapaNodo): boolean {
     if (this.searchValue.trim()) return true;
     return this.expandedIds().includes(node.idRedNodo);
+  }
+
+  isDeletedFolderExpanded(): boolean {
+    if (this.searchValue.trim()) {
+      return true;
+    }
+
+    return this.expandedIds().includes(this.DELETED_FOLDER_ID);
   }
 
   previewShapeClassForNode(node: MapaNodo): string {
@@ -302,13 +348,17 @@ export class MapaTreeComponent implements OnChanges {
       return true;
     }
 
-    for (const elemento of this.elementos) {
+    for (const elemento of [...this.elementos, ...this.deletedElementos]) {
       if (branchNodeIds.has(elemento.idRedNodoFk) && this.hiddenElementoSet.has(elemento.idGeoElemento)) {
         return true;
       }
     }
 
     return false;
+  }
+
+  isDeletedElement(elemento: MapaElemento | null | undefined): boolean {
+    return !!elemento?.fecFin;
   }
 
   onNodeClick(node: MapaNodo, event?: MouseEvent) {
@@ -332,6 +382,16 @@ export class MapaTreeComponent implements OnChanges {
     event.stopPropagation();
     const checked = (event.target as HTMLInputElement).checked;
     this.elementoVisibilityChange.emit({ elemento, visible: checked });
+  }
+
+  onToggleDeletedElements(event: Event) {
+    event.stopPropagation();
+    const checked = (event.target as HTMLInputElement).checked;
+    this.deletedElementsVisibilityChange.emit(checked);
+
+    if (checked) {
+      this.ensureDeletedFolderExpanded();
+    }
   }
 
   openNodeContext(node: MapaNodo, event: MouseEvent) {
@@ -407,13 +467,34 @@ export class MapaTreeComponent implements OnChanges {
     return trimmed;
   }
 
+  private selectDeletedElementosForTree(): MapaElemento[] {
+    const q = this.searchValue.trim().toLowerCase();
+    let source = this.deletedElementos.filter((item) => this.isDeletedElement(item));
+
+    if (q) {
+      source = source.filter((el) => this.matchesElementoWithQuery(el, q));
+    }
+
+    return source
+      .slice()
+      .sort((a, b) => {
+        return (
+          Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
+          a.nombre.localeCompare(b.nombre) ||
+          a.idGeoElemento - b.idGeoElemento
+        );
+      });
+  }
+
   private resolveFocusNodeId(): number | null {
     if (this.selectedNodoId != null) {
       return this.selectedNodoId;
     }
 
     if (this.selectedElementoId != null) {
-      const selected = this.elementos.find((el) => el.idGeoElemento === this.selectedElementoId);
+      const selected =
+        this.elementos.find((el) => el.idGeoElemento === this.selectedElementoId) ??
+        this.deletedElementos.find((el) => el.idGeoElemento === this.selectedElementoId);
       if (selected) {
         return selected.idRedNodoFk;
       }
@@ -492,8 +573,19 @@ export class MapaTreeComponent implements OnChanges {
     this.tree = roots.map(build).filter((n) => n.visible);
   }
 
+  private rebuildDeletedFolder() {
+    const q = this.searchValue.trim().toLowerCase();
+    const elementos = this.treeDeletedElementos;
+
+    this.deletedFolder = {
+      elementos,
+      visible: elementos.length > 0 || (!!q && this.deletedElementos.length > 0),
+    };
+  }
+
   private pruneExpandedIds() {
     const validIds = new Set(this.nodos.map((n) => n.idRedNodo));
+    validIds.add(this.DELETED_FOLDER_ID);
     const next = this.expandedIds().filter((id) => validIds.has(id));
 
     if (next.length !== this.expandedIds().length) {
@@ -538,7 +630,9 @@ export class MapaTreeComponent implements OnChanges {
     }
 
     if (this.selectedElementoId != null) {
-      const el = this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId);
+      const el =
+        this.elementos.find((x) => x.idGeoElemento === this.selectedElementoId) ??
+        this.deletedElementos.find((x) => x.idGeoElemento === this.selectedElementoId);
       if (el) {
         for (const id of getAncestorNodeIds(el.idRedNodoFk, this.nodos)) {
           if (!current.has(id)) {
@@ -550,10 +644,23 @@ export class MapaTreeComponent implements OnChanges {
           current.add(el.idRedNodoFk);
           changed = true;
         }
+
+        if (this.isDeletedElement(el)) {
+          current.add(this.DELETED_FOLDER_ID);
+          changed = true;
+        }
       }
     }
 
     if (changed) {
+      this.expandedIds.set([...current]);
+    }
+  }
+
+  private ensureDeletedFolderExpanded() {
+    const current = new Set(this.expandedIds());
+    if (!current.has(this.DELETED_FOLDER_ID)) {
+      current.add(this.DELETED_FOLDER_ID);
       this.expandedIds.set([...current]);
     }
   }
@@ -571,6 +678,11 @@ export class MapaTreeComponent implements OnChanges {
     };
 
     walk(this.tree);
+
+    if (this.deletedFolder.elementos.length) {
+      visibleIds.add(this.DELETED_FOLDER_ID);
+    }
+
     this.expandedIds.set([...visibleIds]);
   }
 

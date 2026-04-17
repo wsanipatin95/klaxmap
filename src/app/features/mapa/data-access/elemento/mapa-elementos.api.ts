@@ -24,16 +24,22 @@ export class MapaElementosApi {
     page?: number;
     size?: number;
     all?: boolean;
+    includeDeleted?: boolean;
+    onlyDeleted?: boolean;
   } = {}) {
     let httpParams = new HttpParams();
 
     if (params.q != null) httpParams = httpParams.set('q', params.q);
     if (params.idRedNodoFk != null) httpParams = httpParams.set('idRedNodoFk', params.idRedNodoFk);
-    if (params.idGeoTipoElementoFk != null) httpParams = httpParams.set('idGeoTipoElementoFk', params.idGeoTipoElementoFk);
+    if (params.idGeoTipoElementoFk != null)
+      httpParams = httpParams.set('idGeoTipoElementoFk', params.idGeoTipoElementoFk);
     if (params.visible != null) httpParams = httpParams.set('visible', params.visible);
     if (params.page != null) httpParams = httpParams.set('page', params.page);
     if (params.size != null) httpParams = httpParams.set('size', params.size);
     if (params.all != null) httpParams = httpParams.set('all', params.all);
+    if (params.includeDeleted != null)
+      httpParams = httpParams.set('includeDeleted', params.includeDeleted);
+    if (params.onlyDeleted != null) httpParams = httpParams.set('onlyDeleted', params.onlyDeleted);
 
     return this.http.get<ApiEnvelope<PagedResponse<MapaElemento> | MapaElemento[]>>(
       `${this.baseUrl}/listar`,
@@ -57,6 +63,10 @@ export class MapaElementosApi {
   }
 
   eliminar(id: number) {
-    return this.http.delete<ApiEnvelope<{ id: number }>>(`${this.baseUrl}/${id}`);
+    return this.http.delete<ApiEnvelope<MapaElemento>>(`${this.baseUrl}/${id}`);
+  }
+
+  restaurar(id: number) {
+    return this.http.patch<ApiEnvelope<MapaElemento>>(`${this.baseUrl}/${id}/restaurar`, {});
   }
 }

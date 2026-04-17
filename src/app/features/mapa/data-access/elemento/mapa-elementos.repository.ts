@@ -22,6 +22,8 @@ export class MapaElementosRepository {
     page?: number;
     size?: number;
     all?: boolean;
+    includeDeleted?: boolean;
+    onlyDeleted?: boolean;
   } = {}) {
     return this.api.listar(params).pipe(
       map((r) => unwrapOrThrow<PagedResponse<MapaElemento> | MapaElemento[]>(r))
@@ -43,6 +45,10 @@ export class MapaElementosRepository {
   }
 
   eliminar(id: number) {
-    return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<{ id: number }>(r)));
+    return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<MapaElemento>(r)));
+  }
+
+  restaurar(id: number) {
+    return this.api.restaurar(id).pipe(map((r) => unwrapWithMsg<MapaElemento>(r)));
   }
 }

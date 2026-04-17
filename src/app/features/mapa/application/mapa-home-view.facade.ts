@@ -24,7 +24,7 @@ export class MapaHomeViewFacade {
   readonly elementosCanvas = computed(() => {
     const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
 
-    return this.crud.elementos().filter((el) => {
+    return this.getCanvasSourceItems().filter((el) => {
       if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) {
         return false;
       }
@@ -87,7 +87,7 @@ export class MapaHomeViewFacade {
   filterCanvasVisible(items: MapaElemento[]): MapaElemento[] {
     const hiddenTipoIds = new Set(this.capas.hiddenTipoIds());
 
-    return items.filter((el) => {
+    return this.mergeDeletedIfNeeded(items).filter((el) => {
       if (hiddenTipoIds.has(el.idGeoTipoElementoFk)) {
         return false;
       }
@@ -187,5 +187,31 @@ export class MapaHomeViewFacade {
     }
 
     return this.elementosCanvas();
+  }
+
+  private getCanvasSourceItems(): MapaElemento[] {
+    if (!this.ui.deletedElementsVisible()) {
+      return this.crud.elementos();
+    }
+
+    return [...this.crud.elementos(), ...this.crud.deletedElementos()];
+  }
+
+  private mergeDeletedIfNeeded(items: MapaElemento[]): MapaElemento[] {
+    if (!this.ui.deletedElementsVisible()) {
+      return items;
+    }
+
+    const currentDeleted = this.crud.deletedElementos();
+    const ids = new Set(items.map((item) => item.idGeoElemento));
+    const merged = [...items];
+
+    for (const item of currentDeleted) {
+      if (!ids.has(item.idGeoElemento)) {
+        merged.push(item);
+      }
+    }
+
+    return merged;
   }
 }

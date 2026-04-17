@@ -17,6 +17,107 @@
         *ngTemplateOutlet="nodeTpl; context: { $implicit: item, level: 0 }"
       ></ng-container>
     </ng-container>
+
+    <li class="tree-node deleted-folder-node" *ngIf="deletedFolder.visible && hasDeletedFolder">
+      <div
+        class="node-row deleted-folder-row"
+        [class.active]="deletedElementsVisible"
+        [attr.data-node-id]="DELETED_FOLDER_ID"
+        (click)="toggleDeletedFolderExpanded($event)"
+        title="Carpeta virtual de elementos eliminados"
+      >
+        <button
+          type="button"
+          class="expand-btn"
+          *ngIf="deletedElementsVisible && deletedFolder.elementos.length > 0"
+          (click)="toggleDeletedFolderExpanded($event)"
+          aria-label="Expandir o contraer carpeta de eliminados"
+        >
+          <span class="expand-chevron" [class.expanded]="isDeletedFolderExpanded()">▸</span>
+        </button>
+
+        <span
+          class="expand-placeholder"
+          *ngIf="!deletedElementsVisible || deletedFolder.elementos.length === 0"
+        ></span>
+
+        <input
+          type="checkbox"
+          class="tree-check"
+          [checked]="deletedElementsVisible"
+          (click)="$event.stopPropagation()"
+          (change)="onToggleDeletedElements($event)"
+        />
+
+        <span
+          class="node-preview is-folder is-deleted-folder"
+          aria-hidden="true"
+        ></span>
+
+        <span class="node-name">
+          Eliminados
+          <span class="deleted-folder-count">{{ deletedFolderCountLabel }}</span>
+        </span>
+      </div>
+
+      <ul class="tree-children" *ngIf="deletedElementsVisible && isDeletedFolderExpanded()">
+        <li
+          class="element-row element-row-deleted"
+          *ngFor="let el of deletedFolder.elementos; trackBy: trackByElemento"
+          [class.active]="el.idGeoElemento === selectedElementoId"
+          [class.is-hidden]="!isElementoVisible(el)"
+          [class.is-deleted]="isDeletedElement(el)"
+          [style.paddingLeft.px]="26 + 12"
+          [attr.data-element-id]="el.idGeoElemento"
+          (click)="onElementoClick(el, $event)"
+          (contextmenu)="openElementoContext(el, $event)"
+          [attr.title]="el.nombre"
+        >
+          <div class="element-row-grid">
+            <input
+              type="checkbox"
+              class="tree-check"
+              [checked]="isElementoVisible(el)"
+              (click)="$event.stopPropagation()"
+              (change)="onToggleElemento(el, $event)"
+            />
+
+            <span
+              class="element-preview"
+              [ngClass]="previewShapeClassForElemento(el)"
+              [ngStyle]="previewStyleForElemento(el)"
+              aria-hidden="true"
+            >
+              <ng-container *ngIf="showMaterialPreviewForElemento(el)">
+                <span
+                  class="element-preview-material"
+                  [class]="previewMaterialFamilyForElemento(el)"
+                >
+                  {{ previewMaterialGlyphForElemento(el) }}
+                </span>
+              </ng-container>
+
+              <ng-container *ngIf="showClassPreviewForElemento(el)">
+                <i class="element-preview-class" [class]="previewClassForElemento(el)"></i>
+              </ng-container>
+
+              <ng-container *ngIf="showUrlPreviewForElemento(el)">
+                <img
+                  class="element-preview-image"
+                  [src]="previewImageUrlForElemento(el)"
+                  alt=""
+                />
+              </ng-container>
+            </span>
+
+            <span class="element-name">
+              {{ el.nombre }}
+              <span class="deleted-chip">eliminado</span>
+            </span>
+          </div>
+        </li>
+      </ul>
+    </li>
   </ul>
 </div>
 
@@ -77,6 +178,7 @@
         *ngFor="let el of item.elementos; trackBy: trackByElemento"
         [class.active]="el.idGeoElemento === selectedElementoId"
         [class.is-hidden]="!isElementoVisible(el)"
+        [class.is-deleted]="isDeletedElement(el)"
         [style.paddingLeft.px]="26 + ((level + 1) * 12)"
         [attr.data-element-id]="el.idGeoElemento"
         (click)="onElementoClick(el, $event)"
@@ -120,7 +222,10 @@
             </ng-container>
           </span>
 
-          <span class="element-name">{{ el.nombre }}</span>
+          <span class="element-name">
+            {{ el.nombre }}
+            <span class="deleted-chip" *ngIf="isDeletedElement(el)">eliminado</span>
+          </span>
         </div>
       </li>
 
@@ -197,12 +302,24 @@
         Editar datos
       </button>
       <button type="button" (click)="auditElementoRequested.emit(el); closeContext()">
-        Auditoría
+        Historial
       </button>
       <button *ngIf="editarElemento()" type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
-        Editar forma
+        Editar posicion
       </button>
-      <button *ngIf="editarElemento()" type="button" class="danger" (click)="deleteElementoRequested.emit(el); closeContext()">
+      <button
+        *ngIf="editarElemento() && isDeletedElement(el)"
+        type="button"
+        (click)="restoreDeletedElementoRequested.emit(el); closeContext()"
+      >
+        Restaurar
+      </button>
+      <button
+        *ngIf="editarElemento() && !isDeletedElement(el)"
+        type="button"
+        class="danger"
+        (click)="deleteElementoRequested.emit(el); closeContext()"
+      >
         Eliminar
       </button>
     </ng-container>

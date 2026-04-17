@@ -56,6 +56,10 @@ export interface MapaNodo {
   pathCache?: string | null;
   nivel: number;
   atributos?: MapaMetadata | null;
+  usuGen?: number | null;
+  fecGen?: string | null;
+  usuFin?: number | null;
+  fecFin?: string | null;
 }
 
 export interface MapaTipoElemento {
@@ -115,6 +119,11 @@ export interface MapaElemento {
   longitudM?: number;
   areaM2?: number;
   ordenDibujo?: number;
+
+  usuGen?: number | null;
+  fecGen?: string | null;
+  usuFin?: number | null;
+  fecFin?: string | null;
 
   // enriquecidos desde el backend
   tipoCodigo?: string | null;
@@ -241,6 +250,8 @@ export interface ListOrPageOptions {
   page?: number;
   size?: number;
   all?: boolean;
+  includeDeleted?: boolean;
+  onlyDeleted?: boolean;
 }
 
 export interface MapaElementoGeometriaRequest {

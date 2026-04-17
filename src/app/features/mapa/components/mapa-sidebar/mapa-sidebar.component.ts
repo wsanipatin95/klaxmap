@@ -51,6 +51,7 @@ export class MapaSidebarComponent {
 
   @Input() nodos: MapaNodo[] = [];
   @Input() elementos: MapaElemento[] = [];
+  @Input() deletedElementos: MapaElemento[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() selectedNodoId: number | null = null;
   @Input() selectedElementoId: number | null = null;
@@ -65,6 +66,7 @@ export class MapaSidebarComponent {
   @Input() geoSearchResults: MapaGeoSearchResult[] = [];
   @Input() hiddenNodeIds: number[] = [];
   @Input() hiddenElementoIds: number[] = [];
+  @Input() deletedElementsVisible = false;
 
   @Output() geoSearchRequested = new EventEmitter<string>();
   @Output() geoSearchClear = new EventEmitter<void>();
@@ -86,6 +88,8 @@ export class MapaSidebarComponent {
   @Output() treeAuditElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeEditGeometryElementoRequested = new EventEmitter<MapaElemento>();
   @Output() treeDeleteElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() treeRestoreDeletedElementoRequested = new EventEmitter<MapaElemento>();
+  @Output() deletedElementsVisibilityChange = new EventEmitter<boolean>();
 
   readonly topPanePercent = signal(68);
   private resizing = false;

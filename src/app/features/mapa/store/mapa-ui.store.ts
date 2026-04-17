@@ -19,6 +19,7 @@ export class MapaUiStore {
   readonly sidebarCompact = computed(() => this.sidebarMode() === 'compact');
   readonly propertiesOpen = signal(false);
   readonly loading = signal(false);
+  readonly deletedElementsVisible = signal(false);
 
   setToolMode(mode: MapaToolMode) {
     this.toolMode.set(mode);
@@ -84,5 +85,13 @@ export class MapaUiStore {
 
   setLoading(v: boolean) {
     this.loading.set(v);
+  }
+
+  setDeletedElementsVisible(visible: boolean) {
+    this.deletedElementsVisible.set(visible);
+  }
+
+  toggleDeletedElementsVisible() {
+    this.deletedElementsVisible.update((value) => !value);
   }
 }

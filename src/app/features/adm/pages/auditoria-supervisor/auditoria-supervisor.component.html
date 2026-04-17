@@ -1,6 +1,6 @@
 <div class="auditoria-page">
   <header class="page-topbar">
-    <h2>Auditoría</h2>
+    <h2>Historial</h2>
 
     <div class="page-actions">
       <button type="button" class="ghost-btn" (click)="limpiar()" [disabled]="loading()">
@@ -87,7 +87,7 @@
   </section>
 
   <section class="status-strip" *ngIf="loading() || error()">
-    <div class="status-chip info" *ngIf="loading()">Cargando auditoría...</div>
+    <div class="status-chip info" *ngIf="loading()">Cargando historial...</div>
     <div class="status-chip error" *ngIf="error() as err">{{ err }}</div>
   </section>
 

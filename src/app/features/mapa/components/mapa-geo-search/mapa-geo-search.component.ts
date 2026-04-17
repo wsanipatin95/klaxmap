@@ -6,11 +6,9 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
-  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MapaChromeService } from '../../../../core/services/mapa-chrome.service';
 import { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
 
 @Component({
@@ -21,8 +19,6 @@ import { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
   styleUrl: './mapa-geo-search.component.scss',
 })
 export class MapaGeoSearchComponent implements OnChanges {
-  readonly mapaChrome = inject(MapaChromeService);
-
   @Input() value = '';
   @Input() loading = false;
   @Input() results: MapaGeoSearchResult[] = [];
@@ -54,8 +50,8 @@ export class MapaGeoSearchComponent implements OnChanges {
     return this.hasSearched && !this.loading && !this.errorMessage && !this.results.length;
   }
 
-  get chromeToggleTitle(): string {
-    return this.mapaChrome.hidden() ? 'Mostrar menú principal' : 'Ocultar menú principal';
+  get hasValue(): boolean {
+    return !!(this.draftValue || '').trim();
   }
 
   onDraftChange(value: string) {
@@ -81,9 +77,5 @@ export class MapaGeoSearchComponent implements OnChanges {
 
   selectResult(item: MapaGeoSearchResult) {
     this.resultSelected.emit(item);
-  }
-
-  toggleMapaChrome() {
-    this.mapaChrome.toggle();
   }
 }

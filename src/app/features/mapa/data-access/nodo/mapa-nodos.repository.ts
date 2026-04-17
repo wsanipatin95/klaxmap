@@ -29,6 +29,10 @@ export class MapaNodosRepository {
   }
 
   eliminar(id: number) {
-    return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<{ id: number }>(r)));
+    return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<MapaNodo>(r)));
+  }
+
+  restaurar(id: number) {
+    return this.api.restaurar(id).pipe(map((r) => unwrapWithMsg<MapaNodo>(r)));
   }
 }

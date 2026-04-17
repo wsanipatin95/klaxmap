@@ -28,7 +28,6 @@
     (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
     (measureModeRequested)="onToolbarMeasureMode()"
     (sidebarToggleRequested)="onToolbarSidebarToggle()"
-    (sidebarCompactRequested)="onToolbarSidebarCompactToggle()"
     (myLocationRequested)="onToolbarMyLocationRequested()"
     (basemapSelectRequested)="onToolbarBasemapSelect($event)"
     (labelsToggleRequested)="onToolbarLabelsToggle()"
@@ -38,6 +37,7 @@
     slot="sidebar"
     [nodos]="nodos()"
     [elementos]="elementos()"
+    [deletedElementos]="deletedElementos()"
     [tipos]="tipos()"
     [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
     [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
@@ -52,6 +52,7 @@
     [geoSearchResults]="geoSearchResults()"
     [hiddenNodeIds]="hiddenNodeIds()"
     [hiddenElementoIds]="hiddenElementoIds()"
+    [deletedElementsVisible]="deletedElementsVisible()"
     (geoSearchRequested)="onGeoSearchRequested($event)"
     (geoSearchClear)="clearGeoSearch()"
     (geoSearchResultSelected)="onGeoSearchResultSelected($event)"
@@ -72,6 +73,8 @@
     (treeAuditElementoRequested)="onTreeAuditElementoRequested($event)"
     (treeEditGeometryElementoRequested)="onTreeEditGeometryElementoRequested($event)"
     (treeDeleteElementoRequested)="onTreeDeleteElementoRequested($event)"
+    (treeRestoreDeletedElementoRequested)="onTreeRestoreDeletedElementoRequested($event)"
+    (deletedElementsVisibilityChange)="onDeletedElementsVisibilityChange($event)"
   />
 
   <app-mapa-canvas
