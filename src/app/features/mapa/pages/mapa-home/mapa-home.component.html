@@ -1,71 +1,36 @@
-<app-mapa-layout
-  [propertiesOpen]="ui.propertiesOpen()"
-  [sidebarMode]="ui.sidebarMode()"
-  (sidebarBackdropRequested)="onSidebarBackdropRequested()"
->
-  <app-mapa-toolbar
-    slot="toolbar"
-    [selectedName]="selectedElemento()?.nombre ?? null"
-    [totalElementos]="elementosCanvas().length"
-    [editSessionActive]="editSessionActive()"
-    [editSessionDirty]="editSessionDirty()"
-    [editSessionElementName]="editSessionElementName()"
-    [sidebarMode]="ui.sidebarMode()"
-    [basemap]="selectedBasemap()"
-    [basemapOptions]="basemapOptions"
-    [labelsVisible]="labelsVisible()"
-    [locatingMyPosition]="locatingMyPosition()"
-    (refreshRequested)="onRefresh()"
-    (exportRequested)="abrirExportacion()"
-    (importRequested)="abrirImportacion()"
-    (manageTiposRequested)="irATiposElemento()"
-    (saveEditRequested)="saveGeometryEdition()"
-    (cancelEditRequested)="cancelGeometryEdition()"
-    (selectModeRequested)="onToolbarSelectMode()"
-    (editGeometryModeRequested)="onToolbarEditGeometryMode()"
-    (drawPointModeRequested)="onToolbarDrawPointMode()"
-    (drawLineModeRequested)="onToolbarDrawLineMode()"
-    (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
-    (measureModeRequested)="onToolbarMeasureMode()"
-    (sidebarToggleRequested)="onToolbarSidebarToggle()"
-    (myLocationRequested)="onToolbarMyLocationRequested()"
-    (basemapSelectRequested)="onToolbarBasemapSelect($event)"
-    (labelsToggleRequested)="onToolbarLabelsToggle()"
-  />
+<app-mapa-layout [propertiesOpen]="ui.propertiesOpen()" [sidebarMode]="ui.sidebarMode()"
+  (sidebarBackdropRequested)="onSidebarBackdropRequested()">
+  <app-mapa-toolbar slot="toolbar" [selectedName]="selectedElemento()?.nombre ?? null"
+    [totalElementos]="elementosCanvas().length" [editSessionActive]="editSessionActive()"
+    [editSessionDirty]="editSessionDirty()" [editSessionElementName]="editSessionElementName()"
+    [sidebarMode]="ui.sidebarMode()" [basemap]="selectedBasemap()" [basemapOptions]="basemapOptions"
+    [labelsVisible]="labelsVisible()" [locatingMyPosition]="locatingMyPosition()" (refreshRequested)="onRefresh()"
+    (exportRequested)="abrirExportacion()" (importRequested)="abrirImportacion()"
+    (manageTiposRequested)="irATiposElemento()" (saveEditRequested)="saveGeometryEdition()"
+    (cancelEditRequested)="cancelGeometryEdition()" (selectModeRequested)="onToolbarSelectMode()"
+    (editGeometryModeRequested)="onToolbarEditGeometryMode()" (drawPointModeRequested)="onToolbarDrawPointMode()"
+    (drawLineModeRequested)="onToolbarDrawLineMode()" (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
+    (measureModeRequested)="onToolbarMeasureMode()" (sidebarToggleRequested)="onToolbarSidebarToggle()"
+    (myLocationRequested)="onToolbarMyLocationRequested()" (basemapSelectRequested)="onToolbarBasemapSelect($event)"
+    (labelsToggleRequested)="onToolbarLabelsToggle()" />
 
-  <app-mapa-sidebar
-    slot="sidebar"
-    [nodos]="nodos()"
-    [elementos]="elementos()"
-    [deletedElementos]="deletedElementos()"
-    [tipos]="tipos()"
-    [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
-    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
-    [searchValue]="filtros.q()"
-    [searchLoading]="ui.loading()"
-    [searchResultCount]="(filtros.q() || '').trim() ? elementosCanvas().length : 0"
-    [searchResultIndex]="(filtros.q() || '').trim() ? searchResultIndex() : -1"
-    [geoSearchValue]="geoSearchValue()"
-    [geoSearchLoading]="geoSearchLoading()"
-    [geoSearchHasSearched]="geoSearchHasSearched()"
-    [geoSearchError]="geoSearchError()"
-    [geoSearchResults]="geoSearchResults()"
-    [hiddenNodeIds]="hiddenNodeIds()"
-    [hiddenElementoIds]="hiddenElementoIds()"
-    [deletedElementsVisible]="deletedElementsVisible()"
-    (geoSearchRequested)="onGeoSearchRequested($event)"
-    (geoSearchClear)="clearGeoSearch()"
-    (geoSearchResultSelected)="onGeoSearchResultSelected($event)"
-    (searchRequested)="onSearchRequested($event)"
-    (searchClear)="clearSearch()"
-    (searchPrev)="onSearchPrev()"
-    (searchNext)="onSearchNext()"
-    (nodoSelected)="onNodoSelect($event)"
-    (treeElementoSelected)="onTreeElementoSelected($event)"
+  <app-mapa-sidebar slot="sidebar" [nodos]="nodos()" [elementos]="elementos()" [deletedElementos]="deletedElementos()"
+    [tipos]="tipos()" [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
+    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null" [searchValue]="filtros.q()"
+    [searchLoading]="ui.loading()" [searchResultCount]="(filtros.q() || '').trim() ? elementosCanvas().length : 0"
+    [searchResultIndex]="(filtros.q() || '').trim() ? searchResultIndex() : -1" [geoSearchValue]="geoSearchValue()"
+    [geoSearchLoading]="geoSearchLoading()" [geoSearchHasSearched]="geoSearchHasSearched()"
+    [geoSearchError]="geoSearchError()" [geoSearchResults]="geoSearchResults()" [hiddenNodeIds]="hiddenNodeIds()"
+    [hiddenElementoIds]="hiddenElementoIds()" [deletedElementsVisible]="deletedElementsVisible()"
+    (geoSearchRequested)="onGeoSearchRequested($event)" (geoSearchClear)="clearGeoSearch()"
+    (geoSearchResultSelected)="onGeoSearchResultSelected($event)" (searchRequested)="onSearchRequested($event)"
+    (searchClear)="clearSearch()" (searchPrev)="onSearchPrev()" (searchNext)="onSearchNext()"
+    (nodoSelected)="onNodoSelect($event)" (treeElementoSelected)="onTreeElementoSelected($event)"
     (treeNodeVisibilityChange)="onTreeNodeVisibilityChange($event)"
     (treeElementoVisibilityChange)="onTreeElementoVisibilityChange($event)"
     (treeCreateNodeRequested)="onTreeCreateNodeRequested($event)"
     (treeEditNodeRequested)="onTreeEditNodeRequested($event)"
+    (treeAuditNodeRequested)="onTreeAuditNodeRequested($event)"
     (treeDeleteNodeRequested)="onTreeDeleteNodeRequested($event)"
     (treeDrawElementRequested)="onTreeDrawElementRequested($event)"
     (treeCenterElementoRequested)="onTreeCenterElementoRequested($event)"
@@ -74,90 +39,41 @@
     (treeEditGeometryElementoRequested)="onTreeEditGeometryElementoRequested($event)"
     (treeDeleteElementoRequested)="onTreeDeleteElementoRequested($event)"
     (treeRestoreDeletedElementoRequested)="onTreeRestoreDeletedElementoRequested($event)"
-    (deletedElementsVisibilityChange)="onDeletedElementsVisibilityChange($event)"
-  />
+    (deletedElementsVisibilityChange)="onDeletedElementsVisibilityChange($event)" />
 
-  <app-mapa-canvas
-    #mapCanvas
-    slot="canvas"
-    [elementos]="elementosCanvas()"
-    [tipos]="tipos()"
-    [toolMode]="ui.toolMode()"
-    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null"
-    [hiddenTipoIds]="capas.hiddenTipoIds()"
-    [basemap]="selectedBasemap()"
-    [labelsVisible]="labelsVisible()"
-    (elementoSelected)="onElementoSelect($event)"
-    (geometryCreated)="onGeometryCreated($event)"
-    (editSessionStateChanged)="onEditSessionStateChanged($event)"
-    (elementoContext)="openContextMenu($event)"
-  />
+  <app-mapa-canvas #mapCanvas slot="canvas" [elementos]="elementosCanvas()" [tipos]="tipos()" [toolMode]="ui.toolMode()"
+    [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null" [hiddenTipoIds]="capas.hiddenTipoIds()"
+    [basemap]="selectedBasemap()" [labelsVisible]="labelsVisible()" (elementoSelected)="onElementoSelect($event)"
+    (geometryCreated)="onGeometryCreated($event)" (editSessionStateChanged)="onEditSessionStateChanged($event)"
+    (elementoContext)="openContextMenu($event)" />
 
-<app-mapa-properties-panel
-  slot="properties"
-  [open]="ui.propertiesOpen()"
-  [elemento]="selectedElemento()"
-  [tipos]="tipos()"
-  [nodos]="nodos()"
-  [requestedTab]="propertiesRequestedTab()"
-  (saved)="onElementoUpdated($event)"
-  (deleted)="onElementoDeleted($event)"
-  (restored)="onElementoRestored($event)"
-  (dirtyChange)="onPropertiesDirtyChange($event)"
-  (closeRequested)="onPropertiesCloseRequested()"
-/>
+  <app-mapa-properties-panel slot="properties" [open]="ui.propertiesOpen()" [elemento]="selectedElemento()"
+    [tipos]="tipos()" [nodos]="nodos()" [requestedTab]="propertiesRequestedTab()" (saved)="onElementoUpdated($event)"
+    (deleted)="onElementoDeleted($event)" (restored)="onElementoRestored($event)"
+    (dirtyChange)="onPropertiesDirtyChange($event)" (closeRequested)="onPropertiesCloseRequested()" />
 
-  <app-mapa-statusbar
-    slot="status"
-    [totalElementos]="elementosCanvas().length"
-    [modo]="ui.toolMode()"
-    [loading]="ui.loading()"
-    [selectedName]="selectedElemento()?.nombre ?? null"
-  />
+  <app-mapa-statusbar slot="status" [totalElementos]="elementosCanvas().length" [modo]="ui.toolMode()"
+    [loading]="ui.loading()" [selectedName]="selectedElemento()?.nombre ?? null" />
 </app-mapa-layout>
 
-<app-mapa-import-dialog
-  #importDialog
-  (imported)="onImported()"
-></app-mapa-import-dialog>
+<app-mapa-import-dialog #importDialog (imported)="onImported()"></app-mapa-import-dialog>
 
-<app-mapa-export-dialog
-  #exportDialog
-  [nodos]="nodos()"
-  [tipos]="tipos()"
-></app-mapa-export-dialog>
+<app-mapa-export-dialog #exportDialog [nodos]="nodos()" [tipos]="tipos()"></app-mapa-export-dialog>
 
-<app-mapa-create-element-dialog
-  #createDialog
-  [nodos]="nodos()"
-  [tipos]="tipos()"
-  (submitted)="crearElemento($event)"
-></app-mapa-create-element-dialog>
+<app-mapa-create-element-dialog #createDialog [nodos]="nodos()" [tipos]="tipos()"
+  (submitted)="crearElemento($event)"></app-mapa-create-element-dialog>
 
-<app-mapa-node-dialog
-  #nodeDialog
-  (createSubmitted)="onCreateNodeSubmitted($event)"
-  (editSubmitted)="onEditNodeSubmitted($event)"
-  (deleted)="onNodeDeleted($event)"
-  (restored)="onNodeRestored($event)"
-></app-mapa-node-dialog>
+<app-mapa-node-dialog #nodeDialog (createSubmitted)="onCreateNodeSubmitted($event)"
+  (editSubmitted)="onEditNodeSubmitted($event)" (deleted)="onNodeDeleted($event)"
+  (restored)="onNodeRestored($event)"></app-mapa-node-dialog>
 
-<app-mapa-context-menu
-  [visible]="contextVisible()"
-  [x]="contextX()"
-  [y]="contextY()"
-  [elemento]="contextElemento()"
-  (closeRequested)="closeContextMenu()"
-  (centerRequested)="centerContextElemento($event)"
-  (editDataRequested)="editDataContextElemento($event)"
-  (auditRequested)="auditContextElemento($event)"
+<app-mapa-context-menu [visible]="contextVisible()" [x]="contextX()" [y]="contextY()" [elemento]="contextElemento()"
+  (closeRequested)="closeContextMenu()" (centerRequested)="centerContextElemento($event)"
+  (editDataRequested)="editDataContextElemento($event)" (auditRequested)="auditContextElemento($event)"
   (editGeometryRequested)="editGeometryContextElemento($event)"
-  (deleteRequested)="deleteContextElemento($event)"
-></app-mapa-context-menu>
+  (deleteRequested)="deleteContextElemento($event)"></app-mapa-context-menu>
 
-<app-mapa-confirm-dialog
-  #confirmDialog
-></app-mapa-confirm-dialog>
+<app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>
 
 <div class="mapa-success" *ngIf="successVisible()">
   <div class="mapa-success-title">{{ successTitle() }}</div>

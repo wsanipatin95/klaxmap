@@ -107,6 +107,7 @@ export class MapaTreeComponent implements OnChanges {
   @Output() elementoVisibilityChange = new EventEmitter<TreeElementoVisibilityChange>();
   @Output() createNodeRequested = new EventEmitter<TreeCreateNodeRequest>();
   @Output() editNodeRequested = new EventEmitter<MapaNodo>();
+  @Output() auditNodeRequested = new EventEmitter<MapaNodo>();
   @Output() deleteNodeRequested = new EventEmitter<MapaNodo>();
   @Output() drawElementRequested = new EventEmitter<TreeDrawElementRequest>();
   @Output() centerElementoRequested = new EventEmitter<MapaElemento>();

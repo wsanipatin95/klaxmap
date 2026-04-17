@@ -18,6 +18,28 @@
   </div>
 
   <form class="element-form" (ngSubmit)="guardar()">
+    <div class="field" *ngIf="showPointCoordinates()">
+      <label for="elemento-posicion-readonly">Posición GPS</label>
+
+      <div class="readonly-copy-row">
+        <input
+          id="elemento-posicion-readonly"
+          type="text"
+          [value]="pointCoordinates()"
+          readonly
+        />
+
+        <button
+          type="button"
+          class="ghost-btn copy-btn"
+          [disabled]="saving || actionBusy()"
+          (click)="copyPointCoordinates()"
+        >
+          Copiar
+        </button>
+      </div>
+    </div>
+
     <div class="form-grid top-row">
       <div class="field field-node">
         <label for="elemento-nodo-edit">Nodo</label>

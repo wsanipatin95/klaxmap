@@ -306,6 +306,37 @@ export class MapaElementFormComponent implements OnChanges {
     return this.isDeleted() ? 'Eliminado' : 'Activo';
   }
 
+  showPointCoordinates(): boolean {
+    return String(this.elemento?.geomTipo || '').toLowerCase() === 'point' && !!this.pointCoordinates();
+  }
+
+  pointCoordinates(): string {
+    return String(this.elemento?.latLon ?? '').trim();
+  }
+
+  copyPointCoordinates() {
+    const value = this.pointCoordinates();
+    if (!value) {
+      return;
+    }
+
+    this.error = null;
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(
+        () => {
+          this.successMessage = 'Coordenadas copiadas.';
+        },
+        () => {
+          this.error = 'No se pudieron copiar las coordenadas.';
+        }
+      );
+      return;
+    }
+
+    this.successMessage = 'Selecciona y copia manualmente las coordenadas.';
+  }
+
   trackByTipo = (_: number, item: MapaTipoElemento) => item.idGeoTipoElemento;
   trackByGrupo = (_: number, item: TipoAgrupadoVm) => item.agrupacion;
 

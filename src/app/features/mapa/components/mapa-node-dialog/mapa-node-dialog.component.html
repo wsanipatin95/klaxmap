@@ -9,28 +9,8 @@
   [header]="title()"
 >
   <div class="dialog-shell" [class.is-edit]="isEditMode()">
-    <div class="dialog-tabs" *ngIf="isEditMode()">
-      <button
-        type="button"
-        class="dialog-tab-btn"
-        [class.active]="activeTab() === 'edicion'"
-        (click)="setTab('edicion')"
-      >
-        Edición
-      </button>
-
-      <button
-        type="button"
-        class="dialog-tab-btn"
-        [class.active]="activeTab() === 'historial'"
-        (click)="setTab('historial')"
-      >
-        Historial
-      </button>
-    </div>
-
     <div class="dialog-body-wrap">
-      <section class="dialog-view" *ngIf="!isEditMode() || activeTab() === 'edicion'">
+      <section class="dialog-view" *ngIf="viewMode() === 'edicion'">
         <div class="dialog-view-scroll">
           <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="submit()">
             <div class="save-blocker" *ngIf="saving()">
@@ -118,7 +98,7 @@
         </div>
       </section>
 
-      <section class="dialog-view" *ngIf="isEditMode() && activeTab() === 'historial' && editingNode() as node">
+      <section class="dialog-view" *ngIf="isEditMode() && viewMode() === 'historial' && editingNode() as node">
         <div class="dialog-view-scroll">
           <app-auditoria-registro
             [tabla]="'kxt_red_nodo'"
@@ -137,7 +117,7 @@
     <div class="dialog-footer">
       <div class="dialog-footer-left">
         <button
-          *ngIf="isEditMode() && editingNode()"
+          *ngIf="isEditMode() && viewMode() === 'edicion' && editingNode()"
           type="button"
           class="state-btn"
           [class.state-btn--delete]="!editingDeleted()"
@@ -151,11 +131,11 @@
 
       <div class="dialog-footer-right">
         <button type="button" class="ghost-btn" [disabled]="saving()" (click)="requestClose()">
-          Cancelar
+          Cerrar
         </button>
 
         <button
-          *ngIf="!isEditMode() || activeTab() === 'edicion'"
+          *ngIf="viewMode() === 'edicion'"
           type="button"
           class="save-btn"
           [disabled]="form.invalid || saving()"

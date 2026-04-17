@@ -15,7 +15,7 @@ import type {
   MapaNodo,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
-import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
+import { MapaElementFormComponent } from '../mapa-element-form/mapa-element-form.component';
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
 export type PropertiesPanelTab = 'edicion' | 'historial';
@@ -23,7 +23,7 @@ export type PropertiesPanelTab = 'edicion' | 'historial';
 @Component({
   selector: 'app-mapa-properties-panel',
   standalone: true,
-  imports: [CommonModule, MapaPropertiesTabsComponent, AuditoriaRegistroComponent],
+  imports: [CommonModule, MapaElementFormComponent, AuditoriaRegistroComponent],
   templateUrl: './mapa-properties-panel.component.html',
   styleUrl: './mapa-properties-panel.component.scss',
 })
@@ -40,7 +40,7 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   @Output() closeRequested = new EventEmitter<void>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
-  @ViewChild(MapaPropertiesTabsComponent) tabs?: MapaPropertiesTabsComponent;
+  @ViewChild(MapaElementFormComponent) elementForm?: MapaElementFormComponent;
 
   readonly dirty = signal(false);
   readonly activeTab = signal<PropertiesPanelTab>('edicion');
@@ -61,14 +61,10 @@ export class MapaPropertiesPanelComponent implements OnChanges {
     }
   }
 
-  setTab(tab: PropertiesPanelTab) {
-    this.activeTab.set(tab);
-  }
-
   onSaved(item: MapaElemento) {
     this.dirty.set(false);
     this.dirtyChange.emit(false);
-    this.tabs?.markSaved(item);
+    this.elementForm?.markSaved(item);
     this.auditRefreshKey.update((v) => v + 1);
     this.saved.emit(item);
   }
@@ -82,7 +78,7 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   onRestored(item: MapaElemento) {
     this.dirty.set(false);
     this.dirtyChange.emit(false);
-    this.tabs?.markSaved(item);
+    this.elementForm?.markSaved(item);
     this.auditRefreshKey.update((v) => v + 1);
     this.restored.emit(item);
   }
@@ -102,5 +98,54 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   onDirtyStateChanged(isDirty: boolean) {
     this.dirty.set(isDirty);
     this.dirtyChange.emit(isDirty);
+  }
+
+  headerTitle(): string {
+    const elemento = this.elemento;
+    if (!elemento) {
+      return 'Elemento';
+    }
+
+    const prefix = this.activeTab() === 'historial' ? 'Historial' : 'Edición';
+    const parts = [this.resolveTipoNombre(elemento), elemento.nombre?.trim() || 'Sin nombre'];
+
+    const pointPosition = this.resolvePointPosition(elemento);
+    if (pointPosition) {
+      parts.push(pointPosition);
+    }
+
+    return `${prefix} · ${parts.filter(Boolean).join(' - ')}`;
+  }
+
+  headerSubtitle(): string {
+    const elemento = this.elemento;
+    if (!elemento) {
+      return '';
+    }
+
+    const estadoLogico = elemento.fecFin ? 'eliminado' : 'activo';
+    return `${elemento.geomTipo} · ${estadoLogico}`;
+  }
+
+  private resolveTipoNombre(elemento: MapaElemento): string {
+    const enriched = String(elemento.tipoNombre ?? '').trim();
+    if (enriched) {
+      return enriched;
+    }
+
+    const tipo = this.tipos.find((item) => item.idGeoTipoElemento === elemento.idGeoTipoElementoFk);
+    const local = String(tipo?.nombre ?? '').trim();
+
+    return local || 'Elemento';
+  }
+
+  private resolvePointPosition(elemento: MapaElemento): string | null {
+    const isPoint = String(elemento.geomTipo ?? '').toLowerCase() === 'point';
+    if (!isPoint) {
+      return null;
+    }
+
+    const value = String(elemento.latLon ?? '').trim();
+    return value || null;
   }
 }

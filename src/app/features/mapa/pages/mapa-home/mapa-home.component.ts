@@ -358,7 +358,7 @@ export class MapaHomeComponent {
 
     this.showSuccess('Elemento restaurado', `Se restauró "${item.nombre}" correctamente.`);
   }
-  
+
   onNodeDeleted(node: MapaNodo) {
     if (this.selectedNodo()?.idRedNodo === node.idRedNodo) {
       this.selection.setNodo(null);
@@ -727,6 +727,12 @@ export class MapaHomeComponent {
   onTreeEditNodeRequested(node: MapaNodo) {
     this.runGuarded(() => {
       this.nodeDialog?.openEdit(node);
+    });
+  }
+
+  onTreeAuditNodeRequested(node: MapaNodo) {
+    this.runGuarded(() => {
+      this.nodeDialog?.openAudit(node);
     });
   }
 

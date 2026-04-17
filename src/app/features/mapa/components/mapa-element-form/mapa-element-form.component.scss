@@ -471,3 +471,17 @@ textarea:disabled {
     justify-content: flex-end;
   }
 }
+.readonly-copy-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.readonly-copy-row input[readonly] {
+  background: #f8fafc;
+  cursor: text;
+}
+
+.copy-btn {
+  white-space: nowrap;
+}

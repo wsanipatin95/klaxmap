@@ -6,13 +6,11 @@
       <div class="panel-header">
         <div class="panel-title-wrap">
           <div class="title-row">
-            <h3 [title]="elemento.nombre">{{ elemento.nombre }}</h3>
-            <span class="dirty-badge" *ngIf="dirty()">Sin guardar</span>
+            <h3 [title]="headerTitle()">{{ headerTitle() }}</h3>
+            <span class="dirty-badge" *ngIf="activeTab() === 'edicion' && dirty()">Sin guardar</span>
           </div>
 
-          <small>
-            {{ elemento.geomTipo }} · {{ elemento.estado }}{{ elemento.fecFin ? ' · eliminado' : '' }}
-          </small>
+          <small>{{ headerSubtitle() }}</small>
         </div>
 
         <div class="panel-actions">
@@ -27,31 +25,12 @@
         </div>
       </div>
 
-      <div class="panel-tabs">
-        <button
-          type="button"
-          class="panel-tab-btn"
-          [class.active]="activeTab() === 'edicion'"
-          (click)="setTab('edicion')"
-        >
-          Edición
-        </button>
-
-        <button
-          type="button"
-          class="panel-tab-btn"
-          [class.active]="activeTab() === 'historial'"
-          (click)="setTab('historial')"
-        >
-          Historial
-        </button>
-      </div>
-
       <div class="panel-body">
-        <section class="panel-view" *ngIf="activeTab() === 'edicion'">
+        <section class="panel-view">
           <div class="panel-view-scroll">
-            <section class="panel-section">
-              <app-mapa-properties-tabs
+            <section class="panel-section" *ngIf="activeTab() === 'edicion'">
+              <app-mapa-element-form
+                #elementForm
                 [elemento]="elemento"
                 [tipos]="tipos"
                 [nodos]="nodos"
@@ -61,19 +40,17 @@
                 (dirtyChange)="onDirtyStateChanged($event)"
               />
             </section>
-          </div>
-        </section>
 
-        <section class="panel-view" *ngIf="activeTab() === 'historial'">
-          <div class="panel-view-scroll">
-            <app-auditoria-registro
-              [tabla]="'kxt_geo_elemento'"
-              [idRegistro]="elemento.idGeoElemento"
-              [refreshKey]="auditRefreshKey()"
-              [compact]="true"
-              titulo="Historial del elemento"
-              subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
-            />
+            <section class="panel-section" *ngIf="activeTab() === 'historial'">
+              <app-auditoria-registro
+                [tabla]="'kxt_geo_elemento'"
+                [idRegistro]="elemento.idGeoElemento"
+                [refreshKey]="auditRefreshKey()"
+                [compact]="true"
+                titulo="Historial del elemento"
+                subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
+              />
+            </section>
           </div>
         </section>
       </div>

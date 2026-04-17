@@ -14,8 +14,8 @@ import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
 type NodeDialogMode = 'create' | 'edit';
+type NodeDialogView = 'edicion' | 'historial';
 type NodeTipo = MapaNodo['tipoNodo'];
-type NodeDialogTab = 'edicion' | 'historial';
 
 interface NodeDialogFormValue {
   idRedNodoPadreFk: FormControl<number | null>;
@@ -48,9 +48,9 @@ export class MapaNodeDialogComponent {
   readonly visible = signal(false);
   readonly saving = signal(false);
   readonly mode = signal<NodeDialogMode>('create');
+  readonly viewMode = signal<NodeDialogView>('edicion');
   readonly error = signal<string | null>(null);
   readonly title = signal('Crear nodo');
-  readonly activeTab = signal<NodeDialogTab>('edicion');
   readonly auditRefreshKey = signal(0);
 
   readonly parentNode = signal<MapaNodo | null>(null);
@@ -73,19 +73,15 @@ export class MapaNodeDialogComponent {
   readonly isEditMode = computed(() => this.mode() === 'edit');
   readonly editingDeleted = computed(() => !!this.editingNode()?.fecFin);
 
-  setTab(tab: NodeDialogTab) {
-    this.activeTab.set(tab);
-  }
-
   openCreate(parent: MapaNodo | null, tipo: NodeTipo = 'carpeta') {
     this.mode.set('create');
+    this.viewMode.set('edicion');
     this.title.set(parent ? 'Nuevo nodo' : 'Nuevo nodo raíz');
     this.parentNode.set(parent);
     this.editingNode.set(null);
     this.error.set(null);
     this.saving.set(false);
     this.submitted.set(false);
-    this.activeTab.set('edicion');
 
     this.form.reset(
       {
@@ -108,33 +104,13 @@ export class MapaNodeDialogComponent {
   }
 
   openEdit(node: MapaNodo) {
-    this.mode.set('edit');
+    this.prepareExistingNode(node, 'edicion');
     this.title.set('Editar nodo');
-    this.parentNode.set(null);
-    this.editingNode.set(node);
-    this.error.set(null);
-    this.saving.set(false);
-    this.submitted.set(false);
-    this.activeTab.set('edicion');
+  }
 
-    this.form.reset(
-      {
-        idRedNodoPadreFk: node.idRedNodoPadreFk ?? null,
-        codigo: node.codigo ?? '',
-        nodo: node.nodo ?? '',
-        descripcion: node.descripcion ?? '',
-        tipoNodo: node.tipoNodo,
-        orden: node.orden ?? 0,
-        visible: node.visible ?? true,
-      },
-      { emitEvent: false }
-    );
-
-    this.form.controls.tipoNodo.enable({ emitEvent: false });
-
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
-    this.visible.set(true);
+  openAudit(node: MapaNodo) {
+    this.prepareExistingNode(node, 'historial');
+    this.title.set('Historial del nodo');
   }
 
   onVisibleChange(nextVisible: boolean) {
@@ -151,7 +127,7 @@ export class MapaNodeDialogComponent {
       return;
     }
 
-    if (!this.hasPendingChanges()) {
+    if (this.viewMode() !== 'edicion' || !this.hasPendingChanges()) {
       this.closeImmediately();
       return;
     }
@@ -172,7 +148,7 @@ export class MapaNodeDialogComponent {
   }
 
   submit() {
-    if (this.saving()) {
+    if (this.saving() || this.viewMode() !== 'edicion') {
       return;
     }
 
@@ -236,7 +212,7 @@ export class MapaNodeDialogComponent {
   requestStateAction() {
     const node = this.editingNode();
 
-    if (!node || this.saving() || !this.isEditMode()) {
+    if (!node || this.saving() || !this.isEditMode() || this.viewMode() !== 'edicion') {
       return;
     }
 
@@ -325,6 +301,34 @@ export class MapaNodeDialogComponent {
     };
   }
 
+  private prepareExistingNode(node: MapaNodo, view: NodeDialogView) {
+    this.mode.set('edit');
+    this.viewMode.set(view);
+    this.parentNode.set(null);
+    this.editingNode.set(node);
+    this.error.set(null);
+    this.saving.set(false);
+    this.submitted.set(false);
+
+    this.form.reset(
+      {
+        idRedNodoPadreFk: node.idRedNodoPadreFk ?? null,
+        codigo: node.codigo ?? '',
+        nodo: node.nodo ?? '',
+        descripcion: node.descripcion ?? '',
+        tipoNodo: node.tipoNodo,
+        orden: node.orden ?? 0,
+        visible: node.visible ?? true,
+      },
+      { emitEvent: false }
+    );
+
+    this.form.controls.tipoNodo.enable({ emitEvent: false });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.visible.set(true);
+  }
+
   private confirmDelete(node: MapaNodo) {
     this.confirmDialog?.open(
       {
@@ -409,7 +413,7 @@ export class MapaNodeDialogComponent {
     this.saving.set(false);
     this.error.set(null);
     this.submitted.set(false);
-    this.activeTab.set('edicion');
+    this.viewMode.set('edicion');
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }
