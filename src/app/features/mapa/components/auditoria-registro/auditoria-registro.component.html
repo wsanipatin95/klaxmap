@@ -51,16 +51,75 @@
 
       <thead>
         <tr>
-          <th class="col-fecha">Fecha</th>
-          <th class="col-edicion">Edición</th>
-          <th class="col-usuario">Usuario</th>
-          <th class="col-antes">Antes</th>
-          <th class="col-despues">Después</th>
+          <th class="col-fecha">
+            <button
+              type="button"
+              class="sort-btn"
+              [class.is-active]="isSortedBy('fecha')"
+              [attr.aria-label]="sortAriaLabel('fecha', 'Fecha')"
+              (click)="setSort('fecha')"
+            >
+              <span>Fecha</span>
+              <span class="sort-arrow">{{ sortArrow('fecha') }}</span>
+            </button>
+          </th>
+
+          <th class="col-edicion">
+            <button
+              type="button"
+              class="sort-btn"
+              [class.is-active]="isSortedBy('edicion')"
+              [attr.aria-label]="sortAriaLabel('edicion', 'Edición')"
+              (click)="setSort('edicion')"
+            >
+              <span>Edición</span>
+              <span class="sort-arrow">{{ sortArrow('edicion') }}</span>
+            </button>
+          </th>
+
+          <th class="col-usuario">
+            <button
+              type="button"
+              class="sort-btn"
+              [class.is-active]="isSortedBy('usuario')"
+              [attr.aria-label]="sortAriaLabel('usuario', 'Usuario')"
+              (click)="setSort('usuario')"
+            >
+              <span>Usuario</span>
+              <span class="sort-arrow">{{ sortArrow('usuario') }}</span>
+            </button>
+          </th>
+
+          <th class="col-antes">
+            <button
+              type="button"
+              class="sort-btn"
+              [class.is-active]="isSortedBy('antes')"
+              [attr.aria-label]="sortAriaLabel('antes', 'Antes')"
+              (click)="setSort('antes')"
+            >
+              <span>Antes</span>
+              <span class="sort-arrow">{{ sortArrow('antes') }}</span>
+            </button>
+          </th>
+
+          <th class="col-despues">
+            <button
+              type="button"
+              class="sort-btn"
+              [class.is-active]="isSortedBy('despues')"
+              [attr.aria-label]="sortAriaLabel('despues', 'Después')"
+              (click)="setSort('despues')"
+            >
+              <span>Después</span>
+              <span class="sort-arrow">{{ sortArrow('despues') }}</span>
+            </button>
+          </th>
         </tr>
       </thead>
 
       <tbody>
-        <tr *ngFor="let row of rows(); trackBy: trackRow">
+        <tr *ngFor="let row of sortedRows(); trackBy: trackRow">
           <td class="col-fecha">
             <span class="truncate-line" [title]="(row.fechaHora | date:'yyyy-MM-dd HH:mm:ss') || ''">
               {{ row.fechaHora | date:'yyyy-MM-dd HH:mm:ss' }}

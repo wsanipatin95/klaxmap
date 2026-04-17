@@ -39,6 +39,9 @@ interface AuditoriaCellDetail {
   value: string;
 }
 
+type AuditoriaSortKey = 'fecha' | 'edicion' | 'usuario' | 'antes' | 'despues';
+type AuditoriaSortDirection = 'asc' | 'desc';
+
 @Component({
   selector: 'app-auditoria-registro',
   standalone: true,
@@ -60,6 +63,9 @@ export class AuditoriaRegistroComponent implements OnChanges {
   readonly error = signal<string | null>(null);
   readonly data = signal<AuditoriaRegistroResponse | null>(null);
   readonly detail = signal<AuditoriaCellDetail | null>(null);
+
+  readonly sortKey = signal<AuditoriaSortKey>('fecha');
+  readonly sortDirection = signal<AuditoriaSortDirection>('desc');
 
   readonly rows = computed<AuditoriaLedgerRow[]>(() => {
     const audit = this.data();
@@ -94,6 +100,24 @@ export class AuditoriaRegistroComponent implements OnChanges {
     }
 
     return result;
+  });
+
+  readonly sortedRows = computed<AuditoriaLedgerRow[]>(() => {
+    const items = [...this.rows()];
+    const key = this.sortKey();
+    const direction = this.sortDirection();
+    const factor = direction === 'asc' ? 1 : -1;
+
+    items.sort((a, b) => {
+      const comparison = this.compareRows(a, b, key);
+      if (comparison !== 0) {
+        return comparison * factor;
+      }
+
+      return a.rowId.localeCompare(b.rowId);
+    });
+
+    return items;
   });
 
   readonly totalRows = computed(() => this.rows().length);
@@ -133,6 +157,38 @@ export class AuditoriaRegistroComponent implements OnChanges {
           this.error.set(err?.message || 'No se pudo cargar el historial.');
         },
       });
+  }
+
+  setSort(key: AuditoriaSortKey) {
+    if (this.sortKey() === key) {
+      this.sortDirection.update((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    this.sortKey.set(key);
+    this.sortDirection.set(key === 'fecha' ? 'desc' : 'asc');
+  }
+
+  isSortedBy(key: AuditoriaSortKey): boolean {
+    return this.sortKey() === key;
+  }
+
+  sortArrow(key: AuditoriaSortKey): string {
+    if (!this.isSortedBy(key)) {
+      return '↕';
+    }
+
+    return this.sortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  sortAriaLabel(key: AuditoriaSortKey, label: string): string {
+    const current = this.isSortedBy(key)
+      ? this.sortDirection() === 'asc'
+        ? 'ascendente'
+        : 'descendente'
+      : 'sin orden aplicado';
+
+    return `${label}. Estado actual: ${current}. Presiona para ordenar.`;
   }
 
   trackRow(_: number, item: AuditoriaLedgerRow) {
@@ -221,6 +277,64 @@ export class AuditoriaRegistroComponent implements OnChanges {
 
   closeDetail() {
     this.detail.set(null);
+  }
+
+  private compareRows(
+    a: AuditoriaLedgerRow,
+    b: AuditoriaLedgerRow,
+    key: AuditoriaSortKey
+  ): number {
+    switch (key) {
+      case 'fecha':
+        return this.compareDates(a.fechaHora, b.fechaHora);
+
+      case 'edicion':
+        return this.compareText(
+          `${a.campoLabel} ${this.displayOperacion(a.operacion, a.operacionLabel)}`,
+          `${b.campoLabel} ${this.displayOperacion(b.operacion, b.operacionLabel)}`
+        );
+
+      case 'usuario':
+        return this.compareText(this.displayUsuario(a), this.displayUsuario(b));
+
+      case 'antes':
+        return this.compareText(
+          this.fullValue(a.valorAnterior, a.campoLabel),
+          this.fullValue(b.valorAnterior, b.campoLabel)
+        );
+
+      case 'despues':
+        return this.compareText(
+          this.fullValue(a.valorNuevo, a.campoLabel),
+          this.fullValue(b.valorNuevo, b.campoLabel)
+        );
+
+      default:
+        return 0;
+    }
+  }
+
+  private compareDates(a: string | null | undefined, b: string | null | undefined): number {
+    const left = this.dateToMillis(a);
+    const right = this.dateToMillis(b);
+
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  }
+
+  private dateToMillis(value: string | null | undefined): number {
+    const time = Date.parse(String(value ?? '').trim());
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  private compareText(a: string | null | undefined, b: string | null | undefined): number {
+    const left = String(a ?? '').trim().toLocaleLowerCase();
+    const right = String(b ?? '').trim().toLocaleLowerCase();
+
+    return left.localeCompare(right, 'es', {
+      numeric: true,
+      sensitivity: 'base',
+    });
   }
 
   private isUsefulChange(cambio: AuditoriaCambio): boolean {
