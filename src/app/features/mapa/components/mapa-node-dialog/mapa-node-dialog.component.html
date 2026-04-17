@@ -21,29 +21,6 @@
             </div>
 
             <fieldset class="dialog-fieldset" [disabled]="saving()">
-              <div class="mini-summary">
-                <span class="summary-chip" *ngIf="mode() === 'create'">
-                  Padre: {{ parentLabel() }}
-                </span>
-
-                <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
-                  Registro: #{{ node.idRedNodo }}
-                </span>
-
-                <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
-                  Tipo actual: {{ node.tipoNodo }}
-                </span>
-
-                <span
-                  class="summary-chip"
-                  *ngIf="isEditMode() && editingNode()"
-                  [class.is-active]="!editingDeleted()"
-                  [class.is-deleted]="editingDeleted()"
-                >
-                  Estado: {{ logicalStateLabel() }}
-                </span>
-              </div>
-
               <div class="form-grid code-name-row">
                 <div class="field field-code">
                   <label for="node-codigo">Código</label>
@@ -93,6 +70,7 @@
               </div>
             </fieldset>
 
+            <p class="success" *ngIf="successMessage() as ok">{{ ok }}</p>
             <p class="error" *ngIf="error() as err">{{ err }}</p>
           </form>
         </div>

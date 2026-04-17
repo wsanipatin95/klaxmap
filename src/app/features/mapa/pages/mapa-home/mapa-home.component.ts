@@ -822,7 +822,7 @@ export class MapaHomeComponent {
     this.crud.createNodo(
       payload,
       (created) => {
-        this.nodeDialog?.handleSaveSuccess();
+        this.nodeDialog?.handleCreateSuccess();
         this.showSuccess('Nodo guardado', `Se creó "${created.nodo}" correctamente.`);
         this.selection.setNodo(created);
 
@@ -842,8 +842,7 @@ export class MapaHomeComponent {
     this.crud.editNodo(
       payload,
       (updated) => {
-        this.nodeDialog?.handleSaveSuccess();
-        this.showSuccess('Nodo actualizado', `Se actualizó "${updated.nodo}" correctamente.`);
+        this.nodeDialog?.handleEditSaveSuccess(updated);
         this.selection.setNodo(updated);
 
         this.defer(() => {

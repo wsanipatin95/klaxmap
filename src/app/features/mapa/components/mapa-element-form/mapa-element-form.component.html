@@ -1,31 +1,13 @@
 <div class="element-form-shell" *ngIf="elemento as el">
-  <div class="mini-summary">
-    <span class="summary-chip">
-      Registro: #{{ el.idGeoElemento }}
-    </span>
-
-    <span class="summary-chip">
-      Geometría: {{ geomDisplayLabel() }}
-    </span>
-
-    <span
-      class="summary-chip"
-      [class.is-active]="!isDeleted()"
-      [class.is-deleted]="isDeleted()"
-    >
-      Estado: {{ logicalStateLabel() }}
-    </span>
-  </div>
-
   <form class="element-form" (ngSubmit)="guardar()">
-    <div class="field" *ngIf="showPointCoordinates()">
-      <label for="elemento-posicion-readonly">Posición GPS</label>
+    <div class="field" *ngIf="showCoordinates()">
+      <label for="elemento-posicion-readonly">{{ coordinatesLabel() }}</label>
 
       <div class="readonly-copy-row">
         <input
           id="elemento-posicion-readonly"
           type="text"
-          [value]="pointCoordinates()"
+          [value]="coordinatesValue()"
           readonly
         />
 
@@ -33,11 +15,13 @@
           type="button"
           class="ghost-btn copy-btn"
           [disabled]="saving || actionBusy()"
-          (click)="copyPointCoordinates()"
+          (click)="copyCoordinates()"
         >
           Copiar
         </button>
       </div>
+
+      <p class="field-hint">Solo lectura para copiar.</p>
     </div>
 
     <div class="form-grid top-row">

@@ -285,14 +285,6 @@ export class MapaElementFormComponent implements OnChanges {
     return showUrlPreviewForVisual(this.visual(tipo));
   }
 
-  geomDisplayLabel(): string {
-    const geom = String(this.elemento?.geomTipo || '').toLowerCase();
-
-    if (geom === 'linestring') return 'Ruta';
-    if (geom === 'polygon') return 'Polígono';
-    return 'Punto';
-  }
-
   selectedNodoDisplay(): string {
     if (this.form.idRedNodoFk == null) return '';
 
@@ -302,25 +294,46 @@ export class MapaElementFormComponent implements OnChanges {
     return `Nodo #${this.form.idRedNodoFk}`;
   }
 
-  logicalStateLabel(): string {
-    return this.isDeleted() ? 'Eliminado' : 'Activo';
+  showCoordinates(): boolean {
+    return !!this.coordinatesValue();
   }
 
-  showPointCoordinates(): boolean {
-    return String(this.elemento?.geomTipo || '').toLowerCase() === 'point' && !!this.pointCoordinates();
+  coordinatesLabel(): string {
+    return this.isPointGeometry() ? 'Posición GPS' : 'Referencia geográfica';
   }
 
-  pointCoordinates(): string {
-    return String(this.elemento?.latLon ?? '').trim();
+  coordinatesValue(): string {
+    const latLon = this.trimmed(this.elemento?.latLon);
+    if (latLon) {
+      return latLon;
+    }
+
+    const bbox = this.trimmed(this.elemento?.bbox);
+    if (bbox) {
+      return bbox;
+    }
+
+    const fromPayload = this.coordinatesFromGeometryPayload(this.elemento?.geometria);
+    if (fromPayload) {
+      return fromPayload;
+    }
+
+    const fromWkt = this.coordinatesFromWkt(this.elemento?.wkt);
+    if (fromWkt) {
+      return fromWkt;
+    }
+
+    return '';
   }
 
-  copyPointCoordinates() {
-    const value = this.pointCoordinates();
+  copyCoordinates() {
+    const value = this.coordinatesValue();
     if (!value) {
       return;
     }
 
     this.error = null;
+    this.successMessage = null;
 
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(value).then(
@@ -567,5 +580,162 @@ export class MapaElementFormComponent implements OnChanges {
   private normalizeGrouping(value: string | null | undefined): string {
     const normalized = String(value ?? '').trim();
     return normalized || 'Sin agrupación';
+  }
+
+  private isPointGeometry(): boolean {
+    return String(this.elemento?.geomTipo ?? '').toLowerCase() === 'point';
+  }
+
+  private coordinatesFromGeometryPayload(value: unknown): string | null {
+    if (!value) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return this.coordinatesFromWkt(value);
+    }
+
+    if (typeof value !== 'object') {
+      return null;
+    }
+
+    const payload = value as Record<string, unknown>;
+
+    const payloadWkt = this.trimmed(payload['wkt']);
+    if (payloadWkt) {
+      return this.coordinatesFromWkt(payloadWkt);
+    }
+
+    const type = this.trimmed(payload['type'])?.toLowerCase();
+    const coordinates = payload['coordinates'];
+
+    if (!type || coordinates == null) {
+      return null;
+    }
+
+    if (type === 'point') {
+      return this.formatPair(coordinates);
+    }
+
+    if (type === 'linestring') {
+      return this.formatLineCoordinates(coordinates);
+    }
+
+    if (type === 'polygon') {
+      return this.formatPolygonReference(coordinates);
+    }
+
+    if (type === 'multilinestring' && Array.isArray(coordinates) && coordinates.length > 0) {
+      return this.formatLineCoordinates(coordinates[0]);
+    }
+
+    if (type === 'multipolygon' && Array.isArray(coordinates) && coordinates.length > 0) {
+      return this.formatPolygonReference(coordinates[0]);
+    }
+
+    return null;
+  }
+
+  private coordinatesFromWkt(value: string | null | undefined): string | null {
+    const text = this.trimmed(value);
+    if (!text) {
+      return null;
+    }
+
+    const pointMatch = text.match(
+      /POINT(?:\s+Z|\s+M|\s+ZM)?\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*(?:[-\d.]+\s*)?\)/i
+    );
+
+    if (pointMatch) {
+      return this.joinPair(pointMatch[1], pointMatch[2]);
+    }
+
+    const pairMatches = Array.from(
+      text.matchAll(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g)
+    );
+
+    if (!pairMatches.length) {
+      return null;
+    }
+
+    const first = this.joinPair(pairMatches[0][1], pairMatches[0][2]);
+    const lastMatch = pairMatches[pairMatches.length - 1];
+    const last = this.joinPair(lastMatch[1], lastMatch[2]);
+    const upper = text.toUpperCase();
+
+    if (upper.startsWith('LINESTRING') || upper.startsWith('MULTILINESTRING')) {
+      if (first && last && first !== last) {
+        return `Inicio: ${first} · Fin: ${last}`;
+      }
+      return first;
+    }
+
+    if (upper.startsWith('POLYGON') || upper.startsWith('MULTIPOLYGON')) {
+      return first ? `Ref: ${first}` : null;
+    }
+
+    return first;
+  }
+
+  private formatLineCoordinates(value: unknown): string | null {
+    if (!Array.isArray(value) || !value.length) {
+      return null;
+    }
+
+    const first = this.formatPair(value[0]);
+    const last = this.formatPair(value[value.length - 1]);
+
+    if (first && last && first !== last) {
+      return `Inicio: ${first} · Fin: ${last}`;
+    }
+
+    return first || last;
+  }
+
+  private formatPolygonReference(value: unknown): string | null {
+    if (!Array.isArray(value) || !value.length) {
+      return null;
+    }
+
+    const firstRing = Array.isArray(value[0]) ? value[0] : value;
+    if (!Array.isArray(firstRing) || !firstRing.length) {
+      return null;
+    }
+
+    const first = this.formatPair(firstRing[0]);
+    return first ? `Ref: ${first}` : null;
+  }
+
+  private formatPair(value: unknown): string | null {
+    if (!Array.isArray(value) || value.length < 2) {
+      return null;
+    }
+
+    return this.joinPair(value[0], value[1]);
+  }
+
+  private joinPair(lon: unknown, lat: unknown): string | null {
+    const x = this.normalizeCoordinate(lon);
+    const y = this.normalizeCoordinate(lat);
+
+    if (x == null || y == null) {
+      return null;
+    }
+
+    return `${x},${y}`;
+  }
+
+  private normalizeCoordinate(value: unknown): string | null {
+    const num = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+
+    return `${Math.round(num * 1_000_000) / 1_000_000}`;
+  }
+
+  private trimmed(value: unknown): string | null {
+    const text = String(value ?? '').trim();
+    return text ? text : null;
   }
 }

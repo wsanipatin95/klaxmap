@@ -374,3 +374,12 @@ textarea:disabled {
     justify-content: flex-end;
   }
 }
+.success {
+  margin: 0;
+  padding: 0.62rem 0.72rem;
+  border-radius: 0.62rem;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.72rem;
+}

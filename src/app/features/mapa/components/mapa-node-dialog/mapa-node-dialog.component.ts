@@ -50,6 +50,7 @@ export class MapaNodeDialogComponent {
   readonly mode = signal<NodeDialogMode>('create');
   readonly viewMode = signal<NodeDialogView>('edicion');
   readonly error = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
   readonly title = signal('Crear nodo');
   readonly auditRefreshKey = signal(0);
 
@@ -73,6 +74,14 @@ export class MapaNodeDialogComponent {
   readonly isEditMode = computed(() => this.mode() === 'edit');
   readonly editingDeleted = computed(() => !!this.editingNode()?.fecFin);
 
+  constructor() {
+    this.form.valueChanges.subscribe(() => {
+      if (this.successMessage()) {
+        this.successMessage.set(null);
+      }
+    });
+  }
+
   openCreate(parent: MapaNodo | null, tipo: NodeTipo = 'carpeta') {
     this.mode.set('create');
     this.viewMode.set('edicion');
@@ -80,6 +89,7 @@ export class MapaNodeDialogComponent {
     this.parentNode.set(parent);
     this.editingNode.set(null);
     this.error.set(null);
+    this.successMessage.set(null);
     this.saving.set(false);
     this.submitted.set(false);
 
@@ -105,12 +115,12 @@ export class MapaNodeDialogComponent {
 
   openEdit(node: MapaNodo) {
     this.prepareExistingNode(node, 'edicion');
-    this.title.set('Editar nodo');
+    this.title.set(`Editar nodo · ${node.nodo}`);
   }
 
   openAudit(node: MapaNodo) {
     this.prepareExistingNode(node, 'historial');
-    this.title.set('Historial del nodo');
+    this.title.set(`Historial · ${node.nodo}`);
   }
 
   onVisibleChange(nextVisible: boolean) {
@@ -153,6 +163,7 @@ export class MapaNodeDialogComponent {
     }
 
     this.error.set(null);
+    this.successMessage.set(null);
     this.submitted.set(true);
 
     if (this.form.invalid) {
@@ -177,6 +188,7 @@ export class MapaNodeDialogComponent {
       () => {
         this.saving.set(true);
         this.error.set(null);
+        this.successMessage.set(null);
 
         if (this.mode() === 'create') {
           this.createSubmitted.emit(payload);
@@ -227,16 +239,46 @@ export class MapaNodeDialogComponent {
   markSaving() {
     this.saving.set(true);
     this.error.set(null);
+    this.successMessage.set(null);
   }
 
-  handleSaveSuccess() {
+  handleCreateSuccess() {
     this.saving.set(false);
+    this.error.set(null);
+    this.successMessage.set(null);
     this.auditRefreshKey.update((v) => v + 1);
     this.closeImmediately();
   }
 
+  handleEditSaveSuccess(updated: MapaNodo) {
+    this.saving.set(false);
+    this.error.set(null);
+    this.successMessage.set('Los cambios se guardaron correctamente.');
+    this.auditRefreshKey.update((v) => v + 1);
+    this.editingNode.set(updated);
+
+    this.form.reset(
+      {
+        idRedNodoPadreFk: updated.idRedNodoPadreFk ?? null,
+        codigo: updated.codigo ?? '',
+        nodo: updated.nodo ?? '',
+        descripcion: updated.descripcion ?? '',
+        tipoNodo: updated.tipoNodo,
+        orden: updated.orden ?? 0,
+        visible: updated.visible ?? true,
+      },
+      { emitEvent: false }
+    );
+
+    this.form.controls.tipoNodo.enable({ emitEvent: false });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.submitted.set(false);
+  }
+
   handleSaveError(message: string) {
     this.saving.set(false);
+    this.successMessage.set(null);
     this.error.set(message || 'No se pudo guardar el nodo.');
   }
 
@@ -274,14 +316,6 @@ export class MapaNodeDialogComponent {
     return 'Valor inválido.';
   }
 
-  parentLabel(): string {
-    return this.parentNode()?.nodo || 'Raíz';
-  }
-
-  logicalStateLabel(): string {
-    return this.editingDeleted() ? 'Eliminado' : 'Activo';
-  }
-
   private hasPendingChanges(): boolean {
     return this.form.dirty;
   }
@@ -307,6 +341,7 @@ export class MapaNodeDialogComponent {
     this.parentNode.set(null);
     this.editingNode.set(node);
     this.error.set(null);
+    this.successMessage.set(null);
     this.saving.set(false);
     this.submitted.set(false);
 
@@ -366,6 +401,7 @@ export class MapaNodeDialogComponent {
   private executeDelete(node: MapaNodo) {
     this.saving.set(true);
     this.error.set(null);
+    this.successMessage.set(null);
 
     this.repo.eliminar(node.idRedNodo).subscribe({
       next: (resp) => {
@@ -385,6 +421,7 @@ export class MapaNodeDialogComponent {
   private executeRestore(node: MapaNodo) {
     this.saving.set(true);
     this.error.set(null);
+    this.successMessage.set(null);
 
     this.repo.restaurar(node.idRedNodo).subscribe({
       next: (resp) => {
@@ -412,6 +449,7 @@ export class MapaNodeDialogComponent {
     this.visible.set(false);
     this.saving.set(false);
     this.error.set(null);
+    this.successMessage.set(null);
     this.submitted.set(false);
     this.viewMode.set('edicion');
     this.form.markAsPristine();

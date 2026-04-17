@@ -14,26 +14,6 @@
   gap: 0.65rem;
 }
 
-.mini-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.05rem;
-}
-
-.summary-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.7rem;
-  padding: 0 0.65rem;
-  border-radius: 999px;
-  border: 1px solid #d8dee6;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
 .form-grid {
   display: grid;
   gap: 0.55rem 0.75rem;
@@ -316,11 +296,28 @@ textarea:disabled {
   font-size: 0.72rem;
 }
 
+.field-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
 .field-error {
   margin: 0;
   color: #dc2626;
   font-size: 0.68rem;
   line-height: 1.25;
+}
+
+.success {
+  margin: 0;
+  padding: 0.62rem 0.72rem;
+  border-radius: 0.62rem;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.72rem;
 }
 
 .error {
@@ -335,13 +332,24 @@ textarea:disabled {
 
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.55rem;
   margin-top: 0.1rem;
+  flex-wrap: wrap;
+}
+
+.actions-left,
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 .ghost-btn,
-.save-btn {
+.save-btn,
+.state-btn {
   min-height: 2.1rem;
   padding: 0 0.82rem;
   border-radius: 0.58rem;
@@ -371,10 +379,59 @@ textarea:disabled {
   border-color: #921f54;
 }
 
+.state-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+.state-btn--delete {
+  color: #b42318;
+}
+
+.state-btn--delete:hover:not(:disabled) {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.state-btn--restore {
+  color: #0f5b8d;
+}
+
+.state-btn--restore:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
 .ghost-btn:disabled,
-.save-btn:disabled {
+.save-btn:disabled,
+.state-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.readonly-copy-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.readonly-copy-row input[readonly] {
+  background: #f8fafc;
+  cursor: text;
+  flex: 1 1 auto;
+}
+
+.copy-btn {
+  white-space: nowrap;
+  min-width: 5.9rem;
+  color: #0f5b8d;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 @media (max-width: 900px) {
@@ -387,79 +444,7 @@ textarea:disabled {
   .top-row {
     grid-template-columns: 1fr;
   }
-}
 
-.summary-chip.is-active {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
-}
-
-.summary-chip.is-deleted {
-  border-color: #fecdd3;
-  background: #fff1f2;
-  color: #b42318;
-}
-
-.success {
-  margin: 0;
-  padding: 0.62rem 0.72rem;
-  border-radius: 0.62rem;
-  background: #ecfdf3;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-  font-size: 0.72rem;
-}
-
-.actions {
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.actions-left,
-.actions-right {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.state-btn {
-  min-height: 2.1rem;
-  padding: 0 0.82rem;
-  border-radius: 0.58rem;
-  font-size: 0.74rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.state-btn--delete {
-  border: 1px solid #dc2626;
-  background: #ffffff;
-  color: #b42318;
-}
-
-.state-btn--delete:hover:not(:disabled) {
-  background: #fff1f2;
-}
-
-.state-btn--restore {
-  border: 1px solid #0284c7;
-  background: #ffffff;
-  color: #0f5b8d;
-}
-
-.state-btn--restore:hover:not(:disabled) {
-  background: #eff6ff;
-}
-
-.state-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
   .actions {
     flex-direction: column;
     align-items: stretch;
@@ -470,18 +455,13 @@ textarea:disabled {
     width: 100%;
     justify-content: flex-end;
   }
-}
-.readonly-copy-row {
-  display: flex;
-  gap: 0.55rem;
-  align-items: center;
-}
 
-.readonly-copy-row input[readonly] {
-  background: #f8fafc;
-  cursor: text;
-}
+  .readonly-copy-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-.copy-btn {
-  white-space: nowrap;
+  .copy-btn {
+    width: 100%;
+  }
 }
