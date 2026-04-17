@@ -190,7 +190,7 @@ export class MapaTreeComponent implements OnChanges {
       this.ensureDeletedFolderExpanded();
     }
 
-    if (nodosChanged || searchChanged || selectedNodoChanged || selectedElementoChanged || deletedChanged) {
+    if (searchChanged || selectedNodoChanged || selectedElementoChanged) {
       this.requestScrollSelectionIntoView();
     }
   }
@@ -242,7 +242,6 @@ export class MapaTreeComponent implements OnChanges {
     }
 
     this.expandedIds.set([...current]);
-    this.requestScrollSelectionIntoView();
   }
 
   toggleDeletedFolderExpanded(event?: Event) {

@@ -155,16 +155,16 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     layer: L.Layer | null;
     originalSnapshot: L.Layer | null;
   } = {
-    active: false,
-    dirty: false,
-    elementId: null,
-    elementName: null,
-    geomTipo: null,
-    originalWkt: null,
-    currentWkt: null,
-    layer: null,
-    originalSnapshot: null,
-  };
+      active: false,
+      dirty: false,
+      elementId: null,
+      elementName: null,
+      geomTipo: null,
+      originalWkt: null,
+      currentWkt: null,
+      layer: null,
+      originalSnapshot: null,
+    };
 
   private measureState: MeasureState = {
     points: [],
@@ -295,9 +295,9 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     const bounds = result.bounds
       ? L.latLngBounds(
-          [result.bounds.south, result.bounds.west],
-          [result.bounds.north, result.bounds.east]
-        )
+        [result.bounds.south, result.bounds.west],
+        [result.bounds.north, result.bounds.east]
+      )
       : null;
 
     if (bounds?.isValid?.()) {
@@ -326,7 +326,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   centerOnElemento(id: number | null) {
-    if (id == null) return;
+    if (id == null || !this.map) return;
 
     const selected = this.renderedLayers.get(id);
     if (!selected) {
@@ -334,23 +334,48 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       return;
     }
 
+    const anchor = this.tryGetLayerLatLng(selected);
+    if (!anchor) {
+      this.scheduleRender();
+      return;
+    }
+
+    let targetZoom = Math.max(this.currentZoom, 16);
+
     if ('getBounds' in selected && typeof (selected as any).getBounds === 'function') {
       const bounds = (selected as any).getBounds();
       if (bounds?.isValid?.()) {
-        this.map.fitBounds(bounds.pad(0.3));
-        this.updateViewBounds();
-        this.openTooltipForLayer(selected);
-        this.lastTooltipOpenedElementoId = id;
-        return;
+        targetZoom = Math.max(this.resolveFocusedElementZoom(bounds), this.currentZoom);
       }
+    } else if ('getLatLng' in selected && typeof (selected as any).getLatLng === 'function') {
+      targetZoom = Math.max(this.currentZoom, 18);
     }
 
-    if ('getLatLng' in selected && typeof (selected as any).getLatLng === 'function') {
-      this.map.panTo((selected as any).getLatLng());
-      this.updateViewBounds();
-      this.openTooltipForLayer(selected);
-      this.lastTooltipOpenedElementoId = id;
+    this.map.setView(anchor, targetZoom, { animate: true });
+    this.updateViewBounds();
+    this.openTooltipForLayer(selected);
+    this.lastTooltipOpenedElementoId = id;
+    this.scheduleRender();
+  }
+
+  private resolveFocusedElementZoom(bounds: L.LatLngBounds): number {
+    const diagonalMeters = this.map.distance(bounds.getSouthWest(), bounds.getNorthEast());
+
+    if (!Number.isFinite(diagonalMeters) || diagonalMeters <= 0) {
+      return 16;
     }
+
+    if (diagonalMeters <= 20) return 19;
+    if (diagonalMeters <= 80) return 18;
+    if (diagonalMeters <= 250) return 17;
+    if (diagonalMeters <= 800) return 16;
+    if (diagonalMeters <= 2500) return 15;
+    if (diagonalMeters <= 8000) return 14;
+    if (diagonalMeters <= 25000) return 13;
+    if (diagonalMeters <= 70000) return 12;
+    if (diagonalMeters <= 150000) return 11;
+
+    return 10;
   }
 
   centerOnElementos(elementos: MapaElemento[]) {
@@ -1990,7 +2015,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
               .map((ring) => {
                 const closed =
                   ring[0].lat === ring[ring.length - 1].lat &&
-                  ring[0].lng === ring[ring.length - 1].lng
+                    ring[0].lng === ring[ring.length - 1].lng
                     ? ring
                     : [...ring, ring[0]];
 
@@ -2030,7 +2055,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         .map((ring) => {
           const closed =
             ring[0].lat === ring[ring.length - 1].lat &&
-            ring[0].lng === ring[ring.length - 1].lng
+              ring[0].lng === ring[ring.length - 1].lng
               ? ring
               : [...ring, ring[0]];
 

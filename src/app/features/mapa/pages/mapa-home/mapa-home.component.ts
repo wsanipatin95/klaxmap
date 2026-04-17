@@ -341,8 +341,8 @@ export class MapaHomeComponent {
     this.interaction.onElementoDeleted(item.idGeoElemento);
     this.visibility.clearElemento(item.idGeoElemento);
 
-    this.crud.refreshAll((items) => {
-      this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
+    this.crud.refreshAll(() => {
+      this.refreshMapPreservingViewport();
     });
 
     this.showSuccess('Elemento eliminado', `Se movió "${item.nombre}" a la carpeta Eliminados.`);
@@ -353,7 +353,7 @@ export class MapaHomeComponent {
     this.interaction.setInfoPanelDirty(false);
 
     this.crud.refreshAll(() => {
-      this.defer(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento));
+      this.refreshMapPreservingViewport();
     });
 
     this.showSuccess('Elemento restaurado', `Se restauró "${item.nombre}" correctamente.`);
@@ -365,7 +365,7 @@ export class MapaHomeComponent {
     }
 
     this.crud.refreshAll(() => {
-      this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+      this.refreshMapPreservingViewport();
     });
 
     this.showSuccess('Nodo eliminado', `Se eliminó lógicamente "${node.nodo}".`);
@@ -375,20 +375,12 @@ export class MapaHomeComponent {
     this.selection.setNodo(node);
 
     this.crud.refreshAll(() => {
-      this.defer(() => {
-        const branch = this.view.getVisibleBranchElementos(node.idRedNodo);
-
-        if (branch.length) {
-          this.mapCanvas?.centerOnElementos(branch);
-          return;
-        }
-
-        this.mapCanvas?.centerOnElementos(this.elementosCanvas());
-      });
+      this.refreshMapPreservingViewport();
     });
 
     this.showSuccess('Nodo restaurado', `Se restauró "${node.nodo}" correctamente.`);
   }
+
   onRefresh() {
     this.runGuarded(() => {
       this.crud.refreshAll((items) => {
@@ -1009,8 +1001,12 @@ export class MapaHomeComponent {
         this.crud.deleteNodo(
           node.idRedNodo,
           () => {
+            if (this.selectedNodo()?.idRedNodo === node.idRedNodo) {
+              this.selection.setNodo(null);
+            }
+
             this.showSuccess('Nodo eliminado', `Se eliminó lógicamente "${node.nodo}".`);
-            this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+            this.refreshMapPreservingViewport();
           },
           (message) => this.crud.setError(message)
         );
@@ -1044,7 +1040,7 @@ export class MapaHomeComponent {
             }
 
             this.showSuccess('Elemento eliminado', `Se movió "${item.nombre}" a Eliminados.`);
-            this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+            this.refreshMapPreservingViewport();
           },
           (message) => this.crud.setError(message)
         );
@@ -1065,13 +1061,25 @@ export class MapaHomeComponent {
         this.crud.restoreElemento(
           item.idGeoElemento,
           (restored) => {
+            this.selection.setElemento(restored);
+            this.interaction.closeContextMenu();
             this.showSuccess('Elemento restaurado', `Se restauró "${restored.nombre}" correctamente.`);
-            this.defer(() => this.mapCanvas?.centerOnElemento(restored.idGeoElemento));
+            this.refreshMapPreservingViewport();
           },
           (message) => this.crud.setError(message)
         );
       }
     );
+  }
+
+  private refreshMapPreservingViewport() {
+    this.defer(() => this.mapCanvas?.refreshMapLayout(true));
+
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        this.mapCanvas?.refreshMapLayout(true);
+      });
+    }
   }
 
   private defer(action: () => void) {
