@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import type { MapaNodo, MapaNodoSaveRequest, MapaPatchRequest } from '../../data-access/mapa.models';
+import { MapaNodosRepository } from '../../data-access/nodo/mapa-nodos.repository';
 import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
@@ -36,10 +37,13 @@ interface NodeDialogFormValue {
 export class MapaNodeDialogComponent {
   @Output() createSubmitted = new EventEmitter<MapaNodoSaveRequest>();
   @Output() editSubmitted = new EventEmitter<MapaPatchRequest>();
+  @Output() deleted = new EventEmitter<MapaNodo>();
+  @Output() restored = new EventEmitter<MapaNodo>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
 
   private readonly fb = inject(FormBuilder);
+  private readonly repo = inject(MapaNodosRepository);
 
   readonly visible = signal(false);
   readonly saving = signal(false);
@@ -67,6 +71,7 @@ export class MapaNodeDialogComponent {
   });
 
   readonly isEditMode = computed(() => this.mode() === 'edit');
+  readonly editingDeleted = computed(() => !!this.editingNode()?.fecFin);
 
   setTab(tab: NodeDialogTab) {
     this.activeTab.set(tab);
@@ -228,6 +233,21 @@ export class MapaNodeDialogComponent {
     );
   }
 
+  requestStateAction() {
+    const node = this.editingNode();
+
+    if (!node || this.saving() || !this.isEditMode()) {
+      return;
+    }
+
+    if (this.editingDeleted()) {
+      this.confirmRestore(node);
+      return;
+    }
+
+    this.confirmDelete(node);
+  }
+
   markSaving() {
     this.saving.set(true);
     this.error.set(null);
@@ -282,6 +302,10 @@ export class MapaNodeDialogComponent {
     return this.parentNode()?.nodo || 'Raíz';
   }
 
+  logicalStateLabel(): string {
+    return this.editingDeleted() ? 'Eliminado' : 'Activo';
+  }
+
   private hasPendingChanges(): boolean {
     return this.form.dirty;
   }
@@ -301,12 +325,91 @@ export class MapaNodeDialogComponent {
     };
   }
 
+  private confirmDelete(node: MapaNodo) {
+    this.confirmDialog?.open(
+      {
+        title: 'Eliminar nodo',
+        message:
+          `El nodo "${node.nodo}" se marcará como eliminado.\n\nSolo se podrá eliminar si no tiene hijos activos ni elementos activos asociados.` +
+          this.buildPendingChangesWarning(),
+        confirmLabel: 'Eliminar nodo',
+        cancelLabel: 'Cancelar',
+        severity: 'danger',
+      },
+      () => {
+        this.executeDelete(node);
+      }
+    );
+  }
+
+  private confirmRestore(node: MapaNodo) {
+    this.confirmDialog?.open(
+      {
+        title: 'Restaurar nodo',
+        message:
+          `El nodo "${node.nodo}" volverá a estar activo.\n\nSolo se restaurará si su padre existe y está activo.` +
+          this.buildPendingChangesWarning(),
+        confirmLabel: 'Restaurar nodo',
+        cancelLabel: 'Cancelar',
+        severity: 'info',
+      },
+      () => {
+        this.executeRestore(node);
+      }
+    );
+  }
+
+  private executeDelete(node: MapaNodo) {
+    this.saving.set(true);
+    this.error.set(null);
+
+    this.repo.eliminar(node.idRedNodo).subscribe({
+      next: (resp) => {
+        this.saving.set(false);
+        this.auditRefreshKey.update((v) => v + 1);
+        this.editingNode.set(resp.data);
+        this.deleted.emit(resp.data);
+        this.closeImmediately();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(err?.message || 'No se pudo eliminar el nodo.');
+      },
+    });
+  }
+
+  private executeRestore(node: MapaNodo) {
+    this.saving.set(true);
+    this.error.set(null);
+
+    this.repo.restaurar(node.idRedNodo).subscribe({
+      next: (resp) => {
+        this.saving.set(false);
+        this.auditRefreshKey.update((v) => v + 1);
+        this.editingNode.set(resp.data);
+        this.restored.emit(resp.data);
+        this.closeImmediately();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(err?.message || 'No se pudo restaurar el nodo.');
+      },
+    });
+  }
+
+  private buildPendingChangesWarning(): string {
+    return this.hasPendingChanges()
+      ? '\n\nHay cambios sin guardar en el formulario. Esa edición no se guardará antes de continuar.'
+      : '';
+  }
+
   private closeImmediately() {
     this.form.controls.tipoNodo.enable({ emitEvent: false });
     this.visible.set(false);
     this.saving.set(false);
     this.error.set(null);
     this.submitted.set(false);
+    this.activeTab.set('edicion');
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }

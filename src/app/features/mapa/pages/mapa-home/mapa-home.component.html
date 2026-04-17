@@ -93,18 +93,19 @@
     (elementoContext)="openContextMenu($event)"
   />
 
-  <app-mapa-properties-panel
-    slot="properties"
-    [open]="ui.propertiesOpen()"
-    [elemento]="selectedElemento()"
-    [tipos]="tipos()"
-    [nodos]="nodos()"
-    [requestedTab]="propertiesRequestedTab()"
-    (saved)="onElementoUpdated($event)"
-    (deleted)="onElementoDeleted($event)"
-    (dirtyChange)="onPropertiesDirtyChange($event)"
-    (closeRequested)="onPropertiesCloseRequested()"
-  />
+<app-mapa-properties-panel
+  slot="properties"
+  [open]="ui.propertiesOpen()"
+  [elemento]="selectedElemento()"
+  [tipos]="tipos()"
+  [nodos]="nodos()"
+  [requestedTab]="propertiesRequestedTab()"
+  (saved)="onElementoUpdated($event)"
+  (deleted)="onElementoDeleted($event)"
+  (restored)="onElementoRestored($event)"
+  (dirtyChange)="onPropertiesDirtyChange($event)"
+  (closeRequested)="onPropertiesCloseRequested()"
+/>
 
   <app-mapa-statusbar
     slot="status"
@@ -137,6 +138,8 @@
   #nodeDialog
   (createSubmitted)="onCreateNodeSubmitted($event)"
   (editSubmitted)="onEditNodeSubmitted($event)"
+  (deleted)="onNodeDeleted($event)"
+  (restored)="onNodeRestored($event)"
 ></app-mapa-node-dialog>
 
 <app-mapa-context-menu

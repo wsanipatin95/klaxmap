@@ -284,9 +284,6 @@
       <button *ngIf="editarElemento()" type="button" (click)="editNodeRequested.emit(node); closeContext()">
         Editar nodo
       </button>
-      <button *ngIf="editarElemento()" type="button" class="danger" (click)="deleteNodeRequested.emit(node); closeContext()">
-        Eliminar nodo
-      </button>
     </ng-container>
 
     <ng-container *ngIf="contextKind() === 'element' && contextElemento() as el">

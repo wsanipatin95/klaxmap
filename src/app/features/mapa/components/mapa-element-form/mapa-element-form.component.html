@@ -1,4 +1,21 @@
 <div class="element-form-shell" *ngIf="elemento as el">
+  <div class="mini-summary">
+    <span class="summary-chip">
+      Registro: #{{ el.idGeoElemento }}
+    </span>
+
+    <span class="summary-chip">
+      Geometría: {{ geomDisplayLabel() }}
+    </span>
+
+    <span
+      class="summary-chip"
+      [class.is-active]="!isDeleted()"
+      [class.is-deleted]="isDeleted()"
+    >
+      Estado lógico: {{ logicalStateLabel() }}
+    </span>
+  </div>
 
   <form class="element-form" (ngSubmit)="guardar()">
     <div class="form-grid top-row">
@@ -19,6 +36,7 @@
           [showClear]="true"
           [appendTo]="'body'"
           [emptyMessage]="'No hay nodos disponibles'"
+          [disabled]="saving || actionBusy()"
           name="idRedNodoFk"
           (ngModelChange)="onFieldChanged()"
         >
@@ -35,6 +53,7 @@
           [(ngModel)]="form.nombre"
           name="nombre"
           placeholder="Nombre"
+          [disabled]="saving || actionBusy()"
           (ngModelChange)="onFieldChanged()"
         />
         <p class="field-error" *ngIf="controlError('nombre') as err">{{ err }}</p>
@@ -49,6 +68,7 @@
         [(ngModel)]="form.descripcion"
         name="descripcion"
         placeholder="Descripción breve"
+        [disabled]="saving || actionBusy()"
         (ngModelChange)="onFieldChanged()"
       ></textarea>
       <p class="field-error" *ngIf="controlError('descripcion') as err">{{ err }}</p>
@@ -71,6 +91,7 @@
                 type="radio"
                 name="idGeoTipoElementoFk"
                 [checked]="isTipoSelected(tipo)"
+                [disabled]="saving || actionBusy()"
                 (change)="onTipoPicked(tipo.idGeoTipoElemento)"
               />
 
@@ -118,25 +139,41 @@
       <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
     </div>
 
+    <p class="success" *ngIf="successMessage as ok">{{ ok }}</p>
     <p class="error" *ngIf="error as err">{{ err }}</p>
 
     <div class="actions">
-      <button
-        type="button"
-        class="ghost-btn"
-        [disabled]="saving || !hasUnsavedChanges()"
-        (click)="discardChanges()"
-      >
-        Restaurar
-      </button>
+      <div class="actions-left">
+        <button
+          type="button"
+          class="state-btn"
+          [class.state-btn--delete]="!isDeleted()"
+          [class.state-btn--restore]="isDeleted()"
+          [disabled]="saving || actionBusy()"
+          (click)="requestStateAction()"
+        >
+          {{ isDeleted() ? 'Restaurar registro' : 'Eliminar registro' }}
+        </button>
+      </div>
 
-      <button
-        type="submit"
-        class="save-btn"
-        [disabled]="saving || !hasUnsavedChanges()"
-      >
-        {{ saving ? 'Guardando...' : 'Guardar' }}
-      </button>
+      <div class="actions-right">
+        <button
+          type="button"
+          class="ghost-btn"
+          [disabled]="saving || actionBusy() || !hasUnsavedChanges()"
+          (click)="discardChanges()"
+        >
+          Revertir cambios
+        </button>
+
+        <button
+          type="submit"
+          class="save-btn"
+          [disabled]="saving || actionBusy() || !hasUnsavedChanges()"
+        >
+          {{ saving || actionBusy() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
     </div>
   </form>
 </div>

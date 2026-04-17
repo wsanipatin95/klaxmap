@@ -7,6 +7,9 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  computed,
+  inject,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -17,6 +20,7 @@ import type {
   MapaPatchRequest,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
 import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
 import type { MapaItemVisualPreview } from '../../utils/mapa-element-visual.utils';
 import {
@@ -64,16 +68,24 @@ export class MapaElementFormComponent implements OnChanges {
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() saving = false;
 
-  @Output() submitted = new EventEmitter<MapaPatchRequest>();
+  @Output() saved = new EventEmitter<MapaElemento>();
+  @Output() deleted = new EventEmitter<MapaElemento>();
+  @Output() restored = new EventEmitter<MapaElemento>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
+
+  private readonly repo = inject(MapaElementosRepository);
+
+  readonly actionBusy = signal(false);
+  readonly isDeleted = computed(() => !!this.elemento?.fecFin);
 
   form: ElementFormState = this.buildFormState(null);
   private initialForm: ElementFormState = this.buildFormState(null);
 
   submittedAttempt = false;
   error: string | null = null;
+  successMessage: string | null = null;
 
   nodeOptions: NodoSelectOption[] = [];
   tiposAgrupados: TipoAgrupadoVm[] = [];
@@ -95,6 +107,11 @@ export class MapaElementFormComponent implements OnChanges {
 
   onFieldChanged() {
     this.error = null;
+
+    if (this.successMessage) {
+      this.successMessage = null;
+    }
+
     this.emitDirtyState();
   }
 
@@ -105,16 +122,22 @@ export class MapaElementFormComponent implements OnChanges {
 
     this.form.idGeoTipoElementoFk = tipoId;
     this.error = null;
+
+    if (this.successMessage) {
+      this.successMessage = null;
+    }
+
     this.emitDirtyState();
   }
 
   guardar() {
-    if (!this.elemento || this.saving || !this.hasUnsavedChanges()) {
+    if (!this.elemento || this.isWorking() || !this.hasUnsavedChanges()) {
       return;
     }
 
     this.submittedAttempt = true;
     this.error = null;
+    this.successMessage = null;
 
     if (!this.isValid()) {
       this.error = 'Revisa los campos obligatorios.';
@@ -144,13 +167,26 @@ export class MapaElementFormComponent implements OnChanges {
         severity: 'info',
       },
       () => {
-        this.submitted.emit(payload);
+        this.executeSave(payload);
       },
       undefined,
       () => {
         this.discardChanges();
       }
     );
+  }
+
+  requestStateAction() {
+    if (!this.elemento || this.isWorking()) {
+      return;
+    }
+
+    if (this.isDeleted()) {
+      this.confirmRestore();
+      return;
+    }
+
+    this.confirmDelete();
   }
 
   hasUnsavedChanges(): boolean {
@@ -171,6 +207,7 @@ export class MapaElementFormComponent implements OnChanges {
     this.initialForm = this.cloneState(state);
     this.submittedAttempt = false;
     this.error = null;
+    this.successMessage = null;
 
     this.rebuildNodeOptions();
     this.rebuildCompatibleTypeGroups();
@@ -265,8 +302,123 @@ export class MapaElementFormComponent implements OnChanges {
     return `Nodo #${this.form.idRedNodoFk}`;
   }
 
+  logicalStateLabel(): string {
+    return this.isDeleted() ? 'Eliminado' : 'Activo';
+  }
+
   trackByTipo = (_: number, item: MapaTipoElemento) => item.idGeoTipoElemento;
   trackByGrupo = (_: number, item: TipoAgrupadoVm) => item.agrupacion;
+
+  private isWorking(): boolean {
+    return this.saving || this.actionBusy();
+  }
+
+  private executeSave(payload: MapaPatchRequest) {
+    this.actionBusy.set(true);
+    this.error = null;
+    this.successMessage = null;
+
+    this.repo.editar(payload).subscribe({
+      next: (resp) => {
+        this.actionBusy.set(false);
+        this.error = null;
+        this.successMessage = 'Los cambios se guardaron correctamente.';
+        this.markSaved(resp.data);
+        this.saved.emit(resp.data);
+      },
+      error: (err) => {
+        this.actionBusy.set(false);
+        this.successMessage = null;
+        this.error = err?.message || 'No se pudieron guardar los cambios.';
+      },
+    });
+  }
+
+  private confirmDelete() {
+    const elemento = this.elemento;
+    if (!elemento) {
+      return;
+    }
+
+    this.confirmDialog?.open(
+      {
+        title: 'Eliminar elemento',
+        message:
+          `El elemento "${elemento.nombre}" se moverá a la carpeta Eliminados.\n\nPodrás restaurarlo luego desde este mismo formulario.` +
+          this.buildPendingChangesWarning(),
+        confirmLabel: 'Eliminar elemento',
+        cancelLabel: 'Cancelar',
+        severity: 'danger',
+      },
+      () => {
+        this.executeDelete(elemento);
+      }
+    );
+  }
+
+  private confirmRestore() {
+    const elemento = this.elemento;
+    if (!elemento) {
+      return;
+    }
+
+    this.confirmDialog?.open(
+      {
+        title: 'Restaurar elemento',
+        message:
+          `El elemento "${elemento.nombre}" volverá a estar activo y regresará a su ubicación original dentro del árbol.` +
+          this.buildPendingChangesWarning(),
+        confirmLabel: 'Restaurar elemento',
+        cancelLabel: 'Cancelar',
+        severity: 'info',
+      },
+      () => {
+        this.executeRestore(elemento);
+      }
+    );
+  }
+
+  private executeDelete(elemento: MapaElemento) {
+    this.actionBusy.set(true);
+    this.error = null;
+    this.successMessage = null;
+
+    this.repo.eliminar(elemento.idGeoElemento).subscribe({
+      next: (resp) => {
+        this.actionBusy.set(false);
+        this.markSaved(resp.data);
+        this.deleted.emit(resp.data);
+      },
+      error: (err) => {
+        this.actionBusy.set(false);
+        this.error = err?.message || 'No se pudo eliminar el elemento.';
+      },
+    });
+  }
+
+  private executeRestore(elemento: MapaElemento) {
+    this.actionBusy.set(true);
+    this.error = null;
+    this.successMessage = null;
+
+    this.repo.restaurar(elemento.idGeoElemento).subscribe({
+      next: (resp) => {
+        this.actionBusy.set(false);
+        this.markSaved(resp.data);
+        this.restored.emit(resp.data);
+      },
+      error: (err) => {
+        this.actionBusy.set(false);
+        this.error = err?.message || 'No se pudo restaurar el elemento.';
+      },
+    });
+  }
+
+  private buildPendingChangesWarning(): string {
+    return this.hasUnsavedChanges()
+      ? '\n\nHay cambios sin guardar en el formulario. Esa edición no se guardará antes de continuar.'
+      : '';
+  }
 
   private emitDirtyState() {
     this.dirtyChange.emit(this.hasUnsavedChanges());

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
-import type { MapaElemento, MapaNodo, MapaPatchRequest, MapaTipoElemento } from '../../data-access/mapa.models';
+import type { MapaElemento, MapaNodo, MapaTipoElemento } from '../../data-access/mapa.models';
 import { MapaElementFormComponent } from '../mapa-element-form/mapa-element-form.component';
 
 @Component({
@@ -16,7 +16,9 @@ export class MapaPropertiesTabsComponent {
   @Input() nodos: MapaNodo[] = [];
   @Input() saving = false;
 
-  @Output() submitted = new EventEmitter<MapaPatchRequest>();
+  @Output() saved = new EventEmitter<MapaElemento>();
+  @Output() deleted = new EventEmitter<MapaElemento>();
+  @Output() restored = new EventEmitter<MapaElemento>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
   @ViewChild(MapaElementFormComponent) elementForm?: MapaElementFormComponent;

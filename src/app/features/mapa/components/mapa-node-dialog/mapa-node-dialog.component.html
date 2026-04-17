@@ -35,7 +35,7 @@
           <form class="dialog-body" [class.is-saving]="saving()" [formGroup]="form" (ngSubmit)="submit()">
             <div class="save-blocker" *ngIf="saving()">
               <div class="save-blocker-card">
-                <div class="save-blocker-title">Guardando nodo...</div>
+                <div class="save-blocker-title">Procesando nodo...</div>
                 <div class="save-blocker-text">Espera un momento mientras se procesa la operación.</div>
               </div>
             </div>
@@ -52,6 +52,15 @@
 
                 <span class="summary-chip" *ngIf="isEditMode() && editingNode() as node">
                   Tipo actual: {{ node.tipoNodo }}
+                </span>
+
+                <span
+                  class="summary-chip"
+                  *ngIf="isEditMode() && editingNode()"
+                  [class.is-active]="!editingDeleted()"
+                  [class.is-deleted]="editingDeleted()"
+                >
+                  Estado lógico: {{ logicalStateLabel() }}
                 </span>
               </div>
 
@@ -126,18 +135,35 @@
 
   <ng-template pTemplate="footer">
     <div class="dialog-footer">
-      <button type="button" class="ghost-btn" [disabled]="saving()" (click)="requestClose()">
-        Cancelar
-      </button>
+      <div class="dialog-footer-left">
+        <button
+          *ngIf="isEditMode() && editingNode()"
+          type="button"
+          class="state-btn"
+          [class.state-btn--delete]="!editingDeleted()"
+          [class.state-btn--restore]="editingDeleted()"
+          [disabled]="saving()"
+          (click)="requestStateAction()"
+        >
+          {{ editingDeleted() ? 'Restaurar nodo' : 'Eliminar nodo' }}
+        </button>
+      </div>
 
-      <button
-        type="button"
-        class="save-btn"
-        [disabled]="form.invalid || saving()"
-        (click)="submit()"
-      >
-        {{ saving() ? 'Guardando...' : (mode() === 'create' ? 'Crear' : 'Guardar') }}
-      </button>
+      <div class="dialog-footer-right">
+        <button type="button" class="ghost-btn" [disabled]="saving()" (click)="requestClose()">
+          Cancelar
+        </button>
+
+        <button
+          *ngIf="!isEditMode() || activeTab() === 'edicion'"
+          type="button"
+          class="save-btn"
+          [disabled]="form.invalid || saving()"
+          (click)="submit()"
+        >
+          {{ saving() ? 'Guardando...' : (mode() === 'create' ? 'Crear' : 'Guardar') }}
+        </button>
+      </div>
     </div>
   </ng-template>
 </p-dialog>

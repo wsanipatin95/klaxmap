@@ -35,7 +35,9 @@
       [tipos]="tipos"
       [nodos]="nodos"
       [saving]="saving"
-      (submitted)="submitted.emit($event)"
+      (saved)="saved.emit($event)"
+      (deleted)="deleted.emit($event)"
+      (restored)="restored.emit($event)"
       (dirtyChange)="onDirtyChange($event)"
     />
   </div>

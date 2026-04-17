@@ -7,17 +7,14 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
-  inject,
   signal,
 } from '@angular/core';
 
 import type {
   MapaElemento,
   MapaNodo,
-  MapaPatchRequest,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
-import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
 import { MapaPropertiesTabsComponent } from '../mapa-properties-tabs/mapa-properties-tabs.component';
 import { AuditoriaRegistroComponent } from '../auditoria-registro/auditoria-registro.component';
 
@@ -31,8 +28,6 @@ export type PropertiesPanelTab = 'edicion' | 'historial';
   styleUrl: './mapa-properties-panel.component.scss',
 })
 export class MapaPropertiesPanelComponent implements OnChanges {
-  private readonly repo = inject(MapaElementosRepository);
-
   @Input() elemento: MapaElemento | null = null;
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() nodos: MapaNodo[] = [];
@@ -40,16 +35,14 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   @Input() requestedTab: PropertiesPanelTab | null = null;
 
   @Output() saved = new EventEmitter<MapaElemento>();
-  @Output() deleted = new EventEmitter<number>();
+  @Output() deleted = new EventEmitter<MapaElemento>();
+  @Output() restored = new EventEmitter<MapaElemento>();
   @Output() closeRequested = new EventEmitter<void>();
   @Output() dirtyChange = new EventEmitter<boolean>();
 
   @ViewChild(MapaPropertiesTabsComponent) tabs?: MapaPropertiesTabsComponent;
 
   readonly dirty = signal(false);
-  readonly saving = signal(false);
-  readonly statusKind = signal<'success' | 'error' | null>(null);
-  readonly statusMessage = signal<string | null>(null);
   readonly activeTab = signal<PropertiesPanelTab>('edicion');
   readonly auditRefreshKey = signal(0);
 
@@ -72,59 +65,33 @@ export class MapaPropertiesPanelComponent implements OnChanges {
     this.activeTab.set(tab);
   }
 
-  guardar(payload: MapaPatchRequest) {
-    if (this.saving()) {
-      return;
-    }
-
-    this.saving.set(true);
-    this.statusKind.set(null);
-    this.statusMessage.set(null);
-
-    this.repo.editar(payload).subscribe({
-      next: (resp) => {
-        this.saving.set(false);
-        this.dirty.set(false);
-        this.dirtyChange.emit(false);
-        this.tabs?.markSaved(resp.data);
-        this.statusKind.set('success');
-        this.statusMessage.set('Los cambios se guardaron correctamente.');
-        this.auditRefreshKey.update((v) => v + 1);
-        this.saved.emit(resp.data);
-      },
-      error: (err) => {
-        console.error(err);
-        this.saving.set(false);
-        this.statusKind.set('error');
-        this.statusMessage.set(err?.message || 'No se pudieron guardar los cambios.');
-      },
-    });
+  onSaved(item: MapaElemento) {
+    this.dirty.set(false);
+    this.dirtyChange.emit(false);
+    this.tabs?.markSaved(item);
+    this.auditRefreshKey.update((v) => v + 1);
+    this.saved.emit(item);
   }
 
-  eliminar() {
-    if (!this.elemento || this.saving()) return;
+  onDeleted(item: MapaElemento) {
+    this.dirty.set(false);
+    this.dirtyChange.emit(false);
+    this.deleted.emit(item);
+  }
 
-    const id = this.elemento.idGeoElemento;
-
-    this.repo.eliminar(id).subscribe({
-      next: () => this.deleted.emit(id),
-      error: (err) => console.error(err),
-    });
+  onRestored(item: MapaElemento) {
+    this.dirty.set(false);
+    this.dirtyChange.emit(false);
+    this.tabs?.markSaved(item);
+    this.auditRefreshKey.update((v) => v + 1);
+    this.restored.emit(item);
   }
 
   requestClose() {
-    if (this.saving()) {
-      return;
-    }
-
     this.closeRequested.emit();
   }
 
   onOverlayClick() {
-    if (this.saving()) {
-      return;
-    }
-
     this.requestClose();
   }
 
@@ -135,10 +102,5 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   onDirtyStateChanged(isDirty: boolean) {
     this.dirty.set(isDirty);
     this.dirtyChange.emit(isDirty);
-
-    if (isDirty && this.statusKind() === 'success') {
-      this.statusKind.set(null);
-      this.statusMessage.set(null);
-    }
   }
 }

@@ -337,17 +337,58 @@ export class MapaHomeComponent {
     this.showSuccess('Información guardada', `Se actualizó "${item.nombre}" correctamente.`);
   }
 
-  onElementoDeleted(id: number) {
-    const deletedName = this.selectedElemento()?.nombre || 'elemento';
+  onElementoDeleted(item: MapaElemento) {
+    this.interaction.onElementoDeleted(item.idGeoElemento);
+    this.visibility.clearElemento(item.idGeoElemento);
 
-    this.interaction.onElementoDeleted(id);
-    this.visibility.clearElemento(id);
     this.crud.refreshAll((items) => {
       this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
     });
-    this.showSuccess('Elemento eliminado', `Se movió "${deletedName}" a la carpeta Eliminados.`);
+
+    this.showSuccess('Elemento eliminado', `Se movió "${item.nombre}" a la carpeta Eliminados.`);
   }
 
+  onElementoRestored(item: MapaElemento) {
+    this.selection.setElemento(item);
+    this.interaction.setInfoPanelDirty(false);
+
+    this.crud.refreshAll(() => {
+      this.defer(() => this.mapCanvas?.centerOnElemento(item.idGeoElemento));
+    });
+
+    this.showSuccess('Elemento restaurado', `Se restauró "${item.nombre}" correctamente.`);
+  }
+  
+  onNodeDeleted(node: MapaNodo) {
+    if (this.selectedNodo()?.idRedNodo === node.idRedNodo) {
+      this.selection.setNodo(null);
+    }
+
+    this.crud.refreshAll(() => {
+      this.defer(() => this.mapCanvas?.centerOnElementos(this.elementosCanvas()));
+    });
+
+    this.showSuccess('Nodo eliminado', `Se eliminó lógicamente "${node.nodo}".`);
+  }
+
+  onNodeRestored(node: MapaNodo) {
+    this.selection.setNodo(node);
+
+    this.crud.refreshAll(() => {
+      this.defer(() => {
+        const branch = this.view.getVisibleBranchElementos(node.idRedNodo);
+
+        if (branch.length) {
+          this.mapCanvas?.centerOnElementos(branch);
+          return;
+        }
+
+        this.mapCanvas?.centerOnElementos(this.elementosCanvas());
+      });
+    });
+
+    this.showSuccess('Nodo restaurado', `Se restauró "${node.nodo}" correctamente.`);
+  }
   onRefresh() {
     this.runGuarded(() => {
       this.crud.refreshAll((items) => {
