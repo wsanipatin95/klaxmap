@@ -240,10 +240,54 @@
   font-size: 0.64rem;
   font-weight: 800;
   text-align: left;
-  padding: 0.36rem 0.44rem;
+  padding: 0;
   border-bottom: 1px solid #dbe4ef;
   white-space: nowrap;
   box-shadow: inset 0 -1px 0 #dbe4ef;
+}
+
+.sort-btn {
+  width: 100%;
+  min-height: 1.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.36rem 0.44rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sort-btn:hover {
+  background: #f1f5f9;
+}
+
+.sort-btn.is-active {
+  color: #0f172a;
+}
+
+.sort-btn:focus-visible {
+  outline: 2px solid rgba(123, 0, 97, 0.28);
+  outline-offset: -2px;
+}
+
+.sort-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.sort-btn.is-active .sort-arrow {
+  color: #7b0061;
 }
 
 .audit-table tbody td {

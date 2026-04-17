@@ -16,6 +16,19 @@ interface AuditoriaCellPopover {
   y: number;
 }
 
+type AuditoriaSupervisorSortKey =
+  | 'fecha'
+  | 'usuario'
+  | 'contexto'
+  | 'registro'
+  | 'operacion'
+  | 'campo'
+  | 'antes'
+  | 'despues'
+  | 'resumen';
+
+type AuditoriaSupervisorSortDirection = 'asc' | 'desc';
+
 @Component({
   selector: 'app-auditoria-supervisor',
   standalone: true,
@@ -31,6 +44,9 @@ export class AuditoriaSupervisorComponent {
   readonly data = signal<AuditoriaSupervisorResponse | null>(null);
   readonly popover = signal<AuditoriaCellPopover | null>(null);
 
+  readonly sortKey = signal<AuditoriaSupervisorSortKey>('fecha');
+  readonly sortDirection = signal<AuditoriaSupervisorSortDirection>('desc');
+
   readonly filtros = signal<AuditoriaSupervisorFilters>({
     q: '',
     usuario: null,
@@ -45,6 +61,24 @@ export class AuditoriaSupervisorComponent {
   });
 
   readonly items = computed(() => this.data()?.items ?? []);
+  readonly sortedItems = computed(() => {
+    const rows = [...this.items()];
+    const key = this.sortKey();
+    const direction = this.sortDirection();
+    const factor = direction === 'asc' ? 1 : -1;
+
+    rows.sort((a, b) => {
+      const comparison = this.compareItems(a, b, key);
+      if (comparison !== 0) {
+        return comparison * factor;
+      }
+
+      return Number(a.idSegAuditoria ?? 0) - Number(b.idSegAuditoria ?? 0);
+    });
+
+    return rows;
+  });
+
   readonly totalElements = computed(() => this.data()?.totalElements ?? this.data()?.total ?? 0);
   readonly totalPages = computed(() => this.data()?.totalPages ?? 0);
   readonly currentPage = computed(() => this.data()?.page ?? 0);
@@ -139,6 +173,38 @@ export class AuditoriaSupervisorComponent {
       ...this.filtros(),
       [key]: value,
     });
+  }
+
+  setSort(key: AuditoriaSupervisorSortKey) {
+    if (this.sortKey() === key) {
+      this.sortDirection.update((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    this.sortKey.set(key);
+    this.sortDirection.set(key === 'fecha' ? 'desc' : 'asc');
+  }
+
+  isSortedBy(key: AuditoriaSupervisorSortKey): boolean {
+    return this.sortKey() === key;
+  }
+
+  sortArrow(key: AuditoriaSupervisorSortKey): string {
+    if (!this.isSortedBy(key)) {
+      return '↕';
+    }
+
+    return this.sortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  sortAriaLabel(key: AuditoriaSupervisorSortKey, label: string): string {
+    const current = this.isSortedBy(key)
+      ? this.sortDirection() === 'asc'
+        ? 'ascendente'
+        : 'descendente'
+      : 'sin orden aplicado';
+
+    return `${label}. Estado actual: ${current}. Presiona para ordenar.`;
   }
 
   prevPage() {
@@ -274,6 +340,84 @@ export class AuditoriaSupervisorComponent {
 
   closePopover() {
     this.popover.set(null);
+  }
+
+  private compareItems(
+    a: AuditoriaSupervisorItem,
+    b: AuditoriaSupervisorItem,
+    key: AuditoriaSupervisorSortKey
+  ): number {
+    switch (key) {
+      case 'fecha':
+        return this.compareDates(a.fechaHora, b.fechaHora);
+
+      case 'usuario':
+        return this.compareText(this.displayUsuario(a), this.displayUsuario(b));
+
+      case 'contexto':
+        return this.compareText(this.displayContexto(a), this.displayContexto(b));
+
+      case 'registro':
+        return this.compareNumbers(a.idRegistro, b.idRegistro);
+
+      case 'operacion':
+        return this.compareText(a.operacionLabel || a.operacion, b.operacionLabel || b.operacion);
+
+      case 'campo':
+        return this.compareText(this.displayCampo(a), this.displayCampo(b));
+
+      case 'antes':
+        return this.compareText(
+          this.fullValue(a.valorAnterior, a.campoLabel),
+          this.fullValue(b.valorAnterior, b.campoLabel)
+        );
+
+      case 'despues':
+        return this.compareText(
+          this.fullValue(a.valorNuevo, a.campoLabel),
+          this.fullValue(b.valorNuevo, b.campoLabel)
+        );
+
+      case 'resumen':
+        return this.compareText(
+          this.fullValue(a.resumenHumano, a.campoLabel),
+          this.fullValue(b.resumenHumano, b.campoLabel)
+        );
+
+      default:
+        return 0;
+    }
+  }
+
+  private compareDates(a: string | null | undefined, b: string | null | undefined): number {
+    const left = this.dateToMillis(a);
+    const right = this.dateToMillis(b);
+
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  }
+
+  private dateToMillis(value: string | null | undefined): number {
+    const time = Date.parse(String(value ?? '').trim());
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  private compareNumbers(a: string | number | null | undefined, b: string | number | null | undefined): number {
+    const left = Number(a ?? 0);
+    const right = Number(b ?? 0);
+
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  }
+
+  private compareText(a: string | null | undefined, b: string | null | undefined): number {
+    const left = String(a ?? '').trim().toLocaleLowerCase();
+    const right = String(b ?? '').trim().toLocaleLowerCase();
+
+    return left.localeCompare(right, 'es', {
+      numeric: true,
+      sensitivity: 'base',
+    });
   }
 
   private extractUsefulValue(
