@@ -307,21 +307,6 @@
       <button *ngIf="editarElemento()" type="button" (click)="editGeometryElementoRequested.emit(el); closeContext()">
         Editar posicion
       </button>
-      <button
-        *ngIf="editarElemento() && isDeletedElement(el)"
-        type="button"
-        (click)="restoreDeletedElementoRequested.emit(el); closeContext()"
-      >
-        Restaurar
-      </button>
-      <button
-        *ngIf="editarElemento() && !isDeletedElement(el)"
-        type="button"
-        class="danger"
-        (click)="deleteElementoRequested.emit(el); closeContext()"
-      >
-        Eliminar
-      </button>
     </ng-container>
   </div>
 </div>
