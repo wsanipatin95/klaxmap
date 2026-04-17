@@ -78,7 +78,8 @@ export class MapaElementFormComponent implements OnChanges {
   private readonly repo = inject(MapaElementosRepository);
 
   readonly actionBusy = signal(false);
-  readonly isDeleted = computed(() => !!this.elemento?.fecFin);
+  private readonly currentElemento = signal<MapaElemento | null>(null);
+  readonly isDeleted = computed(() => !!this.currentElemento()?.fecFin);
 
   form: ElementFormState = this.buildFormState(null);
   private initialForm: ElementFormState = this.buildFormState(null);
@@ -91,13 +92,14 @@ export class MapaElementFormComponent implements OnChanges {
   tiposAgrupados: TipoAgrupadoVm[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
-    this.rebuildNodeOptions();
-    this.rebuildCompatibleTypeGroups();
-
     if (changes['elemento']) {
-      this.resetFromElemento(this.elemento);
+      this.syncCurrentElemento(this.elemento);
+      this.resetFromElemento(this.currentElemento());
       return;
     }
+
+    this.rebuildNodeOptions();
+    this.rebuildCompatibleTypeGroups();
 
     if (changes['nodos'] || changes['tipos']) {
       this.ensureCurrentSelectionsStillValid();
@@ -131,7 +133,9 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   guardar() {
-    if (!this.elemento || this.isWorking() || !this.hasUnsavedChanges()) {
+    const current = this.currentElemento();
+
+    if (!current || this.isWorking() || !this.hasUnsavedChanges()) {
       return;
     }
 
@@ -145,7 +149,7 @@ export class MapaElementFormComponent implements OnChanges {
     }
 
     const payload: MapaPatchRequest = {
-      id: this.elemento.idGeoElemento,
+      id: current.idGeoElemento,
       cambios: {
         nombre: this.form.nombre.trim(),
         descripcion: this.form.descripcion.trim(),
@@ -177,7 +181,9 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   requestStateAction() {
-    if (!this.elemento || this.isWorking()) {
+    const current = this.currentElemento();
+
+    if (!current || this.isWorking()) {
       return;
     }
 
@@ -194,11 +200,12 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   discardChanges() {
-    this.resetFromElemento(this.elemento);
+    this.resetFromElemento(this.currentElemento());
   }
 
-  markSaved(elemento: MapaElemento | null = this.elemento) {
-    this.resetFromElemento(elemento);
+  markSaved(elemento: MapaElemento | null = this.currentElemento()) {
+    this.syncCurrentElemento(elemento);
+    this.resetFromElemento(this.currentElemento());
   }
 
   resetFromElemento(elemento: MapaElemento | null) {
@@ -303,22 +310,24 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   coordinatesValue(): string {
-    const latLon = this.trimmed(this.elemento?.latLon);
+    const current = this.currentElemento();
+
+    const latLon = this.trimmed(current?.latLon);
     if (latLon) {
       return latLon;
     }
 
-    const bbox = this.trimmed(this.elemento?.bbox);
+    const bbox = this.trimmed(current?.bbox);
     if (bbox) {
       return bbox;
     }
 
-    const fromPayload = this.coordinatesFromGeometryPayload(this.elemento?.geometria);
+    const fromPayload = this.coordinatesFromGeometryPayload(current?.geometria);
     if (fromPayload) {
       return fromPayload;
     }
 
-    const fromWkt = this.coordinatesFromWkt(this.elemento?.wkt);
+    const fromWkt = this.coordinatesFromWkt(current?.wkt);
     if (fromWkt) {
       return fromWkt;
     }
@@ -379,7 +388,7 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   private confirmDelete() {
-    const elemento = this.elemento;
+    const elemento = this.currentElemento();
     if (!elemento) {
       return;
     }
@@ -401,7 +410,7 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   private confirmRestore() {
-    const elemento = this.elemento;
+    const elemento = this.currentElemento();
     if (!elemento) {
       return;
     }
@@ -531,7 +540,7 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   private rebuildCompatibleTypeGroups() {
-    const geom = this.elemento?.geomTipo ?? null;
+    const geom = this.currentElemento()?.geomTipo ?? null;
     const compatibles = this.tipos.filter((t) => {
       if (!geom) return true;
       return t.geometriaPermitida === geom || t.geometriaPermitida === 'mixed';
@@ -583,7 +592,11 @@ export class MapaElementFormComponent implements OnChanges {
   }
 
   private isPointGeometry(): boolean {
-    return String(this.elemento?.geomTipo ?? '').toLowerCase() === 'point';
+    return String(this.currentElemento()?.geomTipo ?? '').toLowerCase() === 'point';
+  }
+
+  private syncCurrentElemento(elemento: MapaElemento | null) {
+    this.currentElemento.set(elemento);
   }
 
   private coordinatesFromGeometryPayload(value: unknown): string | null {
