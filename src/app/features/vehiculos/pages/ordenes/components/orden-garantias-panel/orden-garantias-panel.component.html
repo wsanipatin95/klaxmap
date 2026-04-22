@@ -1,0 +1,149 @@
+<section class="panelCard panelCard--execution">
+  <div class="executionWorkbench executionWorkbench--merged">
+    <aside class="execColumn execColumn--jobs">
+      <div class="sectionHead sectionHead--compact">
+        <div>
+          <h4>Garantías</h4>
+          <div class="secondaryCell">{{ garantias.length }} registro(s)</div>
+        </div>
+
+        <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva"
+          [disabled]="readonlyMode || !orden" (click)="openGarantia.emit()">
+        </button>
+      </div>
+
+      <div class="listCard listCard--tight">
+        <div class="scrollList scrollList--compact">
+          <article class="jiraLikeRow compact compactRow"
+            *ngFor="let item of garantias"
+            [class.selected]="selectedGarantia?.idVehGarantia === item.idVehGarantia"
+            (click)="selectGarantia.emit(item)">
+            <div class="rowHeader">
+              <div class="rowCopy">
+                <div class="primaryCell">{{ item.tipoGarantia || 'GARANTIA' }}</div>
+                <div class="secondaryCell">{{ item.modalidadVencimiento || 'SIN MODALIDAD' }}</div>
+              </div>
+              <p-tag [value]="item.estadoGarantia || 'ACTIVA'" [severity]="estadoSeverity(item.estadoGarantia)"></p-tag>
+            </div>
+            <div class="secondaryCell rowClamp">
+              Base: {{ formatDate(item.fechaBase) }} · Km: {{ item.kmBase || 0 }}
+            </div>
+            <div class="secondaryCell rowClamp">
+              Vence: {{ formatDate(item.fechaVence) }} · Km: {{ item.kmVence || 0 }}
+            </div>
+          </article>
+
+          <app-vehiculos-empty-state *ngIf="!garantias.length" icon="pi pi-shield" title="Sin garantías"
+            subtitle="Crea la primera garantía asociada a esta OT.">
+          </app-vehiculos-empty-state>
+        </div>
+      </div>
+    </aside>
+
+    <section class="execWorkspace">
+      <section class="workbenchCard workbenchCard--full" *ngIf="selectedGarantia as garantia; else noGarantiaSeleccionada">
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Garantía #{{ garantia.idVehGarantia }}</h4>
+            <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{ garantia.modalidadVencimiento || '-' }}</div>
+          </div>
+          <div class="actionWrap actionWrap--compact">
+            <button pButton type="button" size="small" icon="pi pi-list" label="Detalle"
+              [disabled]="readonlyMode" (click)="openGarantiaDetalle.emit()">
+            </button>
+            <button pButton type="button" size="small" icon="pi pi-history" label="Reclamo"
+              [disabled]="readonlyMode" (click)="openGarantiaMovimiento.emit()">
+            </button>
+          </div>
+        </div>
+
+        <div class="metricGrid">
+          <article class="metric"><span>Estado</span><strong>{{ garantia.estadoGarantia || '-' }}</strong></article>
+          <article class="metric"><span>Responsable</span><strong>{{ garantia.responsableCosto || '-' }}</strong></article>
+          <article class="metric"><span>Fecha base</span><strong>{{ formatDate(garantia.fechaBase) }}</strong></article>
+          <article class="metric"><span>Fecha vence</span><strong>{{ formatDate(garantia.fechaVence) }}</strong></article>
+        </div>
+
+        <div class="metricGrid">
+          <article class="metric"><span>Km base</span><strong>{{ garantia.kmBase || 0 }}</strong></article>
+          <article class="metric"><span>Km garantía</span><strong>{{ garantia.kmGarantia || 0 }}</strong></article>
+          <article class="metric"><span>Km vence</span><strong>{{ garantia.kmVence || 0 }}</strong></article>
+          <article class="metric"><span>OT reclamo</span><strong>{{ garantia.idVehOrdenTrabajoReclamoFk || '-' }}</strong></article>
+        </div>
+
+        <div class="kvGrid">
+          <article class="kvItem">
+            <span>Observaciones</span>
+            <strong>{{ garantia.observaciones || 'Sin observaciones' }}</strong>
+          </article>
+          <article class="kvItem">
+            <span>Atributos</span>
+            <strong>{{ garantia.atributos ? (garantia.atributos | json) : 'Sin atributos' }}</strong>
+          </article>
+        </div>
+
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Coberturas</h4>
+            <div class="secondaryCell">{{ garantiaDetalles.length }} item(s)</div>
+          </div>
+        </div>
+
+        <div class="scrollList scrollList--compact">
+          <article class="jiraLikeRow compact compactRow" *ngFor="let item of garantiaDetalles">
+            <div class="rowHeader">
+              <div class="rowCopy">
+                <div class="primaryCell">{{ detalleLabel(item) }}</div>
+                <div class="secondaryCell">{{ item.tipoCobertura || '-' }}</div>
+              </div>
+              <p-tag [value]="(item.cubreManoObra ? 'MO ' : '') + (item.cubreRepuesto ? 'REP' : '') || 'N/A'" severity="secondary"></p-tag>
+            </div>
+            <div class="secondaryCell rowClamp">
+              Monto máx: {{ money(item.montoMaximo) }} · Cantidad máx: {{ item.cantidadMaxima || 0 }}
+            </div>
+            <div class="secondaryCell rowClamp">
+              Serie ant: {{ item.serieAnterior || '-' }} · Serie nueva: {{ item.serieNueva || '-' }}
+            </div>
+          </article>
+
+          <app-vehiculos-empty-state *ngIf="!garantiaDetalles.length" icon="pi pi-list" title="Sin detalle"
+            subtitle="Agrega trabajos o repuestos cubiertos por la garantía.">
+          </app-vehiculos-empty-state>
+        </div>
+
+        <div class="sectionHead sectionHead--compact">
+          <div>
+            <h4>Movimientos / reclamos</h4>
+            <div class="secondaryCell">{{ garantiaMovimientos.length }} evento(s)</div>
+          </div>
+        </div>
+
+        <div class="scrollList scrollList--compact">
+          <article class="jiraLikeRow compact compactRow" *ngFor="let item of garantiaMovimientos">
+            <div class="rowHeader">
+              <div class="rowCopy">
+                <div class="primaryCell">{{ item.resultado || 'RECLAMO' }}</div>
+                <div class="secondaryCell">{{ formatDate(item.fechaReclamo) }} · Km {{ item.kmReclamo || 0 }}</div>
+              </div>
+              <p-tag [value]="item.resultado || 'PENDIENTE'" [severity]="estadoSeverity(item.resultado)"></p-tag>
+            </div>
+            <div class="secondaryCell rowClamp">{{ item.diagnostico || 'Sin diagnóstico' }}</div>
+            <div class="secondaryCell rowClamp">
+              Cliente: {{ money(item.valorCliente) }} · Taller: {{ money(item.valorTaller) }} · Proveedor: {{ money(item.valorProveedor) }}
+            </div>
+          </article>
+
+          <app-vehiculos-empty-state *ngIf="!garantiaMovimientos.length" icon="pi pi-history" title="Sin reclamos"
+            subtitle="Cuando el cliente regrese, registra aquí el movimiento.">
+          </app-vehiculos-empty-state>
+        </div>
+      </section>
+    </section>
+  </div>
+</section>
+
+<ng-template #noGarantiaSeleccionada>
+  <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía"
+    subtitle="Elige una garantía del panel izquierdo para ver coberturas y reclamos.">
+  </app-vehiculos-empty-state>
+</ng-template>

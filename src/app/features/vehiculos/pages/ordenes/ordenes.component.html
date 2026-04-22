@@ -1,8 +1,7 @@
 <div class="vehPageShell vehPageShell--ordenes">
-  <app-vehiculos-page-header
-    title="Órdenes de trabajo"
-    subtitle="Recepción, ejecución y cobro en una sola vista.">
-    <button pButton type="button" severity="secondary" icon="pi pi-arrow-left" label="Volver" (click)="volver()"></button>
+  <app-vehiculos-page-header title="Órdenes de trabajo" subtitle="Recepción, ejecución y cobro en una sola vista.">
+    <button pButton type="button" severity="secondary" icon="pi pi-arrow-left" label="Volver"
+      (click)="volver()"></button>
     <button pButton type="button" icon="pi pi-plus" label="Nueva OT" (click)="nuevo()"></button>
   </app-vehiculos-page-header>
 
@@ -11,11 +10,7 @@
   <div class="toolbarCard toolbarCard--compact toolbarCard--principal">
     <div class="searchBox">
       <i class="pi pi-search"></i>
-      <input
-        pInputText
-        type="text"
-        [(ngModel)]="q"
-        placeholder="Buscar orden, cliente, placa o detalle..."
+      <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar orden, cliente, placa o detalle..."
         (keyup.enter)="cargar()">
     </div>
 
@@ -37,7 +32,8 @@
         </span>
       </div>
 
-      <button pButton type="button" severity="secondary" [text]="true" label="Limpiar" (click)="q=''; cargar()"></button>
+      <button pButton type="button" severity="secondary" [text]="true" label="Limpiar"
+        (click)="q=''; cargar()"></button>
       <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()"
         (click)="cargar()"></button>
     </div>
@@ -50,8 +46,11 @@
     <ng-container *ngIf="selectedOrden() as ordenActual">
       <span class="noticePill is-neutral">OT #{{ ordenActual.idVehOrdenTrabajo }}</span>
       <span class="noticePill is-neutral">{{ ordenActual.tipoServicio || 'SERVICIO' }}</span>
-      <span class="noticePill is-neutral">{{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
-      <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="isOrdenFinalizada(ordenActual)" [class.is-neutral]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
+      <span class="noticePill is-neutral">{{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen)
+        }}</span>
+      <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)"
+        [class.is-success]="isOrdenFinalizada(ordenActual)"
+        [class.is-neutral]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
         {{ ordenActual.estadoOrden || 'RECIBIDO' }}
       </span>
     </ng-container>
@@ -149,16 +148,20 @@
         [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
         [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
         [articuloLabelMap]="articuloLabelMap()" [articulosCatalogo]="articulosCatalogo()"
-        [readonlyMode]="isOrdenBloqueada(selectedOrden())"
-        (saveChecklist)="guardarChecklistMasivo($event)" (saveTrabajo)="guardarTrabajoWorkbench($event)"
-        (saveHallazgo)="guardarHallazgoWorkbench($event)" (saveFoto)="guardarFotoWorkbench($event)"
-        (saveRepuesto)="guardarRepuestoWorkbench($event)" (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
+        [readonlyMode]="isOrdenBloqueada(selectedOrden())" (saveChecklist)="guardarChecklistMasivo($event)"
+        (saveTrabajo)="guardarTrabajoWorkbench($event)" (saveHallazgo)="guardarHallazgoWorkbench($event)"
+        (saveFoto)="guardarFotoWorkbench($event)" (saveRepuesto)="guardarRepuestoWorkbench($event)"
+        (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
         (articuloQueryChange)="onRepuestoArticuloQueryChange($event)"
         (articuloSelected)="seleccionarArticuloRepuesto($event)" (selectHallazgo)="seleccionarHallazgo($event)"
         (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()" (selectVista)="seleccionarVista($event)"
         (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)"
         (createFactura)="guardarFacturaDesdePanel($event)" (openCobro)="abrirComercialDrawer('cobro')"
-        (openContabilizar)="abrirComercialDrawer('contabilizar')">
+        (openContabilizar)="abrirComercialDrawer('contabilizar')" [garantias]="garantias()"
+        [selectedGarantia]="selectedGarantia()" [garantiaDetalles]="garantiaDetalles()"
+        [garantiaMovimientos]="garantiaMovimientos()" (selectGarantia)="seleccionarGarantia($event)"
+        (openGarantia)="abrirGarantiaDrawer()" (openGarantiaDetalle)="abrirGarantiaDetalleDrawer()"
+        (openGarantiaMovimiento)="abrirGarantiaMovimientoDrawer()">
       </app-orden-detail-panel>
     </section>
   </div>
@@ -174,8 +177,9 @@
     (saveAndClose)="guardarOrden($event, true)">
   </app-orden-main-form-drawer>
 
-  <app-vehiculos-form-drawer [visible]="childDrawerVisible()" [dirty]="childDirty()" [saving]="saving() || isOrdenBloqueada(selectedOrden())"
-    [title]="childDrawerTitle()" [subtitle]="childDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
+  <app-vehiculos-form-drawer [visible]="childDrawerVisible()" [dirty]="childDirty()"
+    [saving]="saving() || isOrdenBloqueada(selectedOrden())" [title]="childDrawerTitle()"
+    [subtitle]="childDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
     (visibleChange)="$event ? childDrawerVisible.set(true) : cerrarChildDrawer()" (requestClose)="cerrarChildDrawer()"
     (requestSave)="submitChild()">
 
@@ -189,7 +193,8 @@
               {{ checklistLabelByRelation(item.idVehVehiculoCheckListVehiculo) }}
             </option>
           </select>
-          <small class="fieldError" *ngIf="checklistForm.controls.idVehVehiculoCheckListVehiculoFk.invalid && checklistForm.controls.idVehVehiculoCheckListVehiculoFk.touched">
+          <small class="fieldError"
+            *ngIf="checklistForm.controls.idVehVehiculoCheckListVehiculoFk.invalid && checklistForm.controls.idVehVehiculoCheckListVehiculoFk.touched">
             Debes elegir un ítem.
           </small>
         </div>
@@ -237,7 +242,8 @@
         <div class="drawerField span-12">
           <label>Pedido del cliente <span class="requiredMark">*</span></label>
           <textarea pTextarea rows="3" formControlName="descripcionInicial"></textarea>
-          <small class="fieldError" *ngIf="trabajoForm.controls.descripcionInicial.invalid && trabajoForm.controls.descripcionInicial.touched">
+          <small class="fieldError"
+            *ngIf="trabajoForm.controls.descripcionInicial.invalid && trabajoForm.controls.descripcionInicial.touched">
             Cuéntanos qué solicita el cliente.
           </small>
         </div>
@@ -293,7 +299,8 @@
         <div class="drawerField span-12">
           <label>Descripción <span class="requiredMark">*</span></label>
           <textarea pTextarea rows="3" formControlName="descripcion"></textarea>
-          <small class="fieldError" *ngIf="hallazgoForm.controls.descripcion.invalid && hallazgoForm.controls.descripcion.touched">
+          <small class="fieldError"
+            *ngIf="hallazgoForm.controls.descripcion.invalid && hallazgoForm.controls.descripcion.touched">
             Describe el hallazgo.
           </small>
         </div>
@@ -488,8 +495,9 @@
     </form>
   </app-vehiculos-form-drawer>
 
-  <app-vehiculos-form-drawer [visible]="comercialDrawerVisible()" [dirty]="comercialDirty()" [saving]="saving() || isOrdenBloqueada(selectedOrden())"
-    [title]="comercialDrawerTitle()" [subtitle]="comercialDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
+  <app-vehiculos-form-drawer [visible]="comercialDrawerVisible()" [dirty]="comercialDirty()"
+    [saving]="saving() || isOrdenBloqueada(selectedOrden())" [title]="comercialDrawerTitle()"
+    [subtitle]="comercialDrawerSubtitle()" sizeClass="appDrawer appDrawer--lg"
     (visibleChange)="$event ? comercialDrawerVisible.set(true) : cerrarComercialDrawer()"
     (requestClose)="cerrarComercialDrawer()" (requestSave)="submitComercial()">
 
@@ -618,5 +626,129 @@
         </div>
       </div>
     </form>
+
+    <form *ngIf="childMode() === 'garantia'" [formGroup]="garantiaForm" class="drawerForm">
+      <div class="drawerGrid">
+        <div class="drawerField span-4">
+          <label>Tipo</label>
+          <select formControlName="tipoGarantia">
+            <option value="MANO_OBRA">MANO_OBRA</option>
+            <option value="REPUESTO">REPUESTO</option>
+            <option value="MIXTA">MIXTA</option>
+          </select>
+        </div>
+        <div class="drawerField span-4">
+          <label>Modalidad</label>
+          <select formControlName="modalidadVencimiento">
+            <option value="TIEMPO">TIEMPO</option>
+            <option value="KM">KM</option>
+            <option value="TIEMPO_O_KM">TIEMPO_O_KM</option>
+          </select>
+        </div>
+        <div class="drawerField span-4">
+          <label>Responsable</label>
+          <select formControlName="responsableCosto">
+            <option value="TALLER">TALLER</option>
+            <option value="PROVEEDOR">PROVEEDOR</option>
+            <option value="CLIENTE">CLIENTE</option>
+            <option value="MIXTO">MIXTO</option>
+          </select>
+        </div>
+        <div class="drawerField span-3"><label>Fecha base</label><input type="date" formControlName="fechaBase"></div>
+        <div class="drawerField span-3"><label>Km base</label><input pInputText type="number" formControlName="kmBase">
+        </div>
+        <div class="drawerField span-2"><label>Días</label><input pInputText type="number"
+            formControlName="diasGarantia"></div>
+        <div class="drawerField span-2"><label>Meses</label><input pInputText type="number"
+            formControlName="mesesGarantia"></div>
+        <div class="drawerField span-2"><label>Km garantía</label><input pInputText type="number"
+            formControlName="kmGarantia"></div>
+        <div class="drawerField span-3"><label>Fecha vence</label><input type="date" formControlName="fechaVence"></div>
+        <div class="drawerField span-3"><label>Km vence</label><input pInputText type="number"
+            formControlName="kmVence"></div>
+        <div class="drawerField span-3"><label>Estado</label><input pInputText formControlName="estadoGarantia"></div>
+        <div class="drawerField span-12"><label>Observaciones</label><textarea pTextarea rows="3"
+            formControlName="observaciones"></textarea></div>
+      </div>
+    </form>
+    <form *ngIf="childMode() === 'garantiaDetalle'" [formGroup]="garantiaDetalleForm" class="drawerForm">
+      <div class="drawerGrid">
+        <div class="drawerField span-4">
+          <label>Tipo cobertura</label>
+          <select formControlName="tipoCobertura">
+            <option value="TRABAJO">TRABAJO</option>
+            <option value="REPUESTO">REPUESTO</option>
+            <option value="MIXTA">MIXTA</option>
+          </select>
+        </div>
+        <div class="drawerField span-4">
+          <label>Trabajo OT</label>
+          <select formControlName="idVehOrdenTrabajoTrabajoFk">
+            <option [ngValue]="null">Sin trabajo</option>
+            <option *ngFor="let item of trabajos()" [ngValue]="item.idVehOrdenTrabajoTrabajo">
+              {{ trabajoLabelById(item.idVehOrdenTrabajoTrabajo) }}
+            </option>
+          </select>
+        </div>
+        <div class="drawerField span-4">
+          <label>Repuesto OT</label>
+          <select formControlName="idVehOrdenTrabajoRepuestoFk">
+            <option [ngValue]="null">Sin repuesto</option>
+            <option *ngFor="let item of repuestos()" [ngValue]="item.idVehOrdenTrabajoRepuesto">
+              {{ repuestoDisplay(item) }}
+            </option>
+          </select>
+        </div>
+        <div class="drawerField span-3"><label>Art</label><input pInputText type="number" formControlName="art"></div>
+        <div class="drawerField span-3 checkboxField"><label class="checkboxLabel"><input type="checkbox"
+              formControlName="cubreManoObra"> Cubre mano de obra</label></div>
+        <div class="drawerField span-3 checkboxField"><label class="checkboxLabel"><input type="checkbox"
+              formControlName="cubreRepuesto"> Cubre repuesto</label></div>
+        <div class="drawerField span-3"><label>Monto máx</label><input pInputText type="number"
+            formControlName="montoMaximo"></div>
+        <div class="drawerField span-3"><label>Cantidad máx</label><input pInputText type="number"
+            formControlName="cantidadMaxima"></div>
+        <div class="drawerField span-3"><label>Serie anterior</label><input pInputText formControlName="serieAnterior">
+        </div>
+        <div class="drawerField span-3"><label>Serie nueva</label><input pInputText formControlName="serieNueva"></div>
+        <div class="drawerField span-12"><label>Observaciones</label><textarea pTextarea rows="3"
+            formControlName="observaciones"></textarea></div>
+      </div>
+    </form>
+
+    <form *ngIf="childMode() === 'garantiaMovimiento'" [formGroup]="garantiaMovimientoForm" class="drawerForm">
+      <div class="drawerGrid">
+        <div class="drawerField span-4"><label>OT reclamo</label><input pInputText type="number"
+            formControlName="idVehOrdenTrabajoFk"></div>
+        <div class="drawerField span-4"><label>Fecha reclamo</label><input type="date" formControlName="fechaReclamo">
+        </div>
+        <div class="drawerField span-4"><label>Km reclamo</label><input pInputText type="number"
+            formControlName="kmReclamo"></div>
+        <div class="drawerField span-4">
+          <label>Resultado</label>
+          <select formControlName="resultado">
+            <option value="PENDIENTE">PENDIENTE</option>
+            <option value="APROBADO">APROBADO</option>
+            <option value="PARCIAL">PARCIAL</option>
+            <option value="RECHAZADO">RECHAZADO</option>
+          </select>
+        </div>
+        <div class="drawerField span-12">
+          <label>Diagnóstico <span class="requiredMark">*</span></label>
+          <textarea pTextarea rows="3" formControlName="diagnostico"></textarea>
+        </div>
+        <div class="drawerField span-4"><label>Valor cliente</label><input pInputText type="number"
+            formControlName="valorCliente"></div>
+        <div class="drawerField span-4"><label>Valor taller</label><input pInputText type="number"
+            formControlName="valorTaller"></div>
+        <div class="drawerField span-4"><label>Valor proveedor</label><input pInputText type="number"
+            formControlName="valorProveedor"></div>
+        <div class="drawerField span-12"><label>Motivo rechazo</label><textarea pTextarea rows="2"
+            formControlName="motivoRechazo"></textarea></div>
+        <div class="drawerField span-12"><label>Observaciones</label><textarea pTextarea rows="2"
+            formControlName="observaciones"></textarea></div>
+      </div>
+    </form>
+
   </app-vehiculos-form-drawer>
 </div>

@@ -56,6 +56,8 @@
           (click)="setTab('repuestos')">Repuestos</button>
         <button class="tabButton" [class.active]="activeTab()==='comercial'"
           (click)="setTab('comercial')">Comercial</button>
+        <button class="tabButton" [class.active]="activeTab()==='garantias'"
+          (click)="setTab('garantias')">Garantías</button>
       </div>
     </section>
 
@@ -81,9 +83,11 @@
       </div>
 
       <div class="kvGrid">
-        <article class="kvItem"><span>Fecha de ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen)
+        <article class="kvItem"><span>Fecha de ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso ||
+            orden.fecGen)
             }}</strong></article>
-        <article class="kvItem"><span>Fecha promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong>
+        <article class="kvItem"><span>Fecha promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida)
+            }}</strong>
         </article>
         <article class="kvItem"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong></article>
         <article class="kvItem"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{
@@ -106,8 +110,8 @@
       <div class="checklistBoard" *ngIf="checklistRows().length; else noChecklist">
         <div class="checklistHead">
           <div class="checkCell checkCell--checkbox">
-            <input type="checkbox" [checked]="allChecklistChecked()"
-              [disabled]="readonlyMode" (change)="onToggleAllChecklist($any($event.target).checked)">
+            <input type="checkbox" [checked]="allChecklistChecked()" [disabled]="readonlyMode"
+              (change)="onToggleAllChecklist($any($event.target).checked)">
           </div>
           <div class="checkCell checkCell--item">Punto a revisar</div>
           <div class="checkCell checkCell--obs">Observación</div>
@@ -116,8 +120,8 @@
         <div class="checklistBody">
           <div class="checklistRow" *ngFor="let row of checklistRows(); trackBy: trackByChecklistRow">
             <div class="checkCell checkCell--checkbox">
-              <input type="checkbox" [checked]="row.checked"
-                [disabled]="readonlyMode" (change)="onToggleChecklistRow(row.relationId, $any($event.target).checked)">
+              <input type="checkbox" [checked]="row.checked" [disabled]="readonlyMode"
+                (change)="onToggleChecklistRow(row.relationId, $any($event.target).checked)">
             </div>
 
             <div class="checkCell checkCell--item">
@@ -126,8 +130,8 @@
 
             <div class="checkCell checkCell--obs">
               <input pInputText [ngModel]="row.observaciones" [ngModelOptions]="{ standalone: true }"
-                (ngModelChange)="onChecklistObservationChange(row.relationId, $event ?? '')"
-                [disabled]="readonlyMode" placeholder="Observación opcional">
+                (ngModelChange)="onChecklistObservationChange(row.relationId, $event ?? '')" [disabled]="readonlyMode"
+                placeholder="Observación opcional">
             </div>
           </div>
         </div>
@@ -143,7 +147,8 @@
               <div class="secondaryCell">{{ trabajosListado().length }} registro(s)</div>
             </div>
 
-            <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo" [disabled]="readonlyMode" (click)="iniciarNuevoTrabajo()">
+            <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo" [disabled]="readonlyMode"
+              (click)="iniciarNuevoTrabajo()">
             </button>
           </div>
 
@@ -182,7 +187,8 @@
             <div class="sectionHead sectionHead--compact sectionHead--withTabs">
               <div class="sectionHead__titleBlock">
                 <h4>
-                  {{ executionTab()==='detalle' ? (editingTrabajoId ? 'Detalle del trabajo' : 'Nuevo trabajo') : 'Detalle del hallazgo' }}
+                  {{ executionTab()==='detalle' ? (editingTrabajoId ? 'Detalle del trabajo' : 'Nuevo trabajo') :
+                  'Detalle del hallazgo' }}
                 </h4>
 
                 <ng-container *ngIf="executionTab()==='detalle'">
@@ -211,7 +217,7 @@
                 </button>
 
                 <button class="subTabButton" [class.active]="executionTab()==='hallazgos'"
-                  (click)="setExecutionTab('hallazgos')" >
+                  (click)="setExecutionTab('hallazgos')">
                   Hallazgos
                 </button>
               </div>
@@ -222,7 +228,8 @@
                 </button>
 
                 <button *ngIf="executionTab()==='detalle'" pButton type="button" size="small" icon="pi pi-save"
-                  label="Guardar" [disabled]="readonlyMode || !trabajoDraft.descripcionInicial.trim()" (click)="guardarTrabajo()">
+                  label="Guardar" [disabled]="readonlyMode || !trabajoDraft.descripcionInicial.trim()"
+                  (click)="guardarTrabajo()">
                 </button>
 
                 <button *ngIf="executionTab()==='hallazgos'" pButton type="button" size="small" icon="pi pi-save"
@@ -237,26 +244,30 @@
                 <div class="editorGrid editorGrid--compact">
                   <div class="editorField span-4">
                     <label>Tipo</label>
-                    <select [(ngModel)]="trabajoDraft.tipoTrabajo" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <select [(ngModel)]="trabajoDraft.tipoTrabajo" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                       <option *ngFor="let option of trabajoTipoOptions" [value]="option">{{ option }}</option>
                     </select>
                   </div>
 
                   <div class="editorField span-4">
                     <label>Estado</label>
-                    <select [(ngModel)]="trabajoDraft.estadoTrabajo" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <select [(ngModel)]="trabajoDraft.estadoTrabajo" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                       <option *ngFor="let option of trabajoEstadoOptions" [value]="option">{{ option }}</option>
                     </select>
                   </div>
 
                   <div class="editorField span-2">
                     <label>Inicio</label>
-                    <input type="date" [(ngModel)]="trabajoDraft.fechaInicio" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <input type="date" [(ngModel)]="trabajoDraft.fechaInicio" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                   </div>
 
                   <div class="editorField span-2">
                     <label>Fin</label>
-                    <input type="date" [(ngModel)]="trabajoDraft.fechaFin" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <input type="date" [(ngModel)]="trabajoDraft.fechaFin" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                   </div>
 
                   <div class="editorField span-12">
@@ -279,12 +290,14 @@
 
                   <div class="editorField span-6">
                     <label>Motivo</label>
-                    <input pInputText [(ngModel)]="trabajoDraft.motivo" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <input pInputText [(ngModel)]="trabajoDraft.motivo" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                   </div>
 
                   <div class="editorField span-6">
                     <label>Notas</label>
-                    <input pInputText [(ngModel)]="trabajoDraft.observaciones" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                    <input pInputText [(ngModel)]="trabajoDraft.observaciones" [ngModelOptions]="{ standalone: true }"
+                      [disabled]="readonlyMode">
                   </div>
                 </div>
               </section>
@@ -333,21 +346,24 @@
                     <div class="editorGrid editorGrid--compact">
                       <div class="editorField span-4">
                         <label>Tipo</label>
-                        <select [(ngModel)]="hallazgoDraft.tipoHallazgo" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                        <select [(ngModel)]="hallazgoDraft.tipoHallazgo" [ngModelOptions]="{ standalone: true }"
+                          [disabled]="readonlyMode">
                           <option *ngFor="let option of hallazgoTipoOptions" [value]="option">{{ option }}</option>
                         </select>
                       </div>
 
                       <div class="editorField span-4">
                         <label>Área</label>
-                        <select [(ngModel)]="hallazgoDraft.categoria" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                        <select [(ngModel)]="hallazgoDraft.categoria" [ngModelOptions]="{ standalone: true }"
+                          [disabled]="readonlyMode">
                           <option *ngFor="let option of hallazgoCategoriaOptions" [value]="option">{{ option }}</option>
                         </select>
                       </div>
 
                       <div class="editorField span-4">
                         <label>Severidad</label>
-                        <select [(ngModel)]="hallazgoDraft.severidad" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                        <select [(ngModel)]="hallazgoDraft.severidad" [ngModelOptions]="{ standalone: true }"
+                          [disabled]="readonlyMode">
                           <option *ngFor="let option of hallazgoSeveridadOptions" [value]="option">{{ option }}</option>
                         </select>
                       </div>
@@ -360,7 +376,8 @@
 
                       <div class="editorField span-4">
                         <label>Estado</label>
-                        <select [(ngModel)]="hallazgoDraft.estadoHallazgo" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                        <select [(ngModel)]="hallazgoDraft.estadoHallazgo" [ngModelOptions]="{ standalone: true }"
+                          [disabled]="readonlyMode">
                           <option *ngFor="let option of hallazgoEstadoOptions" [value]="option">{{ option }}</option>
                         </select>
                       </div>
@@ -402,8 +419,8 @@
 
                     <ng-container *ngIf="selectedHallazgoEnContexto() as hallazgoCtx">
                       <div class="hallazgoMediaActions">
-                        <button pButton type="button" size="small" severity="secondary" icon="pi pi-map" label="Marcas" [disabled]="readonlyMode"
-                          (click)="openHallazgoMediaModal('marcas')">
+                        <button pButton type="button" size="small" severity="secondary" icon="pi pi-map" label="Marcas"
+                          [disabled]="readonlyMode" (click)="openHallazgoMediaModal('marcas')">
                         </button>
 
                         <button pButton type="button" size="small" severity="secondary" icon="pi pi-camera"
@@ -430,7 +447,8 @@
               <div class="secondaryCell">{{ repuestosListado().length }} registro(s)</div>
             </div>
 
-            <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo" [disabled]="readonlyMode" (click)="iniciarNuevoRepuesto()">
+            <button pButton type="button" size="small" icon="pi pi-plus" label="Nuevo" [disabled]="readonlyMode"
+              (click)="iniciarNuevoRepuesto()">
             </button>
           </div>
 
@@ -483,7 +501,8 @@
 
                 <button *ngIf="selectedRepuestoActual() as repuestoActual" pButton type="button" size="small"
                   severity="danger" [text]="true" icon="pi pi-trash" label="Eliminar"
-                  [disabled]="readonlyMode || !repuestoEditable(repuestoActual)" (click)="eliminarRepuestoSeleccionado()">
+                  [disabled]="readonlyMode || !repuestoEditable(repuestoActual)"
+                  (click)="eliminarRepuestoSeleccionado()">
                 </button>
 
                 <button pButton type="button" size="small" icon="pi pi-save" label="Guardar"
@@ -579,6 +598,15 @@
         (openCobro)="openCobro.emit()" (openContabilizar)="openContabilizar.emit()" [readonlyMode]="readonlyMode">
       </app-orden-comercial-panel>
     </section>
+  </section>
+
+  <section class="panelCard" *ngIf="activeTab()==='garantias'">
+    <app-orden-garantias-panel [orden]="orden" [garantias]="garantias" [selectedGarantia]="selectedGarantia"
+      [garantiaDetalles]="garantiaDetalles" [garantiaMovimientos]="garantiaMovimientos"
+      [trabajoLabelMap]="trabajoLabelMap" [articuloLabelMap]="articuloLabelMap" [readonlyMode]="readonlyMode"
+      (selectGarantia)="selectGarantia.emit($event)" (openGarantia)="openGarantia.emit()"
+      (openGarantiaDetalle)="openGarantiaDetalle.emit()" (openGarantiaMovimiento)="openGarantiaMovimiento.emit()">
+    </app-orden-garantias-panel>
   </section>
 </ng-container>
 
@@ -822,7 +850,8 @@
             <div class="editorField span-8 checkboxField">
               <div class="checkboxRow checkboxRow--single">
                 <label class="checkboxLabel">
-                  <input type="checkbox" [(ngModel)]="fotoDraft.principal" [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode">
+                  <input type="checkbox" [(ngModel)]="fotoDraft.principal" [ngModelOptions]="{ standalone: true }"
+                    [disabled]="readonlyMode">
                   Marcar como principal
                 </label>
               </div>
@@ -830,8 +859,8 @@
 
             <div class="editorField span-12">
               <label>Descripción</label>
-              <textarea pTextarea rows="2" [(ngModel)]="fotoDraft.descripcion"
-                [ngModelOptions]="{ standalone: true }" [disabled]="readonlyMode"></textarea>
+              <textarea pTextarea rows="2" [(ngModel)]="fotoDraft.descripcion" [ngModelOptions]="{ standalone: true }"
+                [disabled]="readonlyMode"></textarea>
             </div>
 
             <div class="editorField span-12">

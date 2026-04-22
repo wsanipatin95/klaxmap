@@ -247,6 +247,122 @@ export interface VehOrdenTrabajoFactura {
   observaciones?: string | null;
 }
 
+export interface VehGarantia {
+  idVehGarantia: number;
+  idVehOrdenTrabajoOrigenFk: number;
+  idVehOrdenTrabajoReclamoFk?: number | null;
+  tipoGarantia?: string | null;
+  modalidadVencimiento?: string | null;
+  fechaBase?: string | null;
+  kmBase?: number | null;
+  diasGarantia?: number | null;
+  mesesGarantia?: number | null;
+  kmGarantia?: number | null;
+  fechaVence?: string | null;
+  kmVence?: number | null;
+  estadoGarantia?: string | null;
+  responsableCosto?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaDetalle {
+  idVehGarantiaDetalle: number;
+  idVehGarantiaFk: number;
+  tipoCobertura?: string | null;
+  idVehOrdenTrabajoTrabajoFk?: number | null;
+  idVehOrdenTrabajoRepuestoFk?: number | null;
+  art?: number | null;
+  cubreManoObra?: BooleanLike;
+  cubreRepuesto?: BooleanLike;
+  montoMaximo?: number | null;
+  cantidadMaxima?: number | null;
+  serieAnterior?: string | null;
+  serieNueva?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaMovimiento {
+  idVehGarantiaMovimiento: number;
+  idVehGarantiaFk: number;
+  idVehOrdenTrabajoFk?: number | null;
+  fechaReclamo?: string | null;
+  kmReclamo?: number | null;
+  diagnostico?: string | null;
+  resultado?: string | null;
+  valorCliente?: number | null;
+  valorTaller?: number | null;
+  valorProveedor?: number | null;
+  motivoRechazo?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaGuardarRequest {
+  idVehOrdenTrabajoOrigenFk: number;
+  idVehOrdenTrabajoReclamoFk?: number | null;
+  tipoGarantia?: string | null;
+  modalidadVencimiento?: string | null;
+  fechaBase?: string | null;
+  kmBase?: number | null;
+  diasGarantia?: number | null;
+  mesesGarantia?: number | null;
+  kmGarantia?: number | null;
+  fechaVence?: string | null;
+  kmVence?: number | null;
+  estadoGarantia?: string | null;
+  responsableCosto?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaEditarRequest {
+  idVehGarantia: number;
+  cambios: Partial<VehGarantiaGuardarRequest>;
+}
+
+export interface VehGarantiaDetalleGuardarRequest {
+  idVehGarantiaFk: number;
+  tipoCobertura?: string | null;
+  idVehOrdenTrabajoTrabajoFk?: number | null;
+  idVehOrdenTrabajoRepuestoFk?: number | null;
+  art?: number | null;
+  cubreManoObra?: BooleanLike;
+  cubreRepuesto?: BooleanLike;
+  montoMaximo?: number | null;
+  cantidadMaxima?: number | null;
+  serieAnterior?: string | null;
+  serieNueva?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaDetalleEditarRequest {
+  idVehGarantiaDetalle: number;
+  cambios: Partial<VehGarantiaDetalleGuardarRequest>;
+}
+
+export interface VehGarantiaMovimientoGuardarRequest {
+  idVehGarantiaFk: number;
+  idVehOrdenTrabajoFk?: number | null;
+  fechaReclamo?: string | null;
+  kmReclamo?: number | null;
+  diagnostico?: string | null;
+  resultado?: string | null;
+  valorCliente?: number | null;
+  valorTaller?: number | null;
+  valorProveedor?: number | null;
+  motivoRechazo?: string | null;
+  observaciones?: string | null;
+  atributos?: JsonMap | null;
+}
+
+export interface VehGarantiaMovimientoEditarRequest {
+  idVehGarantiaMovimiento: number;
+  cambios: Partial<VehGarantiaMovimientoGuardarRequest>;
+}
+
 export interface VehArticuloCatalogo {
   idActInventario: number;
   artcod?: string | null;

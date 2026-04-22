@@ -51,6 +51,12 @@ import {
   VehOrdenTrabajoTrabajoGuardarRequest,
   VehTipoVehiculoVista,
   VehFacturaDetalleResponse,
+  VehGarantia,
+  VehGarantiaDetalle,
+  VehGarantiaDetalleGuardarRequest,
+  VehGarantiaGuardarRequest,
+  VehGarantiaMovimiento,
+  VehGarantiaMovimientoGuardarRequest,
 } from '../../data-access/vehiculos.models';
 import { NotifyService } from 'src/app/core/services/notify.service';
 import { VehiculosConfirmService } from '../../services/vehiculos-confirm.service';
@@ -74,6 +80,9 @@ type ChildDrawerMode =
   | 'autorizacion'
   | 'foto'
   | 'checklist'
+  | 'garantia'
+  | 'garantiaDetalle'
+  | 'garantiaMovimiento'
   | null;
 
 type ComercialDrawerMode =
@@ -183,6 +192,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   vehiculoSeleccionadoLabel = signal('Vehículo');
 
   articuloCache = signal<Record<number, VehArticuloCatalogo>>({});
+
+  garantias = signal<VehGarantia[]>([]);
+  selectedGarantia = signal<VehGarantia | null>(null);
+  garantiaDetalles = signal<VehGarantiaDetalle[]>([]);
+  garantiaMovimientos = signal<VehGarantiaMovimiento[]>([]);
 
   private initialChildSnapshot = '';
   private initialComercialSnapshot = '';
@@ -321,6 +335,48 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     contabilizarCobro: [true],
     conceptoFactura: ['Factura vehicular'],
     conceptoCobro: ['Cobro vehicular'],
+  });
+
+  garantiaForm = this.fb.group({
+    tipoGarantia: ['REPUESTO'],
+    modalidadVencimiento: ['TIEMPO_O_KM'],
+    fechaBase: [''],
+    kmBase: [0],
+    diasGarantia: [90],
+    mesesGarantia: [null as number | null],
+    kmGarantia: [5000],
+    fechaVence: [''],
+    kmVence: [null as number | null],
+    estadoGarantia: ['ACTIVA'],
+    responsableCosto: ['TALLER'],
+    observaciones: [''],
+  });
+
+  garantiaDetalleForm = this.fb.group({
+    tipoCobertura: ['REPUESTO'],
+    idVehOrdenTrabajoTrabajoFk: [null as number | null],
+    idVehOrdenTrabajoRepuestoFk: [null as number | null],
+    art: [null as number | null],
+    cubreManoObra: [true],
+    cubreRepuesto: [true],
+    montoMaximo: [0],
+    cantidadMaxima: [1],
+    serieAnterior: [''],
+    serieNueva: [''],
+    observaciones: [''],
+  });
+
+  garantiaMovimientoForm = this.fb.group({
+    idVehOrdenTrabajoFk: [null as number | null],
+    fechaReclamo: [''],
+    kmReclamo: [0],
+    diagnostico: ['', Validators.required],
+    resultado: ['PENDIENTE'],
+    valorCliente: [0],
+    valorTaller: [0],
+    valorProveedor: [0],
+    motivoRechazo: [''],
+    observaciones: [''],
   });
 
   readonly hallazgoAtributosFormArray = this.fb.array<AtributoRowForm>([
@@ -572,6 +628,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       autorizaciones: this.repo.listarAutorizaciones({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
       facturasRelacion: this.repo.listarOrdenFacturas({ idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
       facturasOt: this.repo.listarFacturas('', 0, 100, true, { idVehOrdenTrabajoFk: item.idVehOrdenTrabajo }),
+      garantias: this.repo.listarGarantias({ idVehOrdenTrabajoOrigenFk: item.idVehOrdenTrabajo }),
       checklistOpciones: this.repo.listarClientesVehiculo({ dni: item.dni }).pipe(
         map((vehiculos) => {
           const vehiculo = (vehiculos.items ?? []).find((x) => x.idCliVehiculo === item.idCliVehiculoFk) ?? null;
@@ -686,11 +743,44 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.clienteSeleccionadoNombre.set(this.ordenClienteDisplay(item));
         this.cargarUsuarioSeleccionado(item.responsableRecepcion ?? null, 'recepcion');
         this.cargarUsuarioSeleccionado(item.responsableTecnico ?? null, 'tecnico');
+
+        this.garantias.set(garantias.items ?? []);
+
+        const garantiaActual = this.selectedGarantia();
+        const garantiaSeleccionada = garantiaActual
+          ? (garantias.items ?? []).find((x) => x.idVehGarantia === garantiaActual.idVehGarantia) ?? null
+          : ((garantias.items ?? [])[0] ?? null);
+
+        this.selectedGarantia.set(garantiaSeleccionada);
+        if (garantiaSeleccionada) {
+          this.cargarGarantiaDetalle(garantiaSeleccionada.idVehGarantia);
+        } else {
+          this.garantiaDetalles.set([]);
+          this.garantiaMovimientos.set([]);
+        }
+
       },
       error: (err) => this.notify.error('No se pudo cargar detalle de la orden', err?.message),
     });
   }
+  cargarGarantiaDetalle(idVehGarantia: number) {
+    forkJoin({
+      detalles: this.repo.listarGarantiaDetalles({ idVehGarantiaFk: idVehGarantia }),
+      movimientos: this.repo.listarGarantiaMovimientos({ idVehGarantiaFk: idVehGarantia }),
+    }).subscribe({
+      next: ({ detalles, movimientos }) => {
+        if (this.selectedGarantia()?.idVehGarantia !== idVehGarantia) return;
+        this.garantiaDetalles.set(detalles.items ?? []);
+        this.garantiaMovimientos.set(movimientos.items ?? []);
+      },
+      error: (err) => this.notify.error('No se pudo cargar el detalle de garantía', err?.message),
+    });
+  }
 
+  seleccionarGarantia(item: VehGarantia) {
+    this.selectedGarantia.set(item);
+    this.cargarGarantiaDetalle(item.idVehGarantia);
+  }
   resetDetalle() {
     this.checklist.set([]);
     this.checklistOpciones.set([]);
@@ -713,6 +803,71 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.responsableTecnicoSeleccionado.set(null);
     this.clienteSeleccionadoNombre.set('Cliente');
     this.vehiculoSeleccionadoLabel.set('Vehículo');
+    this.garantias.set([]);
+    this.selectedGarantia.set(null);
+    this.garantiaDetalles.set([]);
+    this.garantiaMovimientos.set([]);
+  }
+  abrirGarantiaDrawer() {
+    const orden = this.selectedOrden();
+    if (!orden) return;
+    this.childMode.set('garantia');
+    this.childDrawerVisible.set(true);
+    this.garantiaForm.reset({
+      tipoGarantia: 'REPUESTO',
+      modalidadVencimiento: 'TIEMPO_O_KM',
+      fechaBase: '',
+      kmBase: Number(orden.kilometrajeIngreso || 0),
+      diasGarantia: 90,
+      mesesGarantia: null,
+      kmGarantia: 5000,
+      fechaVence: '',
+      kmVence: null,
+      estadoGarantia: 'ACTIVA',
+      responsableCosto: 'TALLER',
+      observaciones: '',
+    });
+    this.refreshChildSnapshot();
+  }
+
+  abrirGarantiaDetalleDrawer() {
+    if (!this.selectedGarantia()) return;
+    this.childMode.set('garantiaDetalle');
+    this.childDrawerVisible.set(true);
+    this.garantiaDetalleForm.reset({
+      tipoCobertura: 'REPUESTO',
+      idVehOrdenTrabajoTrabajoFk: null,
+      idVehOrdenTrabajoRepuestoFk: null,
+      art: null,
+      cubreManoObra: true,
+      cubreRepuesto: true,
+      montoMaximo: 0,
+      cantidadMaxima: 1,
+      serieAnterior: '',
+      serieNueva: '',
+      observaciones: '',
+    });
+    this.refreshChildSnapshot();
+  }
+
+  abrirGarantiaMovimientoDrawer() {
+    const garantia = this.selectedGarantia();
+    if (!garantia) return;
+    this.childMode.set('garantiaMovimiento');
+    this.childDrawerVisible.set(true);
+    this.garantiaMovimientoForm.reset({
+      idVehOrdenTrabajoFk: garantia.idVehOrdenTrabajoReclamoFk ?? null,
+      fechaReclamo: '',
+      kmReclamo: 0,
+      diagnostico: '',
+      resultado: 'PENDIENTE',
+      valorCliente: 0,
+      valorTaller: 0,
+      valorProveedor: 0,
+      motivoRechazo: '',
+      observaciones: '',
+    });
+    this.refreshChildSnapshot();
   }
 
   cargarHallazgoDetalle(idVehOrdenTrabajoHallazgo: number) {
@@ -1087,6 +1242,65 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         observaciones: this.autorizacionForm.value.observaciones?.trim() || null,
       };
       request$ = this.repo.crearAutorizacion(payload);
+    } else if (mode === 'garantia') {
+      const orden = this.selectedOrden();
+      if (!orden) return;
+      const payload: VehGarantiaGuardarRequest = {
+        idVehOrdenTrabajoOrigenFk: orden.idVehOrdenTrabajo,
+        tipoGarantia: this.garantiaForm.value.tipoGarantia || null,
+        modalidadVencimiento: this.garantiaForm.value.modalidadVencimiento || null,
+        fechaBase: this.toTimestamp(this.garantiaForm.value.fechaBase),
+        kmBase: Number(this.garantiaForm.value.kmBase || 0),
+        diasGarantia: this.garantiaForm.value.diasGarantia ?? null,
+        mesesGarantia: this.garantiaForm.value.mesesGarantia ?? null,
+        kmGarantia: Number(this.garantiaForm.value.kmGarantia || 0),
+        fechaVence: this.toTimestamp(this.garantiaForm.value.fechaVence),
+        kmVence: this.garantiaForm.value.kmVence != null ? Number(this.garantiaForm.value.kmVence) : null,
+        estadoGarantia: this.garantiaForm.value.estadoGarantia || null,
+        responsableCosto: this.garantiaForm.value.responsableCosto || null,
+        observaciones: this.garantiaForm.value.observaciones?.trim() || null,
+      };
+      request$ = this.repo.crearGarantia(payload);
+    } else if (mode === 'garantiaDetalle') {
+      const garantia = this.selectedGarantia();
+      if (!garantia) return;
+      const payload: VehGarantiaDetalleGuardarRequest = {
+        idVehGarantiaFk: garantia.idVehGarantia,
+        tipoCobertura: this.garantiaDetalleForm.value.tipoCobertura || null,
+        idVehOrdenTrabajoTrabajoFk: this.garantiaDetalleForm.value.idVehOrdenTrabajoTrabajoFk ?? null,
+        idVehOrdenTrabajoRepuestoFk: this.garantiaDetalleForm.value.idVehOrdenTrabajoRepuestoFk ?? null,
+        art: this.garantiaDetalleForm.value.art ?? null,
+        cubreManoObra: !!this.garantiaDetalleForm.value.cubreManoObra,
+        cubreRepuesto: !!this.garantiaDetalleForm.value.cubreRepuesto,
+        montoMaximo: Number(this.garantiaDetalleForm.value.montoMaximo || 0),
+        cantidadMaxima: Number(this.garantiaDetalleForm.value.cantidadMaxima || 0),
+        serieAnterior: this.garantiaDetalleForm.value.serieAnterior?.trim() || null,
+        serieNueva: this.garantiaDetalleForm.value.serieNueva?.trim() || null,
+        observaciones: this.garantiaDetalleForm.value.observaciones?.trim() || null,
+      };
+      request$ = this.repo.crearGarantiaDetalle(payload);
+    } else if (mode === 'garantiaMovimiento') {
+      const garantia = this.selectedGarantia();
+      if (!garantia) return;
+      if (this.garantiaMovimientoForm.invalid) {
+        this.garantiaMovimientoForm.markAllAsTouched();
+        this.notify.warn('Formulario incompleto', 'El diagnóstico del reclamo es obligatorio.');
+        return;
+      }
+      const payload: VehGarantiaMovimientoGuardarRequest = {
+        idVehGarantiaFk: garantia.idVehGarantia,
+        idVehOrdenTrabajoFk: this.garantiaMovimientoForm.value.idVehOrdenTrabajoFk ?? null,
+        fechaReclamo: this.toTimestamp(this.garantiaMovimientoForm.value.fechaReclamo),
+        kmReclamo: Number(this.garantiaMovimientoForm.value.kmReclamo || 0),
+        diagnostico: this.garantiaMovimientoForm.value.diagnostico?.trim() || null,
+        resultado: this.garantiaMovimientoForm.value.resultado || null,
+        valorCliente: Number(this.garantiaMovimientoForm.value.valorCliente || 0),
+        valorTaller: Number(this.garantiaMovimientoForm.value.valorTaller || 0),
+        valorProveedor: Number(this.garantiaMovimientoForm.value.valorProveedor || 0),
+        motivoRechazo: this.garantiaMovimientoForm.value.motivoRechazo?.trim() || null,
+        observaciones: this.garantiaMovimientoForm.value.observaciones?.trim() || null,
+      };
+      request$ = this.repo.crearGarantiaMovimiento(payload);
     } else {
       const hallazgo = this.selectedHallazgo();
       if (!hallazgo) {

@@ -61,7 +61,16 @@ import {
   VehTipoVehiculoVistaEditarRequest,
   VehTipoVehiculoVistaGuardarRequest,
   SegUsuarioListadoItem,
-  VehFacturaDetalleResponse
+  VehFacturaDetalleResponse,
+  VehGarantia,
+  VehGarantiaDetalle,
+  VehGarantiaMovimiento,
+  VehGarantiaGuardarRequest,
+  VehGarantiaEditarRequest,
+  VehGarantiaDetalleGuardarRequest,
+  VehGarantiaDetalleEditarRequest,
+  VehGarantiaMovimientoGuardarRequest,
+  VehGarantiaMovimientoEditarRequest
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
@@ -274,7 +283,45 @@ export class VehiculosApi {
   eliminarOrdenFactura(id: number) {
     return this.http.delete<ApiEnvelope<{ idVehOrdenTrabajoFactura: number }>>(`${this.baseUrl}/ordenes-trabajo-factura/${id}`);
   }
+  /**garania */
+  listarGarantias(query: ListQuery = {}) {
+    return this.http.get<ApiEnvelope<Paged<VehGarantia>>>(`${this.baseUrl}/garantias`, { params: buildListParams(query) });
+  }
+  crearGarantia(payload: VehGarantiaGuardarRequest) {
+    return this.http.post<ApiEnvelope<{ idVehGarantia: number }>>(`${this.baseUrl}/garantias`, payload);
+  }
+  editarGarantia(payload: VehGarantiaEditarRequest) {
+    return this.http.patch<ApiEnvelope<{ idVehGarantia: number }>>(`${this.baseUrl}/garantias`, payload);
+  }
+  eliminarGarantia(id: number) {
+    return this.http.delete<ApiEnvelope<{ idVehGarantia: number }>>(`${this.baseUrl}/garantias/${id}`);
+  }
 
+  listarGarantiaDetalles(query: ListQuery = {}) {
+    return this.http.get<ApiEnvelope<Paged<VehGarantiaDetalle>>>(`${this.baseUrl}/garantias-detalle`, { params: buildListParams(query) });
+  }
+  crearGarantiaDetalle(payload: VehGarantiaDetalleGuardarRequest) {
+    return this.http.post<ApiEnvelope<{ idVehGarantiaDetalle: number }>>(`${this.baseUrl}/garantias-detalle`, payload);
+  }
+  editarGarantiaDetalle(payload: VehGarantiaDetalleEditarRequest) {
+    return this.http.patch<ApiEnvelope<{ idVehGarantiaDetalle: number }>>(`${this.baseUrl}/garantias-detalle`, payload);
+  }
+  eliminarGarantiaDetalle(id: number) {
+    return this.http.delete<ApiEnvelope<{ idVehGarantiaDetalle: number }>>(`${this.baseUrl}/garantias-detalle/${id}`);
+  }
+
+  listarGarantiaMovimientos(query: ListQuery = {}) {
+    return this.http.get<ApiEnvelope<Paged<VehGarantiaMovimiento>>>(`${this.baseUrl}/garantias-movimiento`, { params: buildListParams(query) });
+  }
+  crearGarantiaMovimiento(payload: VehGarantiaMovimientoGuardarRequest) {
+    return this.http.post<ApiEnvelope<{ idVehGarantiaMovimiento: number }>>(`${this.baseUrl}/garantias-movimiento`, payload);
+  }
+  editarGarantiaMovimiento(payload: VehGarantiaMovimientoEditarRequest) {
+    return this.http.patch<ApiEnvelope<{ idVehGarantiaMovimiento: number }>>(`${this.baseUrl}/garantias-movimiento`, payload);
+  }
+  eliminarGarantiaMovimiento(id: number) {
+    return this.http.delete<ApiEnvelope<{ idVehGarantiaMovimiento: number }>>(`${this.baseUrl}/garantias-movimiento/${id}`);
+  }
   /* ===== Facturas / Cajas / Cobros ===== */
   listarFacturas(query: ListQuery = {}) {
     return this.http.get<ApiEnvelope<Paged<VehFactura>>>(`${this.baseUrl}/facturas`, { params: buildListParams(query) });

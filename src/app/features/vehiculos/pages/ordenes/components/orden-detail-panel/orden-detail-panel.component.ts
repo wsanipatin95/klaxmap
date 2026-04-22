@@ -29,13 +29,17 @@ import {
   VehOrdenTrabajoRepuesto,
   VehOrdenTrabajoTrabajo,
   VehTipoVehiculoVista,
+  VehGarantia,
+  VehGarantiaDetalle,
+  VehGarantiaMovimiento,
 } from '../../../../data-access/vehiculos.models';
-
+import { OrdenGarantiasPanelComponent } from '../orden-garantias-panel/orden-garantias-panel.component';
 type OrdenDetailTab =
   | 'resumen'
   | 'checklist'
   | 'ejecucion'
   | 'repuestos'
+  | 'garantias'
   | 'comercial';
 
 type ExecutionTab = 'detalle' | 'hallazgos';
@@ -166,6 +170,7 @@ type FotoDraft = {
     VehiculosEmptyStateComponent,
     VehiculoVistaCanvasComponent,
     OrdenComercialPanelComponent,
+    OrdenGarantiasPanelComponent,
   ],
   templateUrl: './orden-detail-panel.component.html',
   styleUrl: './orden-detail-panel.component.scss',
@@ -200,6 +205,12 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Input() trabajoLabelMap: Record<number, string> = {};
   @Input() articuloLabelMap: Record<number, string> = {};
   @Input() articulosCatalogo: VehArticuloCatalogo[] = [];
+
+  @Input() garantias: VehGarantia[] = [];
+  @Input() selectedGarantia: VehGarantia | null = null;
+  @Input() garantiaDetalles: VehGarantiaDetalle[] = [];
+  @Input() garantiaMovimientos: VehGarantiaMovimiento[] = [];
+
   @Output() saveChecklist = new EventEmitter<ChecklistBulkRow[]>();
   @Output() saveTrabajo = new EventEmitter<TrabajoWorkbenchSavePayload>();
   @Output() saveHallazgo = new EventEmitter<HallazgoWorkbenchSavePayload>();
@@ -217,6 +228,11 @@ export class OrdenDetailPanelComponent implements OnChanges {
   @Output() selectVista = new EventEmitter<VehTipoVehiculoVista>();
   @Output() selectFactura = new EventEmitter<VehFactura>();
   @Output() pointMarked = new EventEmitter<{ x: number; y: number }>();
+
+  @Output() selectGarantia = new EventEmitter<VehGarantia>();
+  @Output() openGarantia = new EventEmitter<void>();
+  @Output() openGarantiaDetalle = new EventEmitter<void>();
+  @Output() openGarantiaMovimiento = new EventEmitter<void>();
 
   activeTab = signal<OrdenDetailTab>('resumen');
   executionTab = signal<ExecutionTab>('detalle');

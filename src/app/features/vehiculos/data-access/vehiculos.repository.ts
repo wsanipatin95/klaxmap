@@ -38,7 +38,13 @@ import {
   VehTipoVehiculoGuardarRequest,
   VehTipoVehiculoVistaEditarRequest,
   VehTipoVehiculoVistaGuardarRequest,
-  SegUsuarioListadoItem
+  SegUsuarioListadoItem,
+  VehGarantiaDetalleEditarRequest,
+  VehGarantiaDetalleGuardarRequest,
+  VehGarantiaEditarRequest,
+  VehGarantiaGuardarRequest,
+  VehGarantiaMovimientoEditarRequest,
+  VehGarantiaMovimientoGuardarRequest
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
@@ -150,6 +156,28 @@ export class VehiculosRepository {
   listarOrdenFacturas(extra: Record<string, unknown> = {}) {
     return this.api.listarOrdenFacturas({ all: true, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));
   }
+
+  listarGarantias(extra: Record<string, unknown> = {}) {
+    return this.api.listarGarantias({ all: true, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));
+  }
+  crearGarantia(payload: VehGarantiaGuardarRequest) { return this.api.crearGarantia(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  editarGarantia(payload: VehGarantiaEditarRequest) { return this.api.editarGarantia(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  eliminarGarantia(id: number) { return this.api.eliminarGarantia(id).pipe(map((r) => unwrapWithMsg(r))); }
+
+  listarGarantiaDetalles(extra: Record<string, unknown> = {}) {
+    return this.api.listarGarantiaDetalles({ all: true, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));
+  }
+  crearGarantiaDetalle(payload: VehGarantiaDetalleGuardarRequest) { return this.api.crearGarantiaDetalle(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  editarGarantiaDetalle(payload: VehGarantiaDetalleEditarRequest) { return this.api.editarGarantiaDetalle(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  eliminarGarantiaDetalle(id: number) { return this.api.eliminarGarantiaDetalle(id).pipe(map((r) => unwrapWithMsg(r))); }
+
+  listarGarantiaMovimientos(extra: Record<string, unknown> = {}) {
+    return this.api.listarGarantiaMovimientos({ all: true, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));
+  }
+  crearGarantiaMovimiento(payload: VehGarantiaMovimientoGuardarRequest) { return this.api.crearGarantiaMovimiento(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  editarGarantiaMovimiento(payload: VehGarantiaMovimientoEditarRequest) { return this.api.editarGarantiaMovimiento(payload).pipe(map((r) => unwrapWithMsg(r))); }
+  eliminarGarantiaMovimiento(id: number) { return this.api.eliminarGarantiaMovimiento(id).pipe(map((r) => unwrapWithMsg(r))); }
+
   crearOrdenFactura(payload: VehOrdenTrabajoFacturaGuardarRequest) { return this.api.crearOrdenFactura(payload).pipe(map((r) => unwrapWithMsg(r))); }
   editarOrdenFactura(payload: VehOrdenTrabajoFacturaEditarRequest) { return this.api.editarOrdenFactura(payload).pipe(map((r) => unwrapWithMsg(r))); }
   eliminarOrdenFactura(id: number) { return this.api.eliminarOrdenFactura(id).pipe(map((r) => unwrapWithMsg(r))); }
