@@ -448,6 +448,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.repuestoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
     this.autorizacionForm.valueChanges.subscribe(() => this.updateChildDirtyState());
     this.fotoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
+    this.garantiaForm.valueChanges.subscribe(() => this.updateChildDirtyState());
+    this.garantiaDetalleForm.valueChanges.subscribe(() => this.updateChildDirtyState());
+    this.garantiaMovimientoForm.valueChanges.subscribe(() => this.updateChildDirtyState());
 
     this.facturaForm.valueChanges.subscribe(() => this.updateComercialDirtyState());
     this.cobroForm.valueChanges.subscribe(() => this.updateComercialDirtyState());
@@ -644,6 +647,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         autorizaciones,
         facturasRelacion,
         facturasOt,
+        garantias,
         checklistOpciones,
       }) => {
         const currentSelection = this.selectedOrden();
@@ -713,9 +717,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         const currentHallazgoId = this.selectedHallazgo()?.idVehOrdenTrabajoHallazgo ?? null;
 
         const selectedHallazgo =
-          (currentHallazgoId
-            ? hallazgosItems.find((x) => x.idVehOrdenTrabajoHallazgo === currentHallazgoId) ?? null
-            : null) ?? (hallazgosItems[0] ?? null);
+          currentHallazgoId != null
+            ? (hallazgosItems.find((x) => x.idVehOrdenTrabajoHallazgo === currentHallazgoId) || null)
+            : (hallazgosItems[0] || null);
 
         this.selectedHallazgo.set(selectedHallazgo);
 
@@ -747,9 +751,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         this.garantias.set(garantias.items ?? []);
 
         const garantiaActual = this.selectedGarantia();
-        const garantiaSeleccionada = garantiaActual
-          ? (garantias.items ?? []).find((x) => x.idVehGarantia === garantiaActual.idVehGarantia) ?? null
-          : ((garantias.items ?? [])[0] ?? null);
+        const garantiasItems = garantias.items ?? [];
+        const garantiaSeleccionada =
+          garantiaActual
+            ? (garantiasItems.find((x) => x.idVehGarantia === garantiaActual.idVehGarantia) || null)
+            : (garantiasItems[0] || null);
 
         this.selectedGarantia.set(garantiaSeleccionada);
         if (garantiaSeleccionada) {
@@ -758,11 +764,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
           this.garantiaDetalles.set([]);
           this.garantiaMovimientos.set([]);
         }
-
       },
       error: (err) => this.notify.error('No se pudo cargar detalle de la orden', err?.message),
     });
   }
+
   cargarGarantiaDetalle(idVehGarantia: number) {
     forkJoin({
       detalles: this.repo.listarGarantiaDetalles({ idVehGarantiaFk: idVehGarantia }),
@@ -781,6 +787,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.selectedGarantia.set(item);
     this.cargarGarantiaDetalle(item.idVehGarantia);
   }
+
   resetDetalle() {
     this.checklist.set([]);
     this.checklistOpciones.set([]);
@@ -808,6 +815,7 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     this.garantiaDetalles.set([]);
     this.garantiaMovimientos.set([]);
   }
+
   abrirGarantiaDrawer() {
     const orden = this.selectedOrden();
     if (!orden) return;
@@ -895,6 +903,13 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   seleccionarHallazgo(hallazgo: VehOrdenTrabajoHallazgo) {
     this.selectedHallazgo.set(hallazgo);
     this.cargarHallazgoDetalle(hallazgo.idVehOrdenTrabajoHallazgo);
+  }
+
+  limpiarSeleccionHallazgoWorkbench() {
+    this.selectedHallazgo.set(null);
+    this.marcas.set([]);
+    this.fotos.set([]);
+    this.hallazgoLoadSeq++;
   }
 
   seleccionarVista(vista: VehTipoVehiculoVista) {
@@ -1243,8 +1258,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       };
       request$ = this.repo.crearAutorizacion(payload);
     } else if (mode === 'garantia') {
-      const orden = this.selectedOrden();
-      if (!orden) return;
       const payload: VehGarantiaGuardarRequest = {
         idVehOrdenTrabajoOrigenFk: orden.idVehOrdenTrabajo,
         tipoGarantia: this.garantiaForm.value.tipoGarantia || null,
@@ -1270,8 +1283,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
         idVehOrdenTrabajoTrabajoFk: this.garantiaDetalleForm.value.idVehOrdenTrabajoTrabajoFk ?? null,
         idVehOrdenTrabajoRepuestoFk: this.garantiaDetalleForm.value.idVehOrdenTrabajoRepuestoFk ?? null,
         art: this.garantiaDetalleForm.value.art ?? null,
-        cubreManoObra: !!this.garantiaDetalleForm.value.cubreManoObra,
-        cubreRepuesto: !!this.garantiaDetalleForm.value.cubreRepuesto,
+        cubreManoObra: this.garantiaDetalleForm.value.cubreManoObra ? 1 : 0,
+        cubreRepuesto: this.garantiaDetalleForm.value.cubreRepuesto ? 1 : 0,
         montoMaximo: Number(this.garantiaDetalleForm.value.montoMaximo || 0),
         cantidadMaxima: Number(this.garantiaDetalleForm.value.cantidadMaxima || 0),
         serieAnterior: this.garantiaDetalleForm.value.serieAnterior?.trim() || null,
@@ -1593,6 +1606,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       case 'repuesto': return 'Agregar repuesto';
       case 'autorizacion': return 'Agregar aprobación';
       case 'foto': return 'Agregar evidencia';
+      case 'garantia': return 'Agregar garantía';
+      case 'garantiaDetalle': return 'Agregar cobertura';
+      case 'garantiaMovimiento': return 'Agregar reclamo / movimiento';
       default: return 'Nuevo registro relacionado';
     }
   }
@@ -1605,6 +1621,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       case 'repuesto': return 'Pieza o material usado durante la orden.';
       case 'autorizacion': return 'Control de aprobaciones del cliente.';
       case 'foto': return 'Sube una imagen relacionada con el hallazgo seleccionado.';
+      case 'garantia': return 'Configura la garantía base asociada a la OT.';
+      case 'garantiaDetalle': return 'Define el alcance y cobertura de la garantía.';
+      case 'garantiaMovimiento': return 'Registra el reclamo, diagnóstico y costos del caso.';
       default: return 'La acción cambia según el punto del flujo donde te encuentres.';
     }
   }
@@ -1814,6 +1833,9 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       autorizacion: this.autorizacionForm.getRawValue(),
       foto: this.fotoForm.getRawValue(),
       fotoBase64: this.fotoBase64(),
+      garantia: this.garantiaForm.getRawValue(),
+      garantiaDetalle: this.garantiaDetalleForm.getRawValue(),
+      garantiaMovimiento: this.garantiaMovimientoForm.getRawValue(),
     });
   }
 
@@ -1861,493 +1883,185 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     return this.isOrdenAnulada(item) || this.isOrdenFinalizada(item);
   }
 
-  canMutateOrden(item?: VehOrdenTrabajo | null): boolean {
-    const estado = this.normalizeEstadoOrden(item);
-    return estado === 'RECIBIDO' || estado === 'EN_PROCESO' || estado === 'DEVUELTO';
-  }
-
   canFinalizeOrden(item?: VehOrdenTrabajo | null): boolean {
-    const estado = this.normalizeEstadoOrden(item);
-    return estado !== 'ANULADO' && estado !== 'FINALIZADO';
+    if (!item) return false;
+    return !this.isOrdenBloqueada(item);
   }
 
   canDevolverOrden(item?: VehOrdenTrabajo | null): boolean {
-    const estado = this.normalizeEstadoOrden(item);
-    return estado !== 'ANULADO' && estado !== 'DEVUELTO';
+    if (!item) return false;
+    return this.isOrdenFinalizada(item);
   }
 
-  async finalizarOrden(item: VehOrdenTrabajo) {
-    if (!this.canFinalizeOrden(item)) {
-      this.notify.warn('Acción no disponible', 'Esta orden ya no se puede finalizar.');
-      return;
-    }
-
-    let ok = false;
-
-    try {
-      ok = await this.confirm.confirmFinalize(`la orden #${item.idVehOrdenTrabajo}`);
-    } catch {
-      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
-      return;
-    }
-
-    if (!ok) return;
-    this.actualizarEstadoOrden(item, 'FINALIZADO', 'Orden finalizada', 'La OT quedó finalizada y ahora está en solo lectura.');
-  }
-
-  async devolverOrden(item: VehOrdenTrabajo) {
-    if (!this.canDevolverOrden(item)) {
-      this.notify.warn('Acción no disponible', 'Esta orden ya no se puede devolver.');
-      return;
-    }
-
-    let ok = false;
-
-    try {
-      ok = await this.confirm.confirmReturn(`la orden #${item.idVehOrdenTrabajo}`);
-    } catch {
-      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
-      return;
-    }
-
-    if (!ok) return;
-    this.actualizarEstadoOrden(item, 'DEVUELTO', 'Orden devuelta', 'La OT volvió a estado devuelto y se reactivaron las acciones.');
-  }
-
-  async anularOrden(item: VehOrdenTrabajo) {
-    if (this.isOrdenBloqueada(item)) {
-      this.notify.warn('Acción no disponible', 'La OT finalizada o anulada ya no permite esta acción.');
-      return;
-    }
-
-    let ok = false;
-
-    try {
-      ok = await this.confirm.confirmAnnul(`la orden #${item.idVehOrdenTrabajo}`);
-    } catch {
-      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
-      return;
-    }
-
-    if (!ok) return;
-    this.actualizarEstadoOrden(item, 'ANULADO', 'Orden anulada', 'La OT quedó anulada y bloqueada.');
-  }
-
-  private actualizarEstadoOrden(
-    item: VehOrdenTrabajo,
-    estadoOrden: 'FINALIZADO' | 'DEVUELTO' | 'ANULADO',
-    successTitle: string,
-    successMessage: string,
-  ) {
+  finalizarOrden(item: VehOrdenTrabajo) {
+    if (!this.canFinalizeOrden(item)) return;
     this.saving.set(true);
     this.repo.editarOrden({
       idVehOrdenTrabajo: item.idVehOrdenTrabajo,
-      cambios: { estadoOrden },
-    })
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe({
-        next: () => {
-          this.notify.success(successTitle, successMessage);
-
-          if (this.selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-            const updated = { ...item, estadoOrden };
-            this.selectedOrden.set(updated);
-            this.cargarDetalle(updated);
-          }
-
-          if (this.editingOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo) {
-            this.editingOrden.set({ ...item, estadoOrden });
-          }
-
-          this.cargar();
-        },
-        error: (err) => this.notify.error('No se pudo actualizar el estado de la orden', err?.message),
-      });
+      cambios: { estadoOrden: 'FINALIZADO' },
+    }).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Orden finalizada', `La OT #${item.idVehOrdenTrabajo} fue finalizada.`);
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo finalizar la orden', err?.message),
+    });
   }
 
-  private finalizeMainDrawerClose() {
-    this.drawerVisible.set(false);
-    this.dirty.set(false);
-    this.editingOrden.set(null);
+  devolverOrden(item: VehOrdenTrabajo) {
+    if (!this.canDevolverOrden(item)) return;
+    this.saving.set(true);
+    this.repo.editarOrden({
+      idVehOrdenTrabajo: item.idVehOrdenTrabajo,
+      cambios: { estadoOrden: 'EN_PROCESO' },
+    }).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Orden devuelta', `La OT #${item.idVehOrdenTrabajo} volvió a EN_PROCESO.`);
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo devolver la orden', err?.message),
+    });
   }
 
-  private extractOrdenIdFromResponse(res: any): number | null {
-    const candidate =
-      res?.data?.idVehOrdenTrabajo ??
-      res?.data?.id ??
-      this.editingOrden()?.idVehOrdenTrabajo ??
-      null;
-
-    const parsed = Number(candidate ?? 0);
-    return parsed > 0 ? parsed : null;
-  }
-
-  private refrescarOrdenGuardada(savedId: number | null, closeAfterSave = false) {
-    this.loading.set(true);
-
-    this.repo.listarOrdenes(this.q, 0, this.MAIN_DRAWER_PAGE_SIZE, false)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (res) => {
-          const items = res.items ?? [];
-          this.ordenes.set(items);
-
-          const targetId =
-            savedId ??
-            this.editingOrden()?.idVehOrdenTrabajo ??
-            this.selectedOrden()?.idVehOrdenTrabajo ??
-            null;
-
-          let target = targetId
-            ? items.find((x) => x.idVehOrdenTrabajo === targetId) ?? null
-            : null;
-
-          if (!target && targetId) {
-            this.repo.listarOrdenes('', 0, this.MAIN_DRAWER_PAGE_SIZE, false).subscribe({
-              next: (fallbackRes) => {
-                const fallbackItems = fallbackRes.items ?? [];
-                this.ordenes.set(fallbackItems);
-
-                const fallbackTarget =
-                  fallbackItems.find((x) => x.idVehOrdenTrabajo === targetId) ?? null;
-
-                if (fallbackTarget) {
-                  this.selectedOrden.set(fallbackTarget);
-                  this.editingOrden.set(fallbackTarget);
-                  this.cargarDetalle(fallbackTarget);
-                }
-
-                this.dirty.set(false);
-
-                if (closeAfterSave) {
-                  this.finalizeMainDrawerClose();
-                  return;
-                }
-
-                this.drawerVisible.set(true);
-              },
-              error: (err) => {
-                this.notify.error('La orden se guardó, pero no se pudo refrescar la vista', err?.message);
-                this.dirty.set(false);
-
-                if (closeAfterSave) {
-                  this.finalizeMainDrawerClose();
-                  return;
-                }
-
-                this.drawerVisible.set(true);
-              },
-            });
-
-            return;
-          }
-
-          if (target) {
-            this.selectedOrden.set(target);
-            this.editingOrden.set(target);
-            this.cargarDetalle(target);
-          }
-
-          this.dirty.set(false);
-
-          if (closeAfterSave) {
-            this.finalizeMainDrawerClose();
-            return;
-          }
-
-          this.drawerVisible.set(true);
-        },
-        error: (err) => {
-          this.notify.error('La orden se guardó, pero no se pudo refrescar la vista', err?.message);
-          this.dirty.set(false);
-
-          if (closeAfterSave) {
-            this.finalizeMainDrawerClose();
-            return;
-          }
-
-          this.drawerVisible.set(true);
-        },
-      });
+  anularOrden(item: VehOrdenTrabajo) {
+    if (this.isOrdenBloqueada(item)) return;
+    this.saving.set(true);
+    this.repo.editarOrden({
+      idVehOrdenTrabajo: item.idVehOrdenTrabajo,
+      cambios: { estadoOrden: 'ANULADO' },
+    }).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Orden anulada', `La OT #${item.idVehOrdenTrabajo} fue anulada.`);
+        this.cargar();
+      },
+      error: (err) => this.notify.error('No se pudo anular la orden', err?.message),
+    });
   }
 
   guardarChecklistMasivo(rows: ChecklistBulkRow[]) {
     const orden = this.selectedOrden();
+    if (!orden) return;
+    const cambios = rows.filter((x) => x.changed);
+    if (!cambios.length) return;
 
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
-      return;
-    }
-
-    const changes = rows.filter((row) => row.changed);
-
-    if (!changes.length) {
-      this.notify.warn('Sin cambios', 'No hay cambios pendientes por guardar en el checklist.');
-      return;
-    }
-
-    const operations = changes
-      .map((row) => {
-        const observaciones = row.observaciones?.trim() || null;
-        const estadoCheckList = row.checked ? 'OK' : 'PENDIENTE';
-
-        if (row.existingChecklistId) {
-          return this.repo.editarOrdenCheckList({
-            idVehOrdenTrabajoCheckList: row.existingChecklistId,
-            cambios: {
-              estadoCheckList,
-              observaciones,
-            },
-          });
-        }
-
-        if (!row.checked && !observaciones) {
-          return null;
-        }
-
-        return this.repo.crearOrdenCheckList({
-          idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-          idVehVehiculoCheckListVehiculoFk: row.relationId,
-          estadoCheckList,
-          observaciones,
+    const requests = cambios.map((row) => {
+      if (row.existingChecklistId) {
+        return this.repo.editarOrdenCheckList({
+          idVehOrdenTrabajoCheckList: row.existingChecklistId,
+          cambios: {
+            estadoCheckList: row.checked ? 'OK' : 'PENDIENTE',
+            observaciones: row.observaciones?.trim() || null,
+          },
         });
-      })
-      .filter((op): op is Observable<any> => !!op);
-
-    if (!operations.length) {
-      this.notify.success('Checklist actualizado', 'No hubo registros nuevos que guardar.');
-      this.cargarDetalle(orden);
-      return;
-    }
+      }
+      return this.repo.crearOrdenCheckList({
+        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+        idVehVehiculoCheckListVehiculoFk: row.relationId,
+        estadoCheckList: row.checked ? 'OK' : 'PENDIENTE',
+        observaciones: row.observaciones?.trim() || null,
+      });
+    });
 
     this.saving.set(true);
-    forkJoin(operations)
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe({
-        next: () => {
-          this.notify.success('Checklist guardado', 'Se actualizó el checklist de recepción.');
-          this.cargarDetalle(orden);
-        },
-        error: (err) => this.notify.error('No se pudo guardar el checklist', err?.message),
-      });
+    forkJoin(requests).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Checklist actualizado', 'Los cambios del checklist fueron guardados.');
+        this.cargarDetalle(orden);
+      },
+      error: (err) => this.notify.error('No se pudo guardar el checklist', err?.message),
+    });
   }
 
   guardarTrabajoWorkbench(payload: TrabajoWorkbenchSavePayload) {
     const orden = this.selectedOrden();
-
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
-      return;
-    }
-
-    const base = {
-      tipoTrabajo: payload.tipoTrabajo || null,
-      descripcionInicial: payload.descripcionInicial?.trim() || null,
-      descripcionRealizada: payload.descripcionRealizada?.trim() || null,
-      resultado: payload.resultado?.trim() || null,
-      estadoTrabajo: payload.estadoTrabajo || null,
-      fechaInicio: payload.fechaInicio || null,
-      fechaFin: payload.fechaFin || null,
-      motivo: payload.motivo?.trim() || null,
-      observaciones: payload.observaciones?.trim() || null,
-    };
+    if (!orden) return;
 
     const request$ = payload.idVehOrdenTrabajoTrabajo
       ? this.repo.editarOrdenTrabajo({
         idVehOrdenTrabajoTrabajo: payload.idVehOrdenTrabajoTrabajo,
-        cambios: base,
+        cambios: payload,
       })
       : this.repo.crearOrdenTrabajo({
         idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-        ...base,
+        ...payload,
       });
 
     this.saving.set(true);
-    request$
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe({
-        next: () => {
-          this.notify.success(
-            payload.idVehOrdenTrabajoTrabajo ? 'Trabajo actualizado' : 'Trabajo creado',
-            'La información del trabajo se guardó correctamente.',
-          );
-          this.cargarDetalle(orden);
-        },
-        error: (err) => this.notify.error('No se pudo guardar el trabajo', err?.message),
-      });
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Trabajo guardado', 'El trabajo fue guardado correctamente.');
+        this.cargarDetalle(orden);
+      },
+      error: (err) => this.notify.error('No se pudo guardar el trabajo', err?.message),
+    });
   }
 
   guardarHallazgoWorkbench(payload: HallazgoWorkbenchSavePayload) {
     const orden = this.selectedOrden();
-
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
-      return;
-    }
-
-    const base: VehOrdenTrabajoHallazgoGuardarRequest = {
-      idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-      idVehOrdenTrabajoTrabajoFk: payload.idVehOrdenTrabajoTrabajoFk ?? null,
-      tipoHallazgo: payload.tipoHallazgo || null,
-      categoria: payload.categoria || null,
-      descripcion: payload.descripcion?.trim() || '',
-      severidad: payload.severidad || null,
-      estadoHallazgo: payload.estadoHallazgo || null,
-      motivoCambio: payload.motivoCambio?.trim() || null,
-      requiereCambio: Number(payload.requiereCambio ?? 0),
-      aprobadoCliente: Number(payload.aprobadoCliente ?? 0),
-      fechaAprobacion: payload.fechaAprobacion || null,
-      observaciones: payload.observaciones?.trim() || null,
-      atributos: payload.atributos ?? {},
-    };
+    if (!orden) return;
 
     const request$ = payload.idVehOrdenTrabajoHallazgo
       ? this.repo.editarHallazgo({
         idVehOrdenTrabajoHallazgo: payload.idVehOrdenTrabajoHallazgo,
-        cambios: base,
+        cambios: payload,
       })
-      : this.repo.crearHallazgo(base);
+      : this.repo.crearHallazgo({
+        idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
+        ...payload,
+      });
 
     this.saving.set(true);
-    request$
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe({
-        next: () => {
-          this.notify.success(
-            payload.idVehOrdenTrabajoHallazgo ? 'Hallazgo actualizado' : 'Hallazgo creado',
-            'La información del hallazgo se guardó correctamente.',
-          );
-          this.cargarDetalle(orden);
-        },
-        error: (err) => this.notify.error('No se pudo guardar el hallazgo', err?.message),
-      });
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Hallazgo guardado', 'El hallazgo fue guardado correctamente.');
+        this.cargarDetalle(orden);
+      },
+      error: (err) => this.notify.error('No se pudo guardar el hallazgo', err?.message),
+    });
   }
 
   guardarFotoWorkbench(payload: FotoWorkbenchSavePayload) {
     const orden = this.selectedOrden();
-
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
-      return;
-    }
-
+    if (!orden) return;
     this.saving.set(true);
-    this.repo.crearHallazgoFoto({
-      idVehOrdenTrabajoHallazgoFk: payload.idVehOrdenTrabajoHallazgoFk,
-      etapa: payload.etapa || null,
-      foto: payload.foto,
-      descripcion: payload.descripcion?.trim() || null,
-      principal: !!payload.principal,
-    })
+    this.repo.crearHallazgoFoto(payload as VehOrdenTrabajoHallazgoFotoGuardarRequest)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.notify.success('Foto guardada', 'La evidencia fue registrada correctamente.');
+          this.notify.success('Foto guardada', 'La evidencia fue guardada correctamente.');
           this.cargarDetalle(orden);
         },
         error: (err) => this.notify.error('No se pudo guardar la foto', err?.message),
       });
   }
 
-  limpiarSeleccionHallazgoWorkbench() {
-    this.selectedHallazgo.set(null);
-    this.marcas.set([]);
-    this.fotos.set([]);
-  }
-
   guardarRepuestoWorkbench(payload: RepuestoWorkbenchSavePayload) {
     const orden = this.selectedOrden();
-
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite registrar movimientos.');
-      return;
-    }
-
-    const base = {
-      art: Number(payload.art),
-      cantidad: Number(payload.cantidad || 0),
-      precioUnitario: Number(payload.precioUnitario || 0),
-      motivoCambio: payload.motivoCambio?.trim() || null,
-      detalleInstalacion: payload.detalleInstalacion?.trim() || null,
-      serieAnterior: payload.serieAnterior?.trim() || null,
-      serieNueva: payload.serieNueva?.trim() || null,
-      observaciones: payload.observaciones?.trim() || null,
-    };
+    if (!orden) return;
 
     const request$ = payload.idVehOrdenTrabajoRepuesto
       ? this.repo.editarRepuesto({
         idVehOrdenTrabajoRepuesto: payload.idVehOrdenTrabajoRepuesto,
-        cambios: base,
+        cambios: payload,
       })
       : this.repo.crearRepuesto({
         idVehOrdenTrabajoFk: orden.idVehOrdenTrabajo,
-        ...base,
+        ...payload,
       });
 
     this.saving.set(true);
-    request$
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe({
-        next: () => {
-          this.notify.success(
-            payload.idVehOrdenTrabajoRepuesto ? 'Repuesto actualizado' : 'Repuesto agregado',
-            'La información del repuesto se guardó correctamente.',
-          );
-          this.cargarDetalle(orden);
-        },
-        error: (err) => this.notify.error('No se pudo guardar el repuesto', err?.message),
-      });
+    request$.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.notify.success('Repuesto guardado', 'El repuesto fue guardado correctamente.');
+        this.cargarDetalle(orden);
+      },
+      error: (err) => this.notify.error('No se pudo guardar el repuesto', err?.message),
+    });
   }
 
-  async eliminarRepuestoWorkbench(item: VehOrdenTrabajoRepuesto) {
+  eliminarRepuestoWorkbench(item: VehOrdenTrabajoRepuesto) {
     const orden = this.selectedOrden();
-
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (item.idFacVentaFk) {
-      this.notify.warn('Repuesto bloqueado', 'El repuesto ya fue facturado y no se puede eliminar.');
-      return;
-    }
-
-    let ok = false;
-
-    try {
-      ok = await this.confirm.confirmDelete(`el repuesto ${this.articuloLabelById(item.art)}`);
-    } catch {
-      this.notify.error('No se pudo abrir el confirmador', 'Intenta nuevamente.');
-      return;
-    }
-
-    if (!ok) return;
-
+    if (!orden) return;
     this.saving.set(true);
     this.repo.eliminarRepuesto(item.idVehOrdenTrabajoRepuesto)
       .pipe(finalize(() => this.saving.set(false)))
@@ -2360,62 +2074,80 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
       });
   }
 
-  ordenClienteDisplay(item?: VehOrdenTrabajo | null): string {
-    if (!item) return 'Cliente';
-    return item.nombre || item.ruc || `Cliente #${item.dni}`;
-  }
-
-  ordenVehiculoDisplay(item?: VehOrdenTrabajo | null): string {
-    if (!item) return 'Vehículo';
-    return [item.marca, item.modelo, item.placa].filter(Boolean).join(' · ') || 'Vehículo';
-  }
-
-  repuestoDisplay(item?: VehOrdenTrabajoRepuesto | null): string {
-    if (!item) return 'Repuesto';
-    return [item.artcod || `ART-${item.art}`, item.articulo || ''].filter(Boolean).join(' · ');
-  }
-
-  guardarFacturaDesdePanel(payload: FacturaComercialSavePayload) {
+  guardarFacturaDesdePanel(payload: FacturaComercialSavePayload | any) {
     const orden = this.selectedOrden();
+    if (!orden) return;
 
-    if (!orden) {
-      this.notify.warn('Selecciona una orden', 'Primero selecciona una orden de trabajo.');
-      return;
-    }
-
-    if (this.isOrdenBloqueada(orden)) {
-      this.notify.warn('Orden bloqueada', 'La OT está finalizada o anulada y ya no permite operaciones comerciales.');
-      return;
-    }
-
-    if (!payload.idsVehOrdenTrabajoRepuesto?.length) {
-      this.notify.warn('Sin líneas seleccionadas', 'Selecciona al menos un repuesto para facturar.');
-      return;
-    }
+    const requestPayload: VehFacturaCrearRequest = {
+      idVehOrdenTrabajoFk: Number(payload?.idVehOrdenTrabajoFk ?? orden.idVehOrdenTrabajo),
+      idsVehOrdenTrabajoRepuesto: Array.isArray(payload?.idsVehOrdenTrabajoRepuesto)
+        ? payload.idsVehOrdenTrabajoRepuesto
+        : this.toIdList(payload?.idsVehOrdenTrabajoRepuesto) ?? null,
+      tipoFacturacion: payload?.tipoFacturacion || 'PARCIAL',
+      observacion: payload?.observacion?.trim?.() || payload?.observacion || null,
+      dni: payload?.dni ?? orden.dni ?? null,
+      cen: payload?.cen ?? null,
+      idAdmPtoemi: payload?.idAdmPtoemi ?? null,
+      credito: !!payload?.credito,
+      entrada: Number(payload?.entrada || 0),
+      cuotas: Number(payload?.cuotas || 1),
+      fechaPrimerVencimiento: payload?.fechaPrimerVencimiento || null,
+      idTaxCompAutFk: payload?.idTaxCompAutFk ?? 1,
+      usarPrecioRepuesto: payload?.usarPrecioRepuesto !== false,
+    };
 
     this.saving.set(true);
-    this.repo.facturarCobrarWorkflow(payload)
+    this.repo.crearFactura(requestPayload)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
-        next: (res: any) => {
-          this.workflowResultado.set((res?.data ?? null) as any);
-
-          const createdId = Number(res?.data?.idFacVenta ?? 0);
-
-          if (createdId > 0) {
-            this.selectedFacturaOt.set({ idFacVenta: createdId } as VehFactura);
-          } else {
-            this.selectedFacturaOt.set(null);
-          }
-
-          this.notify.success(
-            'Factura creada',
-            res?.mensaje || 'La factura se generó correctamente desde el panel comercial.',
-          );
-
+        next: () => {
+          this.notify.success('Factura creada', 'La factura fue creada correctamente.');
           this.cargarDetalle(orden);
         },
         error: (err) => this.notify.error('No se pudo crear la factura', err?.message),
       });
+  }
+
+  private extractOrdenIdFromResponse(res: any): number | null {
+    return Number(
+      res?.idVehOrdenTrabajo ??
+      res?.data?.idVehOrdenTrabajo ??
+      res?.payload?.idVehOrdenTrabajo ??
+      0,
+    ) || null;
+  }
+
+  private refrescarOrdenGuardada(savedId: number | null, closeAfterSave: boolean) {
+    this.cargar();
+
+    if (closeAfterSave) {
+      this.finalizeMainDrawerClose();
+    }
+
+    if (!savedId) return;
+
+    setTimeout(() => {
+      const found = this.ordenes().find((x) => x.idVehOrdenTrabajo === savedId) ?? null;
+      if (found) {
+        this.selectedOrden.set(found);
+        this.cargarDetalle(found);
+      }
+    }, 0);
+  }
+
+  private finalizeMainDrawerClose() {
+    this.drawerVisible.set(false);
+    this.editingOrden.set(null);
+    this.dirty.set(false);
+  }
+
+  private ordenClienteDisplay(item?: VehOrdenTrabajo | null): string {
+    if (!item) return 'Cliente';
+    return item.nombre || item.ruc || (item.dni ? `Cliente #${item.dni}` : 'Cliente');
+  }
+
+  private ordenVehiculoDisplay(item?: VehOrdenTrabajo | null): string {
+    if (!item) return 'Vehículo';
+    return [item.marca, item.modelo, item.placa].filter(Boolean).join(' · ') || 'Vehículo';
   }
 }
