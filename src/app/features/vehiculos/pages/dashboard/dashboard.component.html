@@ -155,38 +155,6 @@
           </div>
         </section>
 
-        <section class="contentCard panel panel--alerts">
-          <div class="sectionHead">
-            <div>
-              <h4>Alertas</h4>
-              <div class="secondaryCell">Pendientes del módulo</div>
-            </div>
-          </div>
-
-          <div class="panelScroll">
-            <div class="alertList">
-              <button type="button" class="alertItem" (click)="irAChecklists()">
-                <strong>{{ tiposSinChecklist() }}</strong>
-                <span>tipos sin checklist</span>
-              </button>
-
-              <button type="button" class="alertItem" (click)="irAChecklists()">
-                <strong>{{ checklistSinTipo() }}</strong>
-                <span>checklist sin tipo</span>
-              </button>
-
-              <button type="button" class="alertItem" (click)="irAFacturacion()">
-                <strong>{{ facturasConSaldo() }}</strong>
-                <span>facturas con saldo</span>
-              </button>
-
-              <button type="button" class="alertItem" (click)="irAOrdenes()">
-                <strong>{{ ordenesAnuladas() }}</strong>
-                <span>órdenes anuladas</span>
-              </button>
-            </div>
-          </div>
-        </section>
       </div>
     </section>
   </div>
