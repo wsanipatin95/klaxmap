@@ -1,3 +1,362 @@
 :host {
   display: block;
+  min-width: 0;
+}
+
+.garantiasWorkspace {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.garantiasHero,
+.detailHero,
+.summaryCard,
+.garantiaCard,
+.metric,
+.kvItem,
+.itemCard,
+.stepCard,
+.helperCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.8rem;
+}
+
+.garantiasHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.garantiasHero h4,
+.sectionHead h5,
+.dialogHeader h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.garantiasHero p,
+.dialogHeader p,
+.secondaryCell {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+}
+
+.heroActions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.summaryCard span,
+.metric span,
+.kvItem span,
+.stepCard span,
+.field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.summaryCard strong,
+.metric strong,
+.kvItem strong,
+.stepCard strong,
+.primaryCell {
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.summaryCard strong {
+  font-size: 1.2rem;
+}
+
+.summaryCard small,
+.stepCard small,
+.field small {
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.summaryCard--success {
+  background: #f0fdf4;
+}
+
+.summaryCard--neutral {
+  background: #f8fafc;
+}
+
+.summaryCard--warn {
+  background: #fff7ed;
+}
+
+.garantiasGrid {
+  display: grid;
+  grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.garantiasSidebar,
+.garantiasDetail,
+.sectionBlock {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.sectionHead--compact {
+  align-items: center;
+}
+
+.sidebarList,
+.itemsList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.garantiaCard,
+.itemCard {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.garantiaCard {
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.garantiaCard:hover {
+  border-color: #d98bbb;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.garantiaCard.selected {
+  border-color: #7b0061;
+  box-shadow: 0 10px 24px rgba(123, 0, 97, 0.12);
+}
+
+.garantiaCard__head,
+.rowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.garantiaCard__meta,
+.rowCopy,
+.detailHero {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.cardActions,
+.actionWrap,
+.dialogFooter,
+.chipRow {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cardActions {
+  justify-content: flex-end;
+}
+
+.cardActions--inline {
+  justify-content: flex-start;
+}
+
+.detailHero--soft {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: transparent;
+  border: none;
+}
+
+.stepCard {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.8rem;
+  background: #f8fafc;
+}
+
+.metricGrid,
+.kvGrid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.metricGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kvGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric,
+.kvItem {
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.rowClamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.miniChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dialogForm {
+  display: grid;
+  gap: 0.7rem;
+  padding-top: 0.25rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.7rem 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.field :is(input, select, textarea) {
+  width: 100%;
+  min-height: 2.4rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #0f172a;
+}
+
+.field textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.checkboxField {
+  align-content: end;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  color: #334155;
+  min-height: 2.4rem;
+}
+
+.checkboxLabel input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.helperCard {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.75rem 0.85rem;
+  background: #fff7ed;
+}
+
+.requiredMark {
+  color: #b42318;
+}
+
+.span-12 { grid-column: span 12; }
+.span-8 { grid-column: span 8; }
+.span-6 { grid-column: span 6; }
+.span-4 { grid-column: span 4; }
+.span-3 { grid-column: span 3; }
+.span-2 { grid-column: span 2; }
+
+@media (max-width: 1380px) {
+  .garantiasGrid,
+  .detailHero--soft {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .summaryGrid,
+  .metricGrid,
+  .kvGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .summaryGrid,
+  .metricGrid,
+  .kvGrid,
+  .formGrid,
+  .garantiasHero,
+  .sectionHead,
+  .rowHeader {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .heroActions,
+  .actionWrap,
+  .dialogFooter,
+  .cardActions {
+    justify-content: stretch;
+  }
+
+  .span-12,
+  .span-8,
+  .span-6,
+  .span-4,
+  .span-3,
+  .span-2 {
+    grid-column: span 12;
+  }
 }

@@ -153,6 +153,8 @@
   gap: 0.55rem;
   padding: 0.58rem;
   min-width: 0;
+  height: 50rem;
+  overflow-x: auto;
 }
 
 .panelCard--execution {
@@ -320,7 +322,6 @@
 .rowClamp,
 .photoBody .secondaryCell {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -692,14 +693,32 @@
   padding: 0.18rem 0.38rem;
 }
 
-.span-12 { grid-column: span 12; }
-.span-8 { grid-column: span 8; }
-.span-6 { grid-column: span 6; }
-.span-4 { grid-column: span 4; }
-.span-3 { grid-column: span 3; }
-.span-2 { grid-column: span 2; }
+.span-12 {
+  grid-column: span 12;
+}
+
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-3 {
+  grid-column: span 3;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
 
 @media (max-width: 1480px) {
+
   .executionWorkbench--merged,
   .hallazgoWorkbench,
   .childGrid,
@@ -713,6 +732,7 @@
 }
 
 @media (max-width: 1200px) {
+
   .contextStrip,
   .metricGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -720,6 +740,7 @@
 }
 
 @media (max-width: 960px) {
+
   .kvGrid,
   .contextStrip,
   .metricGrid,
@@ -822,6 +843,7 @@
 }
 
 @media (max-width: 1200px) {
+
   .childGrid--modal,
   .dialogHeaderBar {
     grid-template-columns: 1fr;
@@ -887,7 +909,7 @@
   align-items: center;
 }
 
-.lookupField > .p-inputtext,
+.lookupField>.p-inputtext,
 .lookupField input {
   width: 100%;
 }

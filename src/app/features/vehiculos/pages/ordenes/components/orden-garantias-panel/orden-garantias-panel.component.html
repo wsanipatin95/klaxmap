@@ -1,149 +1,528 @@
-<section class="panelCard panelCard--execution">
-  <div class="executionWorkbench executionWorkbench--merged">
-    <aside class="execColumn execColumn--jobs">
+<section class="garantiasWorkspace">
+  <div class="garantiasHero">
+    <div>
+      <h4>Garantías de la OT</h4>
+      <p>Gestiona la cabecera, las coberturas y los reclamos sin salir de la orden.</p>
+    </div>
+
+    <div class="heroActions">
+      <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva garantía"
+        [disabled]="readonlyMode || !orden" (click)="openNuevaGarantia()">
+      </button>
+    </div>
+  </div>
+
+  <div class="summaryGrid">
+    <article class="summaryCard">
+      <span>Total</span>
+      <strong>{{ resumen().total }}</strong>
+      <small>garantía(s) registradas</small>
+    </article>
+    <article class="summaryCard summaryCard--success">
+      <span>Activas</span>
+      <strong>{{ resumen().activas }}</strong>
+      <small>vigentes para atención</small>
+    </article>
+    <article class="summaryCard summaryCard--neutral">
+      <span>Coberturas</span>
+      <strong>{{ resumen().coberturas }}</strong>
+      <small>trabajos y repuestos cubiertos</small>
+    </article>
+    <article class="summaryCard summaryCard--warn">
+      <span>Reclamos</span>
+      <strong>{{ resumen().reclamos }}</strong>
+      <small>movimiento(s) del historial</small>
+    </article>
+  </div>
+
+  <div class="garantiasGrid">
+    <aside class="garantiasSidebar">
       <div class="sectionHead sectionHead--compact">
         <div>
-          <h4>Garantías</h4>
-          <div class="secondaryCell">{{ garantias.length }} registro(s)</div>
+          <h5>Lista de garantías</h5>
+          <div class="secondaryCell">Elige una garantía para ver su cobertura y reclamos.</div>
         </div>
-
-        <button pButton type="button" size="small" icon="pi pi-plus" label="Nueva"
-          [disabled]="readonlyMode || !orden" (click)="openGarantia.emit()">
-        </button>
       </div>
 
-      <div class="listCard listCard--tight">
-        <div class="scrollList scrollList--compact">
-          <article class="jiraLikeRow compact compactRow"
-            *ngFor="let item of garantias"
-            [class.selected]="selectedGarantia?.idVehGarantia === item.idVehGarantia"
-            (click)="selectGarantia.emit(item)">
-            <div class="rowHeader">
-              <div class="rowCopy">
-                <div class="primaryCell">{{ item.tipoGarantia || 'GARANTIA' }}</div>
-                <div class="secondaryCell">{{ item.modalidadVencimiento || 'SIN MODALIDAD' }}</div>
-              </div>
-              <p-tag [value]="item.estadoGarantia || 'ACTIVA'" [severity]="estadoSeverity(item.estadoGarantia)"></p-tag>
+      <div class="sidebarList" *ngIf="garantiasView().length; else noGarantiasState">
+        <article class="garantiaCard"
+          *ngFor="let item of garantiasView()"
+          [class.selected]="selectedGarantiaView()?.idVehGarantia === item.idVehGarantia"
+          (click)="selectGarantiaCard(item)">
+          <div class="garantiaCard__head">
+            <div>
+              <div class="primaryCell">Garantía #{{ item.idVehGarantia }}</div>
+              <div class="secondaryCell">{{ item.tipoGarantia || 'GARANTÍA' }} · {{ modalidadLabel(item.modalidadVencimiento) }}</div>
             </div>
-            <div class="secondaryCell rowClamp">
-              Base: {{ formatDate(item.fechaBase) }} · Km: {{ item.kmBase || 0 }}
-            </div>
-            <div class="secondaryCell rowClamp">
-              Vence: {{ formatDate(item.fechaVence) }} · Km: {{ item.kmVence || 0 }}
-            </div>
-          </article>
+            <p-tag [value]="item.estadoGarantia || 'ACTIVA'" [severity]="estadoSeverity(item.estadoGarantia)"></p-tag>
+          </div>
 
-          <app-vehiculos-empty-state *ngIf="!garantias.length" icon="pi pi-shield" title="Sin garantías"
-            subtitle="Crea la primera garantía asociada a esta OT.">
-          </app-vehiculos-empty-state>
-        </div>
+          <div class="garantiaCard__meta">
+            <span><strong>Base:</strong> {{ formatDate(item.fechaBase) }} · Km {{ item.kmBase || 0 }}</span>
+            <span><strong>Vence:</strong> {{ formatDate(item.fechaVence) }} · Km {{ item.kmVence || 0 }}</span>
+            <span><strong>Cobertura:</strong> {{ garantiaResumenLabel(item) }}</span>
+            <span><strong>Responsable:</strong> {{ responsableLabel(item.responsableCosto) }}</span>
+          </div>
+
+          <div class="cardActions">
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+              [disabled]="readonlyMode" (click)="openEditarGarantia(item); $event.stopPropagation()">
+            </button>
+            <button pButton type="button" size="small" [text]="true" icon="pi pi-print"
+              (click)="printGarantia(item); $event.stopPropagation()">
+            </button>
+            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+              [disabled]="readonlyMode" (click)="deleteGarantia(item); $event.stopPropagation()">
+            </button>
+          </div>
+        </article>
       </div>
     </aside>
 
-    <section class="execWorkspace">
-      <section class="workbenchCard workbenchCard--full" *ngIf="selectedGarantia as garantia; else noGarantiaSeleccionada">
+    <section class="garantiasDetail" *ngIf="selectedGarantiaView() as garantia; else noGarantiaSeleccionada">
+      <div class="sectionHead">
+        <div>
+          <h5>Garantía #{{ garantia.idVehGarantia }}</h5>
+          <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{ modalidadLabel(garantia.modalidadVencimiento) }}</div>
+        </div>
+
+        <div class="actionWrap">
+          <button pButton type="button" size="small" severity="secondary" icon="pi pi-plus" label="Cobertura"
+            [disabled]="readonlyMode" (click)="openNuevaCobertura()">
+          </button>
+          <button pButton type="button" size="small" severity="secondary" icon="pi pi-history" label="Registrar reclamo"
+            [disabled]="readonlyMode" (click)="openNuevoReclamo()">
+          </button>
+          <button pButton type="button" size="small" icon="pi pi-print" label="Imprimir"
+            (click)="printGarantia(garantia)">
+          </button>
+        </div>
+      </div>
+
+      <div class="detailHero detailHero--soft">
+        <div class="stepCard">
+          <span>Paso 1</span>
+          <strong>Cabecera de garantía</strong>
+          <small>Define vigencia, modalidad y quién asume el costo.</small>
+        </div>
+        <div class="stepCard">
+          <span>Paso 2</span>
+          <strong>Coberturas</strong>
+          <small>Especifica qué trabajo o repuesto queda cubierto.</small>
+        </div>
+        <div class="stepCard">
+          <span>Paso 3</span>
+          <strong>Reclamos</strong>
+          <small>Registra el retorno del cliente, el diagnóstico y el costo del caso.</small>
+        </div>
+      </div>
+
+      <div class="metricGrid">
+        <article class="metric"><span>Estado</span><strong>{{ garantia.estadoGarantia || '-' }}</strong></article>
+        <article class="metric"><span>Responsable</span><strong>{{ responsableLabel(garantia.responsableCosto) }}</strong></article>
+        <article class="metric"><span>Base</span><strong>{{ formatDate(garantia.fechaBase) }} · Km {{ garantia.kmBase || 0 }}</strong></article>
+        <article class="metric"><span>Vence</span><strong>{{ formatDate(garantia.fechaVence) }} · Km {{ garantia.kmVence || 0 }}</strong></article>
+      </div>
+
+      <div class="kvGrid">
+        <article class="kvItem">
+          <span>Alcance de cobertura</span>
+          <strong>{{ garantiaResumenLabel(garantia) }}</strong>
+        </article>
+        <article class="kvItem">
+          <span>Observaciones</span>
+          <strong>{{ garantia.observaciones || 'Sin observaciones registradas.' }}</strong>
+        </article>
+      </div>
+
+      <section class="sectionBlock">
         <div class="sectionHead sectionHead--compact">
           <div>
-            <h4>Garantía #{{ garantia.idVehGarantia }}</h4>
-            <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{ garantia.modalidadVencimiento || '-' }}</div>
+            <h5>Coberturas</h5>
+            <div class="secondaryCell">Define exactamente qué trabajo o repuesto queda cubierto.</div>
           </div>
-          <div class="actionWrap actionWrap--compact">
-            <button pButton type="button" size="small" icon="pi pi-list" label="Detalle"
-              [disabled]="readonlyMode" (click)="openGarantiaDetalle.emit()">
-            </button>
-            <button pButton type="button" size="small" icon="pi pi-history" label="Reclamo"
-              [disabled]="readonlyMode" (click)="openGarantiaMovimiento.emit()">
-            </button>
-          </div>
+          <button pButton type="button" size="small" icon="pi pi-plus" label="Agregar cobertura"
+            [disabled]="readonlyMode" (click)="openNuevaCobertura()">
+          </button>
         </div>
 
-        <div class="metricGrid">
-          <article class="metric"><span>Estado</span><strong>{{ garantia.estadoGarantia || '-' }}</strong></article>
-          <article class="metric"><span>Responsable</span><strong>{{ garantia.responsableCosto || '-' }}</strong></article>
-          <article class="metric"><span>Fecha base</span><strong>{{ formatDate(garantia.fechaBase) }}</strong></article>
-          <article class="metric"><span>Fecha vence</span><strong>{{ formatDate(garantia.fechaVence) }}</strong></article>
-        </div>
-
-        <div class="metricGrid">
-          <article class="metric"><span>Km base</span><strong>{{ garantia.kmBase || 0 }}</strong></article>
-          <article class="metric"><span>Km garantía</span><strong>{{ garantia.kmGarantia || 0 }}</strong></article>
-          <article class="metric"><span>Km vence</span><strong>{{ garantia.kmVence || 0 }}</strong></article>
-          <article class="metric"><span>OT reclamo</span><strong>{{ garantia.idVehOrdenTrabajoReclamoFk || '-' }}</strong></article>
-        </div>
-
-        <div class="kvGrid">
-          <article class="kvItem">
-            <span>Observaciones</span>
-            <strong>{{ garantia.observaciones || 'Sin observaciones' }}</strong>
-          </article>
-          <article class="kvItem">
-            <span>Atributos</span>
-            <strong>{{ garantia.atributos ? (garantia.atributos | json) : 'Sin atributos' }}</strong>
-          </article>
-        </div>
-
-        <div class="sectionHead sectionHead--compact">
-          <div>
-            <h4>Coberturas</h4>
-            <div class="secondaryCell">{{ garantiaDetalles.length }} item(s)</div>
-          </div>
-        </div>
-
-        <div class="scrollList scrollList--compact">
-          <article class="jiraLikeRow compact compactRow" *ngFor="let item of garantiaDetalles">
+        <div class="itemsList" *ngIf="detallesView().length; else noCoberturasState">
+          <article class="itemCard" *ngFor="let item of detallesView()">
             <div class="rowHeader">
               <div class="rowCopy">
                 <div class="primaryCell">{{ detalleLabel(item) }}</div>
-                <div class="secondaryCell">{{ item.tipoCobertura || '-' }}</div>
+                <div class="secondaryCell">{{ detalleSubLabel(item) }}</div>
               </div>
-              <p-tag [value]="(item.cubreManoObra ? 'MO ' : '') + (item.cubreRepuesto ? 'REP' : '') || 'N/A'" severity="secondary"></p-tag>
+              <p-tag [value]="coberturaBadge(item)" severity="secondary"></p-tag>
             </div>
-            <div class="secondaryCell rowClamp">
-              Monto máx: {{ money(item.montoMaximo) }} · Cantidad máx: {{ item.cantidadMaxima || 0 }}
+
+            <div class="chipRow">
+              <span class="miniChip">Monto máx: {{ money(item.montoMaximo) }}</span>
+              <span class="miniChip">Cantidad máx: {{ item.cantidadMaxima || 0 }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie retirada: {{ item.serieAnterior || '-' }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie instalada: {{ item.serieNueva || '-' }}</span>
             </div>
-            <div class="secondaryCell rowClamp">
-              Serie ant: {{ item.serieAnterior || '-' }} · Serie nueva: {{ item.serieNueva || '-' }}
+
+            <div class="secondaryCell rowClamp">{{ item.observaciones || 'Sin observaciones de cobertura.' }}</div>
+
+            <div class="cardActions cardActions--inline">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+                [disabled]="readonlyMode" (click)="openEditarCobertura(item)"></button>
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+                [disabled]="readonlyMode" (click)="deleteCobertura(item)"></button>
             </div>
           </article>
-
-          <app-vehiculos-empty-state *ngIf="!garantiaDetalles.length" icon="pi pi-list" title="Sin detalle"
-            subtitle="Agrega trabajos o repuestos cubiertos por la garantía.">
-          </app-vehiculos-empty-state>
         </div>
+      </section>
 
+      <section class="sectionBlock">
         <div class="sectionHead sectionHead--compact">
           <div>
-            <h4>Movimientos / reclamos</h4>
-            <div class="secondaryCell">{{ garantiaMovimientos.length }} evento(s)</div>
+            <h5>Reclamos / movimientos</h5>
+            <div class="secondaryCell">Historial de retorno del cliente, diagnóstico y costos del caso.</div>
           </div>
+          <button pButton type="button" size="small" icon="pi pi-plus" label="Registrar reclamo"
+            [disabled]="readonlyMode" (click)="openNuevoReclamo()">
+          </button>
         </div>
 
-        <div class="scrollList scrollList--compact">
-          <article class="jiraLikeRow compact compactRow" *ngFor="let item of garantiaMovimientos">
+        <div class="itemsList" *ngIf="movimientosView().length; else noMovimientosState">
+          <article class="itemCard" *ngFor="let item of movimientosView()">
             <div class="rowHeader">
               <div class="rowCopy">
-                <div class="primaryCell">{{ item.resultado || 'RECLAMO' }}</div>
+                <div class="primaryCell">{{ movimientoTitle(item) }}</div>
                 <div class="secondaryCell">{{ formatDate(item.fechaReclamo) }} · Km {{ item.kmReclamo || 0 }}</div>
               </div>
               <p-tag [value]="item.resultado || 'PENDIENTE'" [severity]="estadoSeverity(item.resultado)"></p-tag>
             </div>
-            <div class="secondaryCell rowClamp">{{ item.diagnostico || 'Sin diagnóstico' }}</div>
-            <div class="secondaryCell rowClamp">
-              Cliente: {{ money(item.valorCliente) }} · Taller: {{ money(item.valorTaller) }} · Proveedor: {{ money(item.valorProveedor) }}
+
+            <div class="secondaryCell rowClamp">{{ item.diagnostico || 'Sin diagnóstico registrado.' }}</div>
+
+            <div class="chipRow">
+              <span class="miniChip">Cliente: {{ money(item.valorCliente) }}</span>
+              <span class="miniChip">Taller: {{ money(item.valorTaller) }}</span>
+              <span class="miniChip">Proveedor: {{ money(item.valorProveedor) }}</span>
+              <span class="miniChip" *ngIf="item.idVehOrdenTrabajoFk">OT atención: #{{ item.idVehOrdenTrabajoFk }}</span>
+            </div>
+
+            <div class="secondaryCell" *ngIf="item.motivoRechazo">Motivo rechazo: {{ item.motivoRechazo }}</div>
+            <div class="secondaryCell rowClamp" *ngIf="item.observaciones">{{ item.observaciones }}</div>
+
+            <div class="cardActions cardActions--inline">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+                [disabled]="readonlyMode" (click)="openEditarReclamo(item)"></button>
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+                [disabled]="readonlyMode" (click)="deleteReclamo(item)"></button>
             </div>
           </article>
-
-          <app-vehiculos-empty-state *ngIf="!garantiaMovimientos.length" icon="pi pi-history" title="Sin reclamos"
-            subtitle="Cuando el cliente regrese, registra aquí el movimiento.">
-          </app-vehiculos-empty-state>
         </div>
       </section>
     </section>
   </div>
 </section>
 
-<ng-template #noGarantiaSeleccionada>
-  <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía"
-    subtitle="Elige una garantía del panel izquierdo para ver coberturas y reclamos.">
+<ng-template #noGarantiasState>
+  <app-vehiculos-empty-state icon="pi pi-shield" title="Sin garantías"
+    subtitle="Registra la primera garantía para esta orden y luego define su cobertura.">
   </app-vehiculos-empty-state>
 </ng-template>
+
+<ng-template #noGarantiaSeleccionada>
+  <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía"
+    subtitle="Elige una garantía del panel izquierdo para administrar coberturas y reclamos.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noCoberturasState>
+  <app-vehiculos-empty-state icon="pi pi-list" title="Sin coberturas"
+    subtitle="Agrega trabajos o repuestos cubiertos por esta garantía para que el alcance quede claro.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<ng-template #noMovimientosState>
+  <app-vehiculos-empty-state icon="pi pi-history" title="Sin reclamos"
+    subtitle="Cuando el cliente vuelva, registra aquí el diagnóstico, el resultado y quién asume el costo.">
+  </app-vehiculos-empty-state>
+</ng-template>
+
+<p-dialog [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [style]="{ width: 'min(980px, 96vw)' }" [visible]="garantiaDialogVisible()"
+  (visibleChange)="garantiaDialogVisible.set($event)">
+  <ng-template pTemplate="header">
+    <div class="dialogHeader">
+      <div>
+        <h4>{{ editingGarantiaId() ? 'Editar garantía' : 'Nueva garantía' }}</h4>
+        <p>Primero define la vigencia general y quién responde por el caso.</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <form [formGroup]="garantiaForm" class="dialogForm">
+    <div class="formGrid">
+      <div class="field span-4">
+        <label>Tipo de garantía</label>
+        <select formControlName="tipoGarantia">
+          <option *ngFor="let item of tiposGarantia" [value]="item">{{ item }}</option>
+        </select>
+      </div>
+
+      <div class="field span-4">
+        <label>Modalidad</label>
+        <select formControlName="modalidadVencimiento">
+          <option *ngFor="let item of modalidadesGarantia" [value]="item">{{ modalidadLabel(item) }}</option>
+        </select>
+      </div>
+
+      <div class="field span-4">
+        <label>Responsable del costo</label>
+        <select formControlName="responsableCosto">
+          <option *ngFor="let item of responsablesCosto" [value]="item">{{ responsableLabel(item) }}</option>
+        </select>
+      </div>
+
+      <div class="field span-3">
+        <label>Fecha base</label>
+        <input pInputText type="date" formControlName="fechaBase">
+        <small>Usa la fecha desde la que empieza a correr la garantía.</small>
+      </div>
+
+      <div class="field span-3">
+        <label>Kilometraje base</label>
+        <input pInputText type="number" formControlName="kmBase">
+        <small>Normalmente es el kilometraje al entregar la OT.</small>
+      </div>
+
+      <div class="field span-2">
+        <label>Días</label>
+        <input pInputText type="number" formControlName="diasGarantia">
+      </div>
+
+      <div class="field span-2">
+        <label>Meses</label>
+        <input pInputText type="number" formControlName="mesesGarantia">
+      </div>
+
+      <div class="field span-2">
+        <label>Km cubiertos</label>
+        <input pInputText type="number" formControlName="kmGarantia">
+      </div>
+
+      <div class="field span-3">
+        <label>Fecha de vencimiento</label>
+        <input pInputText type="date" formControlName="fechaVence">
+        <small>Si la dejas vacía, se calcula con base + días/meses.</small>
+      </div>
+
+      <div class="field span-3">
+        <label>Km de vencimiento</label>
+        <input pInputText type="number" formControlName="kmVence">
+        <small>Si lo dejas vacío, se calcula con km base + km cubiertos.</small>
+      </div>
+
+      <div class="field span-3">
+        <label>Estado</label>
+        <select formControlName="estadoGarantia">
+          <option *ngFor="let item of estadosGarantia" [value]="item">{{ item }}</option>
+        </select>
+      </div>
+
+      <div class="field span-12 helperCard">
+        <strong>Previsualización de vencimiento</strong>
+        <span>Fecha estimada: {{ formatDate(garantiaVencimientoPreview().fecha) }} · Km estimado: {{ garantiaVencimientoPreview().km }}</span>
+      </div>
+
+      <div class="field span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="dialogFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar"
+        (click)="garantiaDialogVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Guardar garantía" [loading]="saving()"
+        (click)="saveGarantia()"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [style]="{ width: 'min(980px, 96vw)' }" [visible]="coberturaDialogVisible()"
+  (visibleChange)="coberturaDialogVisible.set($event)">
+  <ng-template pTemplate="header">
+    <div class="dialogHeader">
+      <div>
+        <h4>{{ editingDetalleId() ? 'Editar cobertura' : 'Nueva cobertura' }}</h4>
+        <p>Indica si la garantía cubre mano de obra, repuesto o ambos.</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <form [formGroup]="coberturaForm" class="dialogForm">
+    <div class="formGrid">
+      <div class="field span-4">
+        <label>Qué cubre</label>
+        <select formControlName="tipoCobertura">
+          <option *ngFor="let item of tiposCobertura" [value]="item">{{ item }}</option>
+        </select>
+      </div>
+
+      <div class="field span-8" *ngIf="isTrabajoCoverage(coberturaForm.controls.tipoCobertura.value)">
+        <label>Trabajo cubierto</label>
+        <select formControlName="idVehOrdenTrabajoTrabajoFk">
+          <option [ngValue]="null">Selecciona un trabajo</option>
+          <option *ngFor="let item of trabajoOptions()" [ngValue]="item.id">{{ item.label }}</option>
+        </select>
+        <small>{{ selectedTrabajoLabel() }}</small>
+      </div>
+
+      <div class="field span-8" *ngIf="isRepuestoCoverage(coberturaForm.controls.tipoCobertura.value)">
+        <label>Artículo / repuesto cubierto</label>
+        <select formControlName="art">
+          <option [ngValue]="null">Selecciona un repuesto</option>
+          <option *ngFor="let item of articuloOptions()" [ngValue]="item.art">{{ item.label }}</option>
+        </select>
+        <small>{{ selectedArticuloLabel() }}</small>
+      </div>
+
+      <div class="field span-3 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="cubreManoObra">
+          Cubre mano de obra
+        </label>
+      </div>
+
+      <div class="field span-3 checkboxField">
+        <label class="checkboxLabel">
+          <input type="checkbox" formControlName="cubreRepuesto">
+          Cubre repuesto
+        </label>
+      </div>
+
+      <div class="field span-3">
+        <label>Cantidad máxima</label>
+        <input pInputText type="number" formControlName="cantidadMaxima">
+      </div>
+
+      <div class="field span-3">
+        <label>Monto máximo</label>
+        <input pInputText type="number" formControlName="montoMaximo">
+      </div>
+
+      <div class="field span-6" *ngIf="shouldShowSeries(coberturaForm.controls.tipoCobertura.value)">
+        <label>Serie retirada</label>
+        <input pInputText formControlName="serieAnterior" placeholder="Solo para repuestos serializados">
+      </div>
+
+      <div class="field span-6" *ngIf="shouldShowSeries(coberturaForm.controls.tipoCobertura.value)">
+        <label>Serie instalada</label>
+        <input pInputText formControlName="serieNueva" placeholder="Solo para repuestos serializados">
+      </div>
+
+      <div class="field span-12 helperCard">
+        <strong>Consejo</strong>
+        <span>Usa “Trabajo” para garantías de mano de obra y “Repuesto” cuando la cobertura aplica a una pieza instalada.</span>
+      </div>
+
+      <div class="field span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="dialogFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar"
+        (click)="coberturaDialogVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Guardar cobertura" [loading]="saving()"
+        (click)="saveCobertura()"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
+  [style]="{ width: 'min(980px, 96vw)' }" [visible]="reclamoDialogVisible()"
+  (visibleChange)="reclamoDialogVisible.set($event)">
+  <ng-template pTemplate="header">
+    <div class="dialogHeader">
+      <div>
+        <h4>{{ editingMovimientoId() ? 'Editar reclamo / movimiento' : 'Registrar reclamo / movimiento' }}</h4>
+        <p>Documenta el retorno del cliente, el diagnóstico y quién absorbió el costo.</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <form [formGroup]="reclamoForm" class="dialogForm">
+    <div class="formGrid">
+      <div class="field span-4">
+        <label>OT de atención por garantía</label>
+        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk" placeholder="Opcional">
+        <small>Si generaste una OT para atender el reclamo, coloca aquí su número.</small>
+      </div>
+
+      <div class="field span-4">
+        <label>Fecha del reclamo</label>
+        <input pInputText type="date" formControlName="fechaReclamo">
+      </div>
+
+      <div class="field span-4">
+        <label>Kilometraje al reclamar</label>
+        <input pInputText type="number" formControlName="kmReclamo">
+      </div>
+
+      <div class="field span-4">
+        <label>Resultado</label>
+        <select formControlName="resultado">
+          <option *ngFor="let item of resultadosMovimiento" [value]="item">{{ item }}</option>
+        </select>
+      </div>
+
+      <div class="field span-8" *ngIf="shouldShowMotivoRechazo()">
+        <label>Motivo de rechazo</label>
+        <input pInputText formControlName="motivoRechazo" placeholder="Explica por qué se rechaza el reclamo">
+      </div>
+
+      <div class="field span-12">
+        <label>Diagnóstico <span class="requiredMark">*</span></label>
+        <textarea pTextarea rows="4" formControlName="diagnostico"></textarea>
+      </div>
+
+      <div class="field span-4">
+        <label>Valor asumido por cliente</label>
+        <input pInputText type="number" formControlName="valorCliente">
+      </div>
+
+      <div class="field span-4">
+        <label>Valor asumido por taller</label>
+        <input pInputText type="number" formControlName="valorTaller">
+      </div>
+
+      <div class="field span-4">
+        <label>Valor asumido por proveedor</label>
+        <input pInputText type="number" formControlName="valorProveedor">
+      </div>
+
+      <div class="field span-12 helperCard">
+        <strong>Regla sugerida</strong>
+        <span>Si el caso fue cubierto completamente por garantía, normalmente el valor cliente debe quedar en cero.</span>
+      </div>
+
+      <div class="field span-12">
+        <label>Observaciones</label>
+        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="dialogFooter">
+      <button pButton type="button" severity="secondary" [text]="true" label="Cancelar"
+        (click)="reclamoDialogVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" label="Guardar reclamo" [loading]="saving()"
+        (click)="saveReclamo()"></button>
+    </div>
+  </ng-template>
+</p-dialog>
