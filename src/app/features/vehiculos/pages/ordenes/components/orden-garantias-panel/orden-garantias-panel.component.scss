@@ -1,3 +1,4 @@
+
 :host {
   display: block;
   min-width: 0;
@@ -44,7 +45,9 @@
   color: #64748b;
 }
 
-.heroActions {
+.heroActions,
+.footerLeft,
+.footerRight {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
@@ -92,17 +95,9 @@
   line-height: 1.25;
 }
 
-.summaryCard--success {
-  background: #f0fdf4;
-}
-
-.summaryCard--neutral {
-  background: #f8fafc;
-}
-
-.summaryCard--warn {
-  background: #fff7ed;
-}
+.summaryCard--success { background: #f0fdf4; }
+.summaryCard--neutral { background: #f8fafc; }
+.summaryCard--warn { background: #fff7ed; }
 
 .garantiasGrid {
   display: grid;
@@ -219,6 +214,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.kvItem--wide {
+  grid-column: span 2;
+}
+
 .metric,
 .kvItem {
   display: grid;
@@ -306,8 +305,21 @@
   background: #fff7ed;
 }
 
+.helperCard--info {
+  background: #eff6ff;
+}
+
 .requiredMark {
   color: #b42318;
+}
+
+.dialogFooter {
+  justify-content: space-between;
+}
+
+.dialogFooter--spread {
+  width: 100%;
+  justify-content: space-between;
 }
 
 .span-12 { grid-column: span 12; }
@@ -330,6 +342,10 @@
   .kvGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .kvItem--wide {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 760px) {
@@ -347,7 +363,9 @@
   .heroActions,
   .actionWrap,
   .dialogFooter,
-  .cardActions {
+  .cardActions,
+  .footerLeft,
+  .footerRight {
     justify-content: stretch;
   }
 
@@ -357,6 +375,10 @@
   .span-4,
   .span-3,
   .span-2 {
+    grid-column: span 12;
+  }
+
+  .kvItem--wide {
     grid-column: span 12;
   }
 }

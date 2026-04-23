@@ -604,8 +604,9 @@
     <app-orden-garantias-panel [orden]="orden" [garantias]="garantias" [selectedGarantia]="selectedGarantia"
       [garantiaDetalles]="garantiaDetalles" [garantiaMovimientos]="garantiaMovimientos"
       [trabajoLabelMap]="trabajoLabelMap" [articuloLabelMap]="articuloLabelMap" [readonlyMode]="readonlyMode"
-      (selectGarantia)="selectGarantia.emit($event)" (openGarantia)="openGarantia.emit()"
-      (openGarantiaDetalle)="openGarantiaDetalle.emit()" (openGarantiaMovimiento)="openGarantiaMovimiento.emit()">
+      [trabajosOt]="trabajos" [repuestosOt]="repuestos" (selectGarantia)="selectGarantia.emit($event)"
+      (openGarantia)="openGarantia.emit()" (openGarantiaDetalle)="openGarantiaDetalle.emit()"
+      (openGarantiaMovimiento)="openGarantiaMovimiento.emit()">
     </app-orden-garantias-panel>
   </section>
 </ng-container>

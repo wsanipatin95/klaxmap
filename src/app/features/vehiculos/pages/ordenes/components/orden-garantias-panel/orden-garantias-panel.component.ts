@@ -1,12 +1,13 @@
+
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { finalize } from 'rxjs/operators';
 import {
   VehGarantia,
   VehGarantiaDetalle,
@@ -18,6 +19,9 @@ import {
   VehGarantiaMovimientoEditarRequest,
   VehGarantiaMovimientoGuardarRequest,
   VehOrdenTrabajo,
+  VehOrdenTrabajoGuardarRequest,
+  VehOrdenTrabajoRepuesto,
+  VehOrdenTrabajoTrabajo,
 } from '../../../../data-access/vehiculos.models';
 import { VehiculosRepository } from '../../../../data-access/vehiculos.repository';
 import { VehiculosEmptyStateComponent } from '../../../../components/empty-state/empty-state.component';
@@ -57,6 +61,10 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   @Input() trabajoLabelMap: Record<number, string> = {};
   @Input() articuloLabelMap: Record<number, string> = {};
   @Input() readonlyMode = false;
+
+  // Nuevos inputs para un flujo guiado y autollenado
+  @Input() trabajosOt: VehOrdenTrabajoTrabajo[] = [];
+  @Input() repuestosOt: VehOrdenTrabajoRepuesto[] = [];
 
   // Outputs antiguos, se mantienen para no romper el padre.
   @Output() selectGarantia = new EventEmitter<VehGarantia>();
@@ -105,6 +113,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   readonly coberturaForm = this.fb.group({
     tipoCobertura: this.fb.control<CoverageType>('REPUESTO', { nonNullable: true, validators: [Validators.required] }),
     idVehOrdenTrabajoTrabajoFk: this.fb.control<number | null>(null),
+    idVehOrdenTrabajoRepuestoFk: this.fb.control<number | null>(null),
     art: this.fb.control<number | null>(null),
     cubreManoObra: this.fb.control<boolean>(true, { nonNullable: true }),
     cubreRepuesto: this.fb.control<boolean>(true, { nonNullable: true }),
@@ -128,6 +137,34 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     observaciones: this.fb.control<string>(''),
   });
 
+  readonly creandoOtGarantia = signal(false);
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['garantias'] && this.garantias?.length) {
+      this.garantiasState.set(this.garantias);
+    }
+    if (changes['garantiaDetalles'] && this.garantiaDetalles?.length) {
+      this.detallesState.set(this.garantiaDetalles);
+    }
+    if (changes['garantiaMovimientos'] && this.garantiaMovimientos?.length) {
+      this.movimientosState.set(this.garantiaMovimientos);
+    }
+    if (changes['selectedGarantia'] && this.selectedGarantia) {
+      this.selectedGarantiaState.set(this.selectedGarantia);
+    }
+
+    if (changes['orden']) {
+      const order = this.orden;
+      if (!order?.idVehOrdenTrabajo) {
+        this.garantiasState.set([]);
+        this.selectedGarantiaState.set(null);
+        this.detallesState.set([]);
+        this.movimientosState.set([]);
+        return;
+      }
+      this.loadGarantias(order.idVehOrdenTrabajo);
+    }
+  }
 
   selectedGarantiaView(): VehGarantia | null {
     return this.selectedGarantiaState() ?? this.selectedGarantia ?? null;
@@ -149,16 +186,46 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   }
 
   trabajoOptions(): Array<{ id: number; label: string }> {
+    const fromRows = (this.trabajosOt ?? []).map((item) => ({
+      id: item.idVehOrdenTrabajoTrabajo,
+      label: this.buildTrabajoLabel(item),
+    }));
+
+    if (fromRows.length) return fromRows;
+
     return Object.entries(this.trabajoLabelMap || {})
       .map(([id, label]) => ({ id: Number(id), label }))
       .filter((item) => Number.isFinite(item.id))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
 
+  repuestoOtOptions(): Array<{ id: number; label: string; art: number | null; serieAnterior: string; serieNueva: string }> {
+    return (this.repuestosOt ?? []).map((item) => ({
+      id: item.idVehOrdenTrabajoRepuesto,
+      label: this.buildRepuestoLabel(item),
+      art: item.art ?? null,
+      serieAnterior: item.serieAnterior || '',
+      serieNueva: item.serieNueva || '',
+    }));
+  }
+
   articuloOptions(): Array<{ art: number; label: string }> {
-    return Object.entries(this.articuloLabelMap || {})
-      .map(([art, label]) => ({ art: Number(art), label }))
-      .filter((item) => Number.isFinite(item.art))
+    const fromRows = (this.repuestosOt ?? [])
+      .filter((item) => !!item.art)
+      .map((item) => ({
+        art: Number(item.art),
+        label: this.buildRepuestoLabel(item),
+      }));
+
+    const merged = new Map<number, string>();
+    for (const item of fromRows) merged.set(item.art, item.label);
+    for (const [art, label] of Object.entries(this.articuloLabelMap || {})) {
+      const parsed = Number(art);
+      if (Number.isFinite(parsed) && !merged.has(parsed)) merged.set(parsed, label);
+    }
+
+    return Array.from(merged.entries())
+      .map(([art, label]) => ({ art, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
 
@@ -184,35 +251,6 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       fecha: this.computeFechaVence(fechaBase, dias, meses),
       km: kmBase + kmGarantia,
     };
-  }
-
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['garantias'] && !this.garantiasState().length && this.garantias?.length) {
-      this.garantiasState.set(this.garantias);
-    }
-    if (changes['garantiaDetalles'] && !this.detallesState().length && this.garantiaDetalles?.length) {
-      this.detallesState.set(this.garantiaDetalles);
-    }
-    if (changes['garantiaMovimientos'] && !this.movimientosState().length && this.garantiaMovimientos?.length) {
-      this.movimientosState.set(this.garantiaMovimientos);
-    }
-    if (changes['selectedGarantia'] && this.selectedGarantia) {
-      this.selectedGarantiaState.set(this.selectedGarantia);
-    }
-
-    if (changes['orden']) {
-      const order = this.orden;
-      if (!order?.idVehOrdenTrabajo) {
-        this.garantiasState.set([]);
-        this.selectedGarantiaState.set(null);
-        this.detallesState.set([]);
-        this.movimientosState.set([]);
-        return;
-      }
-
-      this.loadGarantias(order.idVehOrdenTrabajo);
-    }
   }
 
   estadoSeverity(estado?: string | null) {
@@ -274,12 +312,16 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   }
 
   detalleLabel(item: VehGarantiaDetalle): string {
-    if (item.idVehOrdenTrabajoTrabajoFk && this.trabajoLabelMap[item.idVehOrdenTrabajoTrabajoFk]) {
-      return this.trabajoLabelMap[item.idVehOrdenTrabajoTrabajoFk];
+    if (item.idVehOrdenTrabajoTrabajoFk) {
+      const trabajo = (this.trabajosOt ?? []).find((x) => x.idVehOrdenTrabajoTrabajo === item.idVehOrdenTrabajoTrabajoFk);
+      if (trabajo) return this.buildTrabajoLabel(trabajo);
+      if (this.trabajoLabelMap[item.idVehOrdenTrabajoTrabajoFk]) return this.trabajoLabelMap[item.idVehOrdenTrabajoTrabajoFk];
     }
-    if (item.art && this.articuloLabelMap[item.art]) {
-      return this.articuloLabelMap[item.art];
+    if (item.idVehOrdenTrabajoRepuestoFk) {
+      const repuesto = (this.repuestosOt ?? []).find((x) => x.idVehOrdenTrabajoRepuesto === item.idVehOrdenTrabajoRepuestoFk);
+      if (repuesto) return this.buildRepuestoLabel(repuesto);
     }
+    if (item.art && this.articuloLabelMap[item.art]) return this.articuloLabelMap[item.art];
     if (this.isRepuestoCoverage(item.tipoCobertura)) return 'Repuesto cubierto';
     if (this.isTrabajoCoverage(item.tipoCobertura)) return 'Trabajo cubierto';
     return item.tipoCobertura || 'Cobertura';
@@ -312,8 +354,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   }
 
   isTrabajoCoverage(tipo?: string | null): boolean {
-    const value = String(tipo || '').toUpperCase();
-    return value === 'TRABAJO';
+    return String(tipo || '').toUpperCase() === 'TRABAJO';
   }
 
   isRepuestoCoverage(tipo?: string | null): boolean {
@@ -332,13 +373,37 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   selectedTrabajoLabel(): string {
     const id = this.coberturaForm.controls.idVehOrdenTrabajoTrabajoFk.value;
     if (!id) return 'Selecciona un trabajo cubierto';
-    return this.trabajoLabelMap[id] || `Trabajo OT #${id}`;
+    const trabajo = (this.trabajosOt ?? []).find((x) => x.idVehOrdenTrabajoTrabajo === id);
+    return trabajo ? this.buildTrabajoLabel(trabajo) : (this.trabajoLabelMap[id] || `Trabajo OT #${id}`);
   }
 
   selectedArticuloLabel(): string {
+    const idRepuesto = this.coberturaForm.controls.idVehOrdenTrabajoRepuestoFk.value;
+    if (idRepuesto) {
+      const repuesto = (this.repuestosOt ?? []).find((x) => x.idVehOrdenTrabajoRepuesto === idRepuesto);
+      if (repuesto) return this.buildRepuestoLabel(repuesto);
+    }
     const art = this.coberturaForm.controls.art.value;
     if (!art) return 'Selecciona el artículo o repuesto cubierto';
     return this.articuloLabelMap[art] || `Artículo #${art}`;
+  }
+
+  onRepuestoOtChange(): void {
+    const idRepuesto = this.coberturaForm.controls.idVehOrdenTrabajoRepuestoFk.value;
+    const repuesto = (this.repuestosOt ?? []).find((x) => x.idVehOrdenTrabajoRepuesto === idRepuesto);
+    if (!repuesto) return;
+    this.coberturaForm.patchValue({
+      art: repuesto.art ?? null,
+      serieAnterior: repuesto.serieAnterior || '',
+      serieNueva: repuesto.serieNueva || '',
+      cubreRepuesto: true,
+    });
+  }
+
+  selectGarantiaCard(item: VehGarantia): void {
+    this.selectedGarantiaState.set(item);
+    this.selectGarantia.emit(item);
+    this.loadSelectedGarantiaDetail(item.idVehGarantia);
   }
 
   openNuevaGarantia(): void {
@@ -388,6 +453,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     this.coberturaForm.reset({
       tipoCobertura: 'REPUESTO',
       idVehOrdenTrabajoTrabajoFk: null,
+      idVehOrdenTrabajoRepuestoFk: null,
       art: null,
       cubreManoObra: true,
       cubreRepuesto: true,
@@ -406,6 +472,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     this.coberturaForm.reset({
       tipoCobertura: (String(item.tipoCobertura || 'REPUESTO').toUpperCase() as CoverageType),
       idVehOrdenTrabajoTrabajoFk: item.idVehOrdenTrabajoTrabajoFk ?? null,
+      idVehOrdenTrabajoRepuestoFk: item.idVehOrdenTrabajoRepuestoFk ?? null,
       art: item.art ?? null,
       cubreManoObra: this.toBool(item.cubreManoObra),
       cubreRepuesto: this.toBool(item.cubreRepuesto),
@@ -425,7 +492,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     this.reclamoForm.reset({
       idVehOrdenTrabajoFk: garantia.idVehOrdenTrabajoReclamoFk ?? null,
       fechaReclamo: this.todayIso(),
-      kmReclamo: Number(garantia.kmBase || 0),
+      kmReclamo: Number(garantia.kmBase || this.orden?.kilometrajeIngreso || 0),
       diagnostico: '',
       resultado: 'PENDIENTE',
       valorCliente: 0,
@@ -482,6 +549,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       estadoGarantia: raw.estadoGarantia,
       responsableCosto: raw.responsableCosto,
       observaciones: raw.observaciones?.trim() || null,
+      atributos: null,
     };
 
     const editingId = this.editingGarantiaId();
@@ -521,8 +589,8 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       return;
     }
 
-    if (isRepuesto && !raw.art) {
-      this.notify.warn('Selecciona un repuesto', 'Elige el artículo o repuesto cubierto por esta garantía.');
+    if (isRepuesto && !raw.idVehOrdenTrabajoRepuestoFk && !raw.art) {
+      this.notify.warn('Selecciona un repuesto', 'Elige el repuesto de la OT o el artículo cubierto por esta garantía.');
       return;
     }
 
@@ -530,8 +598,8 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       idVehGarantiaFk: garantia.idVehGarantia,
       tipoCobertura: raw.tipoCobertura,
       idVehOrdenTrabajoTrabajoFk: isTrabajo ? raw.idVehOrdenTrabajoTrabajoFk : null,
-      idVehOrdenTrabajoRepuestoFk: null,
-      art: isRepuesto ? raw.art : null,
+      idVehOrdenTrabajoRepuestoFk: isRepuesto ? raw.idVehOrdenTrabajoRepuestoFk : null,
+      art: isRepuesto ? (raw.art ?? null) : null,
       cubreManoObra: raw.cubreManoObra ? 1 : 0,
       cubreRepuesto: raw.cubreRepuesto ? 1 : 0,
       montoMaximo: Number(raw.montoMaximo || 0),
@@ -539,6 +607,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       serieAnterior: this.shouldShowSeries(raw.tipoCobertura) ? raw.serieAnterior?.trim() || null : null,
       serieNueva: this.shouldShowSeries(raw.tipoCobertura) ? raw.serieNueva?.trim() || null : null,
       observaciones: raw.observaciones?.trim() || null,
+      atributos: null,
     };
 
     const editingId = this.editingDetalleId();
@@ -582,6 +651,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       valorProveedor: Number(raw.valorProveedor || 0),
       motivoRechazo: raw.resultado === 'RECHAZADO' ? raw.motivoRechazo?.trim() || null : null,
       observaciones: raw.observaciones?.trim() || null,
+      atributos: null,
     };
 
     const editingId = this.editingMovimientoId();
@@ -595,12 +665,82 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     this.saving.set(true);
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
+        const estadoSugerido = this.mapResultadoToGarantiaEstado(raw.resultado);
+        this.syncGarantiaAfterMovimiento(garantia, raw.idVehOrdenTrabajoFk ?? null, estadoSugerido);
         this.notify.success(editingId ? 'Reclamo actualizado' : 'Reclamo registrado', 'El movimiento quedó guardado en el historial de la garantía.');
         this.reclamoDialogVisible.set(false);
         this.loadSelectedGarantiaDetail(garantia.idVehGarantia);
       },
       error: (err) => this.notify.error('No se pudo guardar el reclamo', err?.message),
     });
+  }
+
+  createOtGarantiaFromDialog(): void {
+    const orden = this.orden;
+    const garantia = this.selectedGarantiaView();
+    if (!orden || !garantia || this.readonlyMode) return;
+
+    const raw = this.reclamoForm.getRawValue();
+    const km = Number(raw.kmReclamo || orden.kilometrajeIngreso || 0);
+
+    const payload: VehOrdenTrabajoGuardarRequest = {
+      dni: orden.dni,
+      idCliVehiculoFk: orden.idCliVehiculoFk,
+      tipoServicio: 'GARANTIA',
+      estadoOrden: 'RECIBIDO',
+      fechaIngreso: this.toTimestamp(raw.fechaReclamo || this.todayIso()),
+      fechaPrometida: null,
+      kilometrajeIngreso: km,
+      nivelCombustible: orden.nivelCombustible || null,
+      nivelBateria: orden.nivelBateria || null,
+      fallaReportada: `RECLAMO DE GARANTIA #${garantia.idVehGarantia}`,
+      sintomasReportados: orden.sintomasReportados || null,
+      ruidosReportados: orden.ruidosReportados || null,
+      detalleCliente: raw.diagnostico?.trim() || `Atención por garantía de la OT #${orden.idVehOrdenTrabajo}`,
+      accesoriosEntregados: orden.accesoriosEntregados || null,
+      condicionIngreso: orden.condicionIngreso || null,
+      diagnosticoGeneral: `Atención de reclamo de garantía asociado a la OT #${orden.idVehOrdenTrabajo}`,
+      recomendacionGeneral: orden.recomendacionGeneral || null,
+      responsableRecepcion: orden.responsableRecepcion ?? null,
+      responsableTecnico: orden.responsableTecnico ?? null,
+      observaciones: [
+        `OT origen: #${orden.idVehOrdenTrabajo}`,
+        `Garantía: #${garantia.idVehGarantia}`,
+        raw.observaciones?.trim() || '',
+      ].filter(Boolean).join(' · '),
+      atributos: {
+        garantia: {
+          idVehGarantiaFk: garantia.idVehGarantia,
+          idVehOrdenTrabajoOrigenFk: orden.idVehOrdenTrabajo,
+          tipoGarantia: garantia.tipoGarantia || null,
+          modalidadVencimiento: garantia.modalidadVencimiento || null,
+          generadoDesdePanel: true,
+        },
+      },
+    };
+
+    this.creandoOtGarantia.set(true);
+    this.repo.crearOrden(payload)
+      .pipe(finalize(() => this.creandoOtGarantia.set(false)))
+      .subscribe({
+        next: (res: any) => {
+          const idOt = this.extractNumericId(res?.data, [
+            'idVehOrdenTrabajo',
+            'id_veh_orden_trabajo',
+            'id',
+          ]);
+
+          if (idOt) {
+            this.reclamoForm.patchValue({ idVehOrdenTrabajoFk: idOt });
+            this.syncGarantiaAfterMovimiento(garantia, idOt, 'RECLAMADA');
+            this.notify.success('OT de garantía creada', `Se generó la OT #${idOt} y quedó vinculada al reclamo.`);
+            return;
+          }
+
+          this.notify.success('OT de garantía creada', 'Se creó la OT de garantía. Revisa el listado de órdenes y vincúlala manualmente si no ves el número aquí.');
+        },
+        error: (err) => this.notify.error('No se pudo crear la OT de garantía', err?.message),
+      });
   }
 
   deleteGarantia(item: VehGarantia): void {
@@ -653,144 +793,136 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.notify.success('Movimiento eliminado', 'El evento fue retirado del historial de garantía.');
+          this.notify.success('Reclamo eliminado', 'El movimiento fue retirado del historial.');
           this.loadSelectedGarantiaDetail(garantia.idVehGarantia);
         },
-        error: (err) => this.notify.error('No se pudo eliminar el movimiento', err?.message),
+        error: (err) => this.notify.error('No se pudo eliminar el reclamo', err?.message),
       });
   }
 
-  printGarantia(item?: VehGarantia | null): void {
-    const garantia = item || this.selectedGarantiaView();
-    if (!garantia) return;
+  printGarantia(item: VehGarantia): void {
+    const detalles = this.selectedGarantiaView()?.idVehGarantia === item.idVehGarantia ? this.detallesView() : [];
+    const movimientos = this.selectedGarantiaView()?.idVehGarantia === item.idVehGarantia ? this.movimientosView() : [];
 
-    const popup = window.open('', '_blank', 'width=960,height=720');
-    if (!popup) {
-      this.notify.warn('No se pudo abrir la impresión', 'Permite ventanas emergentes para imprimir el resumen.');
-      return;
-    }
-
-    const detalles = this.detallesView()
-      .map((d) => `
-        <tr>
-          <td>${this.escapeHtml(this.detalleLabel(d))}</td>
-          <td>${this.escapeHtml(this.detalleSubLabel(d))}</td>
-          <td>${this.escapeHtml(this.coberturaBadge(d))}</td>
-          <td>${this.money(d.montoMaximo)}</td>
-          <td>${Number(d.cantidadMaxima || 0)}</td>
-        </tr>`)
-      .join('');
-
-    const movimientos = this.movimientosView()
-      .map((m) => `
-        <tr>
-          <td>${this.escapeHtml(this.formatDate(m.fechaReclamo))}</td>
-          <td>${Number(m.kmReclamo || 0)}</td>
-          <td>${this.escapeHtml(m.resultado || 'PENDIENTE')}</td>
-          <td>${this.escapeHtml(m.diagnostico || '-')}</td>
-          <td>${this.money(m.valorCliente)} / ${this.money(m.valorTaller)} / ${this.money(m.valorProveedor)}</td>
-        </tr>`)
-      .join('');
-
-    popup.document.write(`
+    const html = `
       <html>
         <head>
-          <title>Garantía #${garantia.idVehGarantia}</title>
+          <title>Garantía #${item.idVehGarantia}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 24px; color: #1f2937; }
-            h1, h2 { margin: 0 0 12px; }
-            .meta { margin-bottom: 16px; }
-            .meta strong { display: inline-block; min-width: 160px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-            th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
-            th { background: #f3f4f6; }
-            .section { margin-top: 28px; }
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+            h1,h2,h3 { margin: 0 0 8px; }
+            .meta, .block { margin-bottom: 18px; }
+            .chip { display:inline-block; padding:4px 10px; border:1px solid #d1d5db; border-radius:999px; margin-right:8px; margin-bottom:8px; font-size:12px; }
+            table { width:100%; border-collapse: collapse; margin-top: 8px; }
+            th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; font-size:12px; vertical-align:top; }
+            th { background:#f8fafc; }
+            .muted { color:#6b7280; }
           </style>
         </head>
         <body>
-          <h1>Resumen de garantía #${garantia.idVehGarantia}</h1>
-          <div class="meta"><strong>OT origen:</strong> ${this.orden?.idVehOrdenTrabajo || '-'} </div>
-          <div class="meta"><strong>Tipo:</strong> ${this.escapeHtml(garantia.tipoGarantia || '-')}</div>
-          <div class="meta"><strong>Modalidad:</strong> ${this.escapeHtml(this.modalidadLabel(garantia.modalidadVencimiento))}</div>
-          <div class="meta"><strong>Estado:</strong> ${this.escapeHtml(garantia.estadoGarantia || '-')}</div>
-          <div class="meta"><strong>Responsable:</strong> ${this.escapeHtml(this.responsableLabel(garantia.responsableCosto))}</div>
-          <div class="meta"><strong>Base:</strong> ${this.escapeHtml(this.formatDate(garantia.fechaBase))} · Km ${Number(garantia.kmBase || 0)}</div>
-          <div class="meta"><strong>Vence:</strong> ${this.escapeHtml(this.formatDate(garantia.fechaVence))} · Km ${Number(garantia.kmVence || 0)}</div>
-          <div class="meta"><strong>Observaciones:</strong> ${this.escapeHtml(garantia.observaciones || 'Sin observaciones')}</div>
-
-          <div class="section">
-            <h2>Coberturas</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Elemento</th>
-                  <th>Tipo</th>
-                  <th>Cubre</th>
-                  <th>Monto máximo</th>
-                  <th>Cantidad máxima</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${detalles || '<tr><td colspan="5">Sin coberturas registradas.</td></tr>'}
-              </tbody>
-            </table>
+          <h1>Garantía #${item.idVehGarantia}</h1>
+          <div class="meta">
+            <div class="chip">Tipo: ${item.tipoGarantia || '-'}</div>
+            <div class="chip">Modalidad: ${this.modalidadLabel(item.modalidadVencimiento)}</div>
+            <div class="chip">Estado: ${item.estadoGarantia || '-'}</div>
+            <div class="chip">Responsable: ${this.responsableLabel(item.responsableCosto)}</div>
           </div>
-
-          <div class="section">
-            <h2>Reclamos / movimientos</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Km</th>
-                  <th>Resultado</th>
-                  <th>Diagnóstico</th>
-                  <th>Costos</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${movimientos || '<tr><td colspan="5">Sin movimientos registrados.</td></tr>'}
-              </tbody>
-            </table>
+          <div class="block">
+            <h3>Vigencia</h3>
+            <div>Base: ${this.formatDate(item.fechaBase)} · Km ${item.kmBase || 0}</div>
+            <div>Vence: ${this.formatDate(item.fechaVence)} · Km ${item.kmVence || 0}</div>
+            <div class="muted">Cobertura: ${this.garantiaResumenLabel(item)}</div>
+          </div>
+          <div class="block">
+            <h3>Observaciones</h3>
+            <div>${item.observaciones || 'Sin observaciones'}</div>
+          </div>
+          <div class="block">
+            <h3>Coberturas</h3>
+            ${detalles.length ? `
+              <table>
+                <thead>
+                  <tr><th>Qué cubre</th><th>Detalle</th><th>Monto/Cantidad</th><th>Series</th></tr>
+                </thead>
+                <tbody>
+                  ${detalles.map((d) => `
+                    <tr>
+                      <td>${d.tipoCobertura || '-'}</td>
+                      <td>${this.detalleLabel(d)}<br><span class="muted">${d.observaciones || ''}</span></td>
+                      <td>Monto: ${this.money(d.montoMaximo)}<br>Cantidad: ${d.cantidadMaxima || 0}</td>
+                      <td>Retirada: ${d.serieAnterior || '-'}<br>Instalada: ${d.serieNueva || '-'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : '<div class="muted">Sin coberturas registradas.</div>'}
+          </div>
+          <div class="block">
+            <h3>Reclamos / movimientos</h3>
+            ${movimientos.length ? `
+              <table>
+                <thead>
+                  <tr><th>Resultado</th><th>Fecha / Km</th><th>Diagnóstico</th><th>Costos</th></tr>
+                </thead>
+                <tbody>
+                  ${movimientos.map((m) => `
+                    <tr>
+                      <td>${m.resultado || '-'}</td>
+                      <td>${this.formatDate(m.fechaReclamo)} · Km ${m.kmReclamo || 0}<br>OT: ${m.idVehOrdenTrabajoFk ? '#' + m.idVehOrdenTrabajoFk : '-'}</td>
+                      <td>${m.diagnostico || '-'}<br><span class="muted">${m.motivoRechazo || ''}</span></td>
+                      <td>Cliente: ${this.money(m.valorCliente)}<br>Taller: ${this.money(m.valorTaller)}<br>Proveedor: ${this.money(m.valorProveedor)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : '<div class="muted">Sin movimientos registrados.</div>'}
           </div>
         </body>
       </html>
-    `);
-    popup.document.close();
-    popup.focus();
-    popup.print();
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=1024,height=800');
+    if (!printWindow) {
+      this.notify.warn('No se pudo abrir la impresión', 'Revisa si el navegador está bloqueando ventanas emergentes.');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   }
 
-  selectGarantiaCard(item: VehGarantia): void {
-    this.selectedGarantiaState.set(item);
-    this.selectGarantia.emit(item);
-    this.loadSelectedGarantiaDetail(item.idVehGarantia);
-  }
-
-  private loadGarantias(idVehOrdenTrabajoOrigenFk: number, preferredId?: number): void {
+  private loadGarantias(idVehOrdenTrabajo: number, focusId?: number): void {
     this.loading.set(true);
-    this.repo.listarGarantias({ idVehOrdenTrabajoOrigenFk })
+    this.repo.listarGarantias({ idVehOrdenTrabajoOrigenFk: idVehOrdenTrabajo })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (res) => {
-          const items = res.items ?? [];
-          this.garantiasState.set(items);
+        next: (result) => {
+          const items = (result?.items ?? []) as VehGarantia[];
+          const sorted = [...items].sort((a, b) => Number(b.idVehGarantia || 0) - Number(a.idVehGarantia || 0));
+          this.garantiasState.set(sorted);
 
-          const currentSelected = preferredId
-            ? items.find((x) => x.idVehGarantia === preferredId) || null
-            : this.selectedGarantiaState()
-              ? items.find((x) => x.idVehGarantia === this.selectedGarantiaState()!.idVehGarantia) || null
-              : items[0] || null;
+          const selected = focusId
+            ? sorted.find((x) => x.idVehGarantia === focusId) ?? null
+            : this.resolveSelectedGarantia(sorted);
 
-          this.selectedGarantiaState.set(currentSelected);
-          if (currentSelected) {
-            this.loadSelectedGarantiaDetail(currentSelected.idVehGarantia);
+          this.selectedGarantiaState.set(selected);
+          if (selected) {
+            this.selectGarantia.emit(selected);
+            this.loadSelectedGarantiaDetail(selected.idVehGarantia);
           } else {
             this.detallesState.set([]);
             this.movimientosState.set([]);
           }
         },
-        error: (err) => this.notify.error('No se pudieron cargar las garantías', err?.message),
+        error: (err) => {
+          this.garantiasState.set([]);
+          this.selectedGarantiaState.set(null);
+          this.detallesState.set([]);
+          this.movimientosState.set([]);
+          this.notify.error('No se pudieron cargar las garantías', err?.message);
+        },
       });
   }
 
@@ -799,32 +931,108 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     this.repo.listarGarantiaDetalles({ idVehGarantiaFk: idVehGarantia })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (det) => {
-          this.detallesState.set(det.items ?? []);
+        next: (detalleResult) => {
+          this.detallesState.set((detalleResult?.items ?? []) as VehGarantiaDetalle[]);
         },
-        error: (err) => this.notify.error('No se pudo cargar la cobertura', err?.message),
+        error: (err) => {
+          this.detallesState.set([]);
+          this.notify.error('No se pudieron cargar las coberturas', err?.message);
+        },
       });
 
-    this.repo.listarGarantiaMovimientos({ idVehGarantiaFk: idVehGarantia }).subscribe({
-      next: (mov) => this.movimientosState.set(mov.items ?? []),
-      error: (err) => this.notify.error('No se pudo cargar el historial del reclamo', err?.message),
+    this.repo.listarGarantiaMovimientos({ idVehGarantiaFk: idVehGarantia })
+      .subscribe({
+        next: (movResult) => {
+          const items = ((movResult?.items ?? []) as VehGarantiaMovimiento[]).sort((a, b) =>
+            Number(b.idVehGarantiaMovimiento || 0) - Number(a.idVehGarantiaMovimiento || 0),
+          );
+          this.movimientosState.set(items);
+        },
+        error: (err) => {
+          this.movimientosState.set([]);
+          this.notify.error('No se pudieron cargar los reclamos', err?.message);
+        },
+      });
+  }
+
+  private syncGarantiaAfterMovimiento(garantia: VehGarantia, idVehOrdenTrabajoFk: number | null, estadoGarantia: string): void {
+    const cambios: Partial<VehGarantiaGuardarRequest> = {
+      idVehOrdenTrabajoReclamoFk: idVehOrdenTrabajoFk,
+      estadoGarantia,
+    };
+    this.repo.editarGarantia({
+      idVehGarantia: garantia.idVehGarantia,
+      cambios,
+    } as VehGarantiaEditarRequest).subscribe({
+      next: () => {
+        const updated: VehGarantia = {
+          ...garantia,
+          idVehOrdenTrabajoReclamoFk: idVehOrdenTrabajoFk,
+          estadoGarantia,
+        };
+        this.selectedGarantiaState.set(updated);
+        this.garantiasState.update((items) => items.map((x) => x.idVehGarantia === updated.idVehGarantia ? updated : x));
+      },
+      error: () => void 0,
     });
+  }
+
+  private resolveSelectedGarantia(items: VehGarantia[]): VehGarantia | null {
+    const current = this.selectedGarantiaState() ?? this.selectedGarantia ?? null;
+    if (!current) return items[0] ?? null;
+    return items.find((x) => x.idVehGarantia === current.idVehGarantia) ?? items[0] ?? null;
+  }
+
+  private mapResultadoToGarantiaEstado(resultado: ResultadoMovimiento): string {
+    if (resultado === 'APROBADO') return 'APROBADA';
+    if (resultado === 'RECHAZADO') return 'RECHAZADA';
+    if (resultado === 'PARCIAL') return 'RECLAMADA';
+    return 'RECLAMADA';
+  }
+
+  private buildTrabajoLabel(item: VehOrdenTrabajoTrabajo): string {
+    return [
+      item.tipoTrabajo || 'TRABAJO',
+      item.descripcionInicial || item.descripcionRealizada || item.resultado || '',
+    ].filter(Boolean).join(' · ');
+  }
+
+  private buildRepuestoLabel(item: VehOrdenTrabajoRepuesto): string {
+    return [
+      item.artcod || (item.art ? `ART-${item.art}` : ''),
+      item.articulo || '',
+      item.detalleInstalacion || item.motivoCambio || '',
+    ].filter(Boolean).join(' · ');
   }
 
   private computeFechaVence(fechaBase: string | null, dias: number, meses: number): string | null {
     if (!fechaBase) return null;
-    const base = new Date(`${fechaBase}T00:00:00`);
-    if (Number.isNaN(base.getTime())) return null;
-    const dt = new Date(base);
-    if (meses > 0) dt.setMonth(dt.getMonth() + meses);
-    if (dias > 0) dt.setDate(dt.getDate() + dias);
-    return dt.toISOString().slice(0, 10);
+    const safe = fechaBase.includes('T') ? fechaBase : `${fechaBase}T00:00:00`;
+    const date = new Date(safe);
+    if (Number.isNaN(date.getTime())) return null;
+    if (meses) date.setMonth(date.getMonth() + meses);
+    if (dias) date.setDate(date.getDate() + dias);
+    return this.toInputDate(date.toISOString());
   }
 
-  private toTimestamp(value?: string | null): string | null {
-    if (!value) return null;
-    if (value.includes('T')) return value;
-    return `${value}T00:00:00-05:00`;
+  private extractNumericId(data: unknown, keys: string[]): number | null {
+    if (!data || typeof data !== 'object') return null;
+    const record = data as Record<string, unknown>;
+
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) return Number(value);
+    }
+
+    for (const value of Object.values(record)) {
+      if (value && typeof value === 'object') {
+        const nested = this.extractNumericId(value, keys);
+        if (nested) return nested;
+      }
+    }
+
+    return null;
   }
 
   private toInputDate(value?: string | null): string {
@@ -832,16 +1040,15 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     return String(value).slice(0, 10);
   }
 
-  private todayIso(): string {
-    return new Date().toISOString().slice(0, 10);
+  private toTimestamp(value?: string | null): string | null {
+    if (!value) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    if (text.includes('T')) return text;
+    return `${text}T00:00:00`;
   }
 
-  private escapeHtml(value: string): string {
-    return String(value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+  private todayIso(): string {
+    return new Date().toISOString().slice(0, 10);
   }
 }
