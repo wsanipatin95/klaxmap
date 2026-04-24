@@ -1,4 +1,3 @@
-
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -52,8 +51,6 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   private readonly fb = inject(FormBuilder);
 
   @Input() orden: VehOrdenTrabajo | null = null;
-
-  // Compatibilidad con el panel anterior
   @Input() garantias: VehGarantia[] = [];
   @Input() selectedGarantia: VehGarantia | null = null;
   @Input() garantiaDetalles: VehGarantiaDetalle[] = [];
@@ -61,12 +58,9 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   @Input() trabajoLabelMap: Record<number, string> = {};
   @Input() articuloLabelMap: Record<number, string> = {};
   @Input() readonlyMode = false;
-
-  // Nuevos inputs para un flujo guiado y autollenado
   @Input() trabajosOt: VehOrdenTrabajoTrabajo[] = [];
   @Input() repuestosOt: VehOrdenTrabajoRepuesto[] = [];
 
-  // Outputs antiguos, se mantienen para no romper el padre.
   @Output() selectGarantia = new EventEmitter<VehGarantia>();
   @Output() openGarantia = new EventEmitter<void>();
   @Output() openGarantiaDetalle = new EventEmitter<void>();
@@ -87,6 +81,8 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   readonly editingGarantiaId = signal<number | null>(null);
   readonly editingDetalleId = signal<number | null>(null);
   readonly editingMovimientoId = signal<number | null>(null);
+  readonly creandoOtGarantia = signal(false);
+  readonly otGarantiaPendienteGuardar = signal<number | null>(null);
 
   readonly tiposGarantia = ['MANO_OBRA', 'REPUESTO', 'MIXTA'];
   readonly modalidadesGarantia = ['TIEMPO', 'KM', 'TIEMPO_O_KM'];
@@ -137,8 +133,6 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     observaciones: this.fb.control<string>(''),
   });
 
-  readonly creandoOtGarantia = signal(false);
-
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['garantias'] && this.garantias?.length) {
       this.garantiasState.set(this.garantias);
@@ -155,6 +149,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
 
     if (changes['orden']) {
       const order = this.orden;
+      this.resetReclamoTransientState();
       if (!order?.idVehOrdenTrabajo) {
         this.garantiasState.set([]);
         this.selectedGarantiaState.set(null);
@@ -370,6 +365,37 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     return this.reclamoForm.controls.resultado.value === 'RECHAZADO';
   }
 
+  shouldRequireOtAtencion(): boolean {
+    const resultado = this.reclamoForm.controls.resultado.value;
+    return resultado === 'APROBADO' || resultado === 'PARCIAL';
+  }
+
+  hasExistingOtGarantia(): boolean {
+    const garantia = this.selectedGarantiaView();
+    const formOt = this.normalizeNullableNumber(this.reclamoForm.controls.idVehOrdenTrabajoFk.value);
+    const garantiaOt = this.normalizeNullableNumber(garantia?.idVehOrdenTrabajoReclamoFk ?? null);
+    return formOt != null || garantiaOt != null || this.otGarantiaPendienteGuardar() != null;
+  }
+
+  currentOtGarantiaId(): number | null {
+    return this.normalizeNullableNumber(this.reclamoForm.controls.idVehOrdenTrabajoFk.value)
+      ?? this.normalizeNullableNumber(this.selectedGarantiaView()?.idVehOrdenTrabajoReclamoFk ?? null)
+      ?? this.otGarantiaPendienteGuardar();
+  }
+
+  canCreateOtGarantia(): boolean {
+    return !this.readonlyMode
+      && !this.creandoOtGarantia()
+      && !this.saving()
+      && !!this.orden
+      && !!this.selectedGarantiaView()
+      && !this.hasExistingOtGarantia();
+  }
+
+  canSaveReclamo(): boolean {
+    return !this.readonlyMode && !this.saving() && !this.creandoOtGarantia();
+  }
+
   selectedTrabajoLabel(): string {
     const id = this.coberturaForm.controls.idVehOrdenTrabajoTrabajoFk.value;
     if (!id) return 'Selecciona un trabajo cubierto';
@@ -488,6 +514,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   openNuevoReclamo(): void {
     const garantia = this.selectedGarantiaView();
     if (!garantia || this.readonlyMode) return;
+    this.resetReclamoTransientState();
     this.editingMovimientoId.set(null);
     this.reclamoForm.reset({
       idVehOrdenTrabajoFk: garantia.idVehOrdenTrabajoReclamoFk ?? null,
@@ -506,6 +533,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
 
   openEditarReclamo(item: VehGarantiaMovimiento): void {
     if (this.readonlyMode) return;
+    this.resetReclamoTransientState();
     this.editingMovimientoId.set(item.idVehGarantiaMovimiento);
     this.reclamoForm.reset({
       idVehOrdenTrabajoFk: item.idVehOrdenTrabajoFk ?? null,
@@ -520,6 +548,26 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       observaciones: item.observaciones || '',
     });
     this.reclamoDialogVisible.set(true);
+  }
+
+  closeReclamoDialog(): void {
+    if (this.otGarantiaPendienteGuardar()) {
+      this.notify.warn(
+        'Guarda el reclamo',
+        `Ya se creó la OT #${this.otGarantiaPendienteGuardar()}. Guarda el reclamo antes de cerrar para dejar el vínculo correcto.`,
+      );
+      return;
+    }
+    this.reclamoDialogVisible.set(false);
+    this.resetReclamoTransientState();
+  }
+
+  onReclamoDialogVisibleChange(visible: boolean): void {
+    if (visible) {
+      this.reclamoDialogVisible.set(true);
+      return;
+    }
+    this.closeReclamoDialog();
   }
 
   saveGarantia(): void {
@@ -632,16 +680,13 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
   saveReclamo(): void {
     const garantia = this.selectedGarantiaView();
     if (!garantia) return;
-    if (this.reclamoForm.invalid) {
-      this.reclamoForm.markAllAsTouched();
-      this.notify.warn('Completa el reclamo', 'El diagnóstico es obligatorio para guardar el movimiento.');
-      return;
-    }
+    if (!this.validateReclamoBeforeSave()) return;
 
     const raw = this.reclamoForm.getRawValue();
+    const idOtAtencion = this.normalizeNullableNumber(raw.idVehOrdenTrabajoFk);
     const payload: VehGarantiaMovimientoGuardarRequest = {
       idVehGarantiaFk: garantia.idVehGarantia,
-      idVehOrdenTrabajoFk: raw.idVehOrdenTrabajoFk ?? null,
+      idVehOrdenTrabajoFk: idOtAtencion,
       fechaReclamo: this.toTimestamp(raw.fechaReclamo),
       kmReclamo: Number(raw.kmReclamo || 0),
       diagnostico: raw.diagnostico?.trim() || null,
@@ -666,9 +711,11 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         const estadoSugerido = this.mapResultadoToGarantiaEstado(raw.resultado);
-        this.syncGarantiaAfterMovimiento(garantia, raw.idVehOrdenTrabajoFk ?? null, estadoSugerido);
+        this.syncGarantiaAfterMovimiento(garantia, idOtAtencion, estadoSugerido);
         this.notify.success(editingId ? 'Reclamo actualizado' : 'Reclamo registrado', 'El movimiento quedó guardado en el historial de la garantía.');
+        this.otGarantiaPendienteGuardar.set(null);
         this.reclamoDialogVisible.set(false);
+        this.resetReclamoTransientState();
         this.loadSelectedGarantiaDetail(garantia.idVehGarantia);
       },
       error: (err) => this.notify.error('No se pudo guardar el reclamo', err?.message),
@@ -679,6 +726,7 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     const orden = this.orden;
     const garantia = this.selectedGarantiaView();
     if (!orden || !garantia || this.readonlyMode) return;
+    if (!this.validateReclamoBeforeCreateOt()) return;
 
     const raw = this.reclamoForm.getRawValue();
     const km = Number(raw.kmReclamo || orden.kilometrajeIngreso || 0);
@@ -724,20 +772,15 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
       .pipe(finalize(() => this.creandoOtGarantia.set(false)))
       .subscribe({
         next: (res: any) => {
-          const idOt = this.extractNumericId(res?.data, [
-            'idVehOrdenTrabajo',
-            'id_veh_orden_trabajo',
-            'id',
-          ]);
-
-          if (idOt) {
-            this.reclamoForm.patchValue({ idVehOrdenTrabajoFk: idOt });
-            this.syncGarantiaAfterMovimiento(garantia, idOt, 'RECLAMADA');
-            this.notify.success('OT de garantía creada', `Se generó la OT #${idOt} y quedó vinculada al reclamo.`);
+          const idOt = this.extractNumericId(res?.data, ['idVehOrdenTrabajo', 'id_veh_orden_trabajo', 'id']);
+          if (!idOt) {
+            this.notify.success('OT de garantía creada', 'Se creó la OT, pero no se pudo recuperar el número. Vincúlala manualmente antes de guardar el reclamo.');
             return;
           }
 
-          this.notify.success('OT de garantía creada', 'Se creó la OT de garantía. Revisa el listado de órdenes y vincúlala manualmente si no ves el número aquí.');
+          this.reclamoForm.patchValue({ idVehOrdenTrabajoFk: idOt });
+          this.otGarantiaPendienteGuardar.set(idOt);
+          this.notify.success('OT de garantía creada', `Se generó la OT #${idOt}. Ahora guarda el reclamo para dejar el vínculo completo.`);
         },
         error: (err) => this.notify.error('No se pudo crear la OT de garantía', err?.message),
       });
@@ -1033,6 +1076,88 @@ export class OrdenGarantiasPanelComponent implements OnChanges {
     }
 
     return null;
+  }
+
+  private validateReclamoBeforeCreateOt(): boolean {
+    if (!this.canCreateOtGarantia()) {
+      const existingOt = this.currentOtGarantiaId();
+      if (existingOt) {
+        this.notify.warn('OT ya creada', `La garantía ya tiene asociada la OT #${existingOt}. No se puede crear otra desde este diálogo.`);
+      }
+      return false;
+    }
+
+    const raw = this.reclamoForm.getRawValue();
+    const diagnostico = String(raw.diagnostico || '').trim();
+    if (!diagnostico) {
+      this.reclamoForm.controls.diagnostico.markAsTouched();
+      this.notify.warn('Falta diagnóstico', 'Escribe el diagnóstico antes de crear la OT de garantía.');
+      return false;
+    }
+
+    if (!raw.fechaReclamo) {
+      this.reclamoForm.controls.fechaReclamo.markAsTouched();
+      this.notify.warn('Falta fecha', 'Selecciona la fecha del reclamo antes de crear la OT de garantía.');
+      return false;
+    }
+
+    const km = this.normalizeNullableNumber(raw.kmReclamo);
+    if (km == null || km < 0) {
+      this.reclamoForm.controls.kmReclamo.markAsTouched();
+      this.notify.warn('Kilometraje inválido', 'Ingresa un kilometraje válido antes de crear la OT de garantía.');
+      return false;
+    }
+
+    return true;
+  }
+
+  private validateReclamoBeforeSave(): boolean {
+    if (this.reclamoForm.invalid) {
+      this.reclamoForm.markAllAsTouched();
+      this.notify.warn('Completa el reclamo', 'El diagnóstico es obligatorio para guardar el movimiento.');
+      return false;
+    }
+
+    const garantia = this.selectedGarantiaView();
+    const raw = this.reclamoForm.getRawValue();
+    const resultado = raw.resultado;
+    const idOtForm = this.normalizeNullableNumber(raw.idVehOrdenTrabajoFk);
+    const idOtGarantia = this.normalizeNullableNumber(garantia?.idVehOrdenTrabajoReclamoFk ?? null);
+
+    if (resultado === 'RECHAZADO' && !String(raw.motivoRechazo || '').trim()) {
+      this.reclamoForm.controls.motivoRechazo.markAsTouched();
+      this.notify.warn('Falta motivo de rechazo', 'Cuando el reclamo se rechaza, debes registrar el motivo.');
+      return false;
+    }
+
+    if (this.shouldRequireOtAtencion() && !idOtForm) {
+      this.reclamoForm.controls.idVehOrdenTrabajoFk.markAsTouched();
+      this.notify.warn('Falta OT de atención', 'Para un reclamo aprobado o parcial debes vincular una OT de garantía.');
+      return false;
+    }
+
+    if (idOtGarantia != null && idOtForm != null && idOtGarantia !== idOtForm) {
+      this.notify.warn('OT inconsistente', `La garantía ya está vinculada a la OT #${idOtGarantia}. No puedes guardar este reclamo con la OT #${idOtForm}.`);
+      return false;
+    }
+
+    if (this.otGarantiaPendienteGuardar() != null && idOtForm !== this.otGarantiaPendienteGuardar()) {
+      this.notify.warn('OT pendiente inconsistente', `Ya se creó la OT #${this.otGarantiaPendienteGuardar()}. Guarda el reclamo con esa OT o cierra el caso correctamente.`);
+      return false;
+    }
+
+    return true;
+  }
+
+  private normalizeNullableNumber(value: unknown): number | null {
+    if (value == null || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private resetReclamoTransientState(): void {
+    this.otGarantiaPendienteGuardar.set(null);
+    this.editingMovimientoId.set(null);
   }
 
   private toInputDate(value?: string | null): string {

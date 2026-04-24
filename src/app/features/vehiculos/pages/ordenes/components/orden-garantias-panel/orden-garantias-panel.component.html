@@ -1,8 +1,8 @@
 <section class="garantiasWorkspace">
   <div class="garantiasHero">
     <div>
-      <h4></h4>
-      <p></p>
+      <h4>Garantías</h4>
+      <p>Control de coberturas y reclamos de la OT seleccionada.</p>
     </div>
 
     <div class="heroActions">
@@ -16,22 +16,22 @@
     <article class="summaryCard">
       <span>Total</span>
       <strong>{{ resumen().total }}</strong>
-      <small>garantía(s) registradas</small>
+      <small>garantía(s)</small>
     </article>
     <article class="summaryCard summaryCard--success">
       <span>Activas</span>
       <strong>{{ resumen().activas }}</strong>
-      <small>vigentes para atención</small>
+      <small>vigentes</small>
     </article>
     <article class="summaryCard summaryCard--neutral">
       <span>Coberturas</span>
       <strong>{{ resumen().coberturas }}</strong>
-      <small>trabajos y repuestos cubiertos</small>
+      <small>ítems cubiertos</small>
     </article>
     <article class="summaryCard summaryCard--warn">
       <span>Reclamos</span>
       <strong>{{ resumen().reclamos }}</strong>
-      <small>movimiento(s) del historial</small>
+      <small>movimientos</small>
     </article>
   </div>
 
@@ -50,8 +50,7 @@
           <div class="garantiaCard__head">
             <div>
               <div class="primaryCell">Garantía #{{ item.idVehGarantia }}</div>
-              <div class="secondaryCell">{{ item.tipoGarantia || 'GARANTÍA' }} · {{
-                modalidadLabel(item.modalidadVencimiento) }}</div>
+              <div class="secondaryCell">{{ item.tipoGarantia || 'GARANTÍA' }} · {{ modalidadLabel(item.modalidadVencimiento) }}</div>
             </div>
             <p-tag [value]="item.estadoGarantia || 'ACTIVA'" [severity]="estadoSeverity(item.estadoGarantia)"></p-tag>
           </div>
@@ -82,8 +81,7 @@
       <div class="sectionHead">
         <div>
           <h5>Garantía #{{ garantia.idVehGarantia }}</h5>
-          <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{
-            modalidadLabel(garantia.modalidadVencimiento) }}</div>
+          <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{ modalidadLabel(garantia.modalidadVencimiento) }}</div>
         </div>
 
         <div class="actionWrap">
@@ -101,23 +99,19 @@
 
       <div class="metricGrid">
         <article class="metric"><span>Estado</span><strong>{{ garantia.estadoGarantia || '-' }}</strong></article>
-        <article class="metric"><span>Responsable</span><strong>{{ responsableLabel(garantia.responsableCosto)
-            }}</strong></article>
-        <article class="metric"><span>Base</span><strong>{{ formatDate(garantia.fechaBase) }} · Km {{ garantia.kmBase ||
-            0 }}</strong></article>
-        <article class="metric"><span>Vence</span><strong>{{ formatDate(garantia.fechaVence) }} · Km {{ garantia.kmVence
-            || 0 }}</strong></article>
+        <article class="metric"><span>Responsable</span><strong>{{ responsableLabel(garantia.responsableCosto) }}</strong></article>
+        <article class="metric"><span>Base</span><strong>{{ formatDate(garantia.fechaBase) }} · Km {{ garantia.kmBase || 0 }}</strong></article>
+        <article class="metric"><span>Vence</span><strong>{{ formatDate(garantia.fechaVence) }} · Km {{ garantia.kmVence || 0 }}</strong></article>
       </div>
 
       <div class="kvGrid">
         <article class="kvItem">
-          <span>Alcance de cobertura</span>
+          <span>Alcance</span>
           <strong>{{ garantiaResumenLabel(garantia) }}</strong>
         </article>
         <article class="kvItem">
-          <span>OT de atención vinculada</span>
-          <strong>{{ garantia.idVehOrdenTrabajoReclamoFk ? ('OT #' + garantia.idVehOrdenTrabajoReclamoFk) : 'Sin OT de
-            garantía todavía' }}</strong>
+          <span>OT vinculada</span>
+          <strong>{{ garantia.idVehOrdenTrabajoReclamoFk ? ('OT #' + garantia.idVehOrdenTrabajoReclamoFk) : 'Sin OT' }}</strong>
         </article>
         <article class="kvItem kvItem--wide">
           <span>Observaciones</span>
@@ -148,10 +142,8 @@
             <div class="chipRow">
               <span class="miniChip">Monto máx: {{ money(item.montoMaximo) }}</span>
               <span class="miniChip">Cantidad máx: {{ item.cantidadMaxima || 0 }}</span>
-              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie retirada: {{ item.serieAnterior
-                || '-' }}</span>
-              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie instalada: {{ item.serieNueva ||
-                '-' }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie retirada: {{ item.serieAnterior || '-' }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie instalada: {{ item.serieNueva || '-' }}</span>
             </div>
 
             <div class="secondaryCell rowClamp">{{ item.observaciones || 'Sin observaciones de cobertura.' }}</div>
@@ -192,8 +184,7 @@
               <span class="miniChip">Cliente: {{ money(item.valorCliente) }}</span>
               <span class="miniChip">Taller: {{ money(item.valorTaller) }}</span>
               <span class="miniChip">Proveedor: {{ money(item.valorProveedor) }}</span>
-              <span class="miniChip" *ngIf="item.idVehOrdenTrabajoFk">OT atención: #{{ item.idVehOrdenTrabajoFk
-                }}</span>
+              <span class="miniChip" *ngIf="item.idVehOrdenTrabajoFk">OT atención: #{{ item.idVehOrdenTrabajoFk }}</span>
             </div>
 
             <div class="secondaryCell" *ngIf="item.motivoRechazo">Motivo rechazo: {{ item.motivoRechazo }}</div>
@@ -214,25 +205,25 @@
 
 <ng-template #noGarantiasState>
   <app-vehiculos-empty-state icon="pi pi-shield" title="Sin garantías"
-    subtitle="Registra la primera garantía para esta orden y luego define su cobertura.">
+    subtitle="Registra la primera garantía para esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noGarantiaSeleccionada>
   <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía"
-    subtitle="Elige una garantía del panel izquierdo para administrar coberturas y reclamos.">
+    subtitle="Elige una garantía del panel izquierdo.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCoberturasState>
   <app-vehiculos-empty-state icon="pi pi-list" title="Sin coberturas"
-    subtitle="Agrega trabajos o repuestos cubiertos por esta garantía para que el alcance quede claro.">
+    subtitle="Agrega trabajos o repuestos cubiertos.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noMovimientosState>
   <app-vehiculos-empty-state icon="pi pi-history" title="Sin reclamos"
-    subtitle="Cuando el cliente vuelva, registra aquí el diagnóstico, el resultado y quién asume el costo.">
+    subtitle="Registra el primer movimiento de garantía.">
   </app-vehiculos-empty-state>
 </ng-template>
 
@@ -243,7 +234,6 @@
     <div class="dialogHeader">
       <div>
         <h4>{{ editingGarantiaId() ? 'Editar garantía' : 'Nueva garantía' }}</h4>
-        <p>Primero define la vigencia general y quién responde por el caso.</p>
       </div>
     </div>
   </ng-template>
@@ -274,13 +264,11 @@
       <div class="field span-3">
         <label>Fecha base</label>
         <input pInputText type="date" formControlName="fechaBase">
-        <small>Usa la fecha desde la que empieza a correr la garantía.</small>
       </div>
 
       <div class="field span-3">
         <label>Kilometraje base</label>
         <input pInputText type="number" formControlName="kmBase">
-        <small>Normalmente es el kilometraje al entregar la OT.</small>
       </div>
 
       <div class="field span-2">
@@ -301,13 +289,11 @@
       <div class="field span-3">
         <label>Fecha de vencimiento</label>
         <input pInputText type="date" formControlName="fechaVence">
-        <small>Si la dejas vacía, se calcula con base + días/meses.</small>
       </div>
 
       <div class="field span-3">
         <label>Km de vencimiento</label>
         <input pInputText type="number" formControlName="kmVence">
-        <small>Si lo dejas vacío, se calcula con km base + km cubiertos.</small>
       </div>
 
       <div class="field span-3">
@@ -318,9 +304,8 @@
       </div>
 
       <div class="field span-12 helperCard">
-        <strong>Previsualización de vencimiento</strong>
-        <span>Fecha estimada: {{ formatDate(garantiaVencimientoPreview().fecha) }} · Km estimado: {{
-          garantiaVencimientoPreview().km }}</span>
+        <strong>Vencimiento estimado</strong>
+        <span>Fecha: {{ formatDate(garantiaVencimientoPreview().fecha) }} · Km: {{ garantiaVencimientoPreview().km }}</span>
       </div>
 
       <div class="field span-12">
@@ -440,29 +425,20 @@
 
 <p-dialog [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true"
   [style]="{ width: 'min(1040px, 96vw)' }" [visible]="reclamoDialogVisible()"
-  (visibleChange)="reclamoDialogVisible.set($event)">
+  (visibleChange)="onReclamoDialogVisibleChange($event)">
   <ng-template pTemplate="header">
     <div class="dialogHeader">
       <div>
         <h4>{{ editingMovimientoId() ? 'Editar reclamo / movimiento' : 'Registrar reclamo / movimiento' }}</h4>
-        <p>Documenta el retorno del cliente, el diagnóstico, el costo del caso y, si aplica, genera la OT de garantía.
-        </p>
       </div>
     </div>
   </ng-template>
 
   <form [formGroup]="reclamoForm" class="dialogForm">
     <div class="formGrid">
-      <div class="field span-12 helperCard helperCard--info">
-        <strong>Flujo recomendado</strong>
-        <span>1) registra diagnóstico y kilometraje, 2) genera la OT de garantía si vas a atender el caso, 3) guarda el
-          reclamo para dejarlo vinculado al historial.</span>
-      </div>
-
       <div class="field span-4">
         <label>OT de atención por garantía</label>
-        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk" placeholder="Opcional">
-        <small>Si ya existe la OT, colócala aquí. También puedes crearla desde este mismo diálogo.</small>
+        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk" placeholder="OT vinculada">
       </div>
 
       <div class="field span-4">
@@ -484,7 +460,7 @@
 
       <div class="field span-8" *ngIf="shouldShowMotivoRechazo()">
         <label>Motivo de rechazo</label>
-        <input pInputText formControlName="motivoRechazo" placeholder="Explica por qué se rechaza el reclamo">
+        <input pInputText formControlName="motivoRechazo" placeholder="Motivo del rechazo">
       </div>
 
       <div class="field span-12">
@@ -507,10 +483,11 @@
         <input pInputText type="number" formControlName="valorProveedor">
       </div>
 
-      <div class="field span-12 helperCard">
-        <strong>Regla sugerida</strong>
-        <span>Si el caso fue cubierto completamente por garantía, normalmente el valor cliente debe quedar en cero. Si
-          vas a atender el reclamo en taller, crea la OT de garantía y luego guarda el movimiento.</span>
+      <div class="field span-12" *ngIf="otGarantiaPendienteGuardar() as idOtPendiente">
+        <div class="helperCard helperCard--warn">
+          <strong>OT creada y pendiente</strong>
+          <span>Ya se creó la OT #{{ idOtPendiente }}. Guarda el reclamo para cerrar correctamente el vínculo.</span>
+        </div>
       </div>
 
       <div class="field span-12">
@@ -524,13 +501,16 @@
     <div class="dialogFooter dialogFooter--spread">
       <div class="footerLeft">
         <button pButton type="button" severity="secondary" icon="pi pi-wrench" label="Crear OT garantía"
-          [loading]="creandoOtGarantia()" [disabled]="readonlyMode || !orden || !selectedGarantiaView()"
+          [loading]="creandoOtGarantia()"
+          [disabled]="!canCreateOtGarantia()"
           (click)="createOtGarantiaFromDialog()"></button>
       </div>
       <div class="footerRight">
         <button pButton type="button" severity="secondary" [text]="true" label="Cancelar"
-          (click)="reclamoDialogVisible.set(false)"></button>
-        <button pButton type="button" icon="pi pi-save" label="Guardar reclamo" [loading]="saving()"
+          (click)="closeReclamoDialog()"></button>
+        <button pButton type="button" icon="pi pi-save" label="Guardar reclamo"
+          [loading]="saving()"
+          [disabled]="!canSaveReclamo()"
           (click)="saveReclamo()"></button>
       </div>
     </div>

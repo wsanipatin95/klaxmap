@@ -68,6 +68,18 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     'OTRO',
   ];
 
+  readonly ESTADO_ORDEN_OPTIONS = [
+    'RECIBIDO',
+    'EN_DIAGNOSTICO',
+    'EN_PROCESO',
+    'ESPERA_APROBACION',
+    'FINALIZADO',
+    'ENTREGADO',
+    'FACTURADO_PARCIAL',
+    'FACTURADO_FINAL',
+    'ANULADO',
+  ];
+
   dirty = signal(false);
   submittedAttempt = signal(false);
 
@@ -102,7 +114,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
     dni: [null as number | null, Validators.required],
     idCliVehiculoFk: [null as number | null, Validators.required],
     tipoServicio: ['REPARACION', Validators.required],
-    estadoOrden: [{ value: 'RECIBIDO', disabled: true }, Validators.required],
+    estadoOrden: ['RECIBIDO', Validators.required],
     fechaIngreso: ['', Validators.required],
     fechaPrometida: [''],
     kilometrajeIngreso: [null as number | null],
@@ -187,7 +199,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
 
   subtitle(): string {
     return this.isEditing()
-      ? 'Actualiza los datos principales de la orden.'
+      ? 'Actualiza los datos principales de la orden y cambia el estado cuando corresponda.'
       : 'Completa los datos básicos para registrar la orden.';
   }
 
@@ -265,7 +277,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       dni: Number(raw.dni),
       idCliVehiculoFk: Number(raw.idCliVehiculoFk),
       tipoServicio: raw.tipoServicio || 'REPARACION',
-      estadoOrden: this.orden?.estadoOrden || raw.estadoOrden || 'RECIBIDO',
+      estadoOrden: raw.estadoOrden || 'RECIBIDO',
       fechaIngreso: this.toTimestamp(raw.fechaIngreso),
       fechaPrometida: this.toTimestamp(raw.fechaPrometida),
       kilometrajeIngreso: raw.kilometrajeIngreso ?? null,
@@ -593,9 +605,7 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       observaciones: item.observaciones || '',
     });
 
-    this.form.controls.estadoOrden.disable({ emitEvent: false });
-    this.syncVehiculoControlState();
-
+    this.syncControlState();
     this.populateAtributosFormArray(this.atributosRows, item.atributos ?? {});
     this.hydrateClienteSeleccionado(item.dni ?? null);
     this.buscarVehiculosCliente(item.dni ?? null, item.idCliVehiculoFk ?? null);
@@ -643,22 +653,23 @@ export class OrdenMainFormDrawerComponent implements OnChanges {
       observaciones: '',
     });
 
-    this.form.controls.estadoOrden.disable({ emitEvent: false });
-    this.syncVehiculoControlState();
-
+    this.syncControlState();
     this.populateAtributosFormArray(this.atributosRows, {});
     this.refreshSnapshot();
   }
 
-  private syncVehiculoControlState() {
+  private syncControlState() {
     const vehiculoControl = this.form.controls.idCliVehiculoFk;
+    const estadoControl = this.form.controls.estadoOrden;
 
     if (this.isSelectionLocked()) {
       vehiculoControl.disable({ emitEvent: false });
+      estadoControl.enable({ emitEvent: false });
       return;
     }
 
     vehiculoControl.enable({ emitEvent: false });
+    estadoControl.disable({ emitEvent: false });
   }
 
   private hydrateClienteSeleccionado(dni: number | null | undefined) {

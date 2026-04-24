@@ -66,7 +66,14 @@
 
         <div class="field span-2">
           <span class="fieldLabel">Estado</span>
-          <input pInputText [value]="form.getRawValue().estadoOrden || 'RECIBIDO'" readonly>
+          <ng-container *ngIf="isEditing(); else estadoLectura">
+            <select formControlName="estadoOrden">
+              <option *ngFor="let option of ESTADO_ORDEN_OPTIONS" [value]="option">{{ option }}</option>
+            </select>
+          </ng-container>
+          <ng-template #estadoLectura>
+            <input pInputText [value]="form.getRawValue().estadoOrden || 'RECIBIDO'" readonly>
+          </ng-template>
         </div>
 
         <div class="field span-3">
@@ -221,6 +228,12 @@
         </button>
       </div>
 
+      <div class="introNote">
+        <span>Para política automática de garantías puedes usar una clave <strong>garantiaPolicy</strong> con JSON, por ejemplo:
+          <code>{"autoEmitirAlCerrarOt":true,"autoEmitirAlFacturar":true,"trabajoDias":30,"repuestoDias":90,"repuestoKm":5000}</code>
+        </span>
+      </div>
+
       <div class="attrTable">
         <div class="attrHead">
           <span>Campo</span>
@@ -229,8 +242,8 @@
         </div>
 
         <div class="attrRow" *ngFor="let row of atributosRows.controls; let i = index" [formGroup]="row">
-          <input pInputText formControlName="key" placeholder="Ej. prioridad">
-          <input pInputText formControlName="value" placeholder="Ej. alta">
+          <input pInputText formControlName="key" placeholder="Ej. prioridad o garantiaPolicy">
+          <input pInputText formControlName="value" placeholder='Ej. alta o {"autoEmitirAlFacturar":true}'>
           <button
             pButton
             type="button"
