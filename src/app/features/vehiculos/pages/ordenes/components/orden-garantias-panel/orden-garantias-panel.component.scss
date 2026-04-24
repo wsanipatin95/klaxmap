@@ -1,4 +1,3 @@
-
 :host {
   display: block;
   min-width: 0;
@@ -6,7 +5,8 @@
 
 .garantiasWorkspace {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .garantiasHero,
@@ -20,15 +20,15 @@
 .helperCard {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 0.8rem;
+  border-radius: 0.76rem;
 }
 
 .garantiasHero {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 0.9rem 1rem;
+  gap: 0.75rem;
+  padding: 0.58rem 0.68rem;
 }
 
 .garantiasHero h4,
@@ -38,31 +38,38 @@
   color: #0f172a;
 }
 
+.garantiasHero h4 {
+  font-size: 0.82rem;
+}
+
 .garantiasHero p,
 .dialogHeader p,
 .secondaryCell {
-  margin: 0.2rem 0 0;
+  margin: 0.18rem 0 0;
   color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.2;
 }
 
 .heroActions,
 .footerLeft,
 .footerRight {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
 }
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.34rem;
 }
 
 .summaryCard {
   display: grid;
-  gap: 0.12rem;
-  padding: 0.8rem 0.9rem;
+  gap: 0.08rem;
+  min-height: 2.7rem;
+  padding: 0.48rem 0.56rem;
 }
 
 .summaryCard span,
@@ -70,8 +77,8 @@
 .kvItem span,
 .stepCard span,
 .field label {
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
   color: #475569;
 }
 
@@ -81,18 +88,18 @@
 .stepCard strong,
 .primaryCell {
   color: #0f172a;
-  line-height: 1.2;
+  line-height: 1.18;
 }
 
 .summaryCard strong {
-  font-size: 1.2rem;
+  font-size: 0.9rem;
 }
 
 .summaryCard small,
 .stepCard small,
 .field small {
   color: #64748b;
-  line-height: 1.25;
+  line-height: 1.22;
 }
 
 .summaryCard--success { background: #f0fdf4; }
@@ -102,15 +109,16 @@
 .garantiasGrid {
   display: grid;
   grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr);
-  gap: 0.75rem;
+  gap: 0.48rem;
   align-items: start;
+  min-width: 0;
 }
 
 .garantiasSidebar,
 .garantiasDetail,
 .sectionBlock {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.44rem;
   min-width: 0;
 }
 
@@ -118,7 +126,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .sectionHead--compact {
@@ -127,15 +136,23 @@
 
 .sidebarList,
 .itemsList {
-  display: grid;
-  gap: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+}
+
+.sidebarList > *,
+.itemsList > * {
+  flex: 0 0 auto;
 }
 
 .garantiaCard,
 .itemCard {
   display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  gap: 0.42rem;
+  min-height: 4.4rem;
+  padding: 0.52rem 0.58rem;
+  overflow: hidden;
 }
 
 .garantiaCard {
@@ -159,14 +176,16 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.42rem;
+  min-width: 0;
 }
 
 .garantiaCard__meta,
 .rowCopy,
 .detailHero {
   display: grid;
-  gap: 0.22rem;
+  gap: 0.18rem;
+  min-width: 0;
 }
 
 .cardActions,
@@ -174,7 +193,7 @@
 .dialogFooter,
 .chipRow {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.32rem;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -188,22 +207,25 @@
 }
 
 .detailHero--soft {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.34rem;
   background: transparent;
   border: none;
 }
 
 .stepCard {
   display: grid;
-  gap: 0.18rem;
-  padding: 0.8rem;
+  gap: 0.16rem;
+  padding: 0.48rem 0.56rem;
   background: #f8fafc;
+  min-height: 2.8rem;
 }
 
 .metricGrid,
 .kvGrid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.34rem;
 }
 
 .metricGrid {
@@ -221,8 +243,9 @@
 .metric,
 .kvItem {
   display: grid;
-  gap: 0.14rem;
-  padding: 0.75rem 0.85rem;
+  gap: 0.1rem;
+  min-height: 2.8rem;
+  padding: 0.48rem 0.56rem;
 }
 
 .rowClamp {
@@ -232,50 +255,58 @@
   overflow: hidden;
 }
 
+.primaryCell,
+.rowCopy strong,
+.garantiaCard__meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .miniChip {
   display: inline-flex;
   align-items: center;
-  min-height: 1.8rem;
-  padding: 0 0.7rem;
+  min-height: 1.56rem;
+  padding: 0 0.58rem;
   border-radius: 999px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   color: #334155;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .dialogForm {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.62rem;
   padding-top: 0.25rem;
 }
 
 .formGrid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0.7rem 0.75rem;
+  gap: 0.62rem 0.68rem;
 }
 
 .field {
   display: grid;
-  gap: 0.22rem;
+  gap: 0.2rem;
   min-width: 0;
 }
 
 .field :is(input, select, textarea) {
   width: 100%;
-  min-height: 2.4rem;
+  min-height: 2.05rem;
   border: 1px solid #dbe2ea;
-  border-radius: 0.7rem;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.9rem;
+  border-radius: 0.64rem;
+  padding: 0.38rem 0.58rem;
+  font-size: 0.82rem;
   background: #fff;
   color: #0f172a;
 }
 
 .field textarea {
-  min-height: 7rem;
+  min-height: 5rem;
   resize: vertical;
 }
 
@@ -286,10 +317,10 @@
 .checkboxLabel {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.92rem;
+  gap: 0.42rem;
+  font-size: 0.82rem;
   color: #334155;
-  min-height: 2.4rem;
+  min-height: 2.05rem;
 }
 
 .checkboxLabel input[type='checkbox'] {
@@ -300,8 +331,8 @@
 
 .helperCard {
   display: grid;
-  gap: 0.18rem;
-  padding: 0.75rem 0.85rem;
+  gap: 0.16rem;
+  padding: 0.5rem 0.58rem;
   background: #fff7ed;
 }
 
@@ -328,6 +359,71 @@
 .span-4 { grid-column: span 4; }
 .span-3 { grid-column: span 3; }
 .span-2 { grid-column: span 2; }
+
+@media (min-width: 1381px) {
+  :host {
+    display: block;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .garantiasWorkspace {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .garantiasHero,
+  .summaryGrid {
+    min-height: 0;
+  }
+
+  .garantiasGrid {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    align-items: stretch;
+  }
+
+  .garantiasSidebar,
+  .garantiasDetail {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .garantiasSidebar {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .garantiasDetail {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.05rem;
+    align-content: start;
+  }
+
+  .sidebarList,
+  .itemsList {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sectionBlock {
+    min-height: 0;
+    align-content: start;
+  }
+}
 
 @media (max-width: 1380px) {
   .garantiasGrid,
