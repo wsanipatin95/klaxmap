@@ -53,54 +53,6 @@
         <i class="pi pi-filter"></i>
         <span *ngIf="activeFilterCount() > 0">{{ activeFilterCount() }}</span>
       </button>
-
-      <div class="filterPopover" *ngIf="filtrosAvanzadosVisible()">
-        <div class="filterPopover__head">
-          <strong>Más filtros</strong>
-          <span>{{ ordenesFiltradas().length }} OT visibles</span>
-        </div>
-
-        <div class="filterPopover__grid">
-          <div class="filterField">
-            <label>Servicio</label>
-            <select [(ngModel)]="filterServicio" [ngModelOptions]="{ standalone: true }"
-              (ngModelChange)="onAdvancedFilterChange()">
-              <option value="">Todos</option>
-              <option *ngFor="let option of servicioFilterOptions" [value]="option">{{ option }}</option>
-            </select>
-          </div>
-
-          <div class="filterField">
-            <label>Solo activas</label>
-            <select [(ngModel)]="filterSoloActivas" [ngModelOptions]="{ standalone: true }"
-              (ngModelChange)="onAdvancedFilterChange()">
-              <option [ngValue]="false">No</option>
-              <option [ngValue]="true">Sí</option>
-            </select>
-          </div>
-
-          <div class="filterField">
-            <label>Ingreso desde</label>
-            <input type="date" [(ngModel)]="filterFechaDesde" [ngModelOptions]="{ standalone: true }"
-              (ngModelChange)="onAdvancedFilterChange()">
-          </div>
-
-          <div class="filterField">
-            <label>Ingreso hasta</label>
-            <input type="date" [(ngModel)]="filterFechaHasta" [ngModelOptions]="{ standalone: true }"
-              (ngModelChange)="onAdvancedFilterChange()">
-          </div>
-        </div>
-
-        <div class="filterPopover__summary">
-          <span class="filterChip">Estado: {{ estadoFilterText() }}</span>
-          <span class="filterChip">Texto: {{ q.trim() || 'Sin texto' }}</span>
-          <span class="filterChip" *ngIf="filterServicio">Servicio: {{ filterServicio }}</span>
-          <span class="filterChip" *ngIf="filterFechaDesde">Desde: {{ filterFechaDesde }}</span>
-          <span class="filterChip" *ngIf="filterFechaHasta">Hasta: {{ filterFechaHasta }}</span>
-          <span class="filterChip" *ngIf="filterSoloActivas">Solo activas</span>
-        </div>
-      </div>
     </div>
 
     <div class="compactSearchRail__actions">
@@ -110,7 +62,7 @@
         severity="secondary"
         [text]="true"
         label="Limpiar"
-        [disabled]="activeFilterCount() === 0"
+        [disabled]="!q.trim() && estadoFilter() === 'TODOS'"
         (click)="limpiarFiltrosOrdenes()">
       </button>
 
@@ -122,6 +74,23 @@
         [loading]="loading()"
         (click)="cargar()">
       </button>
+    </div>
+
+    <div class="filterMiniPanel" *ngIf="filtrosAvanzadosVisible()">
+      <div class="filterMiniPanel__item">
+        <span>Estado</span>
+        <strong>{{ estadoFilterText() }}</strong>
+      </div>
+
+      <div class="filterMiniPanel__item">
+        <span>Búsqueda</span>
+        <strong>{{ q.trim() || 'Sin texto' }}</strong>
+      </div>
+
+      <div class="filterMiniPanel__item">
+        <span>Resultado visible</span>
+        <strong>{{ ordenesFiltradas().length }} OT</strong>
+      </div>
     </div>
   </section>
 
@@ -153,64 +122,16 @@
             </div>
 
             <div class="orderRowActions">
-              <button
-                pButton
-                type="button"
-                size="small"
-                [text]="true"
-                icon="pi pi-pencil"
-                title="Editar"
-                [disabled]="isOrdenBloqueada(item)"
-                (click)="editarOrden(item); $event.stopPropagation()">
-              </button>
-
-              <button
-                pButton
-                type="button"
-                size="small"
-                [text]="true"
-                severity="success"
-                icon="pi pi-check-circle"
-                title="Finalizar"
-                [disabled]="!canFinalizeOrden(item)"
-                (click)="finalizarOrden(item); $event.stopPropagation()">
-              </button>
-
-              <button
-                pButton
-                type="button"
-                size="small"
-                [text]="true"
-                severity="secondary"
-                icon="pi pi-replay"
-                title="Devolver"
-                [disabled]="!canDevolverOrden(item)"
-                (click)="devolverOrden(item); $event.stopPropagation()">
-              </button>
-
-              <button
-                pButton
-                type="button"
-                size="small"
-                [text]="true"
-                severity="warn"
-                icon="pi pi-ban"
-                title="Anular"
-                [disabled]="isOrdenBloqueada(item)"
-                (click)="anularOrden(item); $event.stopPropagation()">
-              </button>
-
-              <button
-                pButton
-                type="button"
-                size="small"
-                [text]="true"
-                severity="danger"
-                icon="pi pi-trash"
-                title="Eliminar"
-                [disabled]="isOrdenBloqueada(item)"
-                (click)="eliminarOrden(item); $event.stopPropagation()">
-              </button>
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" title="Editar"
+                [disabled]="isOrdenBloqueada(item)" (click)="editarOrden(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="success" icon="pi pi-check-circle" title="Finalizar"
+                [disabled]="!canFinalizeOrden(item)" (click)="finalizarOrden(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="secondary" icon="pi pi-replay" title="Devolver"
+                [disabled]="!canDevolverOrden(item)" (click)="devolverOrden(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="warn" icon="pi pi-ban" title="Anular"
+                [disabled]="isOrdenBloqueada(item)" (click)="anularOrden(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" title="Eliminar"
+                [disabled]="isOrdenBloqueada(item)" (click)="eliminarOrden(item); $event.stopPropagation()"></button>
             </div>
           </div>
 
@@ -232,109 +153,48 @@
         <div class="selectedOrderBar__copy">
           <div class="selectedOrderBar__title">
             <strong>OT #{{ ordenActual.idVehOrdenTrabajo }} · {{ ordenActual.tipoServicio || 'SERVICIO' }}</strong>
-            <span
-              class="stateInlinePill"
-              [class.is-danger]="isOrdenAnulada(ordenActual)"
-              [class.is-success]="isOrdenFinalizada(ordenActual)"
-              [class.is-process]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
+            <span class="stateInlinePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="isOrdenFinalizada(ordenActual)" [class.is-process]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
               {{ ordenActual.estadoOrden || 'RECIBIDO' }}
             </span>
           </div>
-
-          <span class="selectedOrderBar__meta">
-            Ingreso: {{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}
-          </span>
+          <span class="selectedOrderBar__meta">Ingreso: {{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
         </div>
 
         <div class="selectedOrderBar__actions">
-          <button
-            pButton
-            type="button"
-            size="small"
-            severity="success"
-            icon="pi pi-check-circle"
-            label="Finalizar orden"
-            [disabled]="!canFinalizeOrden(ordenActual)"
-            (click)="finalizarOrden(ordenActual)">
-          </button>
-
-          <button
-            pButton
-            type="button"
-            size="small"
-            severity="secondary"
-            icon="pi pi-replay"
-            label="Devolver orden"
-            [disabled]="!canDevolverOrden(ordenActual)"
-            (click)="devolverOrden(ordenActual)">
-          </button>
-
+          <button pButton type="button" size="small" severity="success" icon="pi pi-check-circle" label="Finalizar orden" [disabled]="!canFinalizeOrden(ordenActual)" (click)="finalizarOrden(ordenActual)"></button>
+          <button pButton type="button" size="small" severity="secondary" icon="pi pi-replay" label="Devolver orden" [disabled]="!canDevolverOrden(ordenActual)" (click)="devolverOrden(ordenActual)"></button>
           <app-orden-reportes-panel [orden]="selectedOrden()"></app-orden-reportes-panel>
         </div>
       </div>
 
-      <app-orden-detail-panel
-        [orden]="selectedOrden()"
-        [clienteNombre]="clienteNombreSeleccionado()"
-        [vehiculoNombre]="vehiculoNombreSeleccionado()"
-        [responsableRecepcionNombre]="responsableRecepcionNombre()"
-        [responsableTecnicoNombre]="responsableTecnicoNombre()"
-        [checklist]="checklist()"
-        [checklistOpciones]="checklistOpciones()"
-        [trabajos]="trabajos()"
-        [hallazgos]="hallazgos()"
-        [selectedHallazgo]="selectedHallazgo()"
-        [marcas]="marcas()"
-        [fotos]="fotos()"
-        [repuestos]="repuestos()"
-        [autorizaciones]="autorizaciones()"
-        [ordenFacturas]="ordenFacturas()"
-        [vistas]="vistas()"
-        [selectedVista]="selectedVista()"
-        [facturasOt]="facturasOt()"
-        [selectedFacturaOt]="selectedFacturaOt()"
-        [facturaDetalle]="facturaDetalle()"
-        [cobrosFactura]="cobrosFactura()"
-        [workflowResultado]="workflowResultado()"
-        [checklistLabelMap]="checklistLabelMap()"
-        [trabajoLabelMap]="trabajoLabelMap()"
-        [articuloLabelMap]="articuloLabelMap()"
-        [articulosCatalogo]="articulosCatalogo()"
-        [readonlyMode]="isOrdenBloqueada(selectedOrden())"
-        [garantias]="garantias()"
-        [selectedGarantia]="selectedGarantia()"
-        [garantiaDetalles]="garantiaDetalles()"
-        [garantiaMovimientos]="garantiaMovimientos()"
-        (saveChecklist)="guardarChecklistMasivo($event)"
-        (saveTrabajo)="guardarTrabajoWorkbench($event)"
-        (saveHallazgo)="guardarHallazgoWorkbench($event)"
-        (saveFoto)="guardarFotoWorkbench($event)"
-        (saveRepuesto)="guardarRepuestoWorkbench($event)"
-        (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
-        (articuloQueryChange)="onRepuestoArticuloQueryChange($event)"
-        (articuloSelected)="seleccionarArticuloRepuesto($event)"
-        (selectHallazgo)="seleccionarHallazgo($event)"
-        (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()"
-        (selectVista)="seleccionarVista($event)"
-        (selectFactura)="seleccionarFacturaOt($event)"
-        (pointMarked)="createMarcaDesdeCanvas($event)"
-        (createFactura)="guardarFacturaDesdePanel($event)"
-        (openCobro)="abrirComercialDrawer('cobro')"
-        (openContabilizar)="abrirComercialDrawer('contabilizar')"
-        (selectGarantia)="seleccionarGarantia($event)"
-        (openGarantia)="abrirGarantiaDrawer()"
-        (openGarantiaDetalle)="abrirGarantiaDetalleDrawer()"
-        (openGarantiaMovimiento)="abrirGarantiaMovimientoDrawer()">
+      <app-orden-detail-panel [orden]="selectedOrden()" [clienteNombre]="clienteNombreSeleccionado()"
+        [vehiculoNombre]="vehiculoNombreSeleccionado()" [responsableRecepcionNombre]="responsableRecepcionNombre()"
+        [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()"
+        [checklistOpciones]="checklistOpciones()" [trabajos]="trabajos()" [hallazgos]="hallazgos()"
+        [selectedHallazgo]="selectedHallazgo()" [marcas]="marcas()" [fotos]="fotos()" [repuestos]="repuestos()"
+        [autorizaciones]="autorizaciones()" [ordenFacturas]="ordenFacturas()" [vistas]="vistas()"
+        [selectedVista]="selectedVista()" [facturasOt]="facturasOt()" [selectedFacturaOt]="selectedFacturaOt()"
+        [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
+        [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
+        [articuloLabelMap]="articuloLabelMap()" [articulosCatalogo]="articulosCatalogo()"
+        [readonlyMode]="isOrdenBloqueada(selectedOrden())" [garantias]="garantias()"
+        [selectedGarantia]="selectedGarantia()" [garantiaDetalles]="garantiaDetalles()" [garantiaMovimientos]="garantiaMovimientos()"
+        (saveChecklist)="guardarChecklistMasivo($event)" (saveTrabajo)="guardarTrabajoWorkbench($event)"
+        (saveHallazgo)="guardarHallazgoWorkbench($event)" (saveFoto)="guardarFotoWorkbench($event)"
+        (saveRepuesto)="guardarRepuestoWorkbench($event)" (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
+        (articuloQueryChange)="onRepuestoArticuloQueryChange($event)" (articuloSelected)="seleccionarArticuloRepuesto($event)"
+        (selectHallazgo)="seleccionarHallazgo($event)" (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()"
+        (selectVista)="seleccionarVista($event)" (selectFactura)="seleccionarFacturaOt($event)"
+        (pointMarked)="createMarcaDesdeCanvas($event)" (createFactura)="guardarFacturaDesdePanel($event)"
+        (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')"
+        (selectGarantia)="seleccionarGarantia($event)" (openGarantia)="abrirGarantiaDrawer()"
+        (openGarantiaDetalle)="abrirGarantiaDetalleDrawer()" (openGarantiaMovimiento)="abrirGarantiaMovimientoDrawer()">
       </app-orden-detail-panel>
     </section>
   </div>
 
   <ng-template #noOrdenes>
-    <app-vehiculos-empty-state
-      icon="pi pi-briefcase"
-      title="Sin órdenes"
-      subtitle="No hay órdenes para el estado o búsqueda aplicada.">
-    </app-vehiculos-empty-state>
+    <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes" subtitle="No hay órdenes para el estado o búsqueda aplicada."></app-vehiculos-empty-state>
   </ng-template>
 
   <app-orden-main-form-drawer [visible]="drawerVisible()" [saving]="saving()" [orden]="editingOrden()"

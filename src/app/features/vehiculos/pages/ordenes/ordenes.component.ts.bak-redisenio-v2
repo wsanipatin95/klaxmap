@@ -155,24 +155,8 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     { key: 'ANULADO', label: 'ANULADO', tone: 'danger' },
   ];
 
-  readonly servicioFilterOptions = [
-    'REPARACION',
-    'MANTENIMIENTO',
-    'DIAGNOSTICO',
-    'GARANTIA',
-    'REVISION',
-    'INSPECCION',
-    'OTRO',
-  ];
-
   estadoFilter = signal<OrdenEstadoFilter>('TODOS');
   filtrosAvanzadosVisible = signal(false);
-  private filterVersion = signal(0);
-
-  filterServicio = '';
-  filterFechaDesde = '';
-  filterFechaHasta = '';
-  filterSoloActivas = false;
 
   private readonly MAIN_DRAWER_PAGE_SIZE = 100;
   private detalleLoadSeq = 0;
@@ -477,32 +461,14 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   );
 
   readonly ordenesFiltradas = computed(() => {
-    this.filterVersion();
-
     const filter = this.estadoFilter();
-    let items = this.ordenes();
+    const items = this.ordenes();
 
-    if (filter !== 'TODOS') {
-      items = items.filter((item) => this.matchesEstadoFilter(item.estadoOrden, filter));
+    if (filter === 'TODOS') {
+      return items;
     }
 
-    if (this.filterServicio) {
-      items = items.filter((item) => String(item.tipoServicio || '').toUpperCase() === this.filterServicio);
-    }
-
-    if (this.filterFechaDesde) {
-      items = items.filter((item) => this.ordenDateValue(item) >= this.filterFechaDesde);
-    }
-
-    if (this.filterFechaHasta) {
-      items = items.filter((item) => this.ordenDateValue(item) <= this.filterFechaHasta);
-    }
-
-    if (this.filterSoloActivas) {
-      items = items.filter((item) => !this.isOrdenBloqueada(item));
-    }
-
-    return items;
+    return items.filter((item) => this.matchesEstadoFilter(item.estadoOrden, filter));
   });
 
   constructor() {
@@ -570,16 +536,11 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   setEstadoFilter(filter: OrdenEstadoFilter) {
     this.estadoFilter.set(filter);
-    this.onAdvancedFilterChange();
+    this.syncSelectedOrdenWithFilters();
   }
 
   toggleFiltrosAvanzados() {
     this.filtrosAvanzadosVisible.update((value) => !value);
-  }
-
-  onAdvancedFilterChange() {
-    this.filterVersion.update((value) => value + 1);
-    this.syncSelectedOrdenWithFilters();
   }
 
   aplicarBusquedaOrdenes() {
@@ -589,24 +550,20 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   limpiarFiltrosOrdenes() {
     this.q = '';
     this.estadoFilter.set('TODOS');
-    this.filterServicio = '';
-    this.filterFechaDesde = '';
-    this.filterFechaHasta = '';
-    this.filterSoloActivas = false;
     this.filtrosAvanzadosVisible.set(false);
-    this.filterVersion.update((value) => value + 1);
     this.cargar();
   }
 
   activeFilterCount(): number {
     let count = 0;
 
-    if (this.estadoFilter() !== 'TODOS') count += 1;
-    if (this.q.trim()) count += 1;
-    if (this.filterServicio) count += 1;
-    if (this.filterFechaDesde) count += 1;
-    if (this.filterFechaHasta) count += 1;
-    if (this.filterSoloActivas) count += 1;
+    if (this.estadoFilter() !== 'TODOS') {
+      count += 1;
+    }
+
+    if (this.q.trim()) {
+      count += 1;
+    }
 
     return count;
   }
@@ -669,11 +626,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   private normalizeEstadoFilter(rawEstado: string | null | undefined): string {
     return String(rawEstado || 'RECIBIDO').trim().toUpperCase();
-  }
-
-  private ordenDateValue(item: VehOrdenTrabajo): string {
-    const raw = String(item.fechaIngreso || item.fecGen || '').trim();
-    return raw ? raw.slice(0, 10) : '0000-00-00';
   }
 
   nuevo() {

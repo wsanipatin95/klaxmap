@@ -6,7 +6,7 @@
 }
 
 :host ::ng-deep .p-button {
-  border-radius: 0.68rem;
+  border-radius: 0.62rem;
   font-weight: 700;
   min-height: 1.82rem;
   font-size: 0.74rem;
@@ -16,28 +16,28 @@
 .vehPageShell--ordenes {
   min-width: 0;
   display: grid;
-  gap: 0.62rem;
+  gap: 0.52rem;
 }
 
 .statusFilterRail {
   display: flex;
   align-items: center;
-  gap: 0.42rem;
+  gap: 0.38rem;
   flex-wrap: wrap;
-  padding: 0 0.15rem;
+  padding: 0 0.12rem;
 }
 
 .statusFilterButton {
   display: inline-flex;
   align-items: center;
-  gap: 0.38rem;
-  min-height: 1.7rem;
-  padding: 0.2rem 0.58rem;
+  gap: 0.34rem;
+  min-height: 1.58rem;
+  padding: 0.16rem 0.54rem;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
   background: #ffffff;
   color: #475569;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
@@ -45,15 +45,15 @@
 }
 
 .statusFilterButton strong {
-  min-width: 1.2rem;
-  min-height: 1.2rem;
+  min-width: 1.12rem;
+  min-height: 1.12rem;
   display: inline-grid;
   place-items: center;
-  padding: 0 0.25rem;
+  padding: 0 0.23rem;
   border-radius: 999px;
   background: #f1f5f9;
   color: #0f172a;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
 }
 
 .statusFilterButton:hover {
@@ -64,7 +64,7 @@
   border-color: #7b0061;
   background: #fff0fa;
   color: #7b0061;
-  box-shadow: 0 6px 14px rgba(123, 0, 97, 0.1);
+  box-shadow: 0 5px 12px rgba(123, 0, 97, 0.1);
 }
 
 .statusFilterButton.active strong {
@@ -112,24 +112,28 @@
   background: #dc2626;
 }
 
+/* Barra compacta: NO ocupa todo el ancho con una card grande. */
 .compactSearchRail {
-  display: grid;
-  grid-template-columns: minmax(18rem, 30rem) auto;
-  gap: 0.55rem;
+  position: relative;
+  display: flex;
   align-items: center;
-  padding: 0.56rem 0.62rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.86rem;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  justify-content: space-between;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .compactSearchRail__main {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(15rem, 25rem) 2rem 2rem;
   gap: 0.34rem;
   align-items: center;
   min-width: 0;
+  width: min(100%, 30rem);
 }
 
 .compactSearchRail__actions {
@@ -138,10 +142,20 @@
   justify-content: flex-end;
   gap: 0.34rem;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .searchBox--compact {
   min-width: 0;
+  min-height: 2.12rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.72rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.searchBox--compact input {
+  min-height: 2.05rem;
 }
 
 .searchIconButton,
@@ -184,45 +198,99 @@
   font-weight: 800;
 }
 
-.filterMiniPanel {
-  grid-column: 1 / -1;
+/* Popover: ya no son tres cards horizontales que desperdician toda la fila. */
+.filterPopover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  width: min(28rem, calc(100vw - 2rem));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.42rem;
-  padding-top: 0.48rem;
-  border-top: 1px dashed #e2e8f0;
-}
-
-.filterMiniPanel__item {
-  display: grid;
-  gap: 0.05rem;
-  padding: 0.42rem 0.5rem;
+  gap: 0.5rem;
+  padding: 0.6rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.66rem;
-  background: #f8fafc;
-  min-width: 0;
+  border-radius: 0.8rem;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
 }
 
-.filterMiniPanel__item span {
+.filterPopover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid #eef2f7;
+  padding-bottom: 0.45rem;
+}
+
+.filterPopover__head strong {
+  color: #0f172a;
+  font-size: 0.78rem;
+}
+
+.filterPopover__head span {
   color: #64748b;
-  font-size: 0.62rem;
+  font-size: 0.66rem;
   font-weight: 700;
 }
 
-.filterMiniPanel__item strong {
+.filterPopover__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.filterField {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.filterField label {
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.filterField :is(input, select) {
+  width: 100%;
+  min-height: 1.9rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.56rem;
+  background: #ffffff;
   color: #0f172a;
-  font-size: 0.72rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.74rem;
+  padding: 0.28rem 0.48rem;
+}
+
+.filterPopover__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 0.45rem;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.45rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.64rem;
+  font-weight: 800;
 }
 
 .ordenesLayout {
   display: grid;
-  grid-template-columns: minmax(17rem, 20rem) minmax(0, 1fr);
-  gap: 0.62rem;
+  grid-template-columns: minmax(17.5rem, 20.5rem) minmax(0, 1fr);
+  gap: 0.58rem;
   align-items: stretch;
-  min-height: clamp(32rem, calc(100vh - 12.2rem), 50rem);
+  min-height: clamp(32rem, calc(100vh - 11.2rem), 50rem);
 }
 
 .ordenesLayout--dense {
@@ -253,8 +321,8 @@
 .workspaceCard {
   display: grid;
   align-content: start;
-  gap: 0.5rem;
-  padding: 0.52rem;
+  gap: 0.48rem;
+  padding: 0.5rem;
   overflow: auto;
 }
 
@@ -272,7 +340,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.62rem;
-  padding: 0.58rem 0.68rem;
+  padding: 0.52rem 0.62rem;
   border-bottom: 1px solid #eef2f7;
 }
 
@@ -282,7 +350,7 @@
 
 .backlogCard__title {
   display: grid;
-  gap: 0.05rem;
+  gap: 0.04rem;
   min-width: 0;
 }
 
@@ -304,29 +372,35 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.26rem;
-  padding: 0 0.38rem;
+  min-height: 1.22rem;
+  padding: 0 0.36rem;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
   background: #f8fafc;
   color: #64748b;
-  font-size: 0.63rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
 }
 
+/* Importante: flex evita que 1 o 2 items se estiren hasta llenar toda la lista. */
 .backlogCard__body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-content: flex-start;
   gap: 0.5rem;
   overflow: auto;
 }
 
 .backlogCard__body--compact {
-  gap: 0.3rem;
+  gap: 0.32rem;
   padding: 0.42rem;
-  max-height: calc(100vh - 12rem);
+  max-height: calc(100vh - 11.4rem);
 }
 
 .jiraLikeRow {
+  flex: 0 0 auto;
+  align-self: stretch;
   border: 1px solid #e2e8f0;
   border-radius: 0.78rem;
   background: #ffffff;
@@ -348,33 +422,35 @@
 }
 
 .jiraLikeRow--compact {
-  padding: 0.42rem 0.48rem;
-  border-radius: 0.66rem;
+  padding: 0.38rem 0.45rem;
+  border-radius: 0.64rem;
 }
 
 .jiraLikeRow--ultra {
   display: grid;
-  gap: 0.22rem;
+  gap: 0.2rem;
+  min-height: 4.55rem;
+  max-height: 5.2rem;
 }
 
 .orderRowTop {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.36rem;
+  gap: 0.32rem;
   align-items: start;
 }
 
 .orderRowTitle {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.28rem;
   min-width: 0;
 }
 
 .orderRowTitle strong {
   min-width: 0;
   color: #0f172a;
-  font-size: 0.7rem;
+  font-size: 0.69rem;
   line-height: 1.08;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -385,16 +461,16 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.08rem;
+  gap: 0.06rem;
   flex-wrap: nowrap;
 }
 
 .orderRowGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 0.1rem 0.42rem;
+  gap: 0.08rem 0.38rem;
   color: #475569;
-  font-size: 0.63rem;
+  font-size: 0.62rem;
   line-height: 1.12;
 }
 
@@ -412,8 +488,8 @@
 
 .orderRowDetail {
   color: #64748b;
-  font-size: 0.62rem;
-  line-height: 1.14;
+  font-size: 0.61rem;
+  line-height: 1.12;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
@@ -423,31 +499,31 @@
 .selectedOrderBar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.58rem;
+  gap: 0.5rem;
   align-items: center;
-  padding: 0.46rem 0.52rem;
+  padding: 0.42rem 0.48rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.78rem;
+  border-radius: 0.74rem;
   background: #ffffff;
 }
 
 .selectedOrderBar__copy {
   display: grid;
-  gap: 0.08rem;
+  gap: 0.06rem;
   min-width: 0;
 }
 
 .selectedOrderBar__title {
   display: flex;
   align-items: center;
-  gap: 0.42rem;
+  gap: 0.38rem;
   min-width: 0;
 }
 
 .selectedOrderBar__title strong {
   min-width: 0;
   color: #0f172a;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   line-height: 1.12;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -456,7 +532,7 @@
 
 .selectedOrderBar__meta {
   color: #64748b;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   line-height: 1.15;
 }
 
@@ -464,7 +540,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.34rem;
+  gap: 0.32rem;
   flex-wrap: wrap;
 }
 
@@ -475,10 +551,10 @@
 .stateInlinePill {
   display: inline-flex;
   align-items: center;
-  min-height: 1.35rem;
-  padding: 0 0.42rem;
+  min-height: 1.3rem;
+  padding: 0 0.4rem;
   border-radius: 999px;
-  font-size: 0.62rem;
+  font-size: 0.61rem;
   font-weight: 800;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
@@ -671,20 +747,20 @@
 }
 
 :host ::ng-deep .backlogCard .p-tag {
-  font-size: 0.56rem;
-  padding: 0.12rem 0.28rem;
+  font-size: 0.55rem;
+  padding: 0.11rem 0.27rem;
 }
 
 :host ::ng-deep .backlogCard .p-button {
-  min-height: 1.42rem;
-  font-size: 0.62rem;
-  padding: 0.14rem 0.28rem;
-  border-radius: 0.44rem;
+  min-height: 1.36rem;
+  font-size: 0.6rem;
+  padding: 0.12rem 0.26rem;
+  border-radius: 0.42rem;
 }
 
 :host ::ng-deep .backlogCard .p-button.p-button-icon-only {
-  width: 1.42rem;
-  min-width: 1.42rem;
+  width: 1.36rem;
+  min-width: 1.36rem;
   padding: 0;
 }
 
@@ -693,6 +769,20 @@
   .ordenesLayout,
   .selectedOrderBar {
     grid-template-columns: 1fr;
+  }
+
+  .compactSearchRail {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .compactSearchRail__main {
+    width: min(100%, 30rem);
+  }
+
+  .compactSearchRail__actions {
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   .ordenesLayout {
@@ -717,7 +807,7 @@
 @media (max-width: 960px) {
   .drawerGrid,
   .kvRow,
-  .filterMiniPanel {
+  .filterPopover__grid {
     grid-template-columns: 1fr;
   }
 
@@ -729,10 +819,6 @@
   .span-2 {
     grid-column: span 1;
   }
-
-  .compactSearchRail__actions {
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 720px) {
@@ -743,6 +829,11 @@
   .statusFilterButton {
     font-size: 0.6rem;
     padding-inline: 0.42rem;
+  }
+
+  .compactSearchRail__main {
+    grid-template-columns: minmax(0, 1fr) 2rem 2rem;
+    width: 100%;
   }
 
   .orderRowTop {
