@@ -173,6 +173,9 @@
                     <div class="secondaryCell">Completa los datos y guarda el trabajo.</div>
                   </ng-template>
                 
+  <section class="panelCard panelCard--bitacora" *ngIf="activeTab()==='bitacora'">
+    <app-orden-bitacora-panel [orden]="orden"></app-orden-bitacora-panel>
+  </section>
 </ng-container>
 
                 <ng-container *ngIf="executionTab()==='hallazgos'">
@@ -573,18 +576,14 @@
         (openCobro)="openCobro.emit()" (openContabilizar)="openContabilizar.emit()" [readonlyMode]="readonlyMode">
       </app-orden-comercial-panel>
     </section>
+  </section>
 
-    <section class="panelCard" *ngIf="activeTab()==='garantias'">
-      <app-orden-garantias-panel [orden]="orden" [garantias]="garantias" [selectedGarantia]="selectedGarantia"
-        [garantiaDetalles]="garantiaDetalles" [garantiaMovimientos]="garantiaMovimientos"
-        [trabajoLabelMap]="trabajoLabelMap" [articuloLabelMap]="articuloLabelMap" [readonlyMode]="readonlyMode"
-        [trabajosOt]="trabajos" [repuestosOt]="repuestos" (selectGarantia)="selectGarantia.emit($event)">
-      </app-orden-garantias-panel>
-    </section>
-
-    <section class="panelCard panelCard--bitacora" *ngIf="activeTab()==='bitacora'">
-      <app-orden-bitacora-panel [orden]="orden"></app-orden-bitacora-panel>
-    </section>
+  <section class="panelCard" *ngIf="activeTab()==='garantias'">
+    <app-orden-garantias-panel [orden]="orden" [garantias]="garantias" [selectedGarantia]="selectedGarantia"
+      [garantiaDetalles]="garantiaDetalles" [garantiaMovimientos]="garantiaMovimientos"
+      [trabajoLabelMap]="trabajoLabelMap" [articuloLabelMap]="articuloLabelMap" [readonlyMode]="readonlyMode"
+      [trabajosOt]="trabajos" [repuestosOt]="repuestos" (selectGarantia)="selectGarantia.emit($event)">
+    </app-orden-garantias-panel>
   </section>
 </ng-container>
 
