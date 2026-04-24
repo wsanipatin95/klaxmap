@@ -18,16 +18,19 @@
       <strong>{{ resumen().total }}</strong>
       <small>garantía(s)</small>
     </article>
+
     <article class="summaryCard summaryCard--success">
       <span>Activas</span>
       <strong>{{ resumen().activas }}</strong>
       <small>vigentes</small>
     </article>
+
     <article class="summaryCard summaryCard--neutral">
       <span>Coberturas</span>
       <strong>{{ resumen().coberturas }}</strong>
       <small>ítems cubiertos</small>
     </article>
+
     <article class="summaryCard summaryCard--warn">
       <span>Reclamos</span>
       <strong>{{ resumen().reclamos }}</strong>
@@ -40,45 +43,48 @@
       <div class="sectionHead sectionHead--compact">
         <div>
           <h5>Lista de garantías</h5>
+          <div class="secondaryCell">{{ garantiasView().length }} registro(s)</div>
         </div>
       </div>
 
       <div class="sidebarList" *ngIf="garantiasView().length; else noGarantiasState">
-        <article class="garantiaCard" *ngFor="let item of garantiasView()"
+        <article class="garantiaCard garantiaCard--compact" *ngFor="let item of garantiasView()"
           [class.selected]="selectedGarantiaView()?.idVehGarantia === item.idVehGarantia"
           (click)="selectGarantiaCard(item)">
-          <div class="garantiaCard__head">
-            <div>
-              <div class="primaryCell">Garantía #{{ item.idVehGarantia }}</div>
-              <div class="secondaryCell">{{ item.tipoGarantia || 'GARANTÍA' }} · {{ modalidadLabel(item.modalidadVencimiento) }}</div>
+
+          <div class="garantiaCard__top">
+            <div class="garantiaCard__copy">
+              <strong>Garantía #{{ item.idVehGarantia }}</strong>
+              <span>{{ garantiaCompactLine(item) }}</span>
             </div>
+
             <p-tag [value]="item.estadoGarantia || 'ACTIVA'" [severity]="estadoSeverity(item.estadoGarantia)"></p-tag>
           </div>
 
-          <div class="garantiaCard__meta">
-            <span><strong>Base:</strong> {{ formatDate(item.fechaBase) }} · Km {{ item.kmBase || 0 }}</span>
-            <span><strong>Vence:</strong> {{ formatDate(item.fechaVence) }} · Km {{ item.kmVence || 0 }}</span>
-            <span><strong>Cobertura:</strong> {{ garantiaResumenLabel(item) }}</span>
-            <span><strong>Responsable:</strong> {{ responsableLabel(item.responsableCosto) }}</span>
-          </div>
+          <div class="garantiaCard__line">{{ garantiaDatesLine(item) }}</div>
+          <div class="garantiaCard__footer">
+            <span>{{ garantiaFooterLine(item) }}</span>
 
-          <div class="cardActions">
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" [disabled]="readonlyMode"
-              (click)="openEditarGarantia(item); $event.stopPropagation()">
-            </button>
-            <button pButton type="button" size="small" [text]="true" icon="pi pi-print"
-              (click)="printGarantia(item); $event.stopPropagation()">
-            </button>
-            <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
-              [disabled]="readonlyMode" (click)="deleteGarantia(item); $event.stopPropagation()">
-            </button>
+            <div class="cardActions cardActions--mini">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" title="Editar"
+                [disabled]="readonlyMode" (click)="openEditarGarantia(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-print" title="Imprimir"
+                (click)="printGarantia(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+                title="Eliminar" [disabled]="readonlyMode" (click)="deleteGarantia(item); $event.stopPropagation()">
+              </button>
+            </div>
           </div>
         </article>
       </div>
     </aside>
 
     <section class="garantiasDetail" *ngIf="selectedGarantiaView() as garantia; else noGarantiaSeleccionada">
-      <div class="sectionHead">
+      <div class="sectionHead detailTitleRow">
         <div>
           <h5>Garantía #{{ garantia.idVehGarantia }}</h5>
           <div class="secondaryCell">{{ garantia.tipoGarantia || '-' }} · {{ modalidadLabel(garantia.modalidadVencimiento) }}</div>
@@ -88,113 +94,123 @@
           <button pButton type="button" size="small" severity="secondary" icon="pi pi-plus" label="Cobertura"
             [disabled]="readonlyMode" (click)="openNuevaCobertura()">
           </button>
+
           <button pButton type="button" size="small" severity="secondary" icon="pi pi-history" label="Registrar reclamo"
             [disabled]="readonlyMode" (click)="openNuevoReclamo()">
           </button>
+
           <button pButton type="button" size="small" icon="pi pi-print" label="Imprimir"
             (click)="printGarantia(garantia)">
           </button>
         </div>
       </div>
 
-      <div class="metricGrid">
+      <div class="metricGrid metricGrid--compact">
         <article class="metric"><span>Estado</span><strong>{{ garantia.estadoGarantia || '-' }}</strong></article>
         <article class="metric"><span>Responsable</span><strong>{{ responsableLabel(garantia.responsableCosto) }}</strong></article>
         <article class="metric"><span>Base</span><strong>{{ formatDate(garantia.fechaBase) }} · Km {{ garantia.kmBase || 0 }}</strong></article>
         <article class="metric"><span>Vence</span><strong>{{ formatDate(garantia.fechaVence) }} · Km {{ garantia.kmVence || 0 }}</strong></article>
       </div>
 
-      <div class="kvGrid">
+      <div class="kvGrid kvGrid--compact">
         <article class="kvItem">
           <span>Alcance</span>
           <strong>{{ garantiaResumenLabel(garantia) }}</strong>
         </article>
+
         <article class="kvItem">
-          <span>OT vinculada</span>
-          <strong>{{ garantia.idVehOrdenTrabajoReclamoFk ? ('OT #' + garantia.idVehOrdenTrabajoReclamoFk) : 'Sin OT' }}</strong>
+          <span>OT de atención</span>
+          <strong>{{ garantia.idVehOrdenTrabajoReclamoFk ? ('OT #' + garantia.idVehOrdenTrabajoReclamoFk) : 'Sin OT generada' }}</strong>
         </article>
+
         <article class="kvItem kvItem--wide">
           <span>Observaciones</span>
           <strong>{{ garantia.observaciones || 'Sin observaciones registradas.' }}</strong>
         </article>
       </div>
 
-      <section class="sectionBlock">
+      <section class="sectionBlock sectionBlock--compact">
         <div class="sectionHead sectionHead--compact">
           <div>
             <h5>Coberturas</h5>
+            <div class="secondaryCell">{{ detallesView().length }} ítem(s)</div>
           </div>
+
           <button pButton type="button" size="small" icon="pi pi-plus" label="Agregar cobertura"
             [disabled]="readonlyMode" (click)="openNuevaCobertura()">
           </button>
         </div>
 
-        <div class="itemsList" *ngIf="detallesView().length; else noCoberturasState">
-          <article class="itemCard" *ngFor="let item of detallesView()">
-            <div class="rowHeader">
+        <div class="itemsList itemsList--compact" *ngIf="detallesView().length; else noCoberturasState">
+          <article class="itemCard itemCard--compact" *ngFor="let item of detallesView()">
+            <div class="rowHeader rowHeader--tight">
               <div class="rowCopy">
-                <div class="primaryCell">{{ detalleLabel(item) }}</div>
-                <div class="secondaryCell">{{ detalleSubLabel(item) }}</div>
+                <div class="primaryCell rowClamp1">{{ detalleLabel(item) }}</div>
+                <div class="secondaryCell rowClamp1">{{ detalleSubLabel(item) }}</div>
               </div>
+
               <p-tag [value]="coberturaBadge(item)" severity="secondary"></p-tag>
             </div>
 
-            <div class="chipRow">
-              <span class="miniChip">Monto máx: {{ money(item.montoMaximo) }}</span>
-              <span class="miniChip">Cantidad máx: {{ item.cantidadMaxima || 0 }}</span>
-              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie retirada: {{ item.serieAnterior || '-' }}</span>
-              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Serie instalada: {{ item.serieNueva || '-' }}</span>
+            <div class="chipRow chipRow--compact">
+              <span class="miniChip">{{ money(item.montoMaximo) }}</span>
+              <span class="miniChip">Cant. {{ item.cantidadMaxima || 0 }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Ret. {{ item.serieAnterior || '-' }}</span>
+              <span class="miniChip" *ngIf="shouldShowSeries(item.tipoCobertura)">Inst. {{ item.serieNueva || '-' }}</span>
             </div>
 
-            <div class="secondaryCell rowClamp">{{ item.observaciones || 'Sin observaciones de cobertura.' }}</div>
+            <div class="secondaryCell rowClamp1">{{ item.observaciones || 'Sin observaciones.' }}</div>
 
-            <div class="cardActions cardActions--inline">
-              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" [disabled]="readonlyMode"
-                (click)="openEditarCobertura(item)"></button>
+            <div class="cardActions cardActions--inline cardActions--mini">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" title="Editar"
+                [disabled]="readonlyMode" (click)="openEditarCobertura(item)"></button>
               <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
-                [disabled]="readonlyMode" (click)="deleteCobertura(item)"></button>
+                title="Eliminar" [disabled]="readonlyMode" (click)="deleteCobertura(item)"></button>
             </div>
           </article>
         </div>
       </section>
 
-      <section class="sectionBlock">
+      <section class="sectionBlock sectionBlock--compact">
         <div class="sectionHead sectionHead--compact">
           <div>
             <h5>Reclamos / movimientos</h5>
+            <div class="secondaryCell">{{ movimientosView().length }} registro(s)</div>
           </div>
+
           <button pButton type="button" size="small" icon="pi pi-plus" label="Registrar reclamo"
             [disabled]="readonlyMode" (click)="openNuevoReclamo()">
           </button>
         </div>
 
-        <div class="itemsList" *ngIf="movimientosView().length; else noMovimientosState">
-          <article class="itemCard" *ngFor="let item of movimientosView()">
-            <div class="rowHeader">
+        <div class="itemsList itemsList--compact" *ngIf="movimientosView().length; else noMovimientosState">
+          <article class="itemCard itemCard--compact" *ngFor="let item of movimientosView()">
+            <div class="rowHeader rowHeader--tight">
               <div class="rowCopy">
                 <div class="primaryCell">{{ movimientoTitle(item) }}</div>
                 <div class="secondaryCell">{{ formatDate(item.fechaReclamo) }} · Km {{ item.kmReclamo || 0 }}</div>
               </div>
+
               <p-tag [value]="item.resultado || 'PENDIENTE'" [severity]="estadoSeverity(item.resultado)"></p-tag>
             </div>
 
-            <div class="secondaryCell rowClamp">{{ item.diagnostico || 'Sin diagnóstico registrado.' }}</div>
+            <div class="secondaryCell rowClamp1">{{ item.diagnostico || 'Sin diagnóstico registrado.' }}</div>
 
-            <div class="chipRow">
-              <span class="miniChip">Cliente: {{ money(item.valorCliente) }}</span>
-              <span class="miniChip">Taller: {{ money(item.valorTaller) }}</span>
-              <span class="miniChip">Proveedor: {{ money(item.valorProveedor) }}</span>
-              <span class="miniChip" *ngIf="item.idVehOrdenTrabajoFk">OT atención: #{{ item.idVehOrdenTrabajoFk }}</span>
+            <div class="chipRow chipRow--compact">
+              <span class="miniChip">Cliente {{ money(item.valorCliente) }}</span>
+              <span class="miniChip">Taller {{ money(item.valorTaller) }}</span>
+              <span class="miniChip">Proveedor {{ money(item.valorProveedor) }}</span>
+              <span class="miniChip" *ngIf="item.idVehOrdenTrabajoFk">OT #{{ item.idVehOrdenTrabajoFk }}</span>
             </div>
 
-            <div class="secondaryCell" *ngIf="item.motivoRechazo">Motivo rechazo: {{ item.motivoRechazo }}</div>
-            <div class="secondaryCell rowClamp" *ngIf="item.observaciones">{{ item.observaciones }}</div>
+            <div class="secondaryCell rowClamp1" *ngIf="item.motivoRechazo">Motivo rechazo: {{ item.motivoRechazo }}</div>
+            <div class="secondaryCell rowClamp1" *ngIf="item.observaciones">{{ item.observaciones }}</div>
 
-            <div class="cardActions cardActions--inline">
-              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" [disabled]="readonlyMode"
-                (click)="openEditarReclamo(item)"></button>
+            <div class="cardActions cardActions--inline cardActions--mini">
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" title="Editar"
+                [disabled]="readonlyMode" (click)="openEditarReclamo(item)"></button>
               <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
-                [disabled]="readonlyMode" (click)="deleteReclamo(item)"></button>
+                title="Eliminar" [disabled]="readonlyMode" (click)="deleteReclamo(item)"></button>
             </div>
           </article>
         </div>
@@ -204,26 +220,22 @@
 </section>
 
 <ng-template #noGarantiasState>
-  <app-vehiculos-empty-state icon="pi pi-shield" title="Sin garantías"
-    subtitle="Registra la primera garantía para esta orden.">
+  <app-vehiculos-empty-state icon="pi pi-shield" title="Sin garantías" subtitle="Registra la primera garantía para esta orden.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noGarantiaSeleccionada>
-  <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía"
-    subtitle="Elige una garantía del panel izquierdo.">
+  <app-vehiculos-empty-state icon="pi pi-shield" title="Selecciona una garantía" subtitle="Elige una garantía del panel izquierdo.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noCoberturasState>
-  <app-vehiculos-empty-state icon="pi pi-list" title="Sin coberturas"
-    subtitle="Agrega trabajos o repuestos cubiertos.">
+  <app-vehiculos-empty-state icon="pi pi-list" title="Sin coberturas" subtitle="Agrega trabajos o repuestos cubiertos.">
   </app-vehiculos-empty-state>
 </ng-template>
 
 <ng-template #noMovimientosState>
-  <app-vehiculos-empty-state icon="pi pi-history" title="Sin reclamos"
-    subtitle="Registra el primer movimiento de garantía.">
+  <app-vehiculos-empty-state icon="pi pi-history" title="Sin reclamos" subtitle="Registra el primer movimiento de garantía.">
   </app-vehiculos-empty-state>
 </ng-template>
 
@@ -303,14 +315,14 @@
         </select>
       </div>
 
-      <div class="field span-12 helperCard">
+      <div class="field span-12 helperCard helperCard--soft">
         <strong>Vencimiento estimado</strong>
-        <span>Fecha: {{ formatDate(garantiaVencimientoPreview().fecha) }} · Km: {{ garantiaVencimientoPreview().km }}</span>
+        <span>Fecha: {{ formatDate(garantiaVencimientoPreview().fecha) }} · Km: {{ garantiaVencimientoPreview().km || 0 }}</span>
       </div>
 
       <div class="field span-12">
         <label>Observaciones</label>
-        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
       </div>
     </div>
   </form>
@@ -336,16 +348,16 @@
     </div>
   </ng-template>
 
-  <form [formGroup]="coberturaForm" class="dialogForm">
-    <div class="formGrid">
-      <div class="field span-4">
+  <form [formGroup]="coberturaForm" class="dialogForm dialogForm--compact">
+    <div class="formGrid formGrid--coverage">
+      <div class="field span-3">
         <label>Qué cubre</label>
-        <select formControlName="tipoCobertura">
+        <select formControlName="tipoCobertura" (change)="onCoverageTypeChange()">
           <option *ngFor="let item of tiposCobertura" [value]="item">{{ item }}</option>
         </select>
       </div>
 
-      <div class="field span-8" *ngIf="isTrabajoCoverage(coberturaForm.controls.tipoCobertura.value)">
+      <div class="field span-9" *ngIf="isTrabajoCoverage(coberturaForm.controls.tipoCobertura.value)">
         <label>Trabajo cubierto</label>
         <select formControlName="idVehOrdenTrabajoTrabajoFk">
           <option [ngValue]="null">Selecciona un trabajo</option>
@@ -354,7 +366,7 @@
         <small>{{ selectedTrabajoLabel() }}</small>
       </div>
 
-      <div class="field span-8" *ngIf="isRepuestoCoverage(coberturaForm.controls.tipoCobertura.value)">
+      <div class="field span-9" *ngIf="isRepuestoCoverage(coberturaForm.controls.tipoCobertura.value)">
         <label>Repuesto de la OT</label>
         <select formControlName="idVehOrdenTrabajoRepuestoFk" (change)="onRepuestoOtChange()">
           <option [ngValue]="null">Selecciona un repuesto de la OT</option>
@@ -363,7 +375,7 @@
         <small>{{ selectedArticuloLabel() }}</small>
       </div>
 
-      <div class="field span-8"
+      <div class="field span-9"
         *ngIf="isRepuestoCoverage(coberturaForm.controls.tipoCobertura.value) && !coberturaForm.controls.idVehOrdenTrabajoRepuestoFk.value">
         <label>Artículo / repuesto cubierto</label>
         <select formControlName="art">
@@ -372,14 +384,35 @@
         </select>
       </div>
 
-      <div class="field span-3 checkboxField">
+      <div class="field span-12" *ngIf="selectedRepuestoOption() as repuestoInfo">
+        <div class="priceBox">
+          <div>
+            <span>Repuesto seleccionado</span>
+            <strong>{{ repuestoInfo.artcod || 'ART' }} · {{ repuestoInfo.articulo }}</strong>
+          </div>
+          <div>
+            <span>Cantidad</span>
+            <strong>{{ repuestoInfo.cantidad }}</strong>
+          </div>
+          <div>
+            <span>Precio unit.</span>
+            <strong>{{ money(repuestoInfo.precioUnitario) }}</strong>
+          </div>
+          <div>
+            <span>Total permitido</span>
+            <strong>{{ money(repuestoInfo.total) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="field span-3 checkboxField checkboxField--inline">
         <label class="checkboxLabel">
           <input type="checkbox" formControlName="cubreManoObra">
           Cubre mano de obra
         </label>
       </div>
 
-      <div class="field span-3 checkboxField">
+      <div class="field span-3 checkboxField checkboxField--inline">
         <label class="checkboxLabel">
           <input type="checkbox" formControlName="cubreRepuesto">
           Cubre repuesto
@@ -388,12 +421,14 @@
 
       <div class="field span-3">
         <label>Cantidad máxima</label>
-        <input pInputText type="number" formControlName="cantidadMaxima">
+        <input pInputText type="number" formControlName="cantidadMaxima" (blur)="normalizeCantidadMaxima()">
+        <small class="fieldError" *ngIf="cantidadMaximaInvalida()">No puede superar la cantidad instalada.</small>
       </div>
 
       <div class="field span-3">
         <label>Monto máximo</label>
-        <input pInputText type="number" formControlName="montoMaximo">
+        <input pInputText type="number" formControlName="montoMaximo" (blur)="normalizeMontoMaximo()">
+        <small class="fieldError" *ngIf="montoMaximoInvalido()">No puede superar el total del repuesto.</small>
       </div>
 
       <div class="field span-6" *ngIf="shouldShowSeries(coberturaForm.controls.tipoCobertura.value)">
@@ -408,7 +443,7 @@
 
       <div class="field span-12">
         <label>Observaciones</label>
-        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
       </div>
     </div>
   </form>
@@ -434,11 +469,17 @@
     </div>
   </ng-template>
 
-  <form [formGroup]="reclamoForm" class="dialogForm">
-    <div class="formGrid">
+  <form [formGroup]="reclamoForm" class="dialogForm dialogForm--compact">
+    <div class="formGrid formGrid--claim">
       <div class="field span-4">
-        <label>OT de atención por garantía</label>
-        <input pInputText type="number" formControlName="idVehOrdenTrabajoFk" placeholder="OT vinculada">
+        <label>OT de atención</label>
+        <div class="otInfoBox" [class.otInfoBox--linked]="!!otVinculadaActual()">
+          <i class="pi" [class.pi-link]="!!otVinculadaActual()" [class.pi-info-circle]="!otVinculadaActual()"></i>
+          <div>
+            <strong>{{ otVinculadaActual() ? ('OT #' + otVinculadaActual()) : 'Sin OT generada' }}</strong>
+            <span>{{ otVinculadaActual() ? 'Vinculada al reclamo' : 'Se crea solo cuando el resultado lo requiere' }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="field span-4">
@@ -456,6 +497,21 @@
         <select formControlName="resultado">
           <option *ngFor="let item of resultadosMovimiento" [value]="item">{{ item }}</option>
         </select>
+      </div>
+
+      <div class="field span-8" *ngIf="canCreateOtGarantia() || otGarantiaPendienteGuardar() || otVinculadaActual()">
+        <div class="otActionBox">
+          <div>
+            <strong>{{ otVinculadaActual() ? 'OT de garantía lista' : 'Crear OT de garantía' }}</strong>
+            <span *ngIf="!otVinculadaActual()">Disponible solo para resultados APROBADO o PARCIAL.</span>
+            <span *ngIf="otVinculadaActual()">Guarda el reclamo para dejar el historial completo.</span>
+          </div>
+
+          <button pButton type="button" severity="secondary" icon="pi pi-wrench" label="Crear OT"
+            [loading]="creandoOtGarantia()" [disabled]="!canCreateOtGarantia()"
+            (click)="createOtGarantiaFromDialog()">
+          </button>
+        </div>
       </div>
 
       <div class="field span-8" *ngIf="shouldShowMotivoRechazo()">
@@ -483,16 +539,9 @@
         <input pInputText type="number" formControlName="valorProveedor">
       </div>
 
-      <div class="field span-12" *ngIf="otGarantiaPendienteGuardar() as idOtPendiente">
-        <div class="helperCard helperCard--warn">
-          <strong>OT creada y pendiente</strong>
-          <span>Ya se creó la OT #{{ idOtPendiente }}. Guarda el reclamo para cerrar correctamente el vínculo.</span>
-        </div>
-      </div>
-
       <div class="field span-12">
         <label>Observaciones</label>
-        <textarea pTextarea rows="4" formControlName="observaciones"></textarea>
+        <textarea pTextarea rows="3" formControlName="observaciones"></textarea>
       </div>
     </div>
   </form>
@@ -500,18 +549,16 @@
   <ng-template pTemplate="footer">
     <div class="dialogFooter dialogFooter--spread">
       <div class="footerLeft">
-        <button pButton type="button" severity="secondary" icon="pi pi-wrench" label="Crear OT garantía"
-          [loading]="creandoOtGarantia()"
-          [disabled]="!canCreateOtGarantia()"
-          (click)="createOtGarantiaFromDialog()"></button>
+        <span class="footerHint" *ngIf="reclamoForm.controls.resultado.value === 'PENDIENTE'">
+          Para crear OT cambia el resultado a APROBADO o PARCIAL.
+        </span>
       </div>
+
       <div class="footerRight">
         <button pButton type="button" severity="secondary" [text]="true" label="Cancelar"
           (click)="closeReclamoDialog()"></button>
-        <button pButton type="button" icon="pi pi-save" label="Guardar reclamo"
-          [loading]="saving()"
-          [disabled]="!canSaveReclamo()"
-          (click)="saveReclamo()"></button>
+        <button pButton type="button" icon="pi pi-save" label="Guardar reclamo" [loading]="saving()"
+          [disabled]="!canSaveReclamo()" (click)="saveReclamo()"></button>
       </div>
     </div>
   </ng-template>

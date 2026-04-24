@@ -1,0 +1,398 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bitacoraShell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.42rem;
+  overflow: hidden;
+}
+
+.bitacoraTopbar,
+.bitacoraFilters,
+.bitacoraCategoryRail {
+  min-height: 0;
+}
+
+.bitacoraTopbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.48rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.72rem;
+  background: #ffffff;
+}
+
+.bitacoraTitle {
+  min-width: 0;
+  display: grid;
+  gap: 0.02rem;
+}
+
+.bitacoraTitle h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.84rem;
+  line-height: 1.12;
+}
+
+.bitacoraTitle span,
+.bitacoraStats span {
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.bitacoraStats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.bitacoraStats span {
+  min-height: 1.42rem;
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.bitacoraFilters {
+  display: grid;
+  grid-template-columns: minmax(12rem, 24rem) auto auto;
+  align-items: center;
+  gap: 0.34rem;
+}
+
+.bitacoraSearch {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.34rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.66rem;
+  background: #ffffff;
+}
+
+.bitacoraSearch i {
+  color: #7b0061;
+  font-size: 0.74rem;
+}
+
+.bitacoraSearch input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  font-size: 0.76rem;
+  background: transparent;
+}
+
+.bitacoraTechToggle,
+.bitacoraClear {
+  height: 2rem;
+  border-radius: 0.62rem;
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bitacoraTechToggle.active {
+  border-color: #7b0061;
+  color: #7b0061;
+  background: #fff0fa;
+}
+
+.bitacoraClear:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bitacoraCategoryRail {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.05rem;
+}
+
+.bitacoraCategory {
+  flex: 0 0 auto;
+  height: 1.78rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0 0.44rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bitacoraCategory strong {
+  min-width: 1.08rem;
+  height: 1.08rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 0.58rem;
+}
+
+.bitacoraCategory.active {
+  border-color: #7b0061;
+  background: #fff0fa;
+  color: #7b0061;
+}
+
+.bitacoraCategory.active strong {
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.bitacoraTimeline {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.26rem;
+  padding-right: 0.05rem;
+}
+
+.dayDivider {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.16rem 0;
+  background: #ffffff;
+}
+
+.dayDivider span {
+  display: inline-flex;
+  min-height: 1.28rem;
+  align-items: center;
+  padding: 0 0.44rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.bitacoraItem {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 5.4rem 1.45rem minmax(0, 1fr);
+  gap: 0.28rem;
+  align-items: start;
+  padding: 0.38rem 0.46rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.66rem;
+  background: #ffffff;
+  min-height: 3.1rem;
+}
+
+.bitacoraTime {
+  min-width: 0;
+  display: grid;
+  gap: 0.05rem;
+  padding-top: 0.05rem;
+}
+
+.bitacoraTime strong {
+  color: #0f172a;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.bitacoraTime span {
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bitacoraDot {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #f8fafc;
+  color: #7b0061;
+  border: 1px solid #e2e8f0;
+  font-size: 0.7rem;
+}
+
+.bitacoraBody {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.bitacoraRow1 {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.45rem;
+}
+
+.bitacoraMainText {
+  min-width: 0;
+  display: grid;
+  gap: 0.06rem;
+}
+
+.bitacoraMainText strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 0.76rem;
+  line-height: 1.12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bitacoraMainText span {
+  color: #475569;
+  font-size: 0.66rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
+.bitacoraBadges {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  flex-wrap: wrap;
+}
+
+.clientPill,
+.notifyPill {
+  min-height: 1.18rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.34rem;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.clientPill {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.notifyPill {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.bitacoraCompactMeta,
+.bitacoraTechnical {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.bitacoraCompactMeta span,
+.bitacoraTechnical span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  color: #64748b;
+  font-size: 0.61rem;
+  font-weight: 700;
+  max-width: 100%;
+}
+
+.bitacoraCompactMeta i {
+  color: #94a3b8;
+  font-size: 0.58rem;
+}
+
+.bitacoraTechnical {
+  padding: 0.28rem 0.34rem;
+  border-radius: 0.52rem;
+  background: #f8fafc;
+  border: 1px dashed #dbe2ea;
+}
+
+.cat-repuestos .bitacoraDot { color: #9a3412; background: #fff7ed; }
+.cat-comercial .bitacoraDot { color: #047857; background: #ecfdf5; }
+.cat-garantias .bitacoraDot { color: #6d28d9; background: #f5f3ff; }
+.cat-checklist .bitacoraDot { color: #0f766e; background: #f0fdfa; }
+.cat-hallazgos .bitacoraDot { color: #b42318; background: #fff1f2; }
+.cat-cliente .bitacoraDot { color: #1d4ed8; background: #eff6ff; }
+.cat-trabajos .bitacoraDot { color: #7b0061; background: #fff0fa; }
+
+:host ::ng-deep .bitacoraBadges .p-tag {
+  font-size: 0.55rem;
+  padding: 0.12rem 0.3rem;
+}
+
+@media (max-width: 980px) {
+  .bitacoraFilters {
+    grid-template-columns: 1fr auto;
+  }
+
+  .bitacoraClear {
+    grid-column: 1 / -1;
+  }
+
+  .bitacoraItem {
+    grid-template-columns: 4.4rem 1.35rem minmax(0, 1fr);
+  }
+
+  .bitacoraRow1 {
+    grid-template-columns: 1fr;
+  }
+
+  .bitacoraBadges {
+    justify-content: flex-start;
+  }
+}

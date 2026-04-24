@@ -1,0 +1,112 @@
+<section class="bitacoraShell">
+  <div class="bitacoraTopbar">
+    <div class="bitacoraTitle">
+      <h4>Bitácora de la orden</h4>
+      <span>{{ filteredItems().length }} de {{ items().length }} movimiento(s)</span>
+    </div>
+
+    <div class="bitacoraStats">
+      <span title="Eventos visibles para cliente"><i class="pi pi-user"></i>{{ totalCliente() }}</span>
+      <span title="Eventos notificables"><i class="pi pi-send"></i>{{ totalNotificables() }}</span>
+      <button pButton type="button" size="small" icon="pi pi-refresh" [text]="true" [loading]="loading()" (click)="load()"></button>
+    </div>
+  </div>
+
+  <div class="bitacoraFilters">
+    <div class="bitacoraSearch">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        [ngModel]="q()"
+        (ngModelChange)="q.set($event || '')"
+        placeholder="Buscar movimiento, usuario, repuesto, factura...">
+    </div>
+
+    <button
+      type="button"
+      class="bitacoraTechToggle"
+      [class.active]="tecnicoVisible()"
+      (click)="tecnicoVisible.update(v => !v)">
+      <i class="pi pi-code"></i>
+      Técnico
+    </button>
+
+    <button
+      type="button"
+      class="bitacoraClear"
+      [disabled]="!q() && categoria() === 'TODOS'"
+      (click)="clearFilters()">
+      Limpiar
+    </button>
+  </div>
+
+  <div class="bitacoraCategoryRail">
+    <button
+      type="button"
+      class="bitacoraCategory"
+      *ngFor="let cat of categorias"
+      [class.active]="categoria() === cat.key"
+      (click)="setCategoria(cat.key)">
+      <i [class]="cat.icon"></i>
+      <span>{{ cat.label }}</span>
+      <strong>{{ countByCategory(cat.key) }}</strong>
+    </button>
+  </div>
+
+  <div class="bitacoraTimeline" *ngIf="filteredItems().length; else noBitacora">
+    <ng-container *ngFor="let item of filteredItems(); let i = index; trackBy: trackByBitacora">
+      <div class="dayDivider" *ngIf="shouldShowDateHeader(i, item)">
+        <span>{{ formatDateGroup(item.fechaHora || item.fecGen) }}</span>
+      </div>
+
+      <article class="bitacoraItem" [class]="categoryClass(item)">
+        <div class="bitacoraTime">
+          <strong>{{ formatTime(item.fechaHora || item.fecGen) }}</strong>
+          <span>{{ userLabel(item) }}</span>
+        </div>
+
+        <div class="bitacoraDot">
+          <i [class]="categoryIcon(item)"></i>
+        </div>
+
+        <div class="bitacoraBody">
+          <div class="bitacoraRow1">
+            <div class="bitacoraMainText">
+              <strong>{{ item.titulo || item.tipoEvento || 'Movimiento registrado' }}</strong>
+              <span *ngIf="item.descripcion">{{ item.descripcion }}</span>
+            </div>
+
+            <div class="bitacoraBadges">
+              <p-tag [value]="categoryLabel(item)" [severity]="eventSeverity(item)"></p-tag>
+              <span class="clientPill" *ngIf="item.visibleCliente">Cliente</span>
+              <span class="notifyPill" *ngIf="item.notificableCliente">Notificable</span>
+            </div>
+          </div>
+
+          <div class="bitacoraCompactMeta" *ngIf="estadoChangeText(item) || compactEntity(item) || metadataPreview(item)">
+            <span *ngIf="estadoChangeText(item)"><i class="pi pi-sync"></i>{{ estadoChangeText(item) }}</span>
+            <span *ngIf="compactEntity(item)"><i class="pi pi-database"></i>{{ compactEntity(item) }}</span>
+            <span *ngIf="metadataPreview(item)"><i class="pi pi-info-circle"></i>{{ metadataPreview(item) }}</span>
+          </div>
+
+          <div class="bitacoraTechnical" *ngIf="tecnicoVisible()">
+            <span>Evento: <strong>{{ item.tipoEvento || '-' }}</strong></span>
+            <span>Entidad: <strong>{{ item.entidadOrigen || item.tabla || '-' }}</strong></span>
+            <span>ID: <strong>{{ item.idEntidadOrigen || item.idRegistro || '-' }}</strong></span>
+            <span *ngIf="item.campo">Campo: <strong>{{ item.campo }}</strong></span>
+            <span *ngIf="item.valorAnterior != null">Antes: <strong>{{ item.valorAnterior }}</strong></span>
+            <span *ngIf="item.valorNuevo != null">Después: <strong>{{ item.valorNuevo }}</strong></span>
+          </div>
+        </div>
+      </article>
+    </ng-container>
+  </div>
+</section>
+
+<ng-template #noBitacora>
+  <app-vehiculos-empty-state
+    icon="pi pi-history"
+    title="Sin movimientos"
+    subtitle="Cuando se registren cambios de la OT, aparecerán aquí en orden cronológico.">
+  </app-vehiculos-empty-state>
+</ng-template>

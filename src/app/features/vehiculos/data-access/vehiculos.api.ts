@@ -38,6 +38,8 @@ import {
   VehOrdenTrabajoFacturaEditarRequest,
   VehOrdenTrabajoFacturaGuardarRequest,
   VehOrdenTrabajoGuardarRequest,
+  VehOrdenTrabajoBitacoraItem,
+  VehOrdenTrabajoBitacoraGuardarRequest,
   VehOrdenTrabajoHallazgo,
   VehOrdenTrabajoHallazgoEditarRequest,
   VehOrdenTrabajoHallazgoFoto,
@@ -178,6 +180,20 @@ export class VehiculosApi {
   }
   eliminarOrden(id: number) {
     return this.http.delete<ApiEnvelope<{ idVehOrdenTrabajo: number }>>(`${this.baseUrl}/ordenes-trabajo/${id}`);
+  }
+
+
+  listarOrdenBitacora(idOrden: number, query: ListQuery = {}) {
+    return this.http.get<ApiEnvelope<Paged<VehOrdenTrabajoBitacoraItem> | { items: VehOrdenTrabajoBitacoraItem[]; total?: number }>>(
+      `${this.baseUrl}/ordenes-trabajo/${idOrden}/bitacora`,
+      { params: buildListParams(query) }
+    );
+  }
+  crearOrdenBitacora(idOrden: number, payload: VehOrdenTrabajoBitacoraGuardarRequest) {
+    return this.http.post<ApiEnvelope<VehOrdenTrabajoBitacoraItem | { idVehOrdenTrabajoBitacora: number }>>(
+      `${this.baseUrl}/ordenes-trabajo/${idOrden}/bitacora`,
+      payload
+    );
   }
 
   listarOrdenChecklists(query: ListQuery = {}) {

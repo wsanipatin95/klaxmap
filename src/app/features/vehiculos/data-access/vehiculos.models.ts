@@ -504,6 +504,49 @@ export interface VehPtoemi {
   modo?: number | null;
 }
 
+
+export interface VehOrdenTrabajoBitacoraItem {
+  idVehOrdenTrabajoBitacora?: number | null;
+  idVehOrdenTrabajoFk: number;
+  fechaHora?: string | null;
+  fecGen?: string | null;
+  usuario?: number | null;
+  usuarioLogin?: string | null;
+  usuarioNombre?: string | null;
+  tipoEvento?: string | null;
+  categoria?: string | null;
+  titulo?: string | null;
+  descripcion?: string | null;
+  entidadOrigen?: string | null;
+  idEntidadOrigen?: string | null;
+  tabla?: string | null;
+  idRegistro?: string | null;
+  operacion?: string | null;
+  campo?: string | null;
+  valorAnterior?: string | null;
+  valorNuevo?: string | null;
+  estadoAnterior?: string | null;
+  estadoNuevo?: string | null;
+  visibleCliente?: BooleanLike;
+  notificableCliente?: BooleanLike;
+  notificacionEnviada?: BooleanLike;
+  metadata?: JsonMap | null;
+}
+
+export interface VehOrdenTrabajoBitacoraGuardarRequest {
+  tipoEvento: string;
+  categoria?: string | null;
+  titulo: string;
+  descripcion?: string | null;
+  entidadOrigen?: string | null;
+  idEntidadOrigen?: string | number | null;
+  estadoAnterior?: string | null;
+  estadoNuevo?: string | null;
+  visibleCliente?: BooleanLike;
+  notificableCliente?: BooleanLike;
+  metadata?: JsonMap | null;
+}
+
 /* ======== REQUESTS ======== */
 
 export interface VehTipoVehiculoGuardarRequest {

@@ -34,12 +34,14 @@ import {
   VehGarantiaMovimiento,
 } from '../../../../data-access/vehiculos.models';
 import { OrdenGarantiasPanelComponent } from '../orden-garantias-panel/orden-garantias-panel.component';
+import { OrdenBitacoraPanelComponent } from '../orden-bitacora-panel/orden-bitacora-panel.component';
 type OrdenDetailTab =
   | 'resumen'
   | 'checklist'
   | 'ejecucion'
   | 'repuestos'
   | 'garantias'
+  | 'bitacora'
   | 'comercial';
 
 type ExecutionTab = 'detalle' | 'hallazgos';
@@ -171,6 +173,7 @@ type FotoDraft = {
     VehiculoVistaCanvasComponent,
     OrdenComercialPanelComponent,
     OrdenGarantiasPanelComponent,
+    OrdenBitacoraPanelComponent,
   ],
   templateUrl: './orden-detail-panel.component.html',
   styleUrl: './orden-detail-panel.component.scss',

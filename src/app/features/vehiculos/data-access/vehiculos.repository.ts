@@ -24,6 +24,7 @@ import {
   VehOrdenTrabajoFacturaEditarRequest,
   VehOrdenTrabajoFacturaGuardarRequest,
   VehOrdenTrabajoGuardarRequest,
+  VehOrdenTrabajoBitacoraGuardarRequest,
   VehOrdenTrabajoHallazgoEditarRequest,
   VehOrdenTrabajoHallazgoFotoEditarRequest,
   VehOrdenTrabajoHallazgoFotoGuardarRequest,
@@ -103,6 +104,20 @@ export class VehiculosRepository {
   crearOrden(payload: VehOrdenTrabajoGuardarRequest) { return this.api.crearOrden(payload).pipe(map((r) => unwrapWithMsg(r))); }
   editarOrden(payload: VehOrdenTrabajoEditarRequest) { return this.api.editarOrden(payload).pipe(map((r) => unwrapWithMsg(r))); }
   eliminarOrden(id: number) { return this.api.eliminarOrden(id).pipe(map((r) => unwrapWithMsg(r))); }
+
+
+  listarOrdenBitacora(idOrden: number, q = '', page = 0, size = 200, all = true, extra: Record<string, unknown> = {}) {
+    return this.api.listarOrdenBitacora(idOrden, {
+      q,
+      page,
+      size,
+      all,
+      extra: extra as Record<string, string | number | boolean | null | undefined>,
+    }).pipe(map((r) => unwrapOrThrow(r)));
+  }
+  crearOrdenBitacora(idOrden: number, payload: VehOrdenTrabajoBitacoraGuardarRequest) {
+    return this.api.crearOrdenBitacora(idOrden, payload).pipe(map((r) => unwrapWithMsg(r)));
+  }
 
   listarOrdenChecklists(extra: Record<string, unknown> = {}) {
     return this.api.listarOrdenChecklists({ all: true, extra: extra as Record<string, string | number | boolean | null | undefined> }).pipe(map((r) => unwrapOrThrow(r)));

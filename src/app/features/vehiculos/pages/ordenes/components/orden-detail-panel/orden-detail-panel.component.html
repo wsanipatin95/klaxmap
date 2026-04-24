@@ -39,6 +39,8 @@
           (click)="setTab('comercial')">Comercial</button>
         <button class="tabButton" [class.active]="activeTab()==='garantias'"
           (click)="setTab('garantias')">Garantías</button>
+        <button class="tabButton" [class.active]="activeTab()==='bitacora'"
+          (click)="setTab('bitacora')">Bitácora</button>
       </div>
     </section>
 
@@ -48,17 +50,22 @@
         <article class="summaryMetric"><span>Trabajos</span><strong>{{ trabajos.length }}</strong></article>
         <article class="summaryMetric"><span>Hallazgos</span><strong>{{ hallazgos.length }}</strong></article>
         <article class="summaryMetric"><span>Repuestos</span><strong>{{ repuestos.length }}</strong></article>
-        <article class="summaryMetric"><span>Pend. facturar</span><strong>{{ repuestosPendientesCount() }}</strong></article>
+        <article class="summaryMetric"><span>Pend. facturar</span><strong>{{ repuestosPendientesCount() }}</strong>
+        </article>
         <article class="summaryMetric"><span>Facturas</span><strong>{{ facturasOt.length }}</strong></article>
         <article class="summaryMetric"><span>Cobros</span><strong>{{ cobrosFactura.length }}</strong></article>
         <article class="summaryMetric"><span>Relaciones</span><strong>{{ ordenFacturas.length }}</strong></article>
       </div>
 
       <div class="summaryFacts">
-        <article class="summaryFact"><span>Fecha de ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso || orden.fecGen) }}</strong></article>
-        <article class="summaryFact"><span>Fecha promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida) }}</strong></article>
-        <article class="summaryFact"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong></article>
-        <article class="summaryFact"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{ orden.nivelBateria || '-' }}</strong></article>
+        <article class="summaryFact"><span>Fecha de ingreso</span><strong>{{ formatDateTimeShort(orden.fechaIngreso ||
+            orden.fecGen) }}</strong></article>
+        <article class="summaryFact"><span>Fecha promesa</span><strong>{{ formatDateTimeShort(orden.fechaPrometida)
+            }}</strong></article>
+        <article class="summaryFact"><span>Kilometraje</span><strong>{{ orden.kilometrajeIngreso || 0 }}</strong>
+        </article>
+        <article class="summaryFact"><span>Combustible / batería</span><strong>{{ orden.nivelCombustible || '-' }} · {{
+            orden.nivelBateria || '-' }}</strong></article>
       </div>
     </section>
 
@@ -165,7 +172,11 @@
                   <ng-template #nuevoTrabajoHint>
                     <div class="secondaryCell">Completa los datos y guarda el trabajo.</div>
                   </ng-template>
-                </ng-container>
+                
+  <section class="panelCard panelCard--bitacora" *ngIf="activeTab()==='bitacora'">
+    <app-orden-bitacora-panel [orden]="orden"></app-orden-bitacora-panel>
+  </section>
+</ng-container>
 
                 <ng-container *ngIf="executionTab()==='hallazgos'">
                   <div class="secondaryCell" *ngIf="selectedTrabajoActual() as trabajoActual; else hallazgoSinTrabajo">
@@ -571,9 +582,7 @@
     <app-orden-garantias-panel [orden]="orden" [garantias]="garantias" [selectedGarantia]="selectedGarantia"
       [garantiaDetalles]="garantiaDetalles" [garantiaMovimientos]="garantiaMovimientos"
       [trabajoLabelMap]="trabajoLabelMap" [articuloLabelMap]="articuloLabelMap" [readonlyMode]="readonlyMode"
-      [trabajosOt]="trabajos" [repuestosOt]="repuestos" (selectGarantia)="selectGarantia.emit($event)"
-      (openGarantia)="openGarantia.emit()" (openGarantiaDetalle)="openGarantiaDetalle.emit()"
-      (openGarantiaMovimiento)="openGarantiaMovimiento.emit()">
+      [trabajosOt]="trabajos" [repuestosOt]="repuestos" (selectGarantia)="selectGarantia.emit($event)">
     </app-orden-garantias-panel>
   </section>
 </ng-container>
