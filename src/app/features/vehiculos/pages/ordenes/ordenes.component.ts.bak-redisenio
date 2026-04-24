@@ -91,16 +91,6 @@ type ComercialDrawerMode =
   | 'contabilizar'
   | null;
 
-type OrdenEstadoFilter = 'TODOS' | 'RECIBIDO' | 'EN_PROCESO' | 'FINALIZADO' | 'ANULADO';
-
-type EstadoFilterTone = 'all' | 'received' | 'process' | 'success' | 'danger';
-
-type EstadoFilterOption = {
-  key: OrdenEstadoFilter;
-  label: string;
-  tone: EstadoFilterTone;
-};
-
 type AtributoRowForm = FormGroup<{
   key: FormControl<string>;
   value: FormControl<string>;
@@ -146,17 +136,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   readonly TIPO_AUTORIZACION_OPTIONS = ['ADICIONAL', 'CAMBIO_REPUESTO', 'SERVICIO_EXTRA', 'ENTREGA', 'OTRO'];
   readonly ESTADO_AUTORIZACION_OPTIONS = ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'ANULADO'];
   readonly TIPO_FACTURACION_OPTIONS = ['PARCIAL', 'TOTAL'];
-
-  readonly estadoFilters: EstadoFilterOption[] = [
-    { key: 'TODOS', label: 'TODOS', tone: 'all' },
-    { key: 'RECIBIDO', label: 'RECIBIDO', tone: 'received' },
-    { key: 'EN_PROCESO', label: 'EN_PROCESO', tone: 'process' },
-    { key: 'FINALIZADO', label: 'FINALIZADO', tone: 'success' },
-    { key: 'ANULADO', label: 'ANULADO', tone: 'danger' },
-  ];
-
-  estadoFilter = signal<OrdenEstadoFilter>('TODOS');
-  filtrosAvanzadosVisible = signal(false);
 
   private readonly MAIN_DRAWER_PAGE_SIZE = 100;
   private detalleLoadSeq = 0;
@@ -460,17 +439,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
     ),
   );
 
-  readonly ordenesFiltradas = computed(() => {
-    const filter = this.estadoFilter();
-    const items = this.ordenes();
-
-    if (filter === 'TODOS') {
-      return items;
-    }
-
-    return items.filter((item) => this.matchesEstadoFilter(item.estadoOrden, filter));
-  });
-
   constructor() {
     this.ensureAtLeastOneAtributoRow(this.hallazgoAtributosRows);
 
@@ -516,14 +484,22 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
 
   cargar() {
     this.loading.set(true);
-
     this.repo.listarOrdenes(this.q, 0, this.MAIN_DRAWER_PAGE_SIZE, false)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
           const items = res.items ?? [];
           this.ordenes.set(items);
-          this.syncSelectedOrdenWithFilters();
+          const current = this.selectedOrden();
+          if (!current) return;
+
+          const found = items.find((x) => x.idVehOrdenTrabajo === current.idVehOrdenTrabajo) ?? null;
+          this.selectedOrden.set(found);
+          if (found) {
+            this.cargarDetalle(found);
+          } else {
+            this.resetDetalle();
+          }
         },
         error: (err) => this.notify.error('No se pudieron cargar órdenes', err?.message),
       });
@@ -532,100 +508,6 @@ export class VehiculosOrdenesComponent implements PendingChangesAware {
   seleccionarOrden(item: VehOrdenTrabajo) {
     this.selectedOrden.set(item);
     this.cargarDetalle(item);
-  }
-
-  setEstadoFilter(filter: OrdenEstadoFilter) {
-    this.estadoFilter.set(filter);
-    this.syncSelectedOrdenWithFilters();
-  }
-
-  toggleFiltrosAvanzados() {
-    this.filtrosAvanzadosVisible.update((value) => !value);
-  }
-
-  aplicarBusquedaOrdenes() {
-    this.cargar();
-  }
-
-  limpiarFiltrosOrdenes() {
-    this.q = '';
-    this.estadoFilter.set('TODOS');
-    this.filtrosAvanzadosVisible.set(false);
-    this.cargar();
-  }
-
-  activeFilterCount(): number {
-    let count = 0;
-
-    if (this.estadoFilter() !== 'TODOS') {
-      count += 1;
-    }
-
-    if (this.q.trim()) {
-      count += 1;
-    }
-
-    return count;
-  }
-
-  estadoFilterCount(filter: OrdenEstadoFilter): number {
-    if (filter === 'TODOS') {
-      return this.ordenes().length;
-    }
-
-    return this.ordenes().filter((item) => this.matchesEstadoFilter(item.estadoOrden, filter)).length;
-  }
-
-  estadoFilterText(): string {
-    const found = this.estadoFilters.find((item) => item.key === this.estadoFilter());
-    return found?.label ?? 'TODOS';
-  }
-
-  private syncSelectedOrdenWithFilters() {
-    const visibleItems = this.ordenesFiltradas();
-    const current = this.selectedOrden();
-
-    if (current) {
-      const found = visibleItems.find((item) => item.idVehOrdenTrabajo === current.idVehOrdenTrabajo) ?? null;
-
-      if (found) {
-        this.selectedOrden.set(found);
-        this.cargarDetalle(found);
-        return;
-      }
-    }
-
-    const next = visibleItems[0] ?? null;
-    this.selectedOrden.set(next);
-
-    if (next) {
-      this.cargarDetalle(next);
-      return;
-    }
-
-    this.resetDetalle();
-  }
-
-  private matchesEstadoFilter(rawEstado: string | null | undefined, filter: OrdenEstadoFilter): boolean {
-    const estado = this.normalizeEstadoFilter(rawEstado);
-
-    if (filter === 'TODOS') {
-      return true;
-    }
-
-    if (filter === 'FINALIZADO') {
-      return estado.includes('FINALIZADO') || estado.includes('ENTREGADO') || estado.includes('FACTURADO');
-    }
-
-    if (filter === 'ANULADO') {
-      return estado.includes('ANULADO');
-    }
-
-    return estado === filter;
-  }
-
-  private normalizeEstadoFilter(rawEstado: string | null | undefined): string {
-    return String(rawEstado || 'RECIBIDO').trim().toUpperCase();
   }
 
   nuevo() {

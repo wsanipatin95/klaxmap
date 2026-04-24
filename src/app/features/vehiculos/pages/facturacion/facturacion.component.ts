@@ -10,7 +10,6 @@ import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { VehiculosPageHeaderComponent } from '../../components/page-header/page-header.component';
-import { VehiculosFormDrawerComponent } from '../../components/form-drawer/form-drawer.component';
 import { VehiculosEmptyStateComponent } from '../../components/empty-state/empty-state.component';
 import { VehiculosRepository } from '../../data-access/vehiculos.repository';
 import {
@@ -38,7 +37,6 @@ type QuickFilter = 'all' | 'saldo' | 'pagadas' | 'credito' | 'anuladas';
     TagModule,
     ConfirmDialogModule,
     VehiculosPageHeaderComponent,
-    VehiculosFormDrawerComponent,
     VehiculosEmptyStateComponent,
   ],
   providers: [ConfirmationService],

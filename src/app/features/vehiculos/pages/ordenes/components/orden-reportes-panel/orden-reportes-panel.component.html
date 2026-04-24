@@ -1,26 +1,41 @@
-<section class="reportesCard">
-  <div class="reportesCard__copy">
-    <h3>Documentos</h3>
-    <p>Descarga la orden de ingreso, la orden de trabajo y el acta de entrega con datos o en blanco.</p>
-  </div>
+<section class="reportesCard" [class.reportesCard--disabled]="!hasSelectedOrder">
+  <button
+    pButton
+    type="button"
+    icon="pi pi-file"
+    label="Ingreso"
+    [disabled]="!hasSelectedOrder || downloading()"
+    (click)="descargarConDatos('ingreso')">
+  </button>
 
-  <div class="reportesCard__actions">
-    <button pButton type="button" icon="pi pi-file" label="Ingreso"
-      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('ingreso')">
-    </button>
+  <button
+    pButton
+    type="button"
+    icon="pi pi-file-edit"
+    label="Trabajo"
+    [disabled]="!hasSelectedOrder || downloading()"
+    (click)="descargarConDatos('trabajo')">
+  </button>
 
-    <button pButton type="button" icon="pi pi-file-edit" label="Trabajo"
-      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('trabajo')">
-    </button>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    icon="pi pi-send"
+    label="Entrega"
+    [disabled]="!hasSelectedOrder || downloading()"
+    (click)="descargarConDatos('entrega')">
+  </button>
 
-    <button pButton type="button" severity="secondary" icon="pi pi-send" label="Entrega"
-      [disabled]="!hasSelectedOrder || downloading()" (click)="descargarConDatos('entrega')">
-    </button>
-
-    <button pButton type="button" severity="secondary" icon="pi pi-print" label="En blanco"
-      [disabled]="downloading()" (click)="openBlankDrawer()">
-    </button>
-  </div>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    icon="pi pi-print"
+    label="En blanco"
+    [disabled]="downloading()"
+    (click)="openBlankDrawer()">
+  </button>
 </section>
 
 <app-vehiculos-form-drawer

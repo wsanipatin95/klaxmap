@@ -7,166 +7,136 @@
 
   <p-confirmDialog></p-confirmDialog>
 
-  <section class="statusFilterRail" aria-label="Estados de órdenes">
-    <button
-      type="button"
-      class="statusFilterButton"
-      *ngFor="let filter of estadoFilters"
-      [class.active]="estadoFilter() === filter.key"
-      [class.statusFilterButton--all]="filter.tone === 'all'"
-      [class.statusFilterButton--received]="filter.tone === 'received'"
-      [class.statusFilterButton--process]="filter.tone === 'process'"
-      [class.statusFilterButton--success]="filter.tone === 'success'"
-      [class.statusFilterButton--danger]="filter.tone === 'danger'"
-      (click)="setEstadoFilter(filter.key)">
-      <span>{{ filter.label }}</span>
-      <strong>{{ estadoFilterCount(filter.key) }}</strong>
+  <div class="toolbarCard toolbarCard--compact toolbarCard--principal">
+    <div class="searchBox">
+      <i class="pi pi-search"></i>
+      <input pInputText type="text" [(ngModel)]="q" placeholder="Buscar orden, cliente, placa o detalle..."
+        (keyup.enter)="cargar()">
+    </div>
+
+    <div class="toolbarActions toolbarActions--principal">
+      <div class="microStats">
+        <span class="microStat">
+          <small>Órdenes</small>
+          <strong>{{ ordenes().length }}</strong>
+        </span>
+
+        <span class="microStat" *ngIf="selectedOrden() as ordenActual">
+          <small>Actual</small>
+          <strong>#{{ ordenActual.idVehOrdenTrabajo }}</strong>
+        </span>
+
+        <span class="microStat" *ngIf="selectedOrden() as ordenActual">
+          <small>Estado</small>
+          <strong>{{ ordenActual.estadoOrden || 'RECIBIDO' }}</strong>
+        </span>
+      </div>
+
+      <button pButton type="button" severity="secondary" [text]="true" label="Limpiar"
+        (click)="q=''; cargar()"></button>
+      <button pButton type="button" icon="pi pi-refresh" label="Recargar" [loading]="loading()"
+        (click)="cargar()"></button>
+    </div>
+  </div>
+
+  <section class="noticeStrip" *ngIf="loading() || saving() || selectedOrden()">
+    <span class="noticePill is-info" *ngIf="loading()">Cargando</span>
+    <span class="noticePill is-info" *ngIf="saving()">Guardando</span>
+
+    <ng-container *ngIf="selectedOrden() as ordenActual">
+      <span class="noticePill is-neutral">OT #{{ ordenActual.idVehOrdenTrabajo }}</span>
+      <span class="noticePill is-neutral">{{ ordenActual.tipoServicio || 'SERVICIO' }}</span>
+      <span class="noticePill is-neutral">{{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
+      <span class="noticePill" [class.is-danger]="isOrdenAnulada(ordenActual)"
+        [class.is-success]="isOrdenFinalizada(ordenActual)"
+        [class.is-neutral]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
+        {{ ordenActual.estadoOrden || 'RECIBIDO' }}
+      </span>
+    </ng-container>
+  </section>
+
+  <section class="estadoActionStrip" *ngIf="selectedOrden() as ordenActual">
+    <button pButton type="button" severity="success" icon="pi pi-check-circle" label="Finalizar orden"
+      [disabled]="!canFinalizeOrden(ordenActual)" (click)="finalizarOrden(ordenActual)">
+    </button>
+
+    <button pButton type="button" severity="secondary" icon="pi pi-replay" label="Devolver orden"
+      [disabled]="!canDevolverOrden(ordenActual)" (click)="devolverOrden(ordenActual)">
     </button>
   </section>
 
-  <section class="compactSearchRail">
-    <div class="compactSearchRail__main">
-      <div class="searchBox searchBox--compact">
-        <i class="pi pi-search"></i>
-        <input
-          pInputText
-          type="text"
-          [(ngModel)]="q"
-          placeholder="Buscar orden, cliente, placa o detalle..."
-          (keyup.enter)="aplicarBusquedaOrdenes()">
-      </div>
+  <app-orden-reportes-panel [orden]="selectedOrden()"></app-orden-reportes-panel>
 
-      <button
-        type="button"
-        class="searchIconButton"
-        title="Buscar"
-        (click)="aplicarBusquedaOrdenes()">
-        <i class="pi pi-search"></i>
-      </button>
-
-      <button
-        type="button"
-        class="filterIconButton"
-        title="Más filtros"
-        [class.active]="filtrosAvanzadosVisible() || activeFilterCount() > 0"
-        (click)="toggleFiltrosAvanzados()">
-        <i class="pi pi-filter"></i>
-        <span *ngIf="activeFilterCount() > 0">{{ activeFilterCount() }}</span>
-      </button>
-    </div>
-
-    <div class="compactSearchRail__actions">
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [text]="true"
-        label="Limpiar"
-        [disabled]="!q.trim() && estadoFilter() === 'TODOS'"
-        (click)="limpiarFiltrosOrdenes()">
-      </button>
-
-      <button
-        pButton
-        type="button"
-        icon="pi pi-refresh"
-        label="Recargar"
-        [loading]="loading()"
-        (click)="cargar()">
-      </button>
-    </div>
-
-    <div class="filterMiniPanel" *ngIf="filtrosAvanzadosVisible()">
-      <div class="filterMiniPanel__item">
-        <span>Estado</span>
-        <strong>{{ estadoFilterText() }}</strong>
-      </div>
-
-      <div class="filterMiniPanel__item">
-        <span>Búsqueda</span>
-        <strong>{{ q.trim() || 'Sin texto' }}</strong>
-      </div>
-
-      <div class="filterMiniPanel__item">
-        <span>Resultado visible</span>
-        <strong>{{ ordenesFiltradas().length }} OT</strong>
-      </div>
-    </div>
-  </section>
-
-  <div class="ordenesLayout ordenesLayout--dense">
-    <section class="backlogCard backlogCard--dense">
-      <div class="backlogCard__header backlogCard__header--dense">
+  <div class="ordenesLayout">
+    <section class="backlogCard">
+      <div class="backlogCard__header">
         <div class="backlogCard__title">
           <h3>Órdenes</h3>
           <span class="secondaryCell secondaryCell--compact">Cola visible de trabajo</span>
         </div>
 
         <div class="backlogCard__headerMeta">
-          <span class="panelHint">{{ ordenesFiltradas().length }} OT</span>
+          <p-tag [value]="ordenes().length + ' OT'" severity="secondary"></p-tag>
           <span class="panelHint" *ngIf="selectedOrden() as ordenActual">#{{ ordenActual.idVehOrdenTrabajo }}</span>
         </div>
       </div>
 
-      <div class="backlogCard__body backlogCard__body--compact" *ngIf="ordenesFiltradas().length; else noOrdenes">
-        <article
-          class="jiraLikeRow jiraLikeRow--compact jiraLikeRow--ultra"
-          *ngFor="let item of ordenesFiltradas()"
+      <div class="backlogCard__body backlogCard__body--compact" *ngIf="ordenes().length; else noOrdenes">
+        <article class="jiraLikeRow jiraLikeRow--compact" *ngFor="let item of ordenes()"
           [class.selected]="selectedOrden()?.idVehOrdenTrabajo === item.idVehOrdenTrabajo"
           (click)="seleccionarOrden(item)">
+          <div class="rowHeader rowHeader--compact">
+            <div class="rowCopy rowCopy--compact">
+              <div class="primaryCell primaryCell--compact">
+                OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}
+              </div>
 
-          <div class="orderRowTop">
-            <div class="orderRowTitle">
-              <strong>OT #{{ item.idVehOrdenTrabajo }} · {{ item.tipoServicio || 'SERVICIO' }}</strong>
+              <div class="secondaryCell secondaryCell--compact rowLineClamp">
+                {{ item.nombre || item.ruc || ('Cliente #' + item.dni) }}
+              </div>
+
+              <div class="secondaryCell secondaryCell--compact rowLineClamp">
+                {{ [item.marca, item.modelo, item.placa].filter(x => !!x).join(' · ') || 'Vehículo' }}
+              </div>
+
+              <div class="secondaryCell secondaryCell--compact rowDateLine">
+                {{ item.estadoOrden || 'RECIBIDO' }} · {{ formatDateTimeFriendly(item.fechaIngreso || item.fecGen) }}
+              </div>
+            </div>
+
+            <div class="rowActions rowActions--compact">
               <p-tag [value]="item.estadoOrden || 'RECIBIDO'" [severity]="severityEstado(item.estadoOrden)"></p-tag>
-            </div>
 
-            <div class="orderRowActions">
-              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil" title="Editar"
-                [disabled]="isOrdenBloqueada(item)" (click)="editarOrden(item); $event.stopPropagation()"></button>
-              <button pButton type="button" size="small" [text]="true" severity="success" icon="pi pi-check-circle" title="Finalizar"
-                [disabled]="!canFinalizeOrden(item)" (click)="finalizarOrden(item); $event.stopPropagation()"></button>
-              <button pButton type="button" size="small" [text]="true" severity="secondary" icon="pi pi-replay" title="Devolver"
-                [disabled]="!canDevolverOrden(item)" (click)="devolverOrden(item); $event.stopPropagation()"></button>
-              <button pButton type="button" size="small" [text]="true" severity="warn" icon="pi pi-ban" title="Anular"
-                [disabled]="isOrdenBloqueada(item)" (click)="anularOrden(item); $event.stopPropagation()"></button>
-              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash" title="Eliminar"
-                [disabled]="isOrdenBloqueada(item)" (click)="eliminarOrden(item); $event.stopPropagation()"></button>
+              <button pButton type="button" size="small" [text]="true" icon="pi pi-pencil"
+                [disabled]="isOrdenBloqueada(item)" (click)="editarOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="success" icon="pi pi-check-circle"
+                [disabled]="!canFinalizeOrden(item)" (click)="finalizarOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="secondary" icon="pi pi-replay"
+                [disabled]="!canDevolverOrden(item)" (click)="devolverOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="warn" icon="pi pi-ban"
+                [disabled]="isOrdenBloqueada(item)" (click)="anularOrden(item); $event.stopPropagation()">
+              </button>
+
+              <button pButton type="button" size="small" [text]="true" severity="danger" icon="pi pi-trash"
+                [disabled]="isOrdenBloqueada(item)" (click)="eliminarOrden(item); $event.stopPropagation()">
+              </button>
             </div>
           </div>
 
-          <div class="orderRowGrid">
-            <span>{{ item.nombre || item.ruc || ('Cliente #' + item.dni) }}</span>
-            <span>{{ [item.marca, item.modelo, item.placa].filter(x => !!x).join(' · ') || 'Vehículo' }}</span>
-            <span>{{ formatDateTimeFriendly(item.fechaIngreso || item.fecGen) }}</span>
-          </div>
-
-          <div class="orderRowDetail">
+          <div class="secondaryCell secondaryCell--compact rowDetail rowDetail--compact rowLineClamp">
             {{ item.fallaReportada || item.detalleCliente || item.observaciones || 'Sin detalle operativo' }}
           </div>
         </article>
       </div>
     </section>
 
-    <section class="workspaceCard workspaceCard--unified">
-      <div class="selectedOrderBar" *ngIf="selectedOrden() as ordenActual">
-        <div class="selectedOrderBar__copy">
-          <div class="selectedOrderBar__title">
-            <strong>OT #{{ ordenActual.idVehOrdenTrabajo }} · {{ ordenActual.tipoServicio || 'SERVICIO' }}</strong>
-            <span class="stateInlinePill" [class.is-danger]="isOrdenAnulada(ordenActual)" [class.is-success]="isOrdenFinalizada(ordenActual)" [class.is-process]="!isOrdenAnulada(ordenActual) && !isOrdenFinalizada(ordenActual)">
-              {{ ordenActual.estadoOrden || 'RECIBIDO' }}
-            </span>
-          </div>
-          <span class="selectedOrderBar__meta">Ingreso: {{ formatDateTimeFriendly(ordenActual.fechaIngreso || ordenActual.fecGen) }}</span>
-        </div>
-
-        <div class="selectedOrderBar__actions">
-          <button pButton type="button" size="small" severity="success" icon="pi pi-check-circle" label="Finalizar orden" [disabled]="!canFinalizeOrden(ordenActual)" (click)="finalizarOrden(ordenActual)"></button>
-          <button pButton type="button" size="small" severity="secondary" icon="pi pi-replay" label="Devolver orden" [disabled]="!canDevolverOrden(ordenActual)" (click)="devolverOrden(ordenActual)"></button>
-          <app-orden-reportes-panel [orden]="selectedOrden()"></app-orden-reportes-panel>
-        </div>
-      </div>
-
+    <section class="workspaceCard">
       <app-orden-detail-panel [orden]="selectedOrden()" [clienteNombre]="clienteNombreSeleccionado()"
         [vehiculoNombre]="vehiculoNombreSeleccionado()" [responsableRecepcionNombre]="responsableRecepcionNombre()"
         [responsableTecnicoNombre]="responsableTecnicoNombre()" [checklist]="checklist()"
@@ -177,24 +147,27 @@
         [facturaDetalle]="facturaDetalle()" [cobrosFactura]="cobrosFactura()" [workflowResultado]="workflowResultado()"
         [checklistLabelMap]="checklistLabelMap()" [trabajoLabelMap]="trabajoLabelMap()"
         [articuloLabelMap]="articuloLabelMap()" [articulosCatalogo]="articulosCatalogo()"
-        [readonlyMode]="isOrdenBloqueada(selectedOrden())" [garantias]="garantias()"
-        [selectedGarantia]="selectedGarantia()" [garantiaDetalles]="garantiaDetalles()" [garantiaMovimientos]="garantiaMovimientos()"
-        (saveChecklist)="guardarChecklistMasivo($event)" (saveTrabajo)="guardarTrabajoWorkbench($event)"
-        (saveHallazgo)="guardarHallazgoWorkbench($event)" (saveFoto)="guardarFotoWorkbench($event)"
-        (saveRepuesto)="guardarRepuestoWorkbench($event)" (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
-        (articuloQueryChange)="onRepuestoArticuloQueryChange($event)" (articuloSelected)="seleccionarArticuloRepuesto($event)"
-        (selectHallazgo)="seleccionarHallazgo($event)" (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()"
-        (selectVista)="seleccionarVista($event)" (selectFactura)="seleccionarFacturaOt($event)"
-        (pointMarked)="createMarcaDesdeCanvas($event)" (createFactura)="guardarFacturaDesdePanel($event)"
-        (openCobro)="abrirComercialDrawer('cobro')" (openContabilizar)="abrirComercialDrawer('contabilizar')"
-        (selectGarantia)="seleccionarGarantia($event)" (openGarantia)="abrirGarantiaDrawer()"
-        (openGarantiaDetalle)="abrirGarantiaDetalleDrawer()" (openGarantiaMovimiento)="abrirGarantiaMovimientoDrawer()">
+        [readonlyMode]="isOrdenBloqueada(selectedOrden())" (saveChecklist)="guardarChecklistMasivo($event)"
+        (saveTrabajo)="guardarTrabajoWorkbench($event)" (saveHallazgo)="guardarHallazgoWorkbench($event)"
+        (saveFoto)="guardarFotoWorkbench($event)" (saveRepuesto)="guardarRepuestoWorkbench($event)"
+        (deleteRepuesto)="eliminarRepuestoWorkbench($event)"
+        (articuloQueryChange)="onRepuestoArticuloQueryChange($event)"
+        (articuloSelected)="seleccionarArticuloRepuesto($event)" (selectHallazgo)="seleccionarHallazgo($event)"
+        (clearHallazgoSelection)="limpiarSeleccionHallazgoWorkbench()" (selectVista)="seleccionarVista($event)"
+        (selectFactura)="seleccionarFacturaOt($event)" (pointMarked)="createMarcaDesdeCanvas($event)"
+        (createFactura)="guardarFacturaDesdePanel($event)" (openCobro)="abrirComercialDrawer('cobro')"
+        (openContabilizar)="abrirComercialDrawer('contabilizar')" [garantias]="garantias()"
+        [selectedGarantia]="selectedGarantia()" [garantiaDetalles]="garantiaDetalles()"
+        [garantiaMovimientos]="garantiaMovimientos()" (selectGarantia)="seleccionarGarantia($event)"
+        (openGarantia)="abrirGarantiaDrawer()" (openGarantiaDetalle)="abrirGarantiaDetalleDrawer()"
+        (openGarantiaMovimiento)="abrirGarantiaMovimientoDrawer()">
       </app-orden-detail-panel>
     </section>
   </div>
 
   <ng-template #noOrdenes>
-    <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes" subtitle="No hay órdenes para el estado o búsqueda aplicada."></app-vehiculos-empty-state>
+    <app-vehiculos-empty-state icon="pi pi-briefcase" title="Sin órdenes" subtitle="Crea una OT para empezar.">
+    </app-vehiculos-empty-state>
   </ng-template>
 
   <app-orden-main-form-drawer [visible]="drawerVisible()" [saving]="saving()" [orden]="editingOrden()"
