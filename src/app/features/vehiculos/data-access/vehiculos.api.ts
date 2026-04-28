@@ -81,6 +81,7 @@ export class VehiculosApi {
   private env = inject(ENVIRONMENT);
   private userBaseUrl = `${this.env.apiBaseUrl}/api/erp`;
   private baseUrl = `${this.env.apiBaseUrl}/api/erp/klax/veh`;
+  private admBaseUrl = `${this.env.apiBaseUrl}/api/erp/klax/adm`;
 
   /* ===== Tipos ===== */
   listarTipos(query: ListQuery = {}) {

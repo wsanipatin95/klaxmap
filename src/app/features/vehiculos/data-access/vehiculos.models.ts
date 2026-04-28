@@ -111,6 +111,7 @@ export interface VehOrdenTrabajo {
   idVehOrdenTrabajo: number;
   dni: number;
   idCliVehiculoFk: number;
+  idAdmCentroFk?: number | null;
   tipoServicio?: string | null;
   estadoOrden?: string | null;
   fechaIngreso?: string | null;
@@ -547,6 +548,73 @@ export interface VehOrdenTrabajoBitacoraGuardarRequest {
   metadata?: JsonMap | null;
 }
 
+export interface AdmCentro {
+  idAdmCentro: number;
+  centroCosto?: string | null;
+  direccion?: string | null;
+  establecimiento?: number | null;
+  movilWa?: string | null;
+  waResponsable?: string | null;
+  serverMasivo?: string | null;
+  identificadorMasivo?: string | null;
+  wppConfigurado?: BooleanLike;
+}
+
+export interface AdmNotificacionConfig {
+  tokenMeta?: string | null;
+  admCentroDefault?: number | null;
+  metaApiVersion?: string | null;
+  metaPhoneNumberId?: string | null;
+  metaTokenConfigurado?: BooleanLike;
+  metaPlantilla?: string | null;
+  metaPlantillaIdioma?: string | null;
+  correoConfigurado?: BooleanLike;
+}
+
+export interface VehClienteNotificacionEnviarRequest {
+  canal: 'WHATSAPP' | 'EMAIL' | string;
+  tipoEvento?: string | null;
+  idAdmCentroFk?: number | null;
+  destinatarioNombre?: string | null;
+  destinatarioTelefono?: string | null;
+  destinatarioEmail?: string | null;
+  titulo?: string | null;
+  asunto?: string | null;
+  mensaje?: string | null;
+  html?: string | null;
+  visibleCliente?: BooleanLike;
+  requiereRespuesta?: BooleanLike;
+  usarPlantilla?: BooleanLike;
+  templateCode?: string | null;
+  templateLanguage?: string | null;
+  adjuntoBase64?: string | null;
+  adjuntoNombre?: string | null;
+  adjuntoCaption?: string | null;
+  payload?: JsonMap | null;
+}
+
+export interface VehClienteNotificacion {
+  idVehClienteNotificacion?: number | null;
+  idVehOrdenTrabajoFk?: number | null;
+  idAdmCentroOrigenFk?: number | null;
+  idAdmCentroEnvioFk?: number | null;
+  canal?: string | null;
+  provider?: string | null;
+  tipoEvento?: string | null;
+  estadoEnvio?: string | null;
+  destinatarioNombre?: string | null;
+  destinatarioTelefono?: string | null;
+  destinatarioEmail?: string | null;
+  titulo?: string | null;
+  asunto?: string | null;
+  mensaje?: string | null;
+  errorEnvio?: string | null;
+  fecGen?: string | null;
+  fecEnvio?: string | null;
+  responseJson?: JsonMap | null;
+}
+
+
 /* ======== REQUESTS ======== */
 
 export interface VehTipoVehiculoGuardarRequest {
@@ -650,6 +718,7 @@ export interface CliVehiculoEditarRequest {
 export interface VehOrdenTrabajoGuardarRequest {
   dni: number;
   idCliVehiculoFk: number;
+  idAdmCentroFk?: number | null;
   tipoServicio?: string | null;
   estadoOrden?: string | null;
   fechaIngreso?: string | null;
