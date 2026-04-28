@@ -43,7 +43,7 @@
   [dirty]="false"
   [saving]="downloading() || loadingTipos()"
   title="Formatos en blanco"
-  subtitle="Elige el documento a imprimir. Para la orden de trabajo debes seleccionar el tipo de vehículo."
+  subtitle="Elige el documento a previsualizar. Para la orden de trabajo debes seleccionar el tipo de vehículo."
   sizeClass="appDrawer appDrawer--md"
   (visibleChange)="$event ? drawerVisible.set(true) : closeBlankDrawer()"
   (requestClose)="closeBlankDrawer()"
@@ -78,8 +78,81 @@
         Cargará checklist y vistas del tipo seleccionado, dejando el resto de campos para llenado manual.
       </span>
       <span *ngIf="blankForm.controls.formato.value !== 'trabajo'">
-        Generará el formato vacío listo para imprimir y llenar a mano.
+        Generará el formato vacío listo para revisar, imprimir o descargar.
       </span>
     </div>
   </form>
 </app-vehiculos-form-drawer>
+
+<p-dialog
+  [visible]="previewVisible()"
+  (visibleChange)="$event ? previewVisible.set(true) : cerrarPreview()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [closeOnEscape]="true"
+  styleClass="reportPreviewDialog"
+  [style]="{ width: '94vw', maxWidth: '1240px' }">
+
+  <ng-template pTemplate="header">
+    <div class="previewHeader">
+      <div class="previewHeader__copy">
+        <strong>{{ previewTitle() }}</strong>
+        <span>{{ previewSubtitle() }}</span>
+      </div>
+
+      <div class="previewHeader__actions">
+        <button
+          pButton
+          type="button"
+          size="small"
+          severity="secondary"
+          icon="pi pi-print"
+          label="Imprimir"
+          [disabled]="!previewUrl()"
+          (click)="imprimirPreview()">
+        </button>
+
+        <button
+          pButton
+          type="button"
+          size="small"
+          icon="pi pi-download"
+          label="Descargar"
+          [disabled]="!previewUrl()"
+          (click)="descargarPreview()">
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <section class="previewShell">
+    <div class="previewToolbar">
+      <div class="previewToolbar__file">
+        <i class="pi pi-file"></i>
+        <span>{{ previewFileName() }}</span>
+      </div>
+
+      <div class="previewToolbar__hint">
+        Revisa el documento. Luego imprime o descarga según necesites.
+      </div>
+    </div>
+
+    <div class="previewFrameWrap" *ngIf="previewSafeUrl(); else noPreview">
+      <iframe
+        class="previewFrame"
+        [src]="previewSafeUrl()"
+        title="Previsualización de documento">
+      </iframe>
+    </div>
+  </section>
+</p-dialog>
+
+<ng-template #noPreview>
+  <div class="previewEmpty">
+    <i class="pi pi-file"></i>
+    <strong>Sin previsualización</strong>
+    <span>Genera un documento para revisarlo aquí.</span>
+  </div>
+</ng-template>

@@ -80,8 +80,155 @@
   font-weight: 800;
 }
 
+.previewHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.previewHeader__copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.previewHeader__copy strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.previewHeader__copy span {
+  font-size: 0.73rem;
+  color: #64748b;
+}
+
+.previewHeader__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+}
+
+.previewShell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  height: min(78vh, 820px);
+  min-height: 0;
+}
+
+.previewToolbar {
+  min-height: 2.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.78rem;
+  background: #f8fafc;
+  padding: 0.42rem 0.62rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.previewToolbar__file {
+  display: flex;
+  align-items: center;
+  gap: 0.36rem;
+  min-width: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.previewToolbar__file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewToolbar__file i {
+  color: #930071;
+}
+
+.previewToolbar__hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.previewFrameWrap {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.9rem;
+  background: #fff;
+}
+
+.previewFrame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+
+.previewEmpty {
+  height: 22rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+}
+
+.previewEmpty i {
+  font-size: 1.4rem;
+  color: #930071;
+}
+
+.previewEmpty strong {
+  color: #0f172a;
+  font-size: 0.86rem;
+}
+
+.previewEmpty span {
+  font-size: 0.72rem;
+}
+
+:host ::ng-deep .reportPreviewDialog .p-dialog-content {
+  padding-top: 0.5rem;
+}
+
+:host ::ng-deep .reportPreviewDialog .p-dialog-header {
+  padding-bottom: 0.55rem;
+}
+
 @media (max-width: 900px) {
   .reportesCard {
     justify-content: flex-start;
+  }
+
+  .previewHeader,
+  .previewToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .previewHeader__actions {
+    justify-content: flex-start;
+  }
+
+  .previewToolbar__hint {
+    white-space: normal;
+  }
+
+  .previewShell {
+    height: 72vh;
   }
 }
