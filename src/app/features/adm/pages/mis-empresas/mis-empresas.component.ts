@@ -15,6 +15,7 @@ import type { EmpresaUsuarioDto } from 'src/app/features/org/data-access/empresa
 import { UsuarioPrivilegiosRepository } from 'src/app/features/org/data-access/usuario-privilegios.repository';
 import { SessionStore } from 'src/app/features/seg/store/session.store';
 import { NotifyService } from 'src/app/core/services/notify.service';
+import { SessionLandingService } from 'src/app/core/services/session-landing.service';
 
 @Component({
     selector: 'app-mis-empresas',
@@ -37,6 +38,7 @@ export class MisEmpresasComponent implements OnInit {
     private sessionStore = inject(SessionStore);
     private notify = inject(NotifyService);
     private router = inject(Router);
+    private landing = inject(SessionLandingService);
 
     loading = signal(false);
     entering = signal(false);
@@ -50,7 +52,6 @@ export class MisEmpresasComponent implements OnInit {
 
     items = signal<EmpresaUsuarioDto[]>([]);
 
-   
     get usu(): number {
         return this.sessionStore.user()?.id ?? 0;
     }
@@ -67,6 +68,7 @@ export class MisEmpresasComponent implements OnInit {
     empresaLabel(row: any) {
         return row?.empresa || '—';
     }
+
     empresaUuid(row: any) {
         return row?.idSegOrganizacionEmpresaFk || '—';
     }
@@ -78,6 +80,7 @@ export class MisEmpresasComponent implements OnInit {
     isRowActive(row: EmpresaUsuarioDto): boolean {
         return ((row as any)?.estado ?? 1) === 1;
     }
+
     isRowActiveEmpresa(row: EmpresaUsuarioDto): boolean {
         return ((row as any)?.estadoEmpresa ?? 1) === 1;
     }
@@ -85,6 +88,7 @@ export class MisEmpresasComponent implements OnInit {
     estadoLabel(row: EmpresaUsuarioDto) {
         return this.isRowActive(row) ? 'Activa' : 'Inactiva';
     }
+
     estadoEmpresaLabel(row: EmpresaUsuarioDto) {
         return this.isRowActive(row) ? 'Activa' : 'Inactiva';
     }
@@ -99,8 +103,6 @@ export class MisEmpresasComponent implements OnInit {
 
         return base.filter((x) => this.empresaNombre(x).toLowerCase().includes(term));
     }
-
-    
 
     cargar() {
         if (!this.usu) return;
@@ -135,29 +137,6 @@ export class MisEmpresasComponent implements OnInit {
         this.cargar();
     }
 
-    // encuentra primer route navegable del menú dinámico
-    private firstCompanyRoute(menus: any[]): string | null {
-        const walk = (arr: any[]): string | null => {
-            for (const it of arr ?? []) {
-                const children = it?.submenu ?? it?.items ?? [];
-                const funcion = it?.funcion ?? it?.route;
-
-                if (children?.length) {
-                    const child = walk(children);
-                    if (child) return child;
-                }
-
-                if (typeof funcion === 'string' && funcion.trim()) {
-                    const f = funcion.trim();
-                    return f.startsWith('/') ? f : '/' + f;
-                }
-            }
-            return null;
-        };
-
-        return walk(menus);
-    }
-
     entrar(row: EmpresaUsuarioDto) {
         const idEmpresa = this.rowIdEmpresa(row);
         if (!idEmpresa) return;
@@ -167,16 +146,17 @@ export class MisEmpresasComponent implements OnInit {
             return;
         }
 
-        
-
         if (this.entering()) return;
         this.entering.set(true);
 
         const companyName = this.empresaNombre(row);
 
-        
-
-        // 2) refresca sesión por empresa (menus/privilegios bajo tenant)
+        // Refresca sesión por empresa (menus/privilegios bajo tenant).
+        // La ruta inicial ya no sale del primer menú dinámico.
+        // Regla:
+        // - inno -> mapas
+        // - dumax -> órdenes
+        // - cualquier otra empresa -> dashboard
         this.usuPrivRepo
             .menusEmpresa(this.usu)
             .pipe(finalize(() => this.entering.set(false)))
@@ -190,7 +170,7 @@ export class MisEmpresasComponent implements OnInit {
                         menusEmpresa,
                     });
 
-                    const target = this.firstCompanyRoute(menusEmpresa) || '/app/dashboard';
+                    const target = this.landing.getLandingUrlForCompanyName(companyName);
                     this.router.navigateByUrl(target);
                 },
                 error: (err) => {
@@ -201,11 +181,9 @@ export class MisEmpresasComponent implements OnInit {
                     );
                 },
             });
-
     }
 
     salirDeEmpresa() {
         this.router.navigate(['/app/mis-empresas']);
     }
-
 }

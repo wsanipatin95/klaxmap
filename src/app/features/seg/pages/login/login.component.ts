@@ -9,6 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { AuthRepository } from '../../data-access/auth.repository';
 import { NotifyService } from 'src/app/core/services/notify.service';
+import { SessionLandingService } from 'src/app/core/services/session-landing.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { finalize, take } from 'rxjs/operators';
@@ -37,6 +38,7 @@ export class LoginComponent {
   private authRepo = inject(AuthRepository);
   private notify = inject(NotifyService);
   private destroyRef = inject(DestroyRef);
+  private landing = inject(SessionLandingService);
 
   loading = false;
   loginError: string | null = null;
@@ -74,9 +76,8 @@ export class LoginComponent {
     this.loginError = null;
     this.loginForm.disable({ emitEvent: false });
 
-    const { usuario, clave } = this.loginForm.getRawValue(); 
-    const returnUrl =
-      this.route.snapshot.queryParamMap.get('returnUrl') || '/app/dashboard';
+    const { usuario, clave } = this.loginForm.getRawValue();
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
 
     this.authRepo
       .login({
@@ -92,8 +93,9 @@ export class LoginComponent {
       )
       .subscribe({
         next: () => {
+          const target = this.landing.resolveLoginTarget(returnUrl);
           this.notify.success('Bienvenido 👋');
-          this.router.navigateByUrl(returnUrl);
+          this.router.navigateByUrl(target);
         },
         error: (err: HttpErrorResponse) => {
           const backendError =

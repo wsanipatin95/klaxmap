@@ -63,7 +63,14 @@ export const routes: Routes = [
         (m) => m.AppLayoutComponent
       ),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('src/app/core/components/landing-redirect/landing-redirect.component').then(
+            (m) => m.LandingRedirectComponent
+          ),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -90,11 +97,17 @@ export const routes: Routes = [
       },
       {
         path: 'importacion',
-        loadChildren: () => import('src/app/features/importacion/importacion.routes').then((m) => m.IMPORTACION_ROUTES),
-      }, {
+        loadChildren: () =>
+          import('src/app/features/importacion/importacion.routes').then(
+            (m) => m.IMPORTACION_ROUTES
+          ),
+      },
+      {
         path: 'vehiculos',
         loadChildren: () =>
-          import('src/app/features/vehiculos/vehiculos.routes').then((m) => m.VEHICULOS_ROUTES),
+          import('src/app/features/vehiculos/vehiculos.routes').then(
+            (m) => m.VEHICULOS_ROUTES
+          ),
       },
     ],
   },
