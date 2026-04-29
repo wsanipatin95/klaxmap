@@ -72,11 +72,7 @@ import {
   VehGarantiaDetalleGuardarRequest,
   VehGarantiaDetalleEditarRequest,
   VehGarantiaMovimientoGuardarRequest,
-  VehGarantiaMovimientoEditarRequest,
-  AdmCentro,
-  AdmNotificacionConfig,
-  VehClienteNotificacion,
-  VehClienteNotificacionEnviarRequest
+  VehGarantiaMovimientoEditarRequest
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
@@ -86,21 +82,6 @@ export class VehiculosApi {
   private userBaseUrl = `${this.env.apiBaseUrl}/api/erp`;
   private baseUrl = `${this.env.apiBaseUrl}/api/erp/klax/veh`;
   private admBaseUrl = `${this.env.apiBaseUrl}/api/erp/klax/adm`;
-
-
-  /* ===== ADM / Centros / Configuración notificaciones ===== */
-  listarCentrosAdm(query: ListQuery = {}) {
-    return this.http.get<ApiEnvelope<Paged<AdmCentro>>>(
-      `${this.admBaseUrl}/centros`,
-      { params: buildListParams(query) }
-    );
-  }
-
-  obtenerAdmNotificacionConfig() {
-    return this.http.get<ApiEnvelope<AdmNotificacionConfig>>(
-      `${this.admBaseUrl}/notificaciones/config`
-    );
-  }
 
   /* ===== Tipos ===== */
   listarTipos(query: ListQuery = {}) {
@@ -212,21 +193,6 @@ export class VehiculosApi {
   crearOrdenBitacora(idOrden: number, payload: VehOrdenTrabajoBitacoraGuardarRequest) {
     return this.http.post<ApiEnvelope<VehOrdenTrabajoBitacoraItem | { idVehOrdenTrabajoBitacora: number }>>(
       `${this.baseUrl}/ordenes-trabajo/${idOrden}/bitacora`,
-      payload
-    );
-  }
-
-
-  listarOrdenNotificaciones(idOrden: number, query: ListQuery = {}) {
-    return this.http.get<ApiEnvelope<Paged<VehClienteNotificacion>>>(
-      `${this.baseUrl}/ordenes-trabajo/${idOrden}/notificaciones`,
-      { params: buildListParams(query) }
-    );
-  }
-
-  enviarOrdenNotificacion(idOrden: number, payload: VehClienteNotificacionEnviarRequest) {
-    return this.http.post<ApiEnvelope<VehClienteNotificacion>>(
-      `${this.baseUrl}/ordenes-trabajo/${idOrden}/notificaciones/enviar`,
       payload
     );
   }

@@ -24,10 +24,6 @@
         <span>Técnico</span>
         <strong>{{ responsableTecnicoNombre }}</strong>
       </article>
-      <app-orden-notificacion-panel
-        [orden]="orden"
-        [clienteNombre]="clienteNombre">
-      </app-orden-notificacion-panel>
     </section>
 
     <section class="tabRail">

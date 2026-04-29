@@ -35,7 +35,6 @@ import {
 } from '../../../../data-access/vehiculos.models';
 import { OrdenGarantiasPanelComponent } from '../orden-garantias-panel/orden-garantias-panel.component';
 import { OrdenBitacoraPanelComponent } from '../orden-bitacora-panel/orden-bitacora-panel.component';
-import { OrdenNotificacionPanelComponent } from '../orden-notificacion-panel/orden-notificacion-panel.component';
 type OrdenDetailTab =
   | 'resumen'
   | 'checklist'
@@ -175,7 +174,6 @@ type FotoDraft = {
     OrdenComercialPanelComponent,
     OrdenGarantiasPanelComponent,
     OrdenBitacoraPanelComponent,
-    OrdenNotificacionPanelComponent,
   ],
   templateUrl: './orden-detail-panel.component.html',
   styleUrl: './orden-detail-panel.component.scss',

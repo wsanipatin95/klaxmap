@@ -45,22 +45,12 @@ import {
   VehGarantiaEditarRequest,
   VehGarantiaGuardarRequest,
   VehGarantiaMovimientoEditarRequest,
-  VehGarantiaMovimientoGuardarRequest,
-  VehClienteNotificacionEnviarRequest
+  VehGarantiaMovimientoGuardarRequest
 } from './vehiculos.models';
 
 @Injectable({ providedIn: 'root' })
 export class VehiculosRepository {
   private api = inject(VehiculosApi);
-
-
-  listarCentrosAdm(q = '', page = 0, size = 100, all = true) {
-    return this.api.listarCentrosAdm({ q, page, size, all }).pipe(map((r) => unwrapOrThrow(r)));
-  }
-
-  obtenerAdmNotificacionConfig() {
-    return this.api.obtenerAdmNotificacionConfig().pipe(map((r) => unwrapOrThrow(r)));
-  }
 
   listarTipos(q = '', page = 0, size = 20, all = false) {
     return this.api.listarTipos({ q, page, size, all }).pipe(map((r) => unwrapOrThrow(r)));
@@ -127,15 +117,6 @@ export class VehiculosRepository {
   }
   crearOrdenBitacora(idOrden: number, payload: VehOrdenTrabajoBitacoraGuardarRequest) {
     return this.api.crearOrdenBitacora(idOrden, payload).pipe(map((r) => unwrapWithMsg(r)));
-  }
-
-
-  listarOrdenNotificaciones(idOrden: number, page = 0, size = 50) {
-    return this.api.listarOrdenNotificaciones(idOrden, { page, size }).pipe(map((r) => unwrapOrThrow(r)));
-  }
-
-  enviarOrdenNotificacion(idOrden: number, payload: VehClienteNotificacionEnviarRequest) {
-    return this.api.enviarOrdenNotificacion(idOrden, payload).pipe(map((r) => unwrapWithMsg(r)));
   }
 
   listarOrdenChecklists(extra: Record<string, unknown> = {}) {

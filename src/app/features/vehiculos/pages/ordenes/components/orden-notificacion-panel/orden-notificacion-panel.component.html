@@ -1,0 +1,110 @@
+<button pButton type="button" size="small" icon="pi pi-send" label="Notificar" class="notifyQuickBtn" [disabled]="!orden" (click)="open()"></button>
+
+<p-dialog [visible]="visible()" (visibleChange)="$event ? visible.set(true) : close()" [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="true" [closeOnEscape]="true" styleClass="ordenNotifyDialog" [style]="{ width: '92vw', maxWidth: '980px' }">
+  <ng-template pTemplate="header">
+    <div class="notifyHeader">
+      <div class="notifyHeader__copy">
+        <strong>Notificar cliente</strong>
+        <span>OT #{{ orden?.idVehOrdenTrabajo }} · {{ clienteNombre || orden?.nombre || 'Cliente' }}</span>
+      </div>
+      <div class="notifyHeader__actions">
+        <p-tag [value]="providerLabel()" [severity]="providerSeverity()"></p-tag>
+        <button pButton type="button" size="small" severity="secondary" [text]="true" icon="pi pi-history" label="Historial" (click)="toggleHistory()"></button>
+      </div>
+    </div>
+  </ng-template>
+
+  <section class="notifyShell">
+    <div class="notifyMain">
+      <section class="notifyForm">
+        <div class="channelStrip">
+          <button type="button" class="channelBtn" [class.active]="canal === 'WHATSAPP'" (click)="onCanalChange('WHATSAPP')"><i class="pi pi-whatsapp"></i><span>WhatsApp</span></button>
+          <button type="button" class="channelBtn" [class.active]="canal === 'EMAIL'" (click)="onCanalChange('EMAIL')"><i class="pi pi-envelope"></i><span>Correo</span></button>
+        </div>
+
+        <div class="notifyGrid">
+          <div class="notifyField span-4">
+            <label>Evento</label>
+            <select [ngModel]="tipoEvento" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onTipoEventoChange($event)">
+              <option *ngFor="let option of tipoEventoOptions" [value]="option.value">{{ option.label }}</option>
+            </select>
+          </div>
+
+          <div class="notifyField span-4">
+            <label>Centro</label>
+            <select [(ngModel)]="idAdmCentroFk" [ngModelOptions]="{ standalone: true }" [disabled]="loading()">
+              <option [ngValue]="null">Centro default</option>
+              <option *ngFor="let centro of centros()" [ngValue]="centro.idAdmCentro">{{ centro.centroCosto || ('Centro ' + centro.idAdmCentro) }}</option>
+            </select>
+          </div>
+
+          <div class="notifyField span-4">
+            <label>Requiere respuesta</label>
+            <label class="checkLine"><input type="checkbox" [(ngModel)]="requiereRespuesta" [ngModelOptions]="{ standalone: true }"><span>Marcar seguimiento</span></label>
+          </div>
+
+          <div class="notifyField span-4">
+            <label>Nombre</label>
+            <input pInputText [ngModel]="clienteNombre || orden?.nombre || ''" [ngModelOptions]="{ standalone: true }" readonly>
+          </div>
+
+          <div class="notifyField span-4" *ngIf="canal === 'WHATSAPP'">
+            <label>WhatsApp destino</label>
+            <input pInputText [(ngModel)]="destinatarioTelefono" [ngModelOptions]="{ standalone: true }" placeholder="0999999999 / 593999999999">
+          </div>
+
+          <div class="notifyField span-4" *ngIf="canal === 'WHATSAPP'">
+            <label>Plantilla Meta</label>
+            <label class="checkLine"><input type="checkbox" [(ngModel)]="usarPlantilla" [ngModelOptions]="{ standalone: true }" [disabled]="(config()?.tokenMeta || '').toLowerCase() !== 'meta'"><span>Usar plantilla</span></label>
+          </div>
+
+          <div class="notifyField span-4" *ngIf="canal === 'EMAIL'">
+            <label>Email destino</label>
+            <input pInputText [(ngModel)]="destinatarioEmail" [ngModelOptions]="{ standalone: true }" placeholder="cliente@correo.com">
+          </div>
+
+          <div class="notifyField span-4" *ngIf="canal === 'EMAIL'">
+            <label>Asunto</label>
+            <input pInputText [(ngModel)]="asunto" [ngModelOptions]="{ standalone: true }" placeholder="Asunto del correo">
+          </div>
+
+          <div class="notifyField span-12">
+            <label>Título interno</label>
+            <input pInputText [(ngModel)]="titulo" [ngModelOptions]="{ standalone: true }" placeholder="Título de la notificación">
+          </div>
+
+          <div class="notifyField span-12">
+            <label>Mensaje</label>
+            <textarea pTextarea rows="6" [(ngModel)]="mensaje" [ngModelOptions]="{ standalone: true }" placeholder="Escribe el mensaje para el cliente"></textarea>
+          </div>
+        </div>
+
+        <div class="notifyFooter">
+          <div class="notifyHint">
+            <strong>{{ canal }}</strong>
+            <span *ngIf="canal === 'WHATSAPP'">Se enviará por {{ providerLabel() }}.</span>
+            <span *ngIf="canal === 'EMAIL'">Se enviará con la configuración SMTP.</span>
+          </div>
+          <div class="notifyActions">
+            <button pButton type="button" severity="secondary" [text]="true" label="Cerrar" (click)="close()"></button>
+            <button pButton type="button" icon="pi pi-send" label="Enviar" [disabled]="sending() || loading()" (click)="send()"></button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="notifyHistory" *ngIf="historyVisible()">
+        <div class="historyHead"><strong>Historial</strong><span>{{ notificaciones().length }} registro(s)</span></div>
+        <div class="historyList">
+          <article class="historyItem" *ngFor="let item of notificaciones()">
+            <div class="historyItem__top"><strong>{{ item.canal || '-' }} · {{ item.provider || '-' }}</strong><p-tag [value]="item.estadoEnvio || '-'" [severity]="estadoSeverity(item.estadoEnvio)"></p-tag></div>
+            <div class="historyItem__body">{{ item.titulo || item.asunto || item.tipoEvento || 'Notificación' }}</div>
+            <div class="historyItem__meta"><span>{{ formatDateTime(item.fecEnvio || item.fecGen) }}</span><span>{{ item.destinatarioTelefono || item.destinatarioEmail || '-' }}</span></div>
+            <div class="historyItem__error" *ngIf="item.errorEnvio">{{ item.errorEnvio }}</div>
+          </article>
+          <div class="historyEmpty" *ngIf="!loadingHistory() && !notificaciones().length">Sin notificaciones registradas.</div>
+          <div class="historyEmpty" *ngIf="loadingHistory()">Cargando historial...</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</p-dialog>
