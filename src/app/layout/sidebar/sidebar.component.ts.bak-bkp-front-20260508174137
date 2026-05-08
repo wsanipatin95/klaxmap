@@ -82,12 +82,6 @@ export class SidebarComponent {
         icon: 'pi pi-car',
         route: '/app/vehiculos/',
       });
-
-      items.push({
-        label: 'Backups',
-        icon: 'pi pi-database',
-        route: '/app/backups/',
-      });
     }
     return items;
   }

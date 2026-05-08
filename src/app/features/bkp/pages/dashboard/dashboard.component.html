@@ -1,0 +1,21 @@
+<div class="bkpPageShell">
+  <app-bkp-page-header title="Backups" subtitle="Respaldo, almacenamiento externo y monitoreo de bases de datos.">
+    <button pButton type="button" severity="secondary" [text]="true" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button>
+    <button pButton type="button" icon="pi pi-list-check" label="Ejecuciones" (click)="go('/app/backups/runs')"></button>
+  </app-bkp-page-header>
+  <section class="noticeStrip" *ngIf="loading()||error()"><span class="noticePill is-info" *ngIf="loading()">Cargando</span><span class="noticePill is-danger" *ngIf="error()">{{error()}}</span></section>
+  <section class="kpiGrid"><article><span>Planes activos</span><strong>{{activePlans()}}</strong><small>Respaldos configurados</small></article><article><span>Bases origen</span><strong>{{sources().length}}</strong><small>PostgreSQL / MySQL</small></article><article><span>Destinos</span><strong>{{destinations().length}}</strong><small>Local, SFTP, Drive, S3</small></article><article class="danger"><span>Fallidos</span><strong>{{failedRuns()}}</strong><small>Últimos runs</small></article></section>
+  <section class="dashboardGrid">
+    <section class="contentCard"><div class="sectionHead"><div><h4>Accesos</h4><div class="secondaryCell">Configuración y monitoreo</div></div></div><div class="accessGrid">
+      <button type="button" (click)="go('/app/backups/agents')"><i class="pi pi-server"></i><strong>Agentes</strong><small>Binarios pg_dump/mysqldump</small></button>
+      <button type="button" (click)="go('/app/backups/sources')"><i class="pi pi-database"></i><strong>Bases origen</strong><small>{{sources().length}} registradas</small></button>
+      <button type="button" (click)="go('/app/backups/destinations')"><i class="pi pi-cloud-upload"></i><strong>Destinos</strong><small>{{destinations().length}} activos</small></button>
+      <button type="button" (click)="go('/app/backups/schedules')"><i class="pi pi-clock"></i><strong>Horarios</strong><small>Diario, semanal, cron</small></button>
+      <button type="button" (click)="go('/app/backups/plans')"><i class="pi pi-calendar-clock"></i><strong>Planes</strong><small>{{activePlans()}} activos</small></button>
+      <button type="button" (click)="go('/app/backups/secrets')"><i class="pi pi-key"></i><strong>Secretos</strong><small>Credenciales cifradas</small></button>
+      <button type="button" (click)="go('/app/backups/notifications')"><i class="pi pi-send"></i><strong>Notificaciones</strong><small>Email / WhatsApp</small></button>
+      <button type="button" (click)="go('/app/backups/settings')"><i class="pi pi-cog"></i><strong>Configuración</strong><small>Parámetros generales</small></button>
+    </div></section>
+    <section class="contentCard"><div class="sectionHead"><div><h4>Últimas ejecuciones</h4><div class="secondaryCell">Estado, archivo y tamaño</div></div></div><div class="denseList" *ngIf="runs().length;else emptyRuns"><article class="denseRow" *ngFor="let r of runs()" (click)="go('/app/backups/runs')"><div><strong>#{{r.idBkpRun}} · {{r.planNombre}}</strong><small>{{r.sourceNombre}} · {{fmtDate(r.startedAt||r.queuedAt)}}</small></div><div class="denseMeta"><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge><small>{{fmtBytes(r.fileSizeBytes)}}</small></div></article></div><ng-template #emptyRuns><app-bkp-empty-state icon="pi pi-list" title="Sin ejecuciones" subtitle="Aún no hay backups ejecutados."></app-bkp-empty-state></ng-template></section>
+  </section>
+</div>

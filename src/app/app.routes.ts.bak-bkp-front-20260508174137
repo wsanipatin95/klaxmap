@@ -109,13 +109,6 @@ export const routes: Routes = [
             (m) => m.VEHICULOS_ROUTES
           ),
       },
-      {
-        path: 'backups',
-        loadChildren: () =>
-          import('src/app/features/bkp/bkp.routes').then(
-            (m) => m.BKP_ROUTES
-          ),
-      },
     ],
   },
 
