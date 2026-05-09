@@ -1,6 +1,383 @@
-<div class="bkpPage">
-  <app-bkp-page-header title="Backups KLAX" subtitle="Monitoreo de planes, orígenes, destinos y ejecuciones."><button pButton type="button" label="Actualizar" icon="pi pi-refresh" [loading]="loading()" (click)="cargar()"></button></app-bkp-page-header>
-  <div class="kpis"><div class="kpi"><strong>{{ activeCount(plans()) }}</strong><span>Planes activos</span></div><div class="kpi"><strong>{{ activeCount(sources()) }}</strong><span>Orígenes activos</span></div><div class="kpi"><strong>{{ activeCount(destinations()) }}</strong><span>Destinos activos</span></div><div class="kpi"><strong>{{ runs().length }}</strong><span>Últimas ejecuciones</span></div></div>
-  <div class="panel" *ngIf="warnings().length"><strong>Advertencias</strong><ul><li *ngFor="let w of warnings()">{{ w }}</li></ul></div>
-  <div class="panel"><h3>Últimas ejecuciones</h3><div class="tableWrap"><table><thead><tr><th>ID</th><th>Plan</th><th>Estado</th><th>Archivo</th><th>Tamaño</th><th>Fin</th></tr></thead><tbody><tr *ngFor="let r of runs()"><td>{{ r.idBkpRun }}</td><td>{{ r.planNombre || r.idBkpPlanFk }}</td><td><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge></td><td>{{ r.fileName || '-' }}</td><td>{{ fmtBytes(r.fileSizeBytes) }}</td><td>{{ fmtDate(r.finishedAt) }}</td></tr><tr *ngIf="!runs().length"><td colspan="6">Sin ejecuciones.</td></tr></tbody></table></div></div>
+<div class="bkpPageShell bkpDashboard">
+  <app-bkp-page-header
+    eyebrow="Centro de control"
+    title="Backups KLAX"
+    subtitle="Configura el flujo completo: secretos, agente, origen, destino, horario, plan, ejecución, restore y retención.">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-refresh"
+      label="Actualizar"
+      [loading]="loading()"
+      (click)="cargar()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-compass"
+      label="Siguiente paso"
+      (click)="goNextStep()">
+    </button>
+  </app-bkp-page-header>
+
+  <section class="bkpNoticeStrip" *ngIf="loading() || warnings().length">
+    <span class="bkpNoticePill is-info" *ngIf="loading()">
+      <i class="pi pi-spin pi-spinner"></i> Cargando módulo BKP
+    </span>
+
+    <span class="bkpNoticePill is-warning" *ngFor="let warning of warnings()">
+      <i class="pi pi-exclamation-triangle"></i> {{ warning }}
+    </span>
+  </section>
+
+  <section class="setupHero bkpCard">
+    <div class="setupHero__main">
+      <div class="setupHero__badge">
+        <i class="pi pi-shield"></i>
+      </div>
+
+      <div class="setupHero__copy">
+        <h2 *ngIf="nextSetupStep() as next; else readyTitle">
+          Continúa con: {{ next.title }}
+        </h2>
+
+        <ng-template #readyTitle>
+          <h2>Configuración base lista</h2>
+        </ng-template>
+
+        <p *ngIf="nextSetupStep() as next; else readySubtitle">
+          {{ next.help }}
+        </p>
+
+        <ng-template #readySubtitle>
+          <p>
+            Ya tienes los requisitos principales para ejecutar backups. Revisa planes,
+            ejecuta una prueba manual y valida restore/retención.
+          </p>
+        </ng-template>
+
+        <div class="setupHero__actions">
+          <button
+            type="button"
+            class="bkpLinkButton primary"
+            (click)="goNextStep()">
+            <i class="pi pi-arrow-right"></i>
+            {{ nextSetupStep()?.actionLabel || 'Ir a planes' }}
+          </button>
+
+          <button
+            type="button"
+            class="bkpLinkButton"
+            (click)="executeFirstPlan()"
+            [disabled]="!activePlans().length">
+            <i class="pi pi-play"></i>
+            Ejecutar prueba
+          </button>
+
+          <button
+            type="button"
+            class="bkpLinkButton"
+            (click)="go('/app/backups/runs')">
+            <i class="pi pi-list-check"></i>
+            Ver ejecuciones
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="setupHero__progress">
+      <div class="progressRing">
+        <strong>{{ setupProgress() }}%</strong>
+        <span>base lista</span>
+      </div>
+
+      <div class="progressLine">
+        <div class="progressLine__bar">
+          <span [style.width.%]="setupProgress()"></span>
+        </div>
+        <small>
+          Requisitos obligatorios:
+          {{ setupSteps().filter(step => step.required && step.ready).length }}
+          /
+          {{ setupSteps().filter(step => step.required).length }}
+        </small>
+      </div>
+    </div>
+  </section>
+
+  <section class="kpiRail">
+    <article class="kpiCard">
+      <span>Planes activos</span>
+      <strong>{{ activePlans().length }}</strong>
+      <small>{{ plans().length }} registrados</small>
+    </article>
+
+    <article class="kpiCard">
+      <span>Orígenes</span>
+      <strong>{{ activeSources().length }}</strong>
+      <small>PostgreSQL / MySQL</small>
+    </article>
+
+    <article class="kpiCard">
+      <span>Destinos</span>
+      <strong>{{ activeDestinations().length }}</strong>
+      <small>Local / S3 / Drive</small>
+    </article>
+
+    <article class="kpiCard">
+      <span>Runs exitosos</span>
+      <strong>{{ successRuns() }}</strong>
+      <small>{{ runs().length }} recientes</small>
+    </article>
+
+    <article class="kpiCard" [class.is-danger]="failedRuns()">
+      <span>Fallidos</span>
+      <strong>{{ failedRuns() }}</strong>
+      <small>Últimos runs cargados</small>
+    </article>
+
+    <article class="kpiCard">
+      <span>Volumen reciente</span>
+      <strong>{{ fmtBytes(lastRunSize()) }}</strong>
+      <small>Suma de runs visibles</small>
+    </article>
+  </section>
+
+  <section class="flowCard bkpCard bkpCard--pad">
+    <div class="bkpCard__head">
+      <div class="bkpCard__title">
+        <h3>Cómo interactúan los módulos</h3>
+        <p>Este es el flujo real para dejar operativo un backup y validar recuperación.</p>
+      </div>
+    </div>
+
+    <div class="flowRail">
+      <button
+        type="button"
+        class="flowNode"
+        *ngFor="let node of flowNodes; let last = last"
+        (click)="go(node.route)">
+        <span class="flowNode__icon"><i [class]="node.icon"></i></span>
+        <strong>{{ node.label }}</strong>
+        <i class="pi pi-arrow-right flowNode__arrow" *ngIf="!last"></i>
+      </button>
+    </div>
+  </section>
+
+  <section class="setupGrid">
+    <article class="bkpCard bkpCard--pad setupChecklist">
+      <div class="bkpCard__head">
+        <div class="bkpCard__title">
+          <h3>Configuración inicial guiada</h3>
+          <p>Completa estos pasos en orden. Los obligatorios deben estar en OK para ejecutar backups confiables.</p>
+        </div>
+      </div>
+
+      <div class="stepList">
+        <button
+          type="button"
+          class="stepRow"
+          *ngFor="let step of setupSteps()"
+          [class]="toneClass(step.tone)"
+          (click)="go(step.route)">
+          <div class="stepRow__index">{{ step.order }}</div>
+
+          <div class="stepRow__icon">
+            <i [class]="step.icon"></i>
+          </div>
+
+          <div class="stepRow__copy">
+            <div>
+              <strong>{{ step.title }}</strong>
+              <span class="requiredTag" *ngIf="step.required">Obligatorio</span>
+              <span class="requiredTag optional" *ngIf="!step.required">Opcional</span>
+            </div>
+            <p>{{ step.subtitle }}</p>
+            <small>{{ step.help }}</small>
+          </div>
+
+          <div class="stepRow__meta">
+            <span class="stepStatus">{{ stepStatus(step) }}</span>
+            <small>{{ step.count }} registro(s)</small>
+          </div>
+        </button>
+      </div>
+    </article>
+
+    <article class="bkpCard bkpCard--pad alertPanel">
+      <div class="bkpCard__head">
+        <div class="bkpCard__title">
+          <h3>Alertas inteligentes</h3>
+          <p>Problemas o pendientes detectados según los datos cargados.</p>
+        </div>
+      </div>
+
+      <div class="alertList" *ngIf="healthAlerts().length; else noAlerts">
+        <article class="alertItem" *ngFor="let alert of healthAlerts()" [class]="toneClass(alert.tone)">
+          <div class="alertItem__icon">
+            <i class="pi" [ngClass]="{
+              'pi-check': alert.tone === 'success',
+              'pi-exclamation-triangle': alert.tone === 'warning' || alert.tone === 'danger',
+              'pi-info-circle': alert.tone === 'neutral'
+            }"></i>
+          </div>
+
+          <div class="alertItem__copy">
+            <strong>{{ alert.title }}</strong>
+            <p>{{ alert.message }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="bkpLinkButton"
+            *ngIf="alert.route"
+            (click)="go(alert.route)">
+            {{ alert.action || 'Ver' }}
+          </button>
+        </article>
+      </div>
+
+      <ng-template #noAlerts>
+        <app-bkp-empty-state
+          icon="pi pi-check-circle"
+          title="Sin alertas críticas"
+          subtitle="Los datos cargados no muestran bloqueos principales. Puedes revisar planes o ejecutar una prueba."
+          [hasActions]="true">
+          <button type="button" class="bkpLinkButton primary" (click)="go('/app/backups/plans')">
+            Ir a planes
+          </button>
+        </app-bkp-empty-state>
+      </ng-template>
+    </article>
+  </section>
+
+  <section class="bkpCard bkpCard--pad">
+    <div class="bkpCard__head">
+      <div class="bkpCard__title">
+        <h3>Módulos BKP</h3>
+        <p>Accesos completos para administrar todo el ciclo de vida del backup.</p>
+      </div>
+
+      <div class="bkpCard__actions">
+        <button type="button" class="bkpLinkButton" (click)="go('/app/backups/settings')">
+          <i class="pi pi-cog"></i> Configuración
+        </button>
+      </div>
+    </div>
+
+    <div class="moduleGrid">
+      <button
+        type="button"
+        class="moduleCard"
+        *ngFor="let card of moduleCards()"
+        [class]="toneClass(card.tone)"
+        (click)="go(card.route)">
+        <span class="moduleCard__icon">
+          <i [class]="card.icon"></i>
+        </span>
+
+        <span class="moduleCard__copy">
+          <strong>{{ card.title }}</strong>
+          <small>{{ card.subtitle }}</small>
+          <em>{{ card.dependsOn }}</em>
+        </span>
+
+        <span class="moduleCard__meta">
+          <b>{{ card.countLabel }}</b>
+          <small>{{ moduleStatus(card) }}</small>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <section class="runtimeGrid">
+    <article class="bkpCard bkpCard--pad">
+      <div class="bkpCard__head">
+        <div class="bkpCard__title">
+          <h3>Últimas ejecuciones</h3>
+          <p>Estado, archivo, tamaño y hora de finalización.</p>
+        </div>
+
+        <div class="bkpCard__actions">
+          <button type="button" class="bkpLinkButton" (click)="go('/app/backups/runs')">
+            Ver detalle
+          </button>
+        </div>
+      </div>
+
+      <div class="bkpDenseList" *ngIf="runs().length; else emptyRuns">
+        <button
+          type="button"
+          class="bkpDenseRow"
+          *ngFor="let run of runs().slice(0, 8)"
+          (click)="go('/app/backups/runs')">
+          <span class="bkpDenseRow__copy">
+            <strong>#{{ run.idBkpRun }} · {{ run.planNombre || ('Plan ' + run.idBkpPlanFk) }}</strong>
+            <small>
+              {{ run.sourceNombre || 'Origen' }}
+              · {{ run.fileName || 'Sin archivo' }}
+              · {{ fmtDate(run.finishedAt || run.startedAt || run.queuedAt) }}
+            </small>
+          </span>
+
+          <span class="bkpDenseRow__meta">
+            <app-bkp-status-badge [status]="run.status"></app-bkp-status-badge>
+            <small>{{ fmtBytes(run.fileSizeBytes) }}</small>
+          </span>
+        </button>
+      </div>
+
+      <ng-template #emptyRuns>
+        <app-bkp-empty-state
+          icon="pi pi-list"
+          title="Aún no hay ejecuciones"
+          subtitle="Cuando tengas un plan listo, ejecútalo manualmente y aquí verás el resultado.">
+          <button type="button" class="bkpLinkButton primary" (click)="go('/app/backups/plans')">
+            Crear o ejecutar plan
+          </button>
+        </app-bkp-empty-state>
+      </ng-template>
+    </article>
+
+    <article class="bkpCard bkpCard--pad">
+      <div class="bkpCard__head">
+        <div class="bkpCard__title">
+          <h3>Operación y recuperación</h3>
+          <p>Acciones posteriores al backup: restore, retención y notificaciones.</p>
+        </div>
+      </div>
+
+      <div class="operationList">
+        <button type="button" class="operationItem" (click)="go('/app/backups/restores')">
+          <span class="bkpModuleIcon warning"><i class="pi pi-replay"></i></span>
+          <span>
+            <strong>Restauraciones</strong>
+            <small>Valida TEST/DRILL o ejecuta REAL con confirmación fuerte.</small>
+          </span>
+          <em>{{ restores().length }}</em>
+        </button>
+
+        <button type="button" class="operationItem" (click)="go('/app/backups/retention')">
+          <span class="bkpModuleIcon danger"><i class="pi pi-trash"></i></span>
+          <span>
+            <strong>Retención</strong>
+            <small>Limpieza de archivos locales vencidos y registro de remotos.</small>
+          </span>
+          <em>{{ retentionRuns().length }}</em>
+        </button>
+
+        <button type="button" class="operationItem" (click)="go('/app/backups/notifications')">
+          <span class="bkpModuleIcon"><i class="pi pi-send"></i></span>
+          <span>
+            <strong>Notificaciones</strong>
+            <small>Reglas para éxito, fallo, parcial, upload y restore.</small>
+          </span>
+          <em>{{ activeRules().length }}</em>
+        </button>
+      </div>
+    </article>
+  </section>
 </div>
