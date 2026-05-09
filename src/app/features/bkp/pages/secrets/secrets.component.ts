@@ -1,37 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { BkpPageHeaderComponent } from '../../components/bkp-ui.component';
+import { BkpPageHeaderComponent, BkpEmptyStateComponent } from '../../components/bkp-ui.component';
 import { BkpRepository } from '../../data-access/bkp.repository';
+import { BkpSecret } from '../../data-access/bkp.models';
 import { BkpConfirmService } from '../../services/bkp-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
-import { jsonPretty, parseJsonObjectStrict } from '../../data-access/bkp.shared';
 import { NotifyService } from 'src/app/core/services/notify.service';
-
-@Component({selector:'app-bkp-secrets',standalone:true,imports:[CommonModule,FormsModule,ButtonModule,ConfirmDialogModule,InputTextModule,TextareaModule,BkpPageHeaderComponent],templateUrl:'./secrets.component.html',styleUrl:'./secrets.component.scss'})
-export class BkpSecretsComponent implements OnInit,PendingChangesAware{
-  private repo=inject(BkpRepository);private confirm=inject(BkpConfirmService);private notify=inject(NotifyService);
-  q=signal('');loading=signal(false);saving=signal(false);dirty=signal(false);items=signal<any[]>([]);selected=signal<any|null>(null);jsonText=signal('{}');valorPlano=signal('');confirmarValor=signal('');initial='{}';
-  ngOnInit(){this.cargar();}
-  canDeactivate(){return !this.dirty()||this.confirm.confirmDiscard();}
-  cargar(){this.loading.set(true);this.repo.listarSecrets(this.q(),0,100,null).pipe(finalize(()=>this.loading.set(false))).subscribe({next:(r:any)=>this.items.set(r.items??[]),error:(e:any)=>this.notify.error('No se pudo cargar secretos',e?.message)});}
-  nuevo(){this.selected.set(null);this.valorPlano.set('');this.confirmarValor.set('');this.jsonText.set(jsonPretty({nombre:'Password PostgreSQL',tipoSecret:'DB_PASSWORD',algoritmo:'AES_GCM',descripcion:'',activo:true}));this.refresh();}
-  seleccionar(i:any){this.selected.set(i);this.valorPlano.set('');this.confirmarValor.set('');this.jsonText.set(jsonPretty(i));this.refresh();}
-  guardar(){
-    if(this.valorPlano()!==this.confirmarValor()){this.notify.warn('Confirmación inválida','Los valores no coinciden');return;}
-    let cambios:Record<string,unknown>; try{cambios=parseJsonObjectStrict(this.jsonText(),'Secreto');}catch(e){this.notify.error('JSON inválido',e instanceof Error?e.message:'JSON inválido');return;}
-    delete (cambios as any).idBkpSecret; delete (cambios as any).fecGen; delete (cambios as any).fecFin;
-    const id=Number(this.selected()?.idBkpSecret??0);
-    if(!id&&!this.valorPlano()){this.notify.warn('Valor requerido','Debes ingresar el valor del secreto.');return;}
-    this.saving.set(true);
-    const req:any=id?this.repo.editarSecret({idBkpSecret:id,valorPlano:this.valorPlano()||null,cambios}):this.repo.crearSecret({...cambios as any,valorPlano:this.valorPlano()});
-    req.pipe(finalize(()=>this.saving.set(false))).subscribe({next:(r:any)=>{this.notify.success('Secreto guardado',r.mensaje);this.dirty.set(false);this.valorPlano.set('');this.confirmarValor.set('');this.cargar();},error:(e:any)=>this.notify.error('No se pudo guardar',e?.message)});
-  }
-  onChange(v:string){this.jsonText.set(v);this.dirty.set(v!==this.initial||!!this.valorPlano()||!!this.confirmarValor());}
-  refresh(){this.initial=this.jsonText();this.dirty.set(false);}
-}
+@Component({selector:'app-bkp-secrets',standalone:true,imports:[CommonModule,ReactiveFormsModule,ButtonModule,ConfirmDialogModule,BkpPageHeaderComponent,BkpEmptyStateComponent],templateUrl:'./secrets.component.html',styleUrl:'./secrets.component.scss'})
+export class BkpSecretsComponent implements OnInit,PendingChangesAware{private repo=inject(BkpRepository);private confirm=inject(BkpConfirmService);private notify=inject(NotifyService);private fb=inject(FormBuilder);q=signal('');loading=signal(false);saving=signal(false);dirty=signal(false);error=signal<string|null>(null);success=signal<string|null>(null);items=signal<BkpSecret[]>([]);selected=signal<BkpSecret|null>(null);secretTypes=['DB_PASSWORD','ENCRYPTION_KEY','SSH_PASSWORD','SSH_PRIVATE_KEY','API_TOKEN','GOOGLE_TOKEN','S3_ACCESS_KEY','S3_SECRET_KEY','SMTP_PASSWORD','WPP_TOKEN','TELEGRAM_TOKEN','WEBHOOK_TOKEN','OTHER'];form=this.fb.group({nombre:['',Validators.required],tipoSecret:['DB_PASSWORD',Validators.required],algoritmo:['AES_GCM'],descripcion:[''],activo:[true],valorPlano:[''],confirmarValor:['']});
+ngOnInit(){this.form.valueChanges.subscribe(()=>{this.dirty.set(true);this.success.set(null);});this.cargar();this.nuevo();}
+canDeactivate(){return !this.dirty()||this.confirm.confirmDiscard();}
+cargar(){this.loading.set(true);this.repo.listarSecrets(this.q(),0,200,null).pipe(finalize(()=>this.loading.set(false))).subscribe({next:r=>this.items.set(r.items??[]),error:e=>this.setError('No se pudo cargar secretos',e?.message)});}
+nuevo(){this.selected.set(null);this.form.reset({nombre:'',tipoSecret:'DB_PASSWORD',algoritmo:'AES_GCM',descripcion:'',activo:true,valorPlano:'',confirmarValor:''});this.clean();}
+async seleccionar(i:BkpSecret){if(this.dirty()&&!(await this.confirm.confirmDiscard()))return;this.selected.set(i);this.form.reset({nombre:i.nombre??'',tipoSecret:i.tipoSecret??'OTHER',algoritmo:i.algoritmo??'AES_GCM',descripcion:i.descripcion??'',activo:i.activo!==false,valorPlano:'',confirmarValor:''});this.clean();}
+guardar(){this.form.markAllAsTouched();if(this.form.invalid){this.setError('Completa nombre y tipo.');return;}const v=this.form.getRawValue();const id=this.selected()?.idBkpSecret??0;const valor=String(v.valorPlano??'').trim();if(!id&&!valor){this.setError('Valor requerido','Para crear un secreto debes ingresar el valor.');return;}if(valor!==String(v.confirmarValor??'').trim()){this.setError('Confirmación inválida','Los valores no coinciden.');return;}const cambios:any={nombre:v.nombre,tipoSecret:v.tipoSecret,algoritmo:v.algoritmo||null,descripcion:v.descripcion||null,activo:v.activo};const req=id?this.repo.editarSecret({idBkpSecret:id,valorPlano:valor||null,cambios}):this.repo.crearSecret({...cambios,valorPlano:valor});this.saving.set(true);req.pipe(finalize(()=>this.saving.set(false))).subscribe({next:r=>{this.success.set(r.mensaje);this.notify.success('Secreto guardado',r.mensaje);this.dirty.set(false);this.form.patchValue({valorPlano:'',confirmarValor:''},{emitEvent:false});this.cargar();},error:e=>this.setError('No se pudo guardar',e?.message)});}
+async eliminar(i=this.selected()){if(!i)return;if(!(await this.confirm.confirmDelete(i.nombre)))return;this.saving.set(true);this.repo.eliminarSecret(i.idBkpSecret).pipe(finalize(()=>this.saving.set(false))).subscribe({next:r=>{this.notify.success('Secreto desactivado',r.mensaje);this.nuevo();this.cargar();},error:e=>this.setError('No se pudo desactivar',e?.message)});}
+clean(){this.dirty.set(false);this.error.set(null);this.success.set(null);}setError(s:string,d?:string){this.error.set(d||s);this.notify.error(s,d);}invalid(n:string){const c=this.form.get(n);return !!c&&c.invalid&&(c.dirty||c.touched);}}

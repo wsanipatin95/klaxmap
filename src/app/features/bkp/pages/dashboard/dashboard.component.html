@@ -100,9 +100,9 @@
         </div>
         <small>
           Requisitos obligatorios:
-          {{ setupSteps().filter(step => step.required && step.ready).length }}
+          {{ requiredReadyCount() }}
           /
-          {{ setupSteps().filter(step => step.required).length }}
+          {{ requiredStepCount() }}
         </small>
       </div>
     </div>
@@ -181,7 +181,7 @@
           type="button"
           class="stepRow"
           *ngFor="let step of setupSteps()"
-          [class]="toneClass(step.tone)"
+          [ngClass]="toneClass(step.tone)"
           (click)="go(step.route)">
           <div class="stepRow__index">{{ step.order }}</div>
 
@@ -216,7 +216,7 @@
       </div>
 
       <div class="alertList" *ngIf="healthAlerts().length; else noAlerts">
-        <article class="alertItem" *ngFor="let alert of healthAlerts()" [class]="toneClass(alert.tone)">
+        <article class="alertItem" *ngFor="let alert of healthAlerts()" [ngClass]="toneClass(alert.tone)">
           <div class="alertItem__icon">
             <i class="pi" [ngClass]="{
               'pi-check': alert.tone === 'success',
@@ -273,7 +273,7 @@
         type="button"
         class="moduleCard"
         *ngFor="let card of moduleCards()"
-        [class]="toneClass(card.tone)"
+        [ngClass]="toneClass(card.tone)"
         (click)="go(card.route)">
         <span class="moduleCard__icon">
           <i [class]="card.icon"></i>

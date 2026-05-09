@@ -256,6 +256,14 @@ export class BkpDashboardComponent implements OnInit {
     return Math.round((steps.filter(x => x.ready).length / steps.length) * 100);
   });
 
+  readonly requiredStepCount = computed(() =>
+    this.setupSteps().filter(step => step.required).length
+  );
+
+  readonly requiredReadyCount = computed(() =>
+    this.setupSteps().filter(step => step.required && step.ready).length
+  );
+
   readonly nextSetupStep = computed(() =>
     this.setupSteps().find(step => step.required && !step.ready) ??
     this.setupSteps().find(step => !step.ready) ??
