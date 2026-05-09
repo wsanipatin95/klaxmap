@@ -69,6 +69,11 @@ export class SidebarComponent {
           icon: 'pi pi-history',
           route: '/app/adm/auditoria',
         });
+        items.push({
+          label: 'Backups',
+          icon: 'pi pi-database',
+          route: '/app/backups/',
+        });
       }
     } else if (this.env.company === 'dumax') {
       items.push({
@@ -83,11 +88,6 @@ export class SidebarComponent {
         route: '/app/vehiculos/',
       });
 
-      items.push({
-        label: 'Backups',
-        icon: 'pi pi-database',
-        route: '/app/backups/',
-      });
     }
     return items;
   }

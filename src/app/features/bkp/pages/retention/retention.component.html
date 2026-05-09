@@ -1,0 +1,11 @@
+<p-confirmDialog></p-confirmDialog>
+<div class="bkpPage">
+  <app-bkp-page-header title="Retención" subtitle="Limpieza de backups locales vencidos y registro de lifecycle remoto.">
+    <button pButton type="button" label="Actualizar" icon="pi pi-refresh" [loading]="loading()" (click)="cargar()"></button>
+    <button pButton type="button" label="Ejecutar todos" icon="pi pi-trash" severity="danger" [loading]="running()" (click)="ejecutarTodos()"></button>
+  </app-bkp-page-header>
+  <div class="grid">
+    <div class="panel"><h3>Destinos activos</h3><div class="list"><button class="row" type="button" *ngFor="let d of destinations()" (click)="ejecutarDestino(d)"><strong>{{ d.nombre }}</strong><span>{{ d.tipoStorage }} · {{ d.retentionDays }} días · {{ d.basePath || d.bucketName || d.folderId || '-' }}</span></button></div></div>
+    <div class="panel"><h3>Ejecuciones</h3><div class="tableWrap"><table><thead><tr><th>ID</th><th>Destino</th><th>Estado</th><th>Escaneados</th><th>Eliminados</th><th>Bytes</th><th>Fin</th></tr></thead><tbody><tr *ngFor="let r of runs()" (click)="selected.set(r)"><td>{{ r.idBkpRetentionRun }}</td><td>{{ destinoLabel(r.idBkpStorageDestinationFk) }}</td><td><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge></td><td>{{ r.filesScanned || 0 }}</td><td>{{ r.filesDeleted || 0 }}</td><td>{{ fmtBytes(r.bytesDeleted) }}</td><td>{{ fmtDate(r.finishedAt) }}</td></tr></tbody></table></div><pre *ngIf="selected()">{{ jsonPretty(selected()) }}</pre></div>
+  </div>
+</div>

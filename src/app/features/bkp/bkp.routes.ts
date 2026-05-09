@@ -10,6 +10,8 @@ export const BKP_ROUTES: Routes = [
   { path: 'schedules', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/schedules/schedules.component').then(m => m.BkpSchedulesComponent) },
   { path: 'plans', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/plans/plans.component').then(m => m.BkpPlansComponent) },
   { path: 'runs', loadComponent: () => import('./pages/runs/runs.component').then(m => m.BkpRunsComponent) },
+  { path: 'restores', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/restores/restores.component').then(m => m.BkpRestoresComponent) },
+  { path: 'retention', loadComponent: () => import('./pages/retention/retention.component').then(m => m.BkpRetentionComponent) },
   { path: 'secrets', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/secrets/secrets.component').then(m => m.BkpSecretsComponent) },
   { path: 'notifications', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/notifications/notifications.component').then(m => m.BkpNotificationsComponent) },
   { path: 'settings', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./pages/settings/settings.component').then(m => m.BkpSettingsComponent) },

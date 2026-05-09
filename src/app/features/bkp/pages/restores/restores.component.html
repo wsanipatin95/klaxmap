@@ -1,0 +1,30 @@
+<p-confirmDialog></p-confirmDialog>
+<div class="bkpPage">
+  <app-bkp-page-header title="Restauraciones" subtitle="TEST, DRILL y REAL con confirmación fuerte.">
+    <button pButton type="button" label="Nuevo" icon="pi pi-plus" (click)="nuevo()"></button>
+    <button pButton type="button" label="Actualizar" icon="pi pi-refresh" [loading]="loading()" (click)="cargar()"></button>
+  </app-bkp-page-header>
+  <div class="grid">
+    <div class="panel list">
+      <button class="row" type="button" *ngFor="let r of restores()" [class.active]="selected()?.idBkpRestoreRun===r.idBkpRestoreRun" (click)="seleccionar(r)">
+        <strong>#{{ r.idBkpRestoreRun }} · {{ r.restoreType }}</strong><span><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge> {{ r.targetDatabase || '-' }} · {{ fmtDate(r.finishedAt || r.startedAt) }}</span>
+      </button>
+    </div>
+    <form class="panel" [formGroup]="form">
+      <h3>Solicitud</h3>
+      <div class="formGrid">
+        <div class="field full"><label>Run exitoso *</label><select formControlName="idBkpRun"><option [ngValue]="null">Seleccione...</option><option *ngFor="let r of runs()" [ngValue]="r.idBkpRun">{{ runLabel(r.idBkpRun) }}</option></select></div>
+        <div class="field"><label>Agente</label><select formControlName="idBkpAgentNode"><option [ngValue]="null">Usar agente del run</option><option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">{{ a.nombre }}</option></select></div>
+        <div class="field"><label>Tipo *</label><select formControlName="restoreType"><option value="TEST">TEST</option><option value="DRILL">DRILL</option><option value="REAL">REAL</option></select></div>
+        <div class="field"><label>Host destino</label><input formControlName="targetHost"></div><div class="field"><label>Puerto</label><input type="number" formControlName="targetPort"></div>
+        <div class="field"><label>Base destino *</label><input formControlName="targetDatabase"></div><div class="field"><label>Schema</label><input formControlName="targetSchema"></div>
+        <div class="field"><label>Usuario</label><input formControlName="targetUsuario"></div><div class="field"><label>Secreto password</label><select formControlName="idBkpSecretPassword"><option [ngValue]="null">Usar origen</option><option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">{{ s.nombre }} · {{ s.tipoSecret }}</option></select></div>
+        <div class="field"><label>Clean before</label><select formControlName="cleanBeforeRestore"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div>
+        <div class="field full"><label>Extra args</label><input formControlName="extraRestoreArgs"></div>
+      </div>
+      <p class="hint" *ngIf="form.value.restoreType==='REAL'">Para REAL se pedirá escribir RESTAURAR.</p>
+      <div class="actions"><button pButton type="button" label="Registrar" (click)="registrar()" [loading]="saving()"></button><button pButton type="button" label="Ejecutar ahora" severity="danger" (click)="ejecutar()" [loading]="saving()"></button><button pButton type="button" label="Ejecutar registrado" [disabled]="!selected()" (click)="ejecutarRegistrado()"></button></div>
+      <pre *ngIf="selected()">{{ jsonPretty(selected()) }}</pre>
+    </form>
+  </div>
+</div>
