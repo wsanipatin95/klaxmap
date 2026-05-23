@@ -188,6 +188,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.syncToolMode();
     this.setupResizeObserver();
     this.scheduleMapResizeRefresh();
+    this.scheduleRobustMapLayoutRefresh();
   }
 
   ngOnDestroy(): void {
@@ -259,6 +260,7 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   refreshMapLayout(preserveView = true) {
     this.scheduleMapResizeRefresh(preserveView);
+    this.scheduleRobustMapLayoutRefresh(preserveView);
   }
 
   clearMeasurement() {
@@ -612,6 +614,21 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     if (container.parentElement) {
       this.resizeObserver.observe(container.parentElement);
+    }
+  }
+
+
+  private scheduleRobustMapLayoutRefresh(preserveView = true) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const delays = [60, 180, 360, 720];
+
+    for (const delay of delays) {
+      window.setTimeout(() => {
+        this.scheduleMapResizeRefresh(preserveView);
+      }, delay);
     }
   }
 

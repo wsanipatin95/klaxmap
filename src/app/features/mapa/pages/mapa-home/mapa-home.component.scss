@@ -117,3 +117,49 @@
   line-height: 1.45;
   color: #475569;
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+:host {
+  width: 100%;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 860px) {
+  :host {
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  .mapa-success,
+  .mapa-error {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-width: none;
+  }
+
+  .mapa-success {
+    bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mapa-error {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 520px) {
+  .mapa-success,
+  .mapa-error {
+    padding: 0.78rem 0.85rem;
+    border-radius: 0.72rem;
+  }
+
+  .mapa-success-text,
+  .mapa-error-text {
+    font-size: 0.74rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

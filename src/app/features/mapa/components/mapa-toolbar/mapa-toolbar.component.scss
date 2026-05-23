@@ -273,3 +273,105 @@
     min-width: 11rem;
   }
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.ge-toolbar-strip {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+.tool-btn,
+.edit-action,
+.toolbar-dropdown-item {
+  touch-action: manipulation;
+}
+
+@media (max-width: 860px) {
+  .ge-toolbar-shell {
+    min-height: 42px;
+    padding: 0.18rem 0.22rem 0.2rem;
+    padding-top: calc(0.18rem + env(safe-area-inset-top, 0px));
+  }
+
+  .ge-toolbar-strip {
+    gap: 4px;
+    min-height: 38px;
+    padding: 3px;
+    scrollbar-width: none;
+  }
+
+  .ge-toolbar-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tool-btn {
+    width: 36px;
+    height: 34px;
+    min-width: 36px;
+    min-height: 34px;
+    border-radius: 0.45rem;
+  }
+
+  .tool-btn i,
+  .tool-btn-glyph {
+    font-size: 1rem;
+  }
+
+  .tool-btn--wide {
+    min-width: 36px;
+    padding: 0 0.45rem;
+  }
+
+  .tool-separator {
+    height: 24px;
+    margin: 0 1px;
+  }
+
+  .toolbar-dropdown-menu {
+    max-width: calc(100vw - 1rem);
+  }
+
+  .toolbar-dropdown-item {
+    min-height: 2.4rem;
+    padding: 0.48rem 0.6rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .ge-toolbar-shell {
+    min-height: 46px;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+  }
+
+  .ge-toolbar-strip {
+    min-height: 40px;
+  }
+
+  .tool-btn {
+    width: 38px;
+    height: 36px;
+    min-width: 38px;
+    min-height: 36px;
+  }
+
+  .tool-btn--wide {
+    padding: 0 0.38rem;
+  }
+
+  .edit-strip {
+    margin-top: 0.2rem;
+    padding: 0.42rem;
+  }
+
+  .edit-strip-actions {
+    width: 100%;
+  }
+
+  .edit-action {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.25rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

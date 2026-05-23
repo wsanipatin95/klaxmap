@@ -265,3 +265,65 @@
   background: #ffffff;
   font-size: 0.78rem;
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+@media (max-width: 860px) {
+  .properties-drawer {
+    width: min(34rem, 100vw);
+    max-width: 100vw;
+  }
+
+  .panel-header {
+    padding: 0.65rem 0.72rem;
+  }
+
+  .panel-tabs {
+    overflow-x: auto;
+    padding: 0.7rem 0.72rem 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .panel-tab-btn {
+    flex: 0 0 auto;
+    min-height: 2.45rem;
+  }
+
+  .panel-body {
+    padding: 0.72rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .properties-drawer {
+    width: 100vw;
+    border-left: 0;
+  }
+
+  .panel-header {
+    gap: 0.55rem;
+  }
+
+  .title-row {
+    flex-wrap: wrap;
+  }
+
+  .panel-title-wrap h3 {
+    font-size: 0.9rem;
+  }
+
+  .close-btn,
+  .delete-btn {
+    min-height: 2.25rem;
+  }
+
+  .panel-tabs {
+    gap: 0.38rem;
+  }
+
+  .panel-tab-btn {
+    min-height: 2.35rem;
+    padding: 0 0.75rem;
+    font-size: 0.74rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

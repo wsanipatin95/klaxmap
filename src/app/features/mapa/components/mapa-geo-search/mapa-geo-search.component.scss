@@ -220,3 +220,73 @@
     font-size: 0.72rem;
   }
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.geo-search-submit,
+.geo-search-clear,
+.geo-search-result {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  .geo-search-inline {
+    padding: 0.28rem 0.3rem 0.3rem;
+  }
+
+  .geo-search-form {
+    grid-template-columns: minmax(0, 1fr) 3.05rem;
+    gap: 0.28rem;
+  }
+
+  .geo-search-form.has-clear {
+    grid-template-columns: minmax(0, 1fr) 3.05rem 2.2rem;
+  }
+
+  .geo-search-submit,
+  .geo-search-clear,
+  .geo-search-input {
+    height: 2.25rem;
+  }
+
+  .geo-search-submit {
+    min-width: 3.05rem;
+    padding: 0 0.6rem;
+  }
+
+  .geo-search-clear {
+    width: 2.2rem;
+  }
+
+  .geo-search-input {
+    font-size: 0.8rem;
+  }
+
+  .geo-search-panel {
+    max-height: min(14rem, 42vh);
+  }
+
+  .geo-search-result {
+    min-height: 2.6rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .geo-search-result-label {
+    font-size: 0.76rem;
+  }
+
+  .geo-search-result-subtitle {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .geo-search-form,
+  .geo-search-form.has-clear {
+    grid-template-columns: minmax(0, 1fr) 2.7rem;
+  }
+
+  .geo-search-form.has-clear .geo-search-clear {
+    grid-column: 2;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

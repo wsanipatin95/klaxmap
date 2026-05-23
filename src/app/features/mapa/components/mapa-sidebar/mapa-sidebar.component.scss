@@ -151,3 +151,55 @@
     padding: 0.12rem;
   }
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.sidebar-shell {
+  max-width: 100%;
+  overscroll-behavior: contain;
+}
+
+.pane-body,
+.places-tree,
+.pane-layers .pane-body {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 860px) {
+  .sidebar-shell {
+    box-shadow: inset -1px 0 0 rgba(203, 213, 225, 0.8);
+  }
+
+  .pane-header {
+    min-height: 30px;
+    padding: 0 0.5rem;
+  }
+
+  .pane-title {
+    font-size: 0.76rem;
+  }
+
+  .pane-toggle-icon {
+    width: 18px;
+    font-size: 0.72rem;
+  }
+
+  .places-search {
+    padding: 0.24rem;
+  }
+
+  .sidebar-splitter {
+    height: 10px;
+    flex-basis: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .pane-header {
+    min-height: 32px;
+  }
+
+  .places-search {
+    padding: 0.22rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

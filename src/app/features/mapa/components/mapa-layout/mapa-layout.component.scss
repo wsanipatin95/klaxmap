@@ -185,3 +185,100 @@
     pointer-events: auto;
   }
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.mapa-layout {
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.toolbar,
+.sidebar,
+.canvas,
+.status,
+.canvas-surface {
+  min-width: 0;
+}
+
+.canvas,
+.canvas-surface {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .mapa-layout {
+    --toolbar-height: 42px;
+    --status-height: 34px;
+    min-width: 0;
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100svh;
+    height: 100svh;
+    min-height: 100dvh;
+    height: 100dvh;
+  }
+
+  .toolbar {
+    z-index: 70;
+  }
+
+  .sidebar {
+    top: calc(var(--toolbar-height) + env(safe-area-inset-top, 0px));
+    bottom: calc(var(--status-height) + env(safe-area-inset-bottom, 0px));
+    width: min(88vw, 340px);
+    max-width: calc(100vw - 0.85rem);
+    overflow: hidden;
+  }
+
+  .mapa-layout.sidebar-compact .sidebar {
+    width: min(76vw, 300px);
+  }
+
+  .mapa-layout.sidebar-hidden .sidebar {
+    width: min(88vw, 340px);
+    max-width: calc(100vw - 0.85rem);
+  }
+
+  .sidebar-backdrop {
+    inset: calc(var(--toolbar-height) + env(safe-area-inset-top, 0px)) 0 calc(var(--status-height) + env(safe-area-inset-bottom, 0px)) 0;
+    touch-action: none;
+  }
+
+  .canvas {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .mapa-layout {
+    --toolbar-height: 44px;
+    --status-height: 38px;
+  }
+
+  .sidebar,
+  .mapa-layout.sidebar-hidden .sidebar {
+    width: min(92vw, 360px);
+    max-width: calc(100vw - 0.65rem);
+  }
+
+  .mapa-layout.sidebar-compact .sidebar {
+    width: min(84vw, 328px);
+  }
+}
+
+@media (max-width: 420px) {
+  .mapa-layout {
+    --toolbar-height: 46px;
+  }
+
+  .sidebar,
+  .mapa-layout.sidebar-hidden .sidebar,
+  .mapa-layout.sidebar-compact .sidebar {
+    width: calc(100vw - 0.5rem);
+    max-width: calc(100vw - 0.5rem);
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

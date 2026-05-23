@@ -314,3 +314,130 @@
 .leaflet-control-container {
   overflow: visible !important;
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.mapa-canvas-shell,
+.mapa-canvas,
+.leaflet-container {
+  min-width: 0;
+  max-width: 100vw;
+}
+
+.leaflet-container {
+  touch-action: pan-x pan-y;
+}
+
+@media (max-width: 860px) {
+  .mapa-canvas,
+  .leaflet-container {
+    min-height: 260px;
+  }
+
+  .leaflet-control-zoom a {
+    width: 38px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    font-size: 1.2rem !important;
+  }
+
+  .leaflet-touch .leaflet-bar a {
+    width: 38px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+  }
+
+  .leaflet-top .leaflet-control {
+    margin-top: 0.75rem;
+  }
+
+  .leaflet-left .leaflet-control {
+    margin-left: 0.75rem;
+  }
+
+  .leaflet-right .leaflet-control {
+    margin-right: 0.75rem;
+  }
+
+  .leaflet-bottom .leaflet-control {
+    margin-bottom: 0.7rem;
+  }
+
+  .mapa-overlay-left {
+    top: 0.7rem;
+    left: 0.7rem;
+    right: 0.7rem;
+    pointer-events: none;
+  }
+
+  .mapa-measure-card {
+    width: min(17rem, calc(100vw - 1.4rem));
+    min-width: 0;
+    max-width: calc(100vw - 1.4rem);
+    pointer-events: auto;
+  }
+
+  .mapa-measure-actions {
+    flex-wrap: wrap;
+  }
+
+  .mapa-measure-btn {
+    min-height: 2.2rem;
+    padding: 0.48rem 0.78rem;
+  }
+
+  .leaflet-tooltip.mapa-element-tooltip,
+  .leaflet-tooltip.mapa-search-result-tooltip {
+    max-width: min(14rem, calc(100vw - 2rem));
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .mapa-element-label {
+    max-width: min(11rem, calc(100vw - 2rem));
+  }
+}
+
+@media (max-width: 520px) {
+  .leaflet-control-zoom a,
+  .leaflet-touch .leaflet-bar a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .leaflet-top .leaflet-control {
+    margin-top: 0.6rem;
+  }
+
+  .leaflet-left .leaflet-control {
+    margin-left: 0.55rem;
+  }
+
+  .leaflet-right .leaflet-control {
+    margin-right: 0.55rem;
+  }
+
+  .leaflet-bottom .leaflet-control {
+    margin-bottom: 0.55rem;
+  }
+
+  .mapa-overlay-left {
+    top: 0.55rem;
+    left: 0.55rem;
+    right: 0.55rem;
+  }
+
+  .mapa-measure-card {
+    padding: 0.72rem;
+    border-radius: 0.8rem;
+  }
+
+  .mapa-measure-distance {
+    font-size: 1.16rem;
+  }
+
+  .mapa-measure-help {
+    font-size: 0.7rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */

@@ -71,3 +71,59 @@
   text-align: right;
   user-select: none;
 }
+
+/* === KLAXMAP RESPONSIVE HARDENING: BEGIN === */
+.ge-search,
+.nav-btn,
+.clear-btn {
+  touch-action: manipulation;
+}
+
+@media (max-width: 860px) {
+  .ge-search {
+    grid-template-columns: 34px minmax(0, 1fr) 34px 34px 34px;
+    gap: 3px;
+    min-height: 36px;
+    padding: 3px;
+  }
+
+  .search-icon,
+  .nav-btn,
+  .clear-btn {
+    width: 34px;
+    height: 30px;
+    border-radius: 0.38rem;
+  }
+
+  .search-icon {
+    width: 34px;
+  }
+
+  .ge-search input {
+    font-size: 0.78rem;
+    min-height: 30px;
+  }
+
+  .ge-search-status {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .ge-search {
+    grid-template-columns: 36px minmax(0, 1fr) 36px 36px 36px;
+    min-height: 38px;
+  }
+
+  .search-icon,
+  .nav-btn,
+  .clear-btn {
+    width: 36px;
+    height: 32px;
+  }
+
+  .ge-search input {
+    font-size: 0.8rem;
+  }
+}
+/* === KLAXMAP RESPONSIVE HARDENING: END === */
