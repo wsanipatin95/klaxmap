@@ -386,7 +386,6 @@ export class MapaCrudFacade {
 
   private buildElementosFilters() {
     return {
-      q: this.filtros.q(),
       idRedNodoFk: this.filtros.idRedNodoFk(),
       idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
       visible: this.filtros.visible(),
@@ -398,7 +397,6 @@ export class MapaCrudFacade {
 
   private buildDeletedElementosFilters() {
     return {
-      q: this.filtros.q(),
       idRedNodoFk: this.filtros.idRedNodoFk(),
       idGeoTipoElementoFk: this.filtros.idGeoTipoElementoFk(),
       all: true,

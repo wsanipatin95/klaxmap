@@ -44,6 +44,8 @@ export class MapaHomeViewFacade {
     return results.findIndex((item) => item.idGeoElemento === selectedId);
   });
 
+  readonly searchResultCount = computed(() => this.getSearchNavigableItems().length);
+
   readonly quickInfo = computed(() => {
     const q = (this.filtros.q() || '').trim();
     const nodo = this.selection.selectedNodo();
@@ -70,7 +72,7 @@ export class MapaHomeViewFacade {
     }
 
     if (q) {
-      return `Búsqueda: "${q}" · ${this.elementosCanvas().length} resultado(s)`;
+      return `Búsqueda: "${q}" · ${this.searchResultCount()} resultado(s)`;
     }
 
     if (elemento) {
@@ -101,7 +103,7 @@ export class MapaHomeViewFacade {
   }
 
   centerFirstVisibleSearchResultIfNeeded(
-    items: MapaElemento[],
+    _items: MapaElemento[],
     callbacks: {
       onSelect: (item: MapaElemento | null) => void;
       centerOnElemento: (id: number) => void;
@@ -111,16 +113,19 @@ export class MapaHomeViewFacade {
       return false;
     }
 
-    const visibles = this.filterCanvasVisible(items);
-    if (visibles.length === 0) {
+    const first = this.getFirstSearchNavigationItem();
+    if (!first) {
       callbacks.onSelect(null);
       return true;
     }
 
-    const first = visibles[0];
     callbacks.onSelect(first);
     callbacks.centerOnElemento(first.idGeoElemento);
     return true;
+  }
+
+  getFirstSearchNavigationItem(): MapaElemento | null {
+    return this.getSearchNavigableItems()[0] ?? null;
   }
 
   getNextSearchNavigationItem(direction: 1 | -1): MapaElemento | null {
@@ -182,11 +187,28 @@ export class MapaHomeViewFacade {
   }
 
   private getSearchNavigableItems(): MapaElemento[] {
-    if (!(this.filtros.q() || '').trim()) {
+    const q = this.normalizeSearch(this.filtros.q());
+
+    if (!q) {
       return [];
     }
 
-    return this.elementosCanvas();
+    return this.elementosCanvas().filter((item) => this.matchesSearch(item, q));
+  }
+
+  private matchesSearch(item: MapaElemento, q: string): boolean {
+    return [
+      item.nombre,
+      item.descripcion ?? '',
+      item.codigo ?? '',
+      item.etiqueta ?? '',
+      item.observacion ?? '',
+      item.estado ?? '',
+    ].some((value) => this.normalizeSearch(value).includes(q));
+  }
+
+  private normalizeSearch(value: string | null | undefined): string {
+    return String(value ?? '').trim().toLowerCase();
   }
 
   private getCanvasSourceItems(): MapaElemento[] {

@@ -175,14 +175,7 @@ export class MapaTreeComponent implements OnChanges {
       this.ensureRootNodesExpanded();
     }
 
-    if (searchChanged && this.searchValue.trim()) {
-      this.expandVisibleBranches();
-      if (this.deletedFolder.elementos.length) {
-        this.ensureDeletedFolderExpanded();
-      }
-    }
-
-    if ((selectedNodoChanged || selectedElementoChanged) && !this.searchValue.trim()) {
+    if (selectedNodoChanged || selectedElementoChanged || (searchChanged && (this.selectedNodoId != null || this.selectedElementoId != null))) {
       this.ensureSelectionPathExpanded();
     }
 
@@ -249,15 +242,10 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   isExpanded(node: MapaNodo): boolean {
-    if (this.searchValue.trim()) return true;
     return this.expandedIds().includes(node.idRedNodo);
   }
 
   isDeletedFolderExpanded(): boolean {
-    if (this.searchValue.trim()) {
-      return true;
-    }
-
     return this.expandedIds().includes(this.DELETED_FOLDER_ID);
   }
 
@@ -424,27 +412,20 @@ export class MapaTreeComponent implements OnChanges {
   trackByElemento = (_: number, item: MapaElemento) => item.idGeoElemento;
 
   private selectElementosForTree(): MapaElemento[] {
-    const q = this.searchValue.trim().toLowerCase();
     let source = this.elementos.slice();
-
-    if (q) {
-      source = source.filter((el) => this.matchesElementoWithQuery(el, q));
-    }
 
     if (!this.performanceMode) {
       this.performanceNotice = '';
       return source;
     }
 
-    if (!q) {
-      const focusNodeId = this.resolveFocusNodeId();
-      if (focusNodeId != null) {
-        const branchIds = getBranchNodeIds(focusNodeId, this.nodos);
-        source = source.filter((el) => branchIds.has(el.idRedNodoFk));
-      }
+    const focusNodeId = this.resolveFocusNodeId();
+    if (focusNodeId != null) {
+      const branchIds = getBranchNodeIds(focusNodeId, this.nodos);
+      source = source.filter((el) => branchIds.has(el.idRedNodoFk));
     }
 
-    const limit = q ? this.TREE_LIMIT_SEARCH : this.TREE_LIMIT_NO_SEARCH;
+    const limit = this.TREE_LIMIT_NO_SEARCH;
 
     if (source.length <= limit) {
       this.performanceNotice = '';
@@ -468,12 +449,7 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   private selectDeletedElementosForTree(): MapaElemento[] {
-    const q = this.searchValue.trim().toLowerCase();
-    let source = this.deletedElementos.filter((item) => this.isDeletedElement(item));
-
-    if (q) {
-      source = source.filter((el) => this.matchesElementoWithQuery(el, q));
-    }
+    const source = this.deletedElementos.filter((item) => this.isDeletedElement(item));
 
     return source
       .slice()
@@ -507,7 +483,7 @@ export class MapaTreeComponent implements OnChanges {
     const byParent = new Map<number | null, MapaNodo[]>();
     const elementosByNodo = new Map<number, MapaElemento[]>();
     const allNodeIds = new Set(this.nodos.map((n) => n.idRedNodo));
-    const q = this.searchValue.trim().toLowerCase();
+    const q = '';
 
     for (const n of this.nodos) {
       const rawParent = n.idRedNodoPadreFk ?? null;
@@ -557,13 +533,11 @@ export class MapaTreeComponent implements OnChanges {
 
       const hiddenElementCount = Math.max(0, rawElementos.length - elementos.length);
 
-      const childVisible = children.some((c) => c.visible);
-      const nodeVisible = this.matchesNode(node);
-      const visible = !q || nodeVisible || elementos.length > 0 || childVisible;
+      const visible = true;
 
       return {
         node,
-        children: q ? children.filter((c) => c.visible) : children,
+        children,
         elementos,
         visible,
         hiddenElementCount,
@@ -574,12 +548,11 @@ export class MapaTreeComponent implements OnChanges {
   }
 
   private rebuildDeletedFolder() {
-    const q = this.searchValue.trim().toLowerCase();
     const elementos = this.treeDeletedElementos;
 
     this.deletedFolder = {
       elementos,
-      visible: elementos.length > 0 || (!!q && this.deletedElementos.length > 0),
+      visible: elementos.length > 0,
     };
   }
 

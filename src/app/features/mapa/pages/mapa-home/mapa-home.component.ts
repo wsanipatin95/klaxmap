@@ -123,6 +123,7 @@ export class MapaHomeComponent {
 
   readonly elementosCanvas = this.view.elementosCanvas;
   readonly searchResultIndex = this.view.searchResultIndex;
+  readonly searchResultCount = this.view.searchResultCount;
   readonly deletedElementsVisible = this.ui.deletedElementsVisible;
 
   readonly geoSearchValue = this.geoSearch.value;
@@ -246,13 +247,25 @@ export class MapaHomeComponent {
   onSearchRequested(q: string) {
     this.runGuarded(() => {
       this.filtros.setQ(q);
-      this.selection.setElemento(null);
       this.interaction.closeContextMenu();
-      this.crud.refreshAll((items) => {
-        this.view.centerFirstVisibleSearchResultIfNeeded(items, {
-          onSelect: (item) => this.selection.setElemento(item),
-          centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
-        });
+
+      const item = this.view.getFirstSearchNavigationItem();
+
+      if (!item) {
+        this.selection.setElemento(null);
+        this.crud.setError(`No se encontraron elementos para "${q}".`);
+        return;
+      }
+
+      this.interaction.selectElementoWithPendingGuard({
+        item,
+        nodos: this.nodos(),
+        onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
+        onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+        centerOnElemento: (id) => this.defer(() => this.mapCanvas?.panToElementoPreservingZoom(id)),
+        afterSelect: () => {
+          this.defer(() => this.mapCanvas?.panToElementoPreservingZoom(item.idGeoElemento));
+        },
       });
     });
   }
@@ -260,11 +273,7 @@ export class MapaHomeComponent {
   clearSearch() {
     this.runGuarded(() => {
       this.filtros.setQ('');
-      this.selection.setElemento(null);
       this.interaction.closeContextMenu();
-      this.crud.refreshAll((items) => {
-        this.defer(() => this.mapCanvas?.centerOnElementos(this.view.filterCanvasVisible(items)));
-      });
     });
   }
 
@@ -386,7 +395,7 @@ export class MapaHomeComponent {
       this.crud.refreshAll((items) => {
         const centeredBySearch = this.view.centerFirstVisibleSearchResultIfNeeded(items, {
           onSelect: (item) => this.selection.setElemento(item),
-          centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
+          centerOnElemento: (id) => this.defer(() => this.mapCanvas?.panToElementoPreservingZoom(id)),
         });
 
         if (!centeredBySearch) {
@@ -882,9 +891,9 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
-      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.centerOnElemento(id)),
+      centerOnElemento: (id) => this.defer(() => this.mapCanvas?.panToElementoPreservingZoom(id)),
       afterSelect: () => {
-        this.defer(() => this.mapCanvas?.centerOnElemento(nextItem.idGeoElemento));
+        this.defer(() => this.mapCanvas?.panToElementoPreservingZoom(nextItem.idGeoElemento));
       },
     });
   }

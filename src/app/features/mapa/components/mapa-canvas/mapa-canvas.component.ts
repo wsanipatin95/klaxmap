@@ -358,6 +358,36 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.scheduleRender();
   }
 
+  panToElementoPreservingZoom(id: number | null) {
+    if (id == null || !this.map) return;
+
+    const layer = this.renderedLayers.get(id) ?? null;
+    const anchor = layer
+      ? this.tryGetLayerLatLng(layer)
+      : this.getElementAnchorById(id);
+
+    if (!anchor) {
+      this.scheduleRender();
+      return;
+    }
+
+    this.map.panTo(anchor, { animate: true });
+    this.updateViewBounds();
+    this.scheduleRender();
+
+    const rendered = this.renderedLayers.get(id) ?? layer;
+    this.openTooltipForLayer(rendered);
+    this.lastTooltipOpenedElementoId = id;
+  }
+
+  private getElementAnchorById(id: number): L.LatLng | null {
+    const item = this.elementos.find((el) => el.idGeoElemento === id) ?? null;
+    if (!item) return null;
+
+    const bounds = this.getElementBounds(item);
+    return bounds?.isValid?.() ? bounds.getCenter() : null;
+  }
+
   private resolveFocusedElementZoom(bounds: L.LatLngBounds): number {
     const diagonalMeters = this.map.distance(bounds.getSouthWest(), bounds.getNorthEast());
 

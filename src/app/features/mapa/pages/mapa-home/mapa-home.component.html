@@ -17,7 +17,7 @@
   <app-mapa-sidebar slot="sidebar" [nodos]="nodos()" [elementos]="elementos()" [deletedElementos]="deletedElementos()"
     [tipos]="tipos()" [selectedNodoId]="selectedNodo()?.idRedNodo ?? null"
     [selectedElementoId]="selectedElemento()?.idGeoElemento ?? null" [searchValue]="filtros.q()"
-    [searchLoading]="ui.loading()" [searchResultCount]="(filtros.q() || '').trim() ? elementosCanvas().length : 0"
+    [searchLoading]="ui.loading()" [searchResultCount]="searchResultCount()"
     [searchResultIndex]="(filtros.q() || '').trim() ? searchResultIndex() : -1" [geoSearchValue]="geoSearchValue()"
     [geoSearchLoading]="geoSearchLoading()" [geoSearchHasSearched]="geoSearchHasSearched()"
     [geoSearchError]="geoSearchError()" [geoSearchResults]="geoSearchResults()" [hiddenNodeIds]="hiddenNodeIds()"
