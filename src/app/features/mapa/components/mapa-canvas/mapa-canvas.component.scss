@@ -441,3 +441,34 @@
   }
 }
 /* === KLAXMAP RESPONSIVE HARDENING: END === */
+
+/* === KLAXMAP MOBILE CANVAS INTERACTION FIX: BEGIN === */
+/*
+  Refuerzo para que Leaflet conserve interaccion en pantallas pequenas.
+  Esto evita que capas externas o overlays transparentes bloqueen pan/zoom/click.
+*/
+@media (max-width: 860px) {
+  .mapa-canvas-shell,
+  .mapa-canvas,
+  .leaflet-container {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto !important;
+  }
+
+  .leaflet-map-pane,
+  .leaflet-pane,
+  .leaflet-tile-pane,
+  .leaflet-overlay-pane,
+  .leaflet-marker-pane,
+  .leaflet-tooltip-pane,
+  .leaflet-popup-pane,
+  .leaflet-control-container {
+    pointer-events: auto;
+  }
+
+  .leaflet-container {
+    background: #d8dee7;
+  }
+}
+/* === KLAXMAP MOBILE CANVAS INTERACTION FIX: END === */

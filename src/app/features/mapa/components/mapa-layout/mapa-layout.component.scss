@@ -282,3 +282,47 @@
   }
 }
 /* === KLAXMAP RESPONSIVE HARDENING: END === */
+
+/* === KLAXMAP MOBILE BACKDROP MAP FIX: BEGIN === */
+/*
+  En movil NO usamos backdrop bloqueante.
+  El sidebar queda como drawer encima del mapa, pero la zona visible del canvas
+  debe seguir siendo interactiva. El cierre se hace con el boton X del toolbar.
+*/
+@media (max-width: 860px) {
+  .sidebar-backdrop,
+  .mapa-layout.sidebar-expanded .sidebar-backdrop,
+  .mapa-layout.sidebar-compact .sidebar-backdrop,
+  .mapa-layout.sidebar-hidden .sidebar-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    background: transparent !important;
+  }
+
+  .canvas,
+  .canvas-surface {
+    pointer-events: auto !important;
+    z-index: 1;
+  }
+
+  .sidebar {
+    z-index: 80;
+  }
+
+  .toolbar {
+    z-index: 90;
+  }
+
+  .status {
+    z-index: 75;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar {
+    box-shadow: 6px 0 26px rgba(15, 23, 42, 0.24);
+  }
+}
+/* === KLAXMAP MOBILE BACKDROP MAP FIX: END === */

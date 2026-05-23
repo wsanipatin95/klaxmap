@@ -923,7 +923,10 @@ export class MapaHomeComponent {
 
   private scheduleLayoutRefreshForSidebarChange() {
     this.scheduleMapLayoutRefresh();
-    this.scheduleMapLayoutRefresh(280);
+    this.scheduleMapLayoutRefresh(80);
+    this.scheduleMapLayoutRefresh(180);
+    this.scheduleMapLayoutRefresh(360);
+    this.scheduleMapLayoutRefresh(720);
   }
 
   private scheduleMapLayoutRefresh(delay = 0) {
