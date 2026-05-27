@@ -1,4 +1,3 @@
-
 import type { DynamicMenuItem } from 'src/app/features/seg/store/session.store';
 
 export type MapaEmbedMode = 'admin' | 'vendedor' | 'tecnico';
