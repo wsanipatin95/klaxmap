@@ -594,6 +594,154 @@ startDrawFiber() {
     });
   }
 
+openCreateDialogFromDraft() {
+    const mode = this.draftMode();
+    const points = this.draftPoints();
+
+    if (mode === 'none') {
+      return;
+    }
+
+    if (mode === 'box' && points.length !== 1) {
+      this.createError.set('Marca un punto en el mapa para la caja/NAP.');
+      return;
+    }
+
+    if (mode === 'fiber' && points.length < 2) {
+      this.createError.set('Marca al menos dos puntos para el tendido de fibra.');
+      return;
+    }
+
+    const geomTipo: MapaGeomTipo = mode === 'box' ? 'point' : 'linestring';
+    const wkt = mode === 'box' ? this.pointWkt(points[0]) : this.lineWkt(points);
+    const title = mode === 'box' ? 'Nueva caja / NAP' : 'Nuevo tendido de fibra';
+    const defaultNombre = mode === 'box' ? 'Caja / NAP' : 'Tendido de fibra';
+
+    this.loadTecnicoCatalogos();
+
+    this.createDialog?.open({
+      wkt,
+      geomTipo,
+      nodoId: null,
+      title,
+      defaultNombre,
+      defaultDescripcion: this.buildDefaultCreateDescription(mode),
+    });
+  }
+
+  crearElementoTecnico(payload: MapaElementoSaveRequest) {
+    const mode = this.draftMode();
+    const points = this.draftPoints();
+    const ctx = this.context();
+
+    const enriched: MapaElementoSaveRequest = {
+      ...payload,
+      origen: 'embed_tecnico',
+      origenRef: ctx?.trabajoId != null ? String(ctx.trabajoId) : payload.origenRef ?? null,
+      latLon: mode === 'box' && points[0] ? `${points[0].lat},${points[0].lng}` : payload.latLon ?? null,
+      atributos: {
+        ...(payload.atributos ?? {}),
+        embed: true,
+        embedMode: this.mode(),
+        draftMode: mode,
+        trabajoId: ctx?.trabajoId ?? null,
+        clienteId: ctx?.clienteId ?? null,
+        ordenId: ctx?.ordenId ?? null,
+        metadata: (ctx?.metadata ?? null) as any,
+      } as any,
+    };
+
+    this.createDialog?.markSaving();
+    this.saving.set(true);
+    this.createError.set(null);
+
+    this.elementosApi.crear(enriched).subscribe({
+      next: (resp) => {
+        this.saving.set(false);
+
+        try {
+          const created = unwrapOrThrow<MapaElemento>(resp);
+
+          this.createDialog?.handleSaveSuccess();
+
+          if (mode === 'box') {
+            this.messaging.boxCreated(created);
+          }
+
+          if (mode === 'fiber') {
+            this.messaging.fiberCreated(created);
+          }
+
+          this.clearDraft();
+          this.refreshNearby();
+        } catch (err: any) {
+          const message = err?.message || 'No se pudo crear el elemento.';
+          this.createError.set(message);
+          this.createDialog?.handleSaveError(message);
+        }
+      },
+      error: (err) => {
+        this.saving.set(false);
+        const message = err?.error?.mensaje || err?.message || 'No se pudo crear el elemento.';
+        this.createError.set(message);
+        this.createDialog?.handleSaveError(message);
+      },
+    });
+  }
+
+  private loadTecnicoCatalogos() {
+    if (this.nodos().length === 0) {
+      this.crud.loadNodos();
+    }
+
+    if (this.tipos().length === 0) {
+      this.crud.loadTipos();
+    }
+  }
+
+  private filterTecnicoTipos(tipos: MapaTipoElemento[]) {
+    const allowed = new Set((this.config()?.tiposElemento ?? []).filter((id) => Number(id) > 0));
+
+    return tipos.filter((tipo) => {
+      if (!tipo.activo) {
+        return false;
+      }
+
+      if (allowed.size === 0) {
+        return true;
+      }
+
+      return allowed.has(tipo.idGeoTipoElemento);
+    });
+  }
+
+  private buildDefaultCreateDescription(mode: DraftMode) {
+    const ctx = this.context();
+    const parts: string[] = [];
+
+    if (mode === 'box') {
+      parts.push('Creado desde mapa técnico.');
+    }
+
+    if (mode === 'fiber') {
+      parts.push('Tendido dibujado desde mapa técnico.');
+    }
+
+    if (ctx?.trabajoId != null) {
+      parts.push(`Trabajo: ${ctx.trabajoId}`);
+    }
+
+    if (ctx?.ordenId != null) {
+      parts.push(`Orden: ${ctx.ordenId}`);
+    }
+
+    if (ctx?.clienteId != null) {
+      parts.push(`Cliente: ${ctx.clienteId}`);
+    }
+
+    return parts.join(' | ');
+  }
+
   private authenticate(expectedMode: MapaEmbedMode) {
     const code = this.route.snapshot.queryParamMap.get('code');
 
