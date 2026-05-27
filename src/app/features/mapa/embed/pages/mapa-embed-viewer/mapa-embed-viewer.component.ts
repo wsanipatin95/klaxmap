@@ -89,7 +89,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   readonly config = this.embedStore.config;
 
   readonly basemapOptions = MAPA_BASEMAP_OPTIONS;
-  readonly basemapKey = signal<BasemapKey>('openStreetMap');
+  readonly basemapKey = signal<BasemapKey>('osm');
   readonly basemapMenuOpen = signal(false);
   readonly labelsVisible = signal(true);
 
