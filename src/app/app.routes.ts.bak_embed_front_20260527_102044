@@ -54,14 +54,6 @@ export const routes: Routes = [
       ).then((m) => m.ActivateInvitationComponent),
   },
 
-  {
-    path: 'embed/mapa',
-    loadChildren: () =>
-      import('src/app/features/mapa/embed/mapa-embed.routes').then(
-        (m) => m.MAPA_EMBED_ROUTES
-      ),
-  },
-
   // panel protegido
   {
     path: 'app',

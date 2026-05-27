@@ -19,13 +19,6 @@ export interface SessionUser {
 export interface SessionMeta {
   environment: string;
   contextPath: string;
-
-  /**
-   * Contexto opcional para modo embed.
-   * Si existe, el interceptor X-Tenant lo usa por encima del environment.
-   */
-  company?: string;
-  tenant?: string;
 }
 
 /**

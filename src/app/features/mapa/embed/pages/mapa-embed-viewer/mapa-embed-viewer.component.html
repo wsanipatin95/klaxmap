@@ -1,0 +1,135 @@
+<div class="embed-viewer">
+  <aside class="panel">
+    <header>
+      <strong>{{ mode() === 'tecnico' ? 'Mapa técnico' : 'Mapa vendedor' }}</strong>
+      <small *ngIf="context()">Empresa {{ context()?.company }} / {{ context()?.tenant }}</small>
+    </header>
+
+    <section class="state" *ngIf="loading()">
+      Iniciando mapa embebido...
+    </section>
+
+    <section class="state error" *ngIf="!loading() && error()">
+      {{ error() }}
+    </section>
+
+    <section *ngIf="ready()" class="controls">
+      <label>
+        Radio metros
+        <input type="number" min="1" [ngModel]="radioM()" (ngModelChange)="radioM.set(+$event)" />
+      </label>
+
+      <div class="buttons">
+        <button type="button" (click)="refreshNearby()" [disabled]="loadingItems()">Buscar cercanos</button>
+        <button type="button" (click)="centerOrigin()" [disabled]="!origin()">Centrar</button>
+        <button type="button" (click)="locateBrowser()">Mi GPS</button>
+        <button type="button" class="ghost" (click)="cancel()">Cancelar</button>
+      </div>
+
+      <p class="hint" *ngIf="origin()">
+        Origen: {{ origin()?.lat | number:'1.6-6' }}, {{ origin()?.lng | number:'1.6-6' }}
+      </p>
+
+      <p class="hint" *ngIf="loadingItems()">Cargando elementos cercanos...</p>
+    </section>
+
+    <section *ngIf="ready()" class="items">
+      <h3>Elementos cercanos ({{ items().length }})</h3>
+
+      <button
+        type="button"
+        class="item"
+        *ngFor="let item of items()"
+        [class.selected]="selected()?.idGeoElemento === item.idGeoElemento"
+        (click)="focusItem(item)"
+      >
+        <span>{{ item.nombre }}</span>
+        <small>
+          {{ item.tipoNombre || item.tipoCodigo || 'Elemento' }}
+          <ng-container *ngIf="item.distanciaM != null">
+            · {{ item.distanciaM | number:'1.0-0' }} m
+          </ng-container>
+        </small>
+      </button>
+    </section>
+
+    <section *ngIf="selected()" class="selected-box">
+      <h3>Seleccionado</h3>
+      <p><strong>{{ selected()?.nombre }}</strong></p>
+      <p>{{ selected()?.tipoNombre || selected()?.tipoCodigo }}</p>
+      <p *ngIf="selected()?.distanciaM != null">
+        Distancia: {{ selected()?.distanciaM | number:'1.0-0' }} m
+      </p>
+
+      <button type="button" (click)="selectForErp()">
+        {{ mode() === 'tecnico' ? 'Usar esta caja' : 'Enviar selección' }}
+      </button>
+    </section>
+
+    <section *ngIf="mode() === 'tecnico' && ready()" class="tech-actions">
+      <h3>Trabajo técnico</h3>
+
+      <div class="buttons">
+        <button
+          type="button"
+          (click)="startCreateBox()"
+          [disabled]="!can('puedeCrearCaja') || !actionEnabled('create_box')"
+        >
+          Crear caja
+        </button>
+
+        <button
+          type="button"
+          (click)="startDrawFiber()"
+          [disabled]="!can('puedeCrearFibra') || !actionEnabled('draw_fiber')"
+        >
+          Trazar fibra
+        </button>
+      </div>
+
+      <div class="draft" *ngIf="draftMode() !== 'none'">
+        <h4>{{ draftMode() === 'box' ? 'Nueva caja' : 'Nuevo tendido' }}</h4>
+        <p class="hint">
+          Haz click en el mapa para marcar puntos.
+          Para caja se usa un punto; para fibra se usan dos o más.
+        </p>
+
+        <label>
+          idRedNodoFk
+          <input type="number" [(ngModel)]="createForm.idRedNodoFk" />
+        </label>
+
+        <label>
+          idGeoTipoElementoFk
+          <input type="number" [(ngModel)]="createForm.idGeoTipoElementoFk" />
+        </label>
+
+        <label>
+          Nombre
+          <input type="text" [(ngModel)]="createForm.nombre" />
+        </label>
+
+        <label>
+          Descripción
+          <textarea rows="2" [(ngModel)]="createForm.descripcion"></textarea>
+        </label>
+
+        <p class="hint">Puntos marcados: {{ draftPoints().length }}</p>
+        <p class="error-text" *ngIf="createError()">{{ createError() }}</p>
+
+        <div class="buttons">
+          <button type="button" (click)="useOriginAsDraftPoint()" [disabled]="!origin()">Usar origen</button>
+          <button type="button" (click)="undoDraftPoint()" [disabled]="!draftPoints().length">Deshacer</button>
+          <button type="button" (click)="saveDraft()" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+          <button type="button" class="ghost" (click)="clearDraft()">Cancelar</button>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <main class="map-wrap">
+    <div #mapEl class="map"></div>
+  </main>
+</div>
