@@ -66,6 +66,18 @@
             </div>
           </div>
 
+
+          <div class="field">
+            <label for="elemento-etiqueta">Etiqueta</label>
+            <input
+              id="elemento-etiqueta"
+              type="text"
+              formControlName="etiqueta"
+              placeholder="Etiqueta visible en mapa"
+            />
+            <p class="field-error" *ngIf="controlError('etiqueta') as err">{{ err }}</p>
+          </div>
+
           <div class="field">
             <label for="elemento-descripcion">Descripción</label>
             <textarea
@@ -141,7 +153,7 @@
             <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
           </div>
 
-          <div class="wkt-box">
+          <div class="wkt-box" *ngIf="showGeometryPreview">
             <div class="wkt-title">Geometría</div>
             <pre>{{ currentWkt() || 'Sin geometría' }}</pre>
           </div>

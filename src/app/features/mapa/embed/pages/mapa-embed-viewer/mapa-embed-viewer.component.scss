@@ -1781,3 +1781,85 @@
     width: 30px;
   }
 }
+
+/* Técnico embed con modal administrativo */
+.tech-tool-btn.active {
+  background: linear-gradient(180deg, #f3aad6 0%, #eb79ba 100%);
+  border-color: #b02365;
+  color: #ffffff;
+}
+
+.embed-tech-state {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.42rem;
+  border: 1px solid #d8dee6;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.embed-tech-state strong {
+  color: #334155;
+  font-size: 0.68rem;
+}
+
+.embed-tech-state.active {
+  border-color: #f3c7df;
+  background: #fff7fb;
+  color: #7b0061;
+}
+
+.embed-tech-state.active strong {
+  color: #7b0061;
+}
+
+.embed-draft {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .tech-tool-btn {
+    width: 30px;
+    height: 28px;
+  }
+
+  .embed-tech-state {
+    font-size: 0.62rem;
+  }
+
+  .embed-tech-state .embed-info-actions {
+    gap: 0.25rem;
+  }
+
+  .embed-tech-state .edit-action {
+    min-height: 26px;
+    padding: 0 0.45rem;
+  }
+}
+
+:host ::ng-deep app-mapa-create-element-dialog .wkt-box {
+  display: none;
+}
+
+:host ::ng-deep app-mapa-create-element-dialog .dialog-shell {
+  max-height: min(76vh, 620px);
+}
+
+@media (max-width: 520px) {
+  :host ::ng-deep app-mapa-create-element-dialog .p-dialog {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+  }
+
+  :host ::ng-deep app-mapa-create-element-dialog .dialog-shell {
+    max-height: 78dvh;
+  }
+
+  :host ::ng-deep app-mapa-create-element-dialog .tipo-groups {
+    grid-template-columns: 1fr;
+  }
+}

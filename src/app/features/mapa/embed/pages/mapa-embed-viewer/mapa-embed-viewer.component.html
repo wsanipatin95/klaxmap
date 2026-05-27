@@ -114,65 +114,50 @@
         </section>
 
         <section class="sidebar-pane pane-layers embed-info-pane" *ngIf="mode() === 'tecnico' && ready()">
-          <button type="button" class="pane-header">
-            <span class="pane-header-left">
-              <span class="pane-toggle-icon expanded">▾</span>
-              <span class="pane-title">Trabajo técnico</span>
-            </span>
+  <button type="button" class="pane-header">
+    <span class="pane-header-left">
+      <span class="pane-toggle-icon expanded">▾</span>
+      <span class="pane-title">Trabajo técnico</span>
+    </span>
+  </button>
+
+  <div class="pane-body">
+    <div class="embed-tech-body">
+      <div class="embed-tech-state" *ngIf="draftMode() === 'none'">
+        Usa la barra superior para crear una caja/NAP o dibujar un tendido de fibra.
+      </div>
+
+      <div class="embed-tech-state active" *ngIf="draftMode() === 'box'">
+        <strong>Creando caja/NAP</strong>
+        <span>Haz click en el mapa para ubicar la caja. Luego se abrirá el formulario.</span>
+      </div>
+
+      <div class="embed-tech-state active" *ngIf="draftMode() === 'fiber'">
+        <strong>Dibujando fibra</strong>
+        <span>Haz click en el mapa para agregar puntos. Puntos: {{ draftPoints().length }}</span>
+
+        <div class="embed-info-actions">
+          <button type="button" class="edit-action" (click)="undoDraftPoint()" [disabled]="!draftPoints().length">
+            <i class="pi pi-undo"></i>
+            <span>Deshacer</span>
           </button>
 
-          <div class="pane-body">
-            <div class="embed-tech-body">
-              <div class="embed-info-actions">
-                <button
-                  type="button"
-                  class="edit-action"
-                  (click)="startCreateBox()"
-                  [disabled]="!can('puedeCrearCaja') || !actionEnabled('create_box')"
-                >
-                  <i class="pi pi-plus-circle"></i>
-                  <span>Caja</span>
-                </button>
+          <button type="button" class="edit-action edit-action--primary" (click)="openCreateDialogFromDraft()" [disabled]="draftPoints().length < 2">
+            <i class="pi pi-check"></i>
+            <span>Finalizar</span>
+          </button>
 
-                <button
-                  type="button"
-                  class="edit-action"
-                  (click)="startDrawFiber()"
-                  [disabled]="!can('puedeCrearFibra') || !actionEnabled('draw_fiber')"
-                >
-                  <i class="pi pi-share-alt"></i>
-                  <span>Fibra</span>
-                </button>
-              </div>
+          <button type="button" class="edit-action" (click)="clearDraft()">
+            <i class="pi pi-times"></i>
+            <span>Cancelar</span>
+          </button>
+        </div>
+      </div>
 
-              <div class="embed-draft" *ngIf="draftMode() !== 'none'">
-                <label>
-                  Nodo
-                  <input type="number" [(ngModel)]="createForm.idRedNodoFk" />
-                </label>
-
-                <label>
-                  Tipo
-                  <input type="number" [(ngModel)]="createForm.idGeoTipoElementoFk" />
-                </label>
-
-                <label>
-                  Nombre
-                  <input type="text" [(ngModel)]="createForm.nombre" />
-                </label>
-
-                <p class="error-text" *ngIf="createError()">{{ createError() }}</p>
-
-                <div class="embed-info-actions">
-                  <button type="button" class="edit-action" (click)="useOriginAsDraftPoint()" [disabled]="!origin()">Origen</button>
-                  <button type="button" class="edit-action" (click)="undoDraftPoint()" [disabled]="!draftPoints().length">Deshacer</button>
-                  <button type="button" class="edit-action edit-action--primary" (click)="saveDraft()" [disabled]="saving()">Guardar</button>
-                  <button type="button" class="edit-action" (click)="clearDraft()">Cancelar</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+      <p class="error-text" *ngIf="createError()">{{ createError() }}</p>
+    </div>
+  </div>
+</section>
       </div>
     </div>
   </aside>
@@ -210,6 +195,30 @@
         <button type="button" class="tool-btn" title="Limpiar ruta" (click)="clearRoute()" [disabled]="!routeTarget()">
           <i class="pi pi-eraser"></i>
         </button>
+
+        <ng-container *ngIf="mode() === 'tecnico'">
+  <span class="tool-separator" aria-hidden="true"></span>
+
+  <button type="button" class="tool-btn tech-tool-btn" [class.active]="draftMode() === 'box'" title="Crear caja / NAP" (click)="startCreateBox()" [disabled]="!can('puedeCrearCaja') || !actionEnabled('create_box')">
+    <i class="pi pi-plus-circle"></i>
+  </button>
+
+  <button type="button" class="tool-btn tech-tool-btn" [class.active]="draftMode() === 'fiber'" title="Dibujar tendido de fibra" (click)="startDrawFiber()" [disabled]="!can('puedeCrearFibra') || !actionEnabled('draw_fiber')">
+    <i class="pi pi-share-alt"></i>
+  </button>
+
+  <button type="button" class="tool-btn" title="Finalizar fibra" (click)="openCreateDialogFromDraft()" [disabled]="draftMode() !== 'fiber' || draftPoints().length < 2">
+    <i class="pi pi-check"></i>
+  </button>
+
+  <button type="button" class="tool-btn" title="Deshacer punto" (click)="undoDraftPoint()" [disabled]="draftMode() === 'none' || !draftPoints().length">
+    <i class="pi pi-undo"></i>
+  </button>
+
+  <button type="button" class="tool-btn" title="Cancelar herramienta" (click)="clearDraft()" [disabled]="draftMode() === 'none'">
+    <i class="pi pi-times"></i>
+  </button>
+</ng-container>
       </div>
     </div>
   </header>
@@ -226,6 +235,7 @@
       <span><strong>Total:</strong> {{ items().length }}</span>
       <span *ngIf="selectedName()"><strong>Sel:</strong> {{ selectedName() }}</span>
       <span *ngIf="routeTarget()"><strong>Ruta:</strong> {{ routeLoading() ? 'calculando...' : formatDistance(routeDistanceM()) }}</span>
+      <span *ngIf="mode() === 'tecnico' && draftMode() !== 'none'"><strong>Herramienta:</strong> {{ draftMode() === 'box' ? 'Caja/NAP' : 'Fibra' }}</span>
     </div>
   </footer>
 
@@ -271,4 +281,13 @@
       </footer>
     </section>
   </div>
+
+
+  <app-mapa-create-element-dialog
+  #createDialog
+  [nodos]="nodos()"
+  [tipos]="tecnicoTipos()"
+  [showGeometryPreview]="false"
+  (submitted)="crearElementoTecnico($event)"
+/>
 </div>

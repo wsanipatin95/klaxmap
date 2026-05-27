@@ -47,6 +47,7 @@ interface CreateElementoFormValue {
   idGeoTipoElementoFk: FormControl<number | null>;
   nombre: FormControl<string>;
   descripcion: FormControl<string>;
+  etiqueta: FormControl<string>;
   estado: FormControl<EstadoElemento>;
   visible: FormControl<boolean>;
   ordenDibujo: FormControl<number>;
@@ -84,6 +85,8 @@ export class MapaCreateElementDialogComponent {
     this.ensureTipoSelection();
   }
 
+  @Input() showGeometryPreview = true;
+
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
@@ -93,6 +96,7 @@ export class MapaCreateElementDialogComponent {
   readonly error = signal<string | null>(null);
   readonly currentWkt = signal<string | null>(null);
   readonly currentGeomTipo = signal<MapaGeomTipo | null>(null);
+  readonly customTitle = signal<string | null>(null);
   readonly submittedAttempt = signal(false);
   readonly nodeLocked = signal(false);
 
@@ -104,12 +108,16 @@ export class MapaCreateElementDialogComponent {
       Validators.maxLength(180),
     ]),
     descripcion: this.fb.nonNullable.control('', [Validators.maxLength(500)]),
+    etiqueta: this.fb.nonNullable.control('', [Validators.maxLength(120)]),
     estado: this.fb.nonNullable.control<EstadoElemento>('activo', Validators.required),
     visible: this.fb.nonNullable.control(true),
     ordenDibujo: this.fb.nonNullable.control(0, [Validators.min(0)]),
   });
 
   readonly dialogTitle = computed(() => {
+    const custom = this.customTitle();
+    if (custom) return custom;
+
     const geom = String(this.currentGeomTipo() || '').toLowerCase();
 
     if (geom === 'linestring') return 'Nueva ruta';
@@ -155,13 +163,14 @@ export class MapaCreateElementDialogComponent {
     return orderedGroups;
   });
 
-  open(params: { wkt: string; geomTipo: MapaGeomTipo; nodoId?: number | null }) {
+  open(params: { wkt: string; geomTipo: MapaGeomTipo; nodoId?: number | null; title?: string | null; defaultNombre?: string | null; defaultDescripcion?: string | null }) {
     this.visible.set(true);
     this.saving.set(false);
     this.error.set(null);
     this.submittedAttempt.set(false);
     this.currentWkt.set(params.wkt);
     this.currentGeomTipo.set(params.geomTipo);
+    this.customTitle.set(params.title ?? null);
 
     const incomingNodeId = params.nodoId ?? null;
 
@@ -172,8 +181,9 @@ export class MapaCreateElementDialogComponent {
       {
         idRedNodoFk: incomingNodeId,
         idGeoTipoElementoFk: null,
-        nombre: '',
-        descripcion: '',
+        nombre: params.defaultNombre ?? '',
+        descripcion: params.defaultDescripcion ?? '',
+        etiqueta: '',
         estado: 'activo',
         visible: true,
         ordenDibujo: 0,
@@ -328,6 +338,7 @@ export class MapaCreateElementDialogComponent {
     if (control.errors?.['maxlength']) {
       if (name === 'nombre') return 'Máximo 180 caracteres.';
       if (name === 'descripcion') return 'Máximo 500 caracteres.';
+      if (name === 'etiqueta') return 'Máximo 120 caracteres.';
       return 'Valor demasiado largo.';
     }
 
@@ -426,6 +437,7 @@ export class MapaCreateElementDialogComponent {
       idGeoTipoElementoFk: raw.idGeoTipoElementoFk as number,
       nombre: raw.nombre.trim(),
       descripcion: this.emptyToNull(raw.descripcion) ?? '',
+      etiqueta: this.emptyToNull(raw.etiqueta),
       estado: raw.estado,
       visible: raw.visible ?? true,
       origen: 'manual',
@@ -445,6 +457,7 @@ export class MapaCreateElementDialogComponent {
     this.submittedAttempt.set(false);
     this.currentWkt.set(null);
     this.currentGeomTipo.set(null);
+    this.customTitle.set(null);
     this.nodeLocked.set(false);
 
     this.form.controls.idRedNodoFk.enable({ emitEvent: false });
@@ -456,6 +469,7 @@ export class MapaCreateElementDialogComponent {
         idGeoTipoElementoFk: null,
         nombre: '',
         descripcion: '',
+        etiqueta: '',
         estado: 'activo',
         visible: true,
         ordenDibujo: 0,

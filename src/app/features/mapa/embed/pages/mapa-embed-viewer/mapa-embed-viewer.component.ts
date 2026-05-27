@@ -19,8 +19,10 @@ import * as L from 'leaflet';
 import { unwrapOrThrow } from 'src/app/core/api/api-envelope';
 import { SessionStore } from 'src/app/features/seg/store/session.store';
 import { MapaElementosApi } from '../../../data-access/elemento/mapa-elementos.api';
-import type { MapaElemento, MapaElementoSaveRequest } from '../../../data-access/mapa.models';
+import type { MapaElemento, MapaElementoSaveRequest, MapaGeomTipo, MapaTipoElemento } from '../../../data-access/mapa.models';
 import { MAPA_BASEMAP_OPTIONS, type BasemapKey } from '../../../models/mapa-basemap.models';
+import { MapaCrudFacade } from '../../../application/mapa-crud.facade';
+import { MapaCreateElementDialogComponent } from '../../../components/mapa-create-element-dialog/mapa-create-element-dialog.component';
 import { MapaEmbedApi } from '../../data-access/mapa-embed.api';
 import type {
   MapaEmbedInitMessage,
@@ -62,13 +64,14 @@ interface ElementVisualStyle {
 @Component({
   selector: 'app-mapa-embed-viewer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MapaCreateElementDialogComponent],
   templateUrl: './mapa-embed-viewer.component.html',
   styleUrl: './mapa-embed-viewer.component.scss',
   encapsulation: ViewEncapsulation.None,
 })
 export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapEl') mapEl?: ElementRef<HTMLDivElement>;
+  @ViewChild('createDialog') createDialog?: MapaCreateElementDialogComponent;
 
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(MapaEmbedAuthService);
@@ -76,6 +79,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly embedStore = inject(MapaEmbedContextStore);
   private readonly embedApi = inject(MapaEmbedApi);
   private readonly elementosApi = inject(MapaElementosApi);
+  private readonly crud = inject(MapaCrudFacade);
   private readonly messaging = inject(MapaEmbedMessagingService);
 
   readonly mode = signal<MapaEmbedMode>('vendedor');
@@ -87,6 +91,9 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
   readonly context = this.embedStore.context;
   readonly config = this.embedStore.config;
+  readonly nodos = this.crud.nodos;
+  readonly tipos = this.crud.tipos;
+  readonly tecnicoTipos = computed(() => this.filterTecnicoTipos(this.tipos()));
 
   readonly basemapOptions = MAPA_BASEMAP_OPTIONS;
   readonly basemapKey = signal<BasemapKey>('googleSatellite');
@@ -487,30 +494,32 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     this.routeDistanceM.set(null);
   }
 
-  startCreateBox() {
+startCreateBox() {
     if (this.mode() !== 'tecnico') return;
     if (!this.can('puedeCrearCaja') || !this.actionEnabled('create_box')) {
       this.createError.set('No tiene permiso para crear caja.');
       return;
     }
 
+    this.loadTecnicoCatalogos();
     this.draftMode.set('box');
     this.draftPoints.set([]);
     this.createError.set(null);
-    this.seedCreateForm('Caja nueva');
+    this.clearRoute();
   }
 
-  startDrawFiber() {
+startDrawFiber() {
     if (this.mode() !== 'tecnico') return;
     if (!this.can('puedeCrearFibra') || !this.actionEnabled('draw_fiber')) {
       this.createError.set('No tiene permiso para trazar fibra.');
       return;
     }
 
+    this.loadTecnicoCatalogos();
     this.draftMode.set('fiber');
     this.draftPoints.set([]);
     this.createError.set(null);
-    this.seedCreateForm('Tendido de fibra');
+    this.clearRoute();
   }
 
   useOriginAsDraftPoint() {
@@ -610,6 +619,10 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
     const ctx = this.context();
     const config = this.config();
+
+    if (this.mode() === 'tecnico') {
+      this.loadTecnicoCatalogos();
+    }
     this.radioM.set(ctx?.radioM || config?.distanciaM || 500);
 
     const lat = this.numberQueryParam('lat') ?? ctx?.lat ?? null;
@@ -877,7 +890,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     };
   }
 
-  private addDraftPoint(point: LatLngPoint) {
+private addDraftPoint(point: LatLngPoint) {
     const mode = this.draftMode();
     if (mode === 'none') return;
 
@@ -892,6 +905,10 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
       mode,
       points: this.draftPoints(),
     });
+
+    if (mode === 'box') {
+      this.openCreateDialogFromDraft();
+    }
   }
 
   private redrawDraft() {
