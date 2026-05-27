@@ -1092,31 +1092,7 @@ private redrawDraft() {
     });
   }
 
-  private createDraftPointIcon(index: number, mode: DraftMode): L.DivIcon {
-    if (mode === 'box') {
-      return L.divIcon({
-        className: 'mapa-embed-draft-icon-host',
-        html: `
-          <div class="mapa-embed-draft-pin">
-            <i class="pi pi-map-marker"></i>
-          </div>
-        `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 32],
-      });
-    }
 
-    return L.divIcon({
-      className: 'mapa-embed-draft-icon-host',
-      html: `
-        <div class="mapa-embed-draft-vertex">
-          <span>${index + 1}</span>
-        </div>
-      `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
-  }
 
 private createDraftPointIcon(index: number, mode: DraftMode): L.DivIcon {
     if (mode === 'box') {
@@ -1144,7 +1120,7 @@ private createDraftPointIcon(index: number, mode: DraftMode): L.DivIcon {
     });
   }
 
-  private seedCreateForm(defaultName: string) {
+private seedCreateForm(defaultName: string) {
     const firstType = this.config()?.tiposElemento?.[0] ?? null;
     this.createForm.idGeoTipoElementoFk = firstType;
     if (!this.createForm.nombre) {
