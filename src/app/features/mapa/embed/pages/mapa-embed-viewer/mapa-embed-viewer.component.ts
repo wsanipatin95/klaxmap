@@ -187,6 +187,49 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     return text.slice(0, 1).toUpperCase();
   }
 
+  rowIconImage(item: MapaElementoCercano): string | null {
+    const source = String(item.iconoFuente || '').trim().toLowerCase();
+    const icon = String(item.icono || '').trim();
+
+    if (!icon) return null;
+
+    if (source.includes('url') || /^https?:\/\//i.test(icon) || icon.startsWith('assets/')) {
+      return icon;
+    }
+
+    return null;
+  }
+
+  rowIsMaterialIcon(item: MapaElementoCercano): boolean {
+    const source = String(item.iconoFuente || '').trim().toLowerCase();
+    const icon = String(item.icono || '').trim();
+    return !!icon && source.includes('material');
+  }
+
+  rowIconGlyph(item: MapaElementoCercano): string {
+    return String(item.icono || '').trim() || 'radio_button_checked';
+  }
+
+  rowIconClass(item: MapaElementoCercano): string | null {
+    const source = String(item.iconoFuente || '').trim().toLowerCase();
+    const cls = String(item.iconoClase || '').trim();
+    const icon = String(item.icono || '').trim();
+
+    if (cls) return cls;
+    if (icon.includes('pi-')) return icon.startsWith('pi ') ? icon : `pi ${icon}`;
+    if ((source.includes('class') || source.includes('css') || source.includes('prime')) && icon) return icon;
+
+    return null;
+  }
+
+  rowIconBackground(item: MapaElementoCercano): string {
+    if (this.rowIconImage(item) || this.rowIsMaterialIcon(item) || this.rowIconClass(item)) {
+      return '#ffffff';
+    }
+
+    return item.colorFill || this.lightenColor(this.itemStroke(item), 0.82);
+  }
+
   elementLabel(item: MapaElementoCercano) {
     return item.etiqueta || item.codigo || item.nombre;
   }

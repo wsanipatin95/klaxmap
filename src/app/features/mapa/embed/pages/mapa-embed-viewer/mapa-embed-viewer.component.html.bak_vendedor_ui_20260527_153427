@@ -1,3 +1,4 @@
+
 <div class="mapa-layout mapa-embed-layout sidebar-expanded">
   <aside class="sidebar">
     <div class="sidebar-shell">
@@ -14,9 +15,8 @@
             <input type="number" min="1" [ngModel]="radioM()" (ngModelChange)="radioM.set(+$event || 1)" />
           </label>
 
-          <button type="button" class="edit-action edit-action--primary embed-search-btn" title="Buscar cercanos" (click)="refreshNearby()" [disabled]="loadingItems()">
+          <button type="button" class="tool-btn active" title="Buscar cercanos" (click)="refreshNearby()" [disabled]="loadingItems()">
             <i class="pi pi-search"></i>
-            <span>Buscar</span>
           </button>
 
           <button type="button" class="tool-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
@@ -67,25 +67,10 @@
                 <button type="button" class="embed-row-main" (click)="focusItem(item, true)">
                   <span
                     class="embed-row-icon"
-                    [style.background]="rowIconBackground(item)"
+                    [style.background]="itemFill(item)"
                     [style.border-color]="itemStroke(item)"
-                    [style.color]="item.colorTexto || itemStroke(item)"
                   >
-                    <img *ngIf="rowIconImage(item) as iconUrl; else rowIconSymbol" [src]="iconUrl" alt="" />
-
-                    <ng-template #rowIconSymbol>
-                      <span *ngIf="rowIsMaterialIcon(item); else rowCssIcon" class="material-symbols-rounded">
-                        {{ rowIconGlyph(item) }}
-                      </span>
-
-                      <ng-template #rowCssIcon>
-                        <i *ngIf="rowIconClass(item) as iconClass; else rowDot" [class]="iconClass"></i>
-                      </ng-template>
-
-                      <ng-template #rowDot>
-                        <span class="embed-row-dot"></span>
-                      </ng-template>
-                    </ng-template>
+                    {{ itemLetter(item) }}
                   </span>
 
                   <span class="embed-row-text">
@@ -102,8 +87,57 @@
                   <button type="button" class="tool-btn" title="Información" (click)="openInfo(item)">
                     <i class="pi pi-info-circle"></i>
                   </button>
+                  <button type="button" class="tool-btn active" title="Usar" (click)="selected.set(item); selectForErp()">
+                    <i class="pi pi-check"></i>
+                  </button>
                 </span>
               </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="sidebar-pane pane-layers embed-info-pane" *ngIf="selected() && infoOpen()">
+          <button type="button" class="pane-header">
+            <span class="pane-header-left">
+              <span class="pane-toggle-icon expanded">▾</span>
+              <span class="pane-title">Información</span>
+            </span>
+            <span class="embed-close-mini" (click)="closeInfo()">×</span>
+          </button>
+
+          <div class="pane-body">
+            <div class="embed-info-body">
+              <strong>{{ elementLabel(selected()!) }}</strong>
+              <span>{{ selected()?.tipoNombre || selected()?.tipoCodigo || 'Elemento' }}</span>
+
+              <dl>
+                <div>
+                  <dt>Distancia</dt>
+                  <dd>{{ formatDistance(selected()?.distanciaM) }}</dd>
+                </div>
+                <div>
+                  <dt>Estado</dt>
+                  <dd>{{ selected()?.estado || 'N/D' }}</dd>
+                </div>
+                <div *ngIf="selected()?.codigo || selected()?.etiqueta">
+                  <dt>Código</dt>
+                  <dd>{{ selected()?.codigo || selected()?.etiqueta }}</dd>
+                </div>
+              </dl>
+
+              <p *ngIf="selected()?.descripcion">{{ selected()?.descripcion }}</p>
+
+              <div class="embed-info-actions">
+                <button type="button" class="edit-action edit-action--primary" (click)="selectForErp()">
+                  <i class="pi pi-check"></i>
+                  <span>Usar</span>
+                </button>
+
+                <button type="button" class="edit-action" (click)="traceRoute(selected()!)">
+                  <i class="pi pi-directions"></i>
+                  <span>Ruta</span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -175,6 +209,24 @@
   <header class="toolbar">
     <div class="ge-toolbar-shell">
       <div class="ge-toolbar-strip" role="toolbar" aria-label="Herramientas mapa embed">
+        <button type="button" class="tool-btn active" title="Buscar cercanos" (click)="refreshNearby()" [disabled]="loadingItems() || !origin()">
+          <i class="pi pi-search"></i>
+        </button>
+
+        <button type="button" class="tool-btn" title="Mi ubicación" (click)="locateBrowser()">
+          <i class="pi pi-compass"></i>
+        </button>
+
+        <button type="button" class="tool-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
+          <i class="pi pi-crosshairs"></i>
+        </button>
+
+        <button type="button" class="tool-btn" title="Limpiar ruta" (click)="clearRoute()" [disabled]="!routeTarget()">
+          <i class="pi pi-eraser"></i>
+        </button>
+
+        <span class="tool-separator" aria-hidden="true"></span>
+
         <div class="toolbar-dropdown" (click)="$event.stopPropagation()">
           <button
             type="button"
@@ -202,12 +254,8 @@
           </div>
         </div>
 
-        <button type="button" class="tool-btn" [class.active]="labelsVisible()" title="Mostrar/ocultar etiquetas" (click)="toggleLabels()">
+        <button type="button" class="tool-btn" [class.active]="labelsVisible()" title="Mostrar etiquetas" (click)="toggleLabels()">
           <i class="pi pi-eye"></i>
-        </button>
-
-        <button type="button" class="tool-btn" title="Limpiar ruta" (click)="clearRoute()" [disabled]="!routeTarget()">
-          <i class="pi pi-eraser"></i>
         </button>
 
         <span class="tool-separator" aria-hidden="true"></span>
@@ -233,47 +281,4 @@
       <span *ngIf="routeTarget()"><strong>Ruta:</strong> {{ formatDistance(routeDistanceM()) }}</span>
     </div>
   </footer>
-
-  <div class="embed-info-modal-backdrop" *ngIf="selected() && infoOpen()" (click)="closeInfo()">
-    <section class="embed-info-modal" (click)="$event.stopPropagation()">
-      <header>
-        <div>
-          <strong>{{ elementLabel(selected()!) }}</strong>
-          <span>{{ selected()?.tipoNombre || selected()?.tipoCodigo || 'Elemento' }}</span>
-        </div>
-        <button type="button" class="tool-btn" title="Cerrar" (click)="closeInfo()">
-          <i class="pi pi-times"></i>
-        </button>
-      </header>
-
-      <dl>
-        <div>
-          <dt>Distancia</dt>
-          <dd>{{ formatDistance(selected()?.distanciaM) }}</dd>
-        </div>
-        <div>
-          <dt>Estado</dt>
-          <dd>{{ selected()?.estado || 'N/D' }}</dd>
-        </div>
-        <div *ngIf="selected()?.codigo || selected()?.etiqueta">
-          <dt>Código</dt>
-          <dd>{{ selected()?.codigo || selected()?.etiqueta }}</dd>
-        </div>
-      </dl>
-
-      <p *ngIf="selected()?.descripcion">{{ selected()?.descripcion }}</p>
-
-      <footer>
-        <button type="button" class="edit-action edit-action--primary" (click)="selectForErp()">
-          <i class="pi pi-check"></i>
-          <span>Usar</span>
-        </button>
-
-        <button type="button" class="edit-action" (click)="traceRoute(selected()!)">
-          <i class="pi pi-directions"></i>
-          <span>Ruta</span>
-        </button>
-      </footer>
-    </section>
-  </div>
 </div>
