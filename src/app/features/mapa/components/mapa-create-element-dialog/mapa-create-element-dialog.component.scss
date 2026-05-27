@@ -472,3 +472,59 @@ textarea:disabled {
     max-height: min(84vh, 46rem);
   }
 }
+
+/* Modal crear elemento: scroll solo en la lista de tipos */
+:host ::ng-deep .p-dialog-content {
+  overflow: hidden !important;
+}
+
+.dialog-shell {
+  overflow: hidden;
+}
+
+.dialog-view-scroll {
+  overflow: hidden;
+}
+
+.dialog-body,
+.dialog-fieldset {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.field-tipo {
+  min-height: 0;
+}
+
+.field-tipo .tipo-groups {
+  max-height: min(32vh, 18rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.field-tipo .tipo-group {
+  min-height: 0;
+}
+
+.field-tipo .tipo-options {
+  min-height: 0;
+}
+
+@media (max-width: 700px) {
+  .field-tipo .tipo-groups {
+    max-height: min(30vh, 15rem);
+    grid-template-columns: 1fr;
+  }
+
+  textarea {
+    min-height: 3.8rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .field-tipo .tipo-groups {
+    max-height: 28vh;
+  }
+}

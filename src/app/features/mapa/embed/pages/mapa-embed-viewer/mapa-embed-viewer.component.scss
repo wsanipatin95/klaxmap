@@ -1913,3 +1913,108 @@
 .embed-tech-state .edit-action:has(.pi-times) {
   display: none !important;
 }
+
+/* UX creación técnica: guía flotante sobre mapa */
+.embed-draw-hud {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 1300;
+  width: min(26rem, calc(100% - 1.5rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.42rem 0.48rem;
+  border: 1px solid rgba(176, 35, 101, 0.32);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.94);
+  color: #334155;
+  box-shadow:
+    0 14px 30px rgba(15, 23, 42, 0.16),
+    0 2px 8px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.embed-draw-main {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.embed-draw-icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.embed-draw-icon i {
+  font-size: 0.95rem;
+}
+
+.embed-draw-copy {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.embed-draw-copy strong {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.embed-draw-copy em {
+  color: #64748b;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.embed-draw-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+
+.leaflet-container.is-embed-drawing {
+  cursor: crosshair !important;
+}
+
+@media (max-width: 700px) {
+  .embed-draw-hud {
+    left: 0.45rem;
+    right: 0.45rem;
+    top: 0.45rem;
+    width: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .embed-draw-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .embed-draw-copy strong {
+    font-size: 0.68rem;
+  }
+
+  .embed-draw-copy em {
+    font-size: 0.58rem;
+  }
+}

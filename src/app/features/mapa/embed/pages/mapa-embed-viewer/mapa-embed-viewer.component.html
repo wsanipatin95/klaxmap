@@ -113,46 +113,7 @@
           </div>
         </section>
 
-        <section class="sidebar-pane pane-layers embed-info-pane" *ngIf="mode() === 'tecnico' && ready()">
-  <button type="button" class="pane-header">
-    <span class="pane-header-left">
-      <span class="pane-toggle-icon expanded">▾</span>
-      <span class="pane-title">Trabajo técnico</span>
-    </span>
-  </button>
-
-  <div class="pane-body">
-    <div class="embed-tech-body">
-      <div class="embed-tech-state" *ngIf="draftMode() === 'none'">
-        Usa la barra superior para crear una caja/NAP o dibujar un tendido de fibra.
-      </div>
-
-      <div class="embed-tech-state active" *ngIf="draftMode() === 'box'">
-        <strong>Creando caja/NAP</strong>
-        <span>Haz click en el mapa para ubicar la caja. Luego se abrirá el formulario.</span>
-      </div>
-
-      <div class="embed-tech-state active" *ngIf="draftMode() === 'fiber'">
-        <strong>Dibujando fibra</strong>
-        <span>Haz click en el mapa para agregar puntos. Puntos: {{ draftPoints().length }}</span>
-
-        <div class="embed-info-actions">
-          <button type="button" class="edit-action" (click)="undoDraftPoint()" [disabled]="!draftPoints().length">
-            <i class="pi pi-undo"></i>
-            <span>Deshacer</span>
-          </button>
-
-          <button type="button" class="edit-action edit-action--primary" (click)="openCreateDialogFromDraft()" [disabled]="draftPoints().length < 2">
-            <i class="pi pi-check"></i>
-            <span>Finalizar</span>
-          </button>
-        </div>
-      </div>
-
-      <p class="error-text" *ngIf="createError()">{{ createError() }}</p>
-    </div>
-  </div>
-</section>
+        
       </div>
     </div>
   </aside>
@@ -221,6 +182,49 @@
   <main class="canvas">
     <div class="canvas-surface">
       <div #mapEl class="mapa-embed-canvas"></div>
+
+      <div class="embed-draw-hud" *ngIf="mode() === 'tecnico' && draftMode() !== 'none'">
+  <div class="embed-draw-main">
+    <span class="embed-draw-icon">
+      <i [class]="draftMode() === 'box' ? 'pi pi-map-marker' : 'pi pi-share-alt'"></i>
+    </span>
+
+    <span class="embed-draw-copy">
+      <strong>{{ draftMode() === 'box' ? 'Crear caja / NAP' : 'Dibujar tendido de fibra' }}</strong>
+      <em *ngIf="draftMode() === 'box'">Haz click en el mapa para ubicar el punto.</em>
+      <em *ngIf="draftMode() === 'fiber'">Marca los puntos de la línea. Puntos: {{ draftPoints().length }}</em>
+    </span>
+  </div>
+
+  <div class="embed-draw-actions">
+    <button
+      type="button"
+      class="edit-action"
+      *ngIf="draftMode() === 'fiber'"
+      (click)="undoDraftPoint()"
+      [disabled]="!draftPoints().length"
+    >
+      <i class="pi pi-undo"></i>
+      <span>Deshacer</span>
+    </button>
+
+    <button
+      type="button"
+      class="edit-action edit-action--primary"
+      *ngIf="draftMode() === 'fiber'"
+      (click)="openCreateDialogFromDraft()"
+      [disabled]="draftPoints().length < 2"
+    >
+      <i class="pi pi-check"></i>
+      <span>Finalizar</span>
+    </button>
+
+    <button type="button" class="edit-action" (click)="clearDraft()">
+      <i class="pi pi-times"></i>
+      <span>Cancelar</span>
+    </button>
+  </div>
+</div>
     </div>
   </main>
 
@@ -284,5 +288,6 @@
   [tipos]="tecnicoTipos()"
   [showGeometryPreview]="false"
   (submitted)="crearElementoTecnico($event)"
+  (cancelled)="onCreateDialogCancelled()"
 />
 </div>

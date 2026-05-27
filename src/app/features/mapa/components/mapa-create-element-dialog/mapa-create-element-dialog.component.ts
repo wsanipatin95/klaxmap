@@ -88,6 +88,7 @@ export class MapaCreateElementDialogComponent {
   @Input() showGeometryPreview = true;
 
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
+  @Output() cancelled = new EventEmitter<void>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
 
@@ -220,7 +221,7 @@ export class MapaCreateElementDialogComponent {
     }
 
     if (!this.hasPendingChanges()) {
-      this.closeImmediately();
+      this.discardAndClose();
       return;
     }
 
@@ -234,7 +235,7 @@ export class MapaCreateElementDialogComponent {
         severity: 'warning',
       },
       () => {
-        this.closeImmediately();
+        this.discardAndClose();
       }
     );
   }
@@ -282,7 +283,7 @@ export class MapaCreateElementDialogComponent {
       },
       undefined,
       () => {
-        this.closeImmediately();
+        this.discardAndClose();
       }
     );
   }
@@ -300,6 +301,11 @@ export class MapaCreateElementDialogComponent {
   handleSaveError(message: string) {
     this.saving.set(false);
     this.error.set(message || 'No se pudo guardar el elemento.');
+  }
+
+private discardAndClose() {
+    this.closeImmediately();
+    this.cancelled.emit();
   }
 
   selectedNodoDisplay(): string {

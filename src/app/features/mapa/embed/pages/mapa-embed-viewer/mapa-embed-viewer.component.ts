@@ -496,33 +496,45 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
 startCreateBox() {
     if (this.mode() !== 'tecnico') return;
+
     if (!this.can('puedeCrearCaja') || !this.actionEnabled('create_box')) {
       this.createError.set('No tiene permiso para crear caja.');
       return;
     }
 
     this.loadTecnicoCatalogos();
-    this.draftMode.set('box');
-    this.draftPoints.set([]);
+    this.selected.set(null);
+    this.infoOpen.set(false);
+    this.error.set(null);
     this.createError.set(null);
     this.clearRoute();
+    this.draftMode.set('box');
+    this.draftPoints.set([]);
+    this.redrawDraft();
+    this.setDrawingCursor(true);
   }
 
 startDrawFiber() {
     if (this.mode() !== 'tecnico') return;
+
     if (!this.can('puedeCrearFibra') || !this.actionEnabled('draw_fiber')) {
       this.createError.set('No tiene permiso para trazar fibra.');
       return;
     }
 
     this.loadTecnicoCatalogos();
-    this.draftMode.set('fiber');
-    this.draftPoints.set([]);
+    this.selected.set(null);
+    this.infoOpen.set(false);
+    this.error.set(null);
     this.createError.set(null);
     this.clearRoute();
+    this.draftMode.set('fiber');
+    this.draftPoints.set([]);
+    this.redrawDraft();
+    this.setDrawingCursor(true);
   }
 
-  useOriginAsDraftPoint() {
+useOriginAsDraftPoint() {
     const origin = this.origin();
     if (!origin) return;
     this.addDraftPoint(origin);
@@ -534,7 +546,7 @@ startDrawFiber() {
     this.redrawDraft();
   }
 
-  clearDraft() {
+clearDraft() {
     this.draftMode.set('none');
     this.draftPoints.set([]);
     this.createError.set(null);
@@ -543,9 +555,10 @@ startDrawFiber() {
     this.createForm.nombre = '';
     this.createForm.descripcion = '';
     this.redrawDraft();
+    this.setDrawingCursor(false);
   }
 
-  saveDraft() {
+saveDraft() {
     const draftMode = this.draftMode();
     const points = this.draftPoints();
 
@@ -594,6 +607,10 @@ startDrawFiber() {
     });
   }
 
+onCreateDialogCancelled() {
+    this.clearDraft();
+  }
+
 openCreateDialogFromDraft() {
     const mode = this.draftMode();
     const points = this.draftPoints();
@@ -618,6 +635,7 @@ openCreateDialogFromDraft() {
     const defaultNombre = mode === 'box' ? 'Caja / NAP' : 'Tendido de fibra';
 
     this.loadTecnicoCatalogos();
+    this.setDrawingCursor(false);
 
     this.createDialog?.open({
       wkt,
@@ -731,6 +749,10 @@ openCreateDialogFromDraft() {
     }
 
     return parts.join(' | ');
+  }
+
+private setDrawingCursor(active: boolean) {
+    this.map?.getContainer().classList.toggle('is-embed-drawing', active);
   }
 
 private authenticate(expectedMode: MapaEmbedMode) {
