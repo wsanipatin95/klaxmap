@@ -1863,3 +1863,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Técnico: dibujo tipo admin, con puntos y línea visibles */
+.mapa-embed-draft-icon-host {
+  background: transparent;
+  border: 0;
+}
+
+.mapa-embed-draft-pin {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px 999px 999px 0.35rem;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  border: 3px solid #ffffff;
+  color: #ffffff;
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.18),
+    0 10px 22px rgba(2, 6, 23, 0.28);
+}
+
+.mapa-embed-draft-pin i {
+  transform: rotate(45deg);
+  font-size: 0.9rem;
+}
+
+.mapa-embed-draft-vertex {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 3px solid #ffffff;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.18),
+    0 8px 18px rgba(2, 6, 23, 0.24);
+}
+
+.mapa-embed-draft-vertex span {
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.embed-tech-state .edit-action:has(.pi-times) {
+  display: none !important;
+}
