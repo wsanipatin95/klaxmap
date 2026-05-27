@@ -89,7 +89,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   readonly config = this.embedStore.config;
 
   readonly basemapOptions = MAPA_BASEMAP_OPTIONS;
-  readonly basemapKey = signal<BasemapKey>('osm');
+  readonly basemapKey = signal<BasemapKey>('googleSatellite');
   readonly basemapMenuOpen = signal(false);
   readonly labelsVisible = signal(true);
 
@@ -102,6 +102,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
   readonly routeTarget = signal<MapaElementoCercano | null>(null);
   readonly routeDistanceM = signal<number | null>(null);
+  readonly routeLoading = signal(false);
 
   readonly draftMode = signal<DraftMode>('none');
   readonly draftPoints = signal<LatLngPoint[]>([]);
@@ -354,56 +355,130 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
     this.routeLayer?.clearLayers();
     this.routeTarget.set(item);
+    this.routeDistanceM.set(null);
+    this.routeLoading.set(true);
 
-    const originLL = L.latLng(origin.lat, origin.lng);
-    const targetLL = L.latLng(target.lat, target.lng);
-    const distance = this.map?.distance(originLL, targetLL) ?? item.distanciaM ?? 0;
-    this.routeDistanceM.set(distance);
+    this.resolveStreetRoute(origin, target)
+      .then((streetPoints) => {
+        const routePoints = streetPoints.length >= 2 ? streetPoints : [origin, target];
+        const distance = this.computeRouteDistance(routePoints, item.distanciaM);
+        this.routeDistanceM.set(distance);
 
-    const points: L.LatLngExpression[] = [
-      [origin.lat, origin.lng],
-      [target.lat, target.lng],
-    ];
+        this.paintRoute(routePoints, distance);
+        this.focusItem(item, false);
+        this.fitRoute(routePoints);
 
-    L.polyline(points, {
+        this.messaging.post('KLAX_MAP_ELEMENT_VIEWED', {
+          ...item,
+          routeDistanceM: distance,
+          routeDistanceText: this.formatDistance(distance),
+          routeMode: streetPoints.length >= 2 ? 'street' : 'direct',
+        });
+      })
+      .catch(() => {
+        const routePoints = [origin, target];
+        const distance = this.computeRouteDistance(routePoints, item.distanciaM);
+        this.routeDistanceM.set(distance);
+
+        this.paintRoute(routePoints, distance);
+        this.focusItem(item, false);
+        this.fitRoute(routePoints);
+      })
+      .finally(() => {
+        this.routeLoading.set(false);
+      });
+  }
+
+  private async resolveStreetRoute(origin: LatLngPoint, target: LatLngPoint): Promise<LatLngPoint[]> {
+    const url = new URL(
+      `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${target.lng},${target.lat}`
+    );
+
+    url.searchParams.set('overview', 'full');
+    url.searchParams.set('geometries', 'geojson');
+    url.searchParams.set('alternatives', 'false');
+    url.searchParams.set('steps', 'false');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+
+    if (!Array.isArray(coordinates)) return [];
+
+    return coordinates
+      .map((coord: unknown) => {
+        const pair = coord as [number, number];
+        return { lng: Number(pair[0]), lat: Number(pair[1]) };
+      })
+      .filter((point: LatLngPoint) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+  }
+
+  private paintRoute(points: LatLngPoint[], distance: number) {
+    this.routeLayer?.clearLayers();
+
+    if (!this.routeLayer || points.length < 2) return;
+
+    const latLngs = points.map((p) => [p.lat, p.lng] as L.LatLngExpression);
+
+    L.polyline(latLngs, {
       color: '#ffffff',
       weight: 7,
       opacity: 0.78,
       lineCap: 'round',
       lineJoin: 'round',
-    }).addTo(this.routeLayer!);
+    }).addTo(this.routeLayer);
 
-    L.polyline(points, {
+    L.polyline(latLngs, {
       color: this.KLAX_PRIMARY,
       weight: 3,
       opacity: 0.98,
       dashArray: '10 7',
       lineCap: 'round',
       lineJoin: 'round',
-    }).addTo(this.routeLayer!);
+    }).addTo(this.routeLayer);
 
-    const middle = {
-      lat: (origin.lat + target.lat) / 2,
-      lng: (origin.lng + target.lng) / 2,
-    };
-
+    const middle = this.middleRoutePoint(points);
     L.marker([middle.lat, middle.lng], {
       interactive: false,
       icon: this.createRouteLabelIcon(this.formatDistance(distance)),
       zIndexOffset: 1800,
-    }).addTo(this.routeLayer!);
+    }).addTo(this.routeLayer);
+  }
 
-    this.focusItem(item);
+  private fitRoute(points: LatLngPoint[]) {
+    if (!this.map || points.length < 2) return;
 
-    if (this.map) {
-      this.map.fitBounds(L.latLngBounds([originLL, targetLL]), { padding: [40, 40], maxZoom: 17 });
+    this.map.fitBounds(
+      L.latLngBounds(points.map((p) => L.latLng(p.lat, p.lng))),
+      { padding: [40, 40], maxZoom: 17 }
+    );
+  }
+
+  private computeRouteDistance(points: LatLngPoint[], fallback?: number | null): number {
+    if (!this.map || points.length < 2) {
+      return Number(fallback ?? 0);
     }
 
-    this.messaging.post('KLAX_MAP_ELEMENT_VIEWED', {
-      ...item,
-      routeDistanceM: distance,
-      routeDistanceText: this.formatDistance(distance),
-    });
+    let distance = 0;
+
+    for (let i = 1; i < points.length; i++) {
+      distance += this.map.distance(
+        L.latLng(points[i - 1].lat, points[i - 1].lng),
+        L.latLng(points[i].lat, points[i].lng)
+      );
+    }
+
+    return Number.isFinite(distance) && distance > 0 ? distance : Number(fallback ?? 0);
+  }
+
+  private middleRoutePoint(points: LatLngPoint[]): LatLngPoint {
+    if (points.length === 0) {
+      return this.origin() ?? { lat: 0, lng: 0 };
+    }
+
+    return points[Math.floor(points.length / 2)];
   }
 
   clearRoute() {

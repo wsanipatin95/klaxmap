@@ -19,12 +19,13 @@
             <span>Buscar</span>
           </button>
 
-          <button type="button" class="tool-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
-            <i class="pi pi-crosshairs"></i>
+          <button type="button" class="edit-action embed-gps-btn" title="Usar GPS" (click)="locateBrowser()">
+            <i class="pi pi-map-marker"></i>
+            <span>GPS</span>
           </button>
 
-          <button type="button" class="tool-btn" title="Usar GPS" (click)="locateBrowser()">
-            <i class="pi pi-compass"></i>
+          <button type="button" class="tool-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
+            <i class="pi pi-crosshairs"></i>
           </button>
         </div>
       </div>
@@ -55,6 +56,11 @@
                 Buscando cercanos...
               </div>
 
+              <div class="embed-message" *ngIf="ready() && routeLoading()">
+                <span class="mini-loader"></span>
+                Calculando ruta...
+              </div>
+
               <div class="embed-message" *ngIf="ready() && !loadingItems() && !items().length">
                 No hay elementos cercanos.
               </div>
@@ -64,7 +70,7 @@
                 *ngFor="let item of items()"
                 [class.selected]="selected()?.idGeoElemento === item.idGeoElemento"
               >
-                <button type="button" class="embed-row-main" (click)="focusItem(item, true)">
+                <button type="button" class="embed-row-main" (click)="focusItem(item)">
                   <span
                     class="embed-row-icon"
                     [style.background]="rowIconBackground(item)"
@@ -202,10 +208,6 @@
           </div>
         </div>
 
-        <button type="button" class="tool-btn" [class.active]="labelsVisible()" title="Mostrar/ocultar etiquetas" (click)="toggleLabels()">
-          <i class="pi pi-eye"></i>
-        </button>
-
         <button type="button" class="tool-btn" title="Limpiar ruta" (click)="clearRoute()" [disabled]="!routeTarget()">
           <i class="pi pi-eraser"></i>
         </button>
@@ -230,7 +232,7 @@
       <span><strong>Modo:</strong> {{ modeLabel() }}</span>
       <span><strong>Total:</strong> {{ items().length }}</span>
       <span *ngIf="selectedName()"><strong>Sel:</strong> {{ selectedName() }}</span>
-      <span *ngIf="routeTarget()"><strong>Ruta:</strong> {{ formatDistance(routeDistanceM()) }}</span>
+      <span *ngIf="routeTarget()"><strong>Ruta:</strong> {{ routeLoading() ? 'calculando...' : formatDistance(routeDistanceM()) }}</span>
     </div>
   </footer>
 
