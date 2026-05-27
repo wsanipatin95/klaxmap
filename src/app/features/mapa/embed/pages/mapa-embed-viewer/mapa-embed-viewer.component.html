@@ -19,13 +19,12 @@
             <span>Buscar</span>
           </button>
 
-          <button type="button" class="edit-action embed-gps-btn" title="Usar GPS" (click)="locateBrowser()">
+          <button type="button" class="tool-btn embed-gps-btn" title="Usar GPS" (click)="locateBrowser()">
             <i class="pi pi-map-marker"></i>
-            <span>GPS</span>
           </button>
 
-          <button type="button" class="tool-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
-            <i class="pi pi-crosshairs"></i>
+          <button type="button" class="tool-btn embed-center-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
+            <i class="pi pi-send"></i>
           </button>
         </div>
       </div>
@@ -210,12 +209,6 @@
 
         <button type="button" class="tool-btn" title="Limpiar ruta" (click)="clearRoute()" [disabled]="!routeTarget()">
           <i class="pi pi-eraser"></i>
-        </button>
-
-        <span class="tool-separator" aria-hidden="true"></span>
-
-        <button type="button" class="tool-btn" title="Cerrar" (click)="cancel()">
-          <i class="pi pi-times"></i>
         </button>
       </div>
     </div>
