@@ -4,7 +4,7 @@
   <app-bkp-page-header
     eyebrow="Infraestructura"
     title="Agentes y binarios"
-    subtitle="Primero define el servidor de ejecución. Luego registra las rutas reales de sus binarios.">
+    subtitle="Configura el servidor donde se ejecutan los comandos y sus rutas de binarios.">
     <button
       pButton
       type="button"
@@ -30,8 +30,8 @@
       pButton
       type="button"
       icon="pi pi-plus"
-      [label]="tab()==='agents' ? 'Nuevo agente' : 'Nuevo binario'"
-      (click)="nuevo()">
+      label="Nuevo agente"
+      (click)="nuevoAgent()">
     </button>
   </app-bkp-page-header>
 
@@ -43,43 +43,16 @@
     <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
   </section>
 
-  <section class="agentFlowCard">
-    <button
-      type="button"
-      class="agentFlowStep"
-      [class.active]="tab()==='agents'"
-      [class.done]="agents().length"
-      (click)="setTab('agents')">
-      <span>1</span>
-      <strong>Agente de ejecución</strong>
-      <small>Servidor donde KLAX ejecuta los comandos.</small>
-    </button>
-
-    <i class="pi pi-arrow-right"></i>
-
-    <button
-      type="button"
-      class="agentFlowStep"
-      [class.active]="tab()==='tools'"
-      [class.done]="tools().length"
-      [disabled]="!agents().length"
-      (click)="setTab('tools')">
-      <span>2</span>
-      <strong>Binarios del motor</strong>
-      <small>Dependen del agente seleccionado.</small>
-    </button>
-  </section>
-
-  <section class="bkpWorkbench">
-    <aside class="bkpPanel pad">
+  <section class="bkpWorkbench agentsWorkbench">
+    <aside class="bkpPanel pad agentsListPanel">
       <div class="bkpPanelHeader">
         <div class="bkpPanelTitle">
-          <h3>{{ tab()==='agents' ? 'Agentes' : 'Binarios' }}</h3>
-          <p>{{ tab()==='agents' ? agents().length : tools().length }} registro(s)</p>
+          <h3>Agentes</h3>
+          <p>{{ agents().length }} registro(s)</p>
         </div>
       </div>
 
-      <div class="bkpList" *ngIf="tab()==='agents' && agents().length">
+      <div class="bkpList" *ngIf="agents().length; else emptyAgents">
         <button
           type="button"
           class="bkpRow"
@@ -90,44 +63,30 @@
             <strong>{{ i.nombre }}</strong>
             <small>{{ i.osType }} · {{ i.hostname || i.ipAddress || 'sin host' }}</small>
           </span>
-          <span class="bkpBadge" [class.ok]="i.activo!==false">{{ i.activo===false ? 'Inactivo' : 'Activo' }}</span>
-        </button>
-      </div>
 
-      <div class="bkpList" *ngIf="tab()==='tools' && tools().length">
-        <button
-          type="button"
-          class="bkpRow"
-          *ngFor="let i of tools()"
-          [class.active]="selectedTool()?.idBkpEngineTool===i.idBkpEngineTool"
-          (click)="seleccionarTool(i)">
-          <span>
-            <strong>{{ i.herramienta }} · {{ i.motor }}</strong>
-            <small>{{ agentName(i.idBkpAgentNodeFk) }} · {{ i.binaryPath }}</small>
+          <span class="bkpBadge" [class.ok]="i.activo!==false">
+            {{ i.activo===false ? 'Inactivo' : 'Activo' }}
           </span>
-          <span class="bkpBadge" [class.ok]="i.activo!==false">{{ i.activo===false ? 'Inactivo' : 'Activo' }}</span>
         </button>
       </div>
 
-      <app-bkp-empty-state
-        *ngIf="(tab()==='agents' && !agents().length) || (tab()==='tools' && !tools().length)"
-        icon="pi pi-server"
-        [title]="tab()==='agents' ? 'Sin agentes' : 'Sin binarios'"
-        [subtitle]="tab()==='agents' ? 'Crea primero el servidor donde se ejecutarán los comandos.' : 'Agrega las rutas de pg_dump, pg_restore, psql, mysqldump o mysql.'">
-      </app-bkp-empty-state>
+      <ng-template #emptyAgents>
+        <app-bkp-empty-state
+          icon="pi pi-server"
+          title="Sin agentes"
+          subtitle="Crea el servidor donde KLAX ejecutará pg_dump, pg_restore, psql, mysqldump o mysql.">
+        </app-bkp-empty-state>
+      </ng-template>
     </aside>
 
-    <section class="bkpPanel pad">
-      <form
-        class="bkpForm"
-        [formGroup]="agentForm"
-        (ngSubmit)="guardarAgent()"
-        *ngIf="tab()==='agents'">
-        <div class="bkpPanelHeader">
+    <section class="bkpPanel pad agentMainPanel">
+      <form class="bkpForm" [formGroup]="agentForm" (ngSubmit)="guardarAgent()">
+        <div class="bkpPanelHeader compactHead">
           <div class="bkpPanelTitle">
             <h3>{{ selectedAgent() ? 'Editar agente' : 'Nuevo agente' }}</h3>
-            <p>Servidor donde corre KLAX API o donde el backend ejecuta los comandos de backup.</p>
+            <p>Un agente representa el servidor de ejecución y contiene sus binarios.</p>
           </div>
+
           <span class="bkpChip warning">* obligatorio</span>
         </div>
 
@@ -136,7 +95,7 @@
             <div class="bkpField">
               <label>Nombre del agente *</label>
               <input formControlName="nombre" placeholder="BACKUP-SERVER-01">
-              <small class="bkpHint">Nombre interno para identificar el servidor de ejecución.</small>
+              <small class="bkpHint">Nombre interno para reconocer este servidor.</small>
               <span class="bkpError" *ngIf="invalid('agent','nombre')">Requerido.</span>
             </div>
 
@@ -146,7 +105,7 @@
                 <option value="LINUX">Linux</option>
                 <option value="WINDOWS">Windows</option>
               </select>
-              <small class="bkpHint">Ayuda a sugerir rutas de binarios.</small>
+              <small class="bkpHint">Define las rutas sugeridas de binarios.</small>
             </div>
 
             <div class="bkpField">
@@ -162,38 +121,21 @@
             </div>
 
             <div class="bkpField">
-              <label>Estado</label>
-              <select formControlName="activo">
-                <option [ngValue]="true">Activo</option>
-                <option [ngValue]="false">Inactivo</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <button class="bkpLinkButton" type="button" (click)="agentTechOpen.set(!agentTechOpen())">
-          <i class="pi" [ngClass]="agentTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-          {{ agentTechOpen() ? 'Ocultar' : 'Mostrar' }} rutas y opciones técnicas
-        </button>
-
-        <div class="bkpSoftBox" *ngIf="agentTechOpen()">
-          <div class="bkpFormGrid">
-            <div class="bkpField">
-              <label>Carpeta de trabajo opcional</label>
+              <label>Carpeta de trabajo</label>
               <input formControlName="workDir" placeholder="C:\Backups\work o /opt/backup-agent">
-              <small class="bkpHint">Ruta usada para trabajo interno si tu flujo la necesita.</small>
+              <small class="bkpHint">Ruta base donde trabaja el agente.</small>
             </div>
 
             <div class="bkpField">
-              <label>Carpeta temporal opcional</label>
+              <label>Carpeta temporal</label>
               <input formControlName="tempDir" placeholder="C:\Backups\tmp o /var/backups/tmp">
-              <small class="bkpHint">Ubicación sugerida para archivos temporales grandes.</small>
+              <small class="bkpHint">Aquí pueden generarse archivos grandes antes de subirlos.</small>
             </div>
 
             <div class="bkpField">
               <label>Carpeta de logs opcional</label>
               <input formControlName="logDir" placeholder="C:\Backups\logs o /var/log/klax-bkp">
-              <small class="bkpHint">Solo si quieres separar logs del sistema.</small>
+              <small class="bkpHint">Déjalo vacío si usarás los logs normales de la aplicación.</small>
             </div>
 
             <div class="bkpField">
@@ -203,33 +145,177 @@
               <span class="bkpError" *ngIf="invalid('agent','maxParallelJobs')">Debe estar entre 1 y 20.</span>
             </div>
 
+            <div class="bkpField">
+              <label>Estado</label>
+              <select formControlName="activo">
+                <option [ngValue]="true">Activo</option>
+                <option [ngValue]="false">Inactivo</option>
+              </select>
+            </div>
+
             <div class="bkpField full">
               <label>Observación opcional</label>
               <textarea formControlName="observacion" placeholder="Notas del servidor, usuario operativo o permisos."></textarea>
             </div>
+          </div>
+        </div>
 
+        <button class="bkpLinkButton technicalToggle" type="button" (click)="agentTechOpen.set(!agentTechOpen())">
+          <i class="pi" [ngClass]="agentTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          {{ agentTechOpen() ? 'Ocultar' : 'Mostrar' }} metadata técnica
+        </button>
+
+        <div class="bkpSoftBox" *ngIf="agentTechOpen()">
+          <div class="bkpFormGrid">
             <div class="bkpField full">
               <label>Metadata JSON técnico</label>
               <textarea formControlName="metadataJson"></textarea>
-              <small class="bkpHint">Solo para parámetros internos adicionales. Normalmente déjalo vacío como objeto JSON.</small>
+              <small class="bkpHint">Solo para parámetros internos adicionales. Normalmente déjalo como objeto JSON vacío.</small>
             </div>
           </div>
         </div>
 
-        <div class="bkpActions split">
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [outlined]="true"
-            icon="pi pi-wrench"
-            label="Agregar binarios para este agente"
-            [disabled]="!selectedAgent()"
-            (click)="abrirBinariosDelAgente()">
-          </button>
+        <section class="embeddedTools">
+          <div class="embeddedTools__header">
+            <div>
+              <h3>Binarios de este agente</h3>
+              <p>Rutas reales de las herramientas instaladas en este servidor.</p>
+            </div>
 
-          <span class="spacer"></span>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-plus"
+              label="Agregar binario"
+              [disabled]="!selectedAgent()"
+              (click)="nuevoTool()">
+            </button>
+          </div>
 
+          <div class="bkpNotice warn" *ngIf="!selectedAgent()">
+            Guarda el agente para poder agregar sus binarios.
+          </div>
+
+          <div class="toolGrid" *ngIf="selectedAgent()">
+            <div class="toolList">
+              <button
+                type="button"
+                class="toolRow"
+                *ngFor="let tool of selectedAgentTools()"
+                [class.active]="selectedTool()?.idBkpEngineTool===tool.idBkpEngineTool"
+                (click)="seleccionarTool(tool)">
+                <span>
+                  <strong>{{ tool.herramienta }} · {{ tool.motor }}</strong>
+                  <small>{{ tool.binaryPath }}</small>
+                </span>
+
+                <span class="bkpBadge" [class.ok]="tool.activo!==false">
+                  {{ tool.activo===false ? 'Inactivo' : 'Activo' }}
+                </span>
+              </button>
+
+              <app-bkp-empty-state
+                *ngIf="!selectedAgentTools().length"
+                icon="pi pi-wrench"
+                title="Sin binarios"
+                subtitle="Agrega al menos pg_dump o mysqldump según el motor que usarás.">
+              </app-bkp-empty-state>
+            </div>
+
+            <form
+              class="toolEditor"
+              [formGroup]="toolForm"
+              (ngSubmit)="guardarTool()"
+              *ngIf="toolEditorOpen()">
+              <div class="toolEditor__head">
+                <div>
+                  <h4>{{ selectedTool() ? 'Editar binario' : 'Nuevo binario' }}</h4>
+                  <p>{{ agentToolHint() }}</p>
+                </div>
+                <button type="button" class="bkpIconButton" (click)="toolEditorOpen.set(false)">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+
+              <div class="bkpFormGrid">
+                <div class="bkpField">
+                  <label>Motor *</label>
+                  <select formControlName="motor">
+                    <option *ngFor="let m of motores()" [value]="m">{{ m }}</option>
+                  </select>
+                </div>
+
+                <div class="bkpField">
+                  <label>Herramienta *</label>
+                  <select formControlName="herramienta">
+                    <option *ngFor="let h of herramientas()" [value]="h">{{ h }}</option>
+                  </select>
+                </div>
+
+                <div class="bkpField full">
+                  <label>Ruta del binario *</label>
+                  <input formControlName="binaryPath" placeholder="/usr/bin/pg_dump">
+                  <small class="bkpHint">Ruta real en el servidor del agente, no en el navegador.</small>
+                  <span class="bkpError" *ngIf="invalid('tool','binaryPath')">Requerido.</span>
+                </div>
+
+                <div class="bkpPresetBar full">
+                  <span>Autollenar ruta típica:</span>
+                  <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('LINUX')">Linux</button>
+                  <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('WINDOWS')">Windows</button>
+                </div>
+
+                <div class="bkpField">
+                  <label>Versión opcional</label>
+                  <input formControlName="versionText" placeholder="15, 16, 8.0">
+                </div>
+
+                <div class="bkpField">
+                  <label>Estado</label>
+                  <select formControlName="activo">
+                    <option [ngValue]="true">Activo</option>
+                    <option [ngValue]="false">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <button class="bkpLinkButton technicalToggle" type="button" (click)="toolTechOpen.set(!toolTechOpen())">
+                <i class="pi" [ngClass]="toolTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+                {{ toolTechOpen() ? 'Ocultar' : 'Mostrar' }} configuración técnica
+              </button>
+
+              <div class="bkpSoftBox" *ngIf="toolTechOpen()">
+                <div class="bkpField full">
+                  <label>Config JSON técnico</label>
+                  <textarea formControlName="configJson"></textarea>
+                  <small class="bkpHint">Normalmente déjalo como objeto JSON vacío.</small>
+                </div>
+              </div>
+
+              <div class="bkpActions">
+                <button
+                  pButton
+                  type="button"
+                  severity="danger"
+                  [outlined]="true"
+                  label="Desactivar"
+                  [disabled]="!selectedTool()"
+                  (click)="eliminarTool()">
+                </button>
+
+                <button
+                  pButton
+                  type="submit"
+                  icon="pi pi-save"
+                  label="Guardar binario"
+                  [loading]="saving()">
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <div class="bkpActions agentFooter">
           <button
             pButton
             type="button"
@@ -245,113 +331,6 @@
             type="submit"
             icon="pi pi-save"
             label="Guardar agente"
-            [loading]="saving()">
-          </button>
-        </div>
-      </form>
-
-      <form
-        class="bkpForm"
-        [formGroup]="toolForm"
-        (ngSubmit)="guardarTool()"
-        *ngIf="tab()==='tools'">
-        <div class="bkpPanelHeader">
-          <div class="bkpPanelTitle">
-            <h3>{{ selectedTool() ? 'Editar binario' : 'Nuevo binario' }}</h3>
-            <p>Ruta absoluta del ejecutable en el servidor del agente. Sin esto no hay dump/restore.</p>
-          </div>
-          <span class="bkpChip warning">* obligatorio</span>
-        </div>
-
-        <div class="bkpNotice warn" *ngIf="!agents().length">
-          Crea primero un agente. Los binarios siempre pertenecen a un agente.
-        </div>
-
-        <div class="bkpSoftBox">
-          <div class="bkpFormGrid">
-            <div class="bkpField">
-              <label>Agente *</label>
-              <select formControlName="idBkpAgentNodeFk">
-                <option [ngValue]="null">Seleccione...</option>
-                <option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">{{ a.nombre }}</option>
-              </select>
-              <small class="bkpHint">Servidor donde existe esta ruta.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Motor *</label>
-              <select formControlName="motor">
-                <option *ngFor="let m of motores()" [value]="m">{{ m }}</option>
-              </select>
-            </div>
-
-            <div class="bkpField">
-              <label>Herramienta *</label>
-              <select formControlName="herramienta">
-                <option *ngFor="let h of herramientas()" [value]="h">{{ h }}</option>
-              </select>
-              <small class="bkpHint">pg_dump/mysqldump para backup; pg_restore/psql/mysql para restore.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Ruta del binario *</label>
-              <input formControlName="binaryPath" placeholder="/usr/bin/pg_dump">
-              <small class="bkpHint">Ruta real en el servidor, no en el navegador.</small>
-              <span class="bkpError" *ngIf="invalid('tool','binaryPath')">Requerido.</span>
-            </div>
-
-            <div class="bkpPresetBar full">
-              <span>Autollenar ruta típica:</span>
-              <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('LINUX')">Linux</button>
-              <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('WINDOWS')">Windows</button>
-            </div>
-
-            <div class="bkpField">
-              <label>Versión opcional</label>
-              <input formControlName="versionText" placeholder="15, 16, 8.0">
-            </div>
-
-            <div class="bkpField">
-              <label>Estado</label>
-              <select formControlName="activo">
-                <option [ngValue]="true">Activo</option>
-                <option [ngValue]="false">Inactivo</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <button class="bkpLinkButton" type="button" (click)="toolTechOpen.set(!toolTechOpen())">
-          <i class="pi" [ngClass]="toolTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-          {{ toolTechOpen() ? 'Ocultar' : 'Mostrar' }} configuración técnica
-        </button>
-
-        <div class="bkpSoftBox" *ngIf="toolTechOpen()">
-          <div class="bkpFormGrid">
-            <div class="bkpField full">
-              <label>Config JSON técnico</label>
-              <textarea formControlName="configJson"></textarea>
-              <small class="bkpHint">Normalmente déjalo vacío como objeto JSON. Úsalo solo para parámetros internos del binario.</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="bkpActions">
-          <button
-            pButton
-            type="button"
-            severity="danger"
-            [outlined]="true"
-            label="Desactivar"
-            [disabled]="!selectedTool()"
-            (click)="eliminarTool()">
-          </button>
-
-          <button
-            pButton
-            type="submit"
-            icon="pi pi-save"
-            label="Guardar binario"
             [loading]="saving()">
           </button>
         </div>

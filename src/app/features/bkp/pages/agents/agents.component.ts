@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
@@ -12,8 +12,6 @@ import { BkpConfirmService } from '../../services/bkp-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 import { jsonPretty, parseJsonObjectStrict } from '../../data-access/bkp.shared';
 import { NotifyService } from 'src/app/core/services/notify.service';
-
-type AgentTab = 'agents' | 'tools';
 
 @Component({
   selector: 'app-bkp-agents',
@@ -37,20 +35,27 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  tab = signal<AgentTab>('agents');
   loading = signal(false);
   saving = signal(false);
   dirty = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
+
   agentTechOpen = signal(false);
   toolTechOpen = signal(false);
+  toolEditorOpen = signal(false);
 
   agents = signal<BkpAgentNode[]>([]);
   tools = signal<BkpEngineTool[]>([]);
   catalogs = signal<Partial<BkpCatalogs>>({});
   selectedAgent = signal<BkpAgentNode | null>(null);
   selectedTool = signal<BkpEngineTool | null>(null);
+
+  selectedAgentTools = computed(() => {
+    const agentId = this.selectedAgent()?.idBkpAgentNode;
+    if (!agentId) return [];
+    return this.tools().filter(t => t.idBkpAgentNodeFk === agentId);
+  });
 
   agentForm = this.fb.group({
     nombre: ['', Validators.required],
@@ -80,16 +85,8 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.agentForm.valueChanges.subscribe(() => this.markDirty());
     this.toolForm.valueChanges.subscribe(() => this.markDirty());
 
-    this.route.queryParamMap.subscribe(params => {
-      const requested = params.get('tab') === 'tools' ? 'tools' : 'agents';
-      if (this.tab() !== requested && !this.dirty()) {
-        this.tab.set(requested);
-      }
-    });
-
     this.toolForm.get('motor')?.valueChanges.subscribe(() => this.syncToolPathIfEmpty());
     this.toolForm.get('herramienta')?.valueChanges.subscribe(() => this.syncToolPathIfEmpty());
-    this.toolForm.get('idBkpAgentNodeFk')?.valueChanges.subscribe(() => this.syncToolPathIfEmpty());
 
     this.cargar();
   }
@@ -109,38 +106,35 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.agents.set(r.agents.items ?? []);
         this.tools.set(r.tools.items ?? []);
         this.catalogs.set(r.catalogs ?? {});
-        if (!this.toolForm.value.idBkpAgentNodeFk && this.agents()[0]?.idBkpAgentNode) {
-          this.toolForm.patchValue({ idBkpAgentNodeFk: this.agents()[0].idBkpAgentNode }, { emitEvent: false });
+
+        const currentId = this.selectedAgent()?.idBkpAgentNode;
+        const refreshed = currentId ? this.agents().find(a => a.idBkpAgentNode === currentId) : null;
+        const first = refreshed ?? this.agents()[0] ?? null;
+
+        if (first) this.seleccionarAgentSinConfirmar(first);
+        else this.nuevoAgent();
+
+        const openTools = this.route.snapshot.queryParamMap.get('tab') === 'tools';
+        if (openTools && this.selectedAgent()?.idBkpAgentNode) {
+          this.toolEditorOpen.set(true);
+          this.nuevoTool(this.selectedAgent()?.idBkpAgentNode, false);
         }
-        if (!this.selectedAgent() && this.tab() === 'agents' && this.agents()[0]) {
-          this.seleccionarAgentSinConfirmar(this.agents()[0]);
-        }
+
         this.clean();
       },
       error: e => this.setError('No se pudo cargar agentes', e?.message),
     });
   }
 
-  async setTab(t: AgentTab) {
-    if (this.dirty() && !(await this.confirm.confirmDiscard())) return;
-    this.tab.set(t);
-    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: t }, queryParamsHandling: 'merge' });
-    if (t === 'agents') this.nuevoAgent();
-    else this.nuevoTool();
-  }
-
   volverDashboard() {
     this.router.navigateByUrl('/app/backups/dashboard');
-  }
-
-  nuevo() {
-    if (this.tab() === 'agents') this.nuevoAgent();
-    else this.nuevoTool();
   }
 
   nuevoAgent() {
     this.selectedAgent.set(null);
     this.selectedTool.set(null);
+    this.toolEditorOpen.set(false);
+    this.toolTechOpen.set(false);
     this.agentTechOpen.set(false);
     this.agentForm.reset({
       nombre: 'BACKUP-SERVER-01',
@@ -158,36 +152,16 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.clean();
   }
 
-  nuevoTool(agentId?: number | null) {
-    this.selectedTool.set(null);
-    this.selectedAgent.set(null);
-    this.toolTechOpen.set(false);
-    const id = agentId ?? this.agents()[0]?.idBkpAgentNode ?? null;
-    const motor = 'POSTGRESQL';
-    const herramienta = 'pg_dump';
-    const agent = this.agents().find(a => a.idBkpAgentNode === id);
-    this.toolForm.reset({
-      idBkpAgentNodeFk: id,
-      motor,
-      herramienta,
-      binaryPath: this.defaultBinaryPath(motor, herramienta, agent?.osType),
-      versionText: '',
-      configJson: '{}',
-      activo: true,
-    });
-    this.clean();
-  }
-
   async seleccionarAgent(i: BkpAgentNode) {
     if (this.dirty() && !(await this.confirm.confirmDiscard())) return;
     this.seleccionarAgentSinConfirmar(i);
   }
 
   private seleccionarAgentSinConfirmar(i: BkpAgentNode) {
-    this.tab.set('agents');
     this.selectedAgent.set(i);
     this.selectedTool.set(null);
-    this.agentTechOpen.set(false);
+    this.toolTechOpen.set(false);
+    this.toolEditorOpen.set(false);
     this.agentForm.reset({
       nombre: i.nombre ?? '',
       hostname: i.hostname ?? '',
@@ -201,17 +175,46 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       metadataJson: jsonPretty(i.metadata ?? {}),
       activo: i.activo !== false,
     });
+    this.toolForm.patchValue({ idBkpAgentNodeFk: i.idBkpAgentNode }, { emitEvent: false });
     this.clean();
+  }
+
+  nuevoTool(agentId = this.selectedAgent()?.idBkpAgentNode ?? null, resetDirty = true) {
+    if (!agentId) {
+      this.setError('Guarda o selecciona un agente antes de agregar binarios.');
+      return;
+    }
+
+    this.selectedTool.set(null);
+    this.toolTechOpen.set(false);
+    this.toolEditorOpen.set(true);
+
+    const motor = 'POSTGRESQL';
+    const herramienta = 'pg_dump';
+    const agent = this.agents().find(a => a.idBkpAgentNode === agentId) ?? this.selectedAgent();
+
+    this.toolForm.reset({
+      idBkpAgentNodeFk: agentId,
+      motor,
+      herramienta,
+      binaryPath: this.defaultBinaryPath(motor, herramienta, agent?.osType),
+      versionText: '',
+      configJson: '{}',
+      activo: true,
+    });
+
+    if (resetDirty) this.clean();
   }
 
   async seleccionarTool(i: BkpEngineTool) {
     if (this.dirty() && !(await this.confirm.confirmDiscard())) return;
-    this.tab.set('tools');
+
     this.selectedTool.set(i);
-    this.selectedAgent.set(null);
     this.toolTechOpen.set(false);
+    this.toolEditorOpen.set(true);
+
     this.toolForm.reset({
-      idBkpAgentNodeFk: i.idBkpAgentNodeFk ?? null,
+      idBkpAgentNodeFk: i.idBkpAgentNodeFk ?? this.selectedAgent()?.idBkpAgentNode ?? null,
       motor: i.motor ?? 'POSTGRESQL',
       herramienta: i.herramienta ?? 'pg_dump',
       binaryPath: i.binaryPath ?? '',
@@ -219,18 +222,13 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       configJson: jsonPretty(i.configJson ?? {}),
       activo: i.activo !== false,
     });
-    this.clean();
-  }
 
-  abrirBinariosDelAgente(agent = this.selectedAgent()) {
-    if (!agent) return;
-    this.tab.set('tools');
-    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: 'tools' }, queryParamsHandling: 'merge' });
-    this.nuevoTool(agent.idBkpAgentNode);
+    this.clean();
   }
 
   guardarAgent() {
     this.agentForm.markAllAsTouched();
+
     if (this.agentForm.invalid) {
       this.setError('Completa los campos obligatorios del agente.');
       return;
@@ -260,16 +258,32 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     };
 
     const id = this.selectedAgent()?.idBkpAgentNode ?? 0;
-    this.save(
-      id ? this.repo.editarAgent(id, payload as Record<string, unknown>) : this.repo.crearAgent(payload),
-      'Agente guardado'
-    );
+    const request = id
+      ? this.repo.editarAgent(id, payload as Record<string, unknown>)
+      : this.repo.crearAgent(payload);
+
+    this.saving.set(true);
+    request.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: (r: any) => {
+        this.success.set(r?.mensaje || 'Agente guardado');
+        this.notify.success('Agente guardado', r?.mensaje);
+        this.dirty.set(false);
+        this.cargar();
+      },
+      error: (e: any) => this.setError('No se pudo guardar el agente', e?.message),
+    });
   }
 
   guardarTool() {
     this.toolForm.markAllAsTouched();
+
+    if (!this.selectedAgent()?.idBkpAgentNode) {
+      this.setError('Selecciona o guarda un agente antes de guardar binarios.');
+      return;
+    }
+
     if (this.toolForm.invalid) {
-      this.setError('Completa agente, motor, herramienta y ruta del binario.');
+      this.setError('Completa motor, herramienta y ruta del binario.');
       return;
     }
 
@@ -283,7 +297,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
 
     const v = this.toolForm.getRawValue();
     const payload: Partial<BkpEngineTool> = {
-      idBkpAgentNodeFk: Number(v.idBkpAgentNodeFk),
+      idBkpAgentNodeFk: this.selectedAgent()?.idBkpAgentNode,
       motor: v.motor ?? 'POSTGRESQL',
       herramienta: v.herramienta ?? 'pg_dump',
       binaryPath: v.binaryPath ?? '',
@@ -293,35 +307,53 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     };
 
     const id = this.selectedTool()?.idBkpEngineTool ?? 0;
-    this.save(
-      id ? this.repo.editarTool(id, payload as Record<string, unknown>) : this.repo.crearTool(payload),
-      'Binario guardado'
-    );
+    const request = id
+      ? this.repo.editarTool(id, payload as Record<string, unknown>)
+      : this.repo.crearTool(payload);
+
+    this.saving.set(true);
+    request.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: (r: any) => {
+        this.success.set(r?.mensaje || 'Binario guardado');
+        this.notify.success('Binario guardado', r?.mensaje);
+        this.dirty.set(false);
+        this.toolEditorOpen.set(false);
+        this.cargar();
+      },
+      error: (e: any) => this.setError('No se pudo guardar el binario', e?.message),
+    });
   }
 
   async eliminarAgent(i = this.selectedAgent()) {
     if (!i) return;
     if (!(await this.confirm.confirmDelete(i.nombre))) return;
-    this.save(this.repo.eliminarAgent(i.idBkpAgentNode), 'Agente desactivado', true);
+
+    this.saving.set(true);
+    this.repo.eliminarAgent(i.idBkpAgentNode).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: (r: any) => {
+        this.success.set(r?.mensaje || 'Agente desactivado');
+        this.notify.success('Agente desactivado', r?.mensaje);
+        this.nuevoAgent();
+        this.cargar();
+      },
+      error: (e: any) => this.setError('No se pudo desactivar el agente', e?.message),
+    });
   }
 
   async eliminarTool(i = this.selectedTool()) {
     if (!i) return;
     if (!(await this.confirm.confirmDelete(i.herramienta))) return;
-    this.save(this.repo.eliminarTool(i.idBkpEngineTool), 'Binario desactivado', true);
-  }
 
-  save(obs: any, label: string, reset = false) {
     this.saving.set(true);
-    obs.pipe(finalize(() => this.saving.set(false))).subscribe({
+    this.repo.eliminarTool(i.idBkpEngineTool).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (r: any) => {
-        this.success.set(r?.mensaje || label);
-        this.notify.success(label, r?.mensaje);
-        this.dirty.set(false);
-        if (reset) this.nuevo();
+        this.success.set(r?.mensaje || 'Binario desactivado');
+        this.notify.success('Binario desactivado', r?.mensaje);
+        this.selectedTool.set(null);
+        this.toolEditorOpen.set(false);
         this.cargar();
       },
-      error: (e: any) => this.setError('No se pudo guardar', e?.message),
+      error: (e: any) => this.setError('No se pudo desactivar el binario', e?.message),
     });
   }
 
@@ -348,17 +380,24 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   herramientas() {
     const motor = String(this.toolForm.value.motor || '').toUpperCase();
     const all = this.catalogs().herramientas ?? ['pg_dump', 'pg_restore', 'psql', 'mysqldump', 'mysql'];
+
     if (motor === 'POSTGRESQL') return all.filter(x => ['pg_dump', 'pg_restore', 'psql'].includes(String(x)));
     if (motor === 'MYSQL') return all.filter(x => ['mysqldump', 'mysql'].includes(String(x)));
+
     return all;
   }
 
-  agentName(id?: number | null) {
-    return this.agents().find(a => a.idBkpAgentNode === id)?.nombre ?? 'Sin agente';
-  }
+  agentToolHint() {
+    const motor = String(this.toolForm.value.motor || '').toUpperCase();
+    const tool = String(this.toolForm.value.herramienta || '');
 
-  selectedToolAgent() {
-    return this.agents().find(a => a.idBkpAgentNode === this.toolForm.value.idBkpAgentNodeFk) ?? null;
+    if (motor === 'POSTGRESQL' && tool === 'pg_dump') return 'Necesario para generar backups PostgreSQL.';
+    if (motor === 'POSTGRESQL' && tool === 'pg_restore') return 'Necesario para restaurar backups CUSTOM o TAR.';
+    if (motor === 'POSTGRESQL' && tool === 'psql') return 'Necesario para restaurar scripts SQL.';
+    if (motor === 'MYSQL' && tool === 'mysqldump') return 'Necesario para generar backups MySQL.';
+    if (motor === 'MYSQL' && tool === 'mysql') return 'Necesario para restaurar backups MySQL.';
+
+    return 'Ruta real del ejecutable en el servidor del agente.';
   }
 
   invalid(form: 'agent' | 'tool', name: string) {
@@ -375,19 +414,27 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   private syncToolPathIfEmpty() {
     const current = String(this.toolForm.value.binaryPath || '').trim();
     if (current) return;
-    const agent = this.selectedToolAgent();
+
     this.toolForm.patchValue({
-      binaryPath: this.defaultBinaryPath(this.toolForm.value.motor, this.toolForm.value.herramienta, agent?.osType),
+      binaryPath: this.defaultBinaryPath(
+        this.toolForm.value.motor,
+        this.toolForm.value.herramienta,
+        this.selectedAgent()?.osType
+      ),
     }, { emitEvent: false });
   }
 
   private defaultBinaryPath(motor?: string | null, tool?: string | null, os?: string | null) {
     const herramienta = String(tool || 'pg_dump');
     const isWindows = String(os || '').toUpperCase() === 'WINDOWS';
+
     if (isWindows) {
-      if (String(motor).toUpperCase() === 'MYSQL') return `C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\${herramienta}.exe`;
+      if (String(motor).toUpperCase() === 'MYSQL') {
+        return `C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\${herramienta}.exe`;
+      }
       return `C:\\Program Files\\PostgreSQL\\15\\bin\\${herramienta}.exe`;
     }
+
     return `/usr/bin/${herramienta}`;
   }
 }
