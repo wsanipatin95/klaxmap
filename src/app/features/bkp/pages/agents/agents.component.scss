@@ -3,9 +3,8 @@
 .agentsPage {
   gap: .45rem;
   padding: .45rem .72rem .72rem;
-  height: calc(100vh - 4.35rem);
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
 }
 
@@ -19,8 +18,8 @@
   gap: .58rem;
   align-items: stretch;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
 }
 
 .agentsListPanel,
@@ -136,8 +135,8 @@
 
 .agentSectionBody {
   min-height: 0;
-  height: 100%;
-  overflow-y: scroll;
+  height: auto;
+  overflow-y: auto;
   overflow-x: hidden;
   padding: .5rem .18rem .2rem 0;
   scrollbar-gutter: stable;
@@ -145,7 +144,7 @@
 
 .dataFormPanel,
 .toolsPanel {
-  min-height: calc(100vh - 13rem);
+  min-height: 0;
 }
 
 .agentsPage .bkpSoftBox {
@@ -199,8 +198,8 @@
   align-content: start;
   gap: .38rem;
   min-width: 0;
-  min-height: 24rem;
-  max-height: calc(100vh - 17rem);
+  min-height: 0;
+  max-height: calc(100vh - 18rem);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: .12rem;
@@ -262,8 +261,8 @@
   display: grid;
   gap: .5rem;
   min-width: 0;
-  min-height: 24rem;
-  max-height: calc(100vh - 17rem);
+  min-height: 0;
+  max-height: calc(100vh - 18rem);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
@@ -370,44 +369,70 @@
   }
 }
 
-/* BKP agents tools compact fix */
-.embeddedTools.toolsPanel {
-  min-height: 0 !important;
+/* BKP agents remove top gap fix */
+.agentsPage {
   height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  align-content: start !important;
+}
+
+.agentsWorkbench {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  align-items: start !important;
+}
+
+.agentsListPanel,
+.agentMainPanel {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.agentSectionBody {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 14.5rem) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.dataFormPanel,
+.toolsPanel,
+.embeddedTools.toolsPanel {
+  height: auto !important;
+  min-height: 0 !important;
   align-content: start !important;
   grid-auto-rows: max-content !important;
 }
 
 .embeddedTools__header {
-  min-height: 0 !important;
   height: auto !important;
+  min-height: 0 !important;
   align-self: start !important;
-  padding: .5rem .62rem !important;
+  padding: .48rem .62rem !important;
 }
 
 .toolGrid {
-  align-self: start !important;
+  height: auto !important;
   min-height: 0 !important;
+  align-items: start !important;
+  align-self: start !important;
 }
 
 .toolList,
 .toolEditor {
   min-height: 0 !important;
-  max-height: calc(100vh - 18.5rem) !important;
-}
-
-.agentSectionBody {
-  scroll-behavior: auto;
+  max-height: calc(100vh - 19rem) !important;
+  overflow-y: auto !important;
 }
 
 @media (max-width: 1180px) {
-  .embeddedTools.toolsPanel,
-  .embeddedTools__header,
-  .toolGrid,
+  .agentSectionBody,
   .toolList,
   .toolEditor {
-    min-height: 0 !important;
     max-height: none !important;
-    height: auto !important;
+    overflow: visible !important;
   }
 }
