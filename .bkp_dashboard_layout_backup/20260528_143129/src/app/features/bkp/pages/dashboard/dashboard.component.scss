@@ -1,7 +1,7 @@
 @use '../shared-page';
 
 .bkpDashboard {
-  gap: .68rem;
+  gap: .62rem;
 }
 
 .bkpNoticeStrip {
@@ -38,7 +38,7 @@
 
 .setupHero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
   gap: .75rem;
   align-items: center;
   padding: .82rem;
@@ -85,7 +85,7 @@
   color: #475569;
   font-size: .74rem;
   line-height: 1.32;
-  max-width: 58rem;
+  max-width: 56rem;
 }
 
 .setupHero__actions {
@@ -207,17 +207,70 @@
   background: #fffafa;
 }
 
-.dashboardGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .65fr);
-  gap: .68rem;
-  align-items: start;
+.flowCard {
+  overflow: hidden;
 }
 
-.dashboardSide {
+.flowRail {
+  display: flex;
+  align-items: stretch;
+  gap: .34rem;
+  overflow: auto;
+  padding-bottom: .1rem;
+}
+
+.flowNode {
+  position: relative;
+  min-width: 7.2rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: .78rem;
+  padding: .5rem 1.35rem .5rem .5rem;
   display: grid;
-  gap: .68rem;
-  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .38rem;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  color: #334155;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.flowNode:hover {
+  border-color: #d98bbb;
+  background: #fff7fc;
+  color: #7b0061;
+  transform: translateY(-1px);
+}
+
+.flowNode__icon {
+  width: 1.72rem;
+  height: 1.72rem;
+  border-radius: .58rem;
+  background: #fff0fa;
+  color: #7b0061;
+  display: grid;
+  place-items: center;
+  font-size: .82rem;
+}
+
+.flowNode strong {
+  font-size: .68rem;
+  line-height: 1.12;
+}
+
+.flowNode__arrow {
+  position: absolute;
+  right: .42rem;
+  color: #94a3b8;
+  font-size: .64rem;
+}
+
+.setupGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(20rem, .75fr);
+  gap: .62rem;
+  align-items: start;
 }
 
 .stepList {
@@ -456,13 +509,135 @@
   line-height: 1.2;
 }
 
-.quickActionList {
+.moduleGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.moduleCard {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: .82rem;
+  padding: .62rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .52rem;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.moduleCard:hover {
+  border-color: #d98bbb;
+  background: #fff7fc;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, .05);
+}
+
+.moduleCard.is-success {
+  border-color: #d1fadf;
+}
+
+.moduleCard.is-danger {
+  border-color: #fecdd3;
+}
+
+.moduleCard.is-warning {
+  border-color: #fed7aa;
+}
+
+.moduleCard__icon {
+  width: 2.05rem;
+  height: 2.05rem;
+  border-radius: .72rem;
+  display: grid;
+  place-items: center;
+  background: #fff0fa;
+  color: #7b0061;
+  font-size: .9rem;
+}
+
+.moduleCard.is-success .moduleCard__icon {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.moduleCard.is-danger .moduleCard__icon {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.moduleCard.is-warning .moduleCard__icon {
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.moduleCard__copy {
+  display: grid;
+  gap: .1rem;
+  min-width: 0;
+}
+
+.moduleCard__copy strong {
+  color: #0f172a;
+  font-size: .78rem;
+  line-height: 1.12;
+}
+
+.moduleCard__copy small,
+.moduleCard__copy em {
+  color: #64748b;
+  font-size: .62rem;
+  line-height: 1.16;
+  font-style: normal;
+}
+
+.moduleCard__copy em {
+  color: #475569;
+  font-weight: 750;
+}
+
+.moduleCard__meta {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: .38rem;
+  align-items: center;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: .38rem;
+  margin-top: .08rem;
+}
+
+.moduleCard__meta b,
+.moduleCard__meta small {
+  font-size: .61rem;
+  line-height: 1.1;
+}
+
+.moduleCard__meta b {
+  color: #334155;
+}
+
+.moduleCard__meta small {
+  color: #7b0061;
+  font-weight: 900;
+}
+
+.runtimeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(20rem, .75fr);
+  gap: .62rem;
+  align-items: start;
+}
+
+.operationList {
   display: grid;
   gap: .42rem;
 }
 
-.quickAction {
-  width: 100%;
+.operationItem {
   border: 1px solid #e2e8f0;
   background: #fff;
   border-radius: .78rem;
@@ -473,40 +648,42 @@
   align-items: center;
   text-align: left;
   cursor: pointer;
-  color: #334155;
-  transition: border-color .16s ease, background .16s ease, transform .16s ease;
 }
 
-.quickAction:hover {
+.operationItem:hover {
   border-color: #d98bbb;
   background: #fff7fc;
-  transform: translateY(-1px);
 }
 
-.quickAction span:not(.bkpModuleIcon) {
+.operationItem span:not(.bkpModuleIcon) {
   display: grid;
   gap: .08rem;
   min-width: 0;
 }
 
-.quickAction strong {
+.operationItem strong {
   color: #0f172a;
   font-size: .72rem;
 }
 
-.quickAction small {
+.operationItem small {
   color: #64748b;
   font-size: .62rem;
   line-height: 1.16;
 }
 
-.quickAction > i {
-  color: #94a3b8;
-  font-size: .7rem;
-}
-
-.runsPanel {
-  min-height: 13rem;
+.operationItem em {
+  width: 1.65rem;
+  height: 1.65rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: .68rem;
+  font-weight: 900;
+  font-style: normal;
 }
 
 @media (max-width: 1280px) {
@@ -514,14 +691,20 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .dashboardGrid,
+  .moduleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .setupGrid,
+  .runtimeGrid,
   .setupHero {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 900px) {
-  .kpiRail {
+  .kpiRail,
+  .moduleGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -548,7 +731,8 @@
 }
 
 @media (max-width: 680px) {
-  .kpiRail {
+  .kpiRail,
+  .moduleGrid {
     grid-template-columns: 1fr;
   }
 
@@ -561,5 +745,9 @@
   .setupHero__badge {
     width: 2.2rem;
     height: 2.2rem;
+  }
+
+  .flowNode {
+    min-width: 6.8rem;
   }
 }
