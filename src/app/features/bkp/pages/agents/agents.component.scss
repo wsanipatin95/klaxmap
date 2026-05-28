@@ -369,3 +369,45 @@
     display: grid;
   }
 }
+
+/* BKP agents tools compact fix */
+.embeddedTools.toolsPanel {
+  min-height: 0 !important;
+  height: auto !important;
+  align-content: start !important;
+  grid-auto-rows: max-content !important;
+}
+
+.embeddedTools__header {
+  min-height: 0 !important;
+  height: auto !important;
+  align-self: start !important;
+  padding: .5rem .62rem !important;
+}
+
+.toolGrid {
+  align-self: start !important;
+  min-height: 0 !important;
+}
+
+.toolList,
+.toolEditor {
+  min-height: 0 !important;
+  max-height: calc(100vh - 18.5rem) !important;
+}
+
+.agentSectionBody {
+  scroll-behavior: auto;
+}
+
+@media (max-width: 1180px) {
+  .embeddedTools.toolsPanel,
+  .embeddedTools__header,
+  .toolGrid,
+  .toolList,
+  .toolEditor {
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+}
