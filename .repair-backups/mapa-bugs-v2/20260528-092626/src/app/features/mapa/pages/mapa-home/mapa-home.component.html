@@ -61,7 +61,7 @@
 <app-mapa-export-dialog #exportDialog [nodos]="nodos()" [tipos]="tipos()"></app-mapa-export-dialog>
 
 <app-mapa-create-element-dialog #createDialog [nodos]="nodos()" [tipos]="tipos()"
-  (submitted)="crearElemento($event)" (cancelled)="onCreateElementCancelled()"></app-mapa-create-element-dialog>
+  (submitted)="crearElemento($event)"></app-mapa-create-element-dialog>
 
 <app-mapa-node-dialog #nodeDialog (createSubmitted)="onCreateNodeSubmitted($event)"
   (editSubmitted)="onEditNodeSubmitted($event)" (deleted)="onNodeDeleted($event)"

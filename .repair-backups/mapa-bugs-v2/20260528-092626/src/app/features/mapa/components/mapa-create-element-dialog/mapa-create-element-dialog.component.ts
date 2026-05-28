@@ -205,6 +205,7 @@ export class MapaCreateElementDialogComponent {
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }
+
   onVisibleChange(nextVisible: boolean) {
     if (nextVisible) {
       this.visible.set(true);
@@ -213,7 +214,8 @@ export class MapaCreateElementDialogComponent {
 
     this.requestClose();
   }
-  requestClose() {
+
+requestClose() {
     if (this.saving()) {
       return;
     }
@@ -223,12 +225,16 @@ export class MapaCreateElementDialogComponent {
       return;
     }
 
-    /*
-     * PrimeNG emite visibleChange(false) cuando se pulsa la X o la mascara.
-     * Sincronizamos visible=false y, si el usuario elige "Seguir editando",
-     * forzamos false -> true para que el p-dialog vuelva a abrir.
-     */
-    this.visible.set(false);
+    // PrimeNG emite visibleChange(false) cuando se pulsa la X o la máscara.
+    // Si el usuario elige "Seguir editando", el diálogo debe seguir visible.
+    // Forzamos visible=true antes del confirm para que no quede cerrado visualmente.
+    this.visible.set(true);
+
+    queueMicrotask(() => {
+      if (this.currentWkt()) {
+        this.visible.set(true);
+      }
+    });
 
     this.confirmDialog?.open(
       {
@@ -241,25 +247,8 @@ export class MapaCreateElementDialogComponent {
       },
       () => {
         this.discardAndClose();
-      },
-      () => {
-        this.reopenCurrentDraft();
       }
     );
-  }
-
-  private reopenCurrentDraft() {
-    if (!this.currentWkt() || this.saving()) {
-      return;
-    }
-
-    this.visible.set(false);
-
-    queueMicrotask(() => {
-      if (this.currentWkt() && !this.saving()) {
-        this.visible.set(true);
-      }
-    });
   }
 
 guardar() {

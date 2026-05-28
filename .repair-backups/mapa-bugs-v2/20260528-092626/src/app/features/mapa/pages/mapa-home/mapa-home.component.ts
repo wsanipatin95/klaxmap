@@ -466,13 +466,6 @@ export class MapaHomeComponent {
     );
   }
 
-  onCreateElementCancelled() {
-    this.ui.setSelectMode();
-    this.defer(() => {
-      this.mapCanvas?.refreshMapLayout(true);
-    });
-  }
-
   onEditSessionStateChanged(state: MapaEditSessionState) {
     this.interaction.onEditSessionStateChanged(state);
   }

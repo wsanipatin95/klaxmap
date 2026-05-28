@@ -575,16 +575,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         if (!wkt) return;
 
         this.geometryCreated.emit({ wkt, geomTipo });
-
-        queueMicrotask(() => {
-          if (
-            this.toolMode !== 'draw-point' &&
-            this.toolMode !== 'draw-line' &&
-            this.toolMode !== 'draw-polygon'
-          ) {
-            this.stopActiveDraw();
-          }
-        });
       });
     }
   }
@@ -877,27 +867,10 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     this.activeDrawHandler?.enable?.();
   }
+
   private stopActiveDraw() {
-    const handler = this.activeDrawHandler;
+    this.activeDrawHandler?.disable?.();
     this.activeDrawHandler = null;
-
-    try {
-      handler?.disable?.();
-    } catch (err) {
-      console.warn('[MAPA][DRAW] No se pudo desactivar el handler de dibujo:', err);
-    }
-
-    if (this.map) {
-      this.map.dragging.enable();
-
-      if (this.toolMode !== 'measure') {
-        this.map.doubleClickZoom.enable();
-      }
-
-      if (!this.editSession.active) {
-        this.map.getContainer().style.cursor = '';
-      }
-    }
   }
 
   private enableLayerEditing(layer: L.Layer | null) {
@@ -2533,8 +2506,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
           fillColor: '#60a5fa',
           fillOpacity: 0.08,
           dashArray: '8 6',
-          interactive: false,
-          bubblingMouseEvents: false,
           renderer: this.vectorRenderer,
         }
       );
@@ -2547,8 +2518,6 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       weight: 2,
       fillColor: '#93c5fd',
       fillOpacity: 0.18,
-      interactive: false,
-      bubblingMouseEvents: false,
       renderer: this.vectorRenderer,
     });
 

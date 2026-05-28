@@ -472,11 +472,3 @@
   }
 }
 /* === KLAXMAP MOBILE CANVAS INTERACTION FIX: END === */
-
-/* Reparacion: las marcas auxiliares de busqueda/ubicacion no deben bloquear clicks sobre elementos. */
-.leaflet-marker-icon.mapa-search-marker-host,
-.mapa-search-marker-host,
-.mapa-search-marker,
-.mapa-search-marker-core {
-  pointer-events: none;
-}
