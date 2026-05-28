@@ -892,7 +892,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
         lat,
         lng,
         radioM,
-        limit: this.mode() === 'tecnico' ? 100 : 50,
+        limit: this.nearbyLimitForRadius(radioM),
         ctx: this.context(),
       })
       .subscribe({
