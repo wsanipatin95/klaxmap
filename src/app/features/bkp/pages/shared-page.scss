@@ -415,3 +415,7 @@ input,select,textarea{width:100%;min-height:2.02rem;border:1px solid #cbd5e1;bor
 .bkpSoftBox{border:1px solid #e2e8f0;border-radius:.78rem;background:#f8fafc;padding:.6rem}.bkpKeyValue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}.bkpKeyValue div{border:1px solid #e2e8f0;border-radius:.72rem;padding:.5rem;background:#fff;min-width:0}.bkpKeyValue small{display:block;color:#64748b;font-size:.62rem;font-weight:850;margin-bottom:.15rem}.bkpKeyValue strong,.bkpKeyValue span{color:#0f172a;font-size:.74rem;word-break:break-word}
 pre{margin:0;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:.72rem;padding:.62rem;font-size:.7rem;line-height:1.35;max-height:18rem;overflow:auto}
 @media(max-width:1100px){.bkpWorkbench{grid-template-columns:1fr}.bkpList{max-height:none}}@media(max-width:860px){.bkpFormGrid,.bkpFormGrid.cols3,.bkpKeyValue{grid-template-columns:1fr}.bkpToolbar{display:grid}.bkpSearchBox{min-width:0}}
+
+/* UX guided patch */
+.bkpCheck{display:inline-flex;align-items:center;gap:.38rem;margin:.18rem .55rem .18rem 0;font-size:.72rem;font-weight:800;color:#334155}.bkpCheck input{width:auto;min-height:0}.bkpForm h4{margin:.2rem 0 -.25rem;color:#0f172a;font-size:.82rem}.bkpSoftBox .bkpNotice{margin-bottom:.45rem}.bkpLinkButton[disabled]{opacity:.55;cursor:not-allowed}.bkpField small.bkpHint{display:block;margin-top:.12rem}.bkpSoftBox{margin-top:.25rem}.bkpPanel .bkpEmptyState{min-height:14rem}
+

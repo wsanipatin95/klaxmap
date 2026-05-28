@@ -124,24 +124,24 @@
     <article class="kpiCard">
       <span>Destinos</span>
       <strong>{{ activeDestinations().length }}</strong>
-      <small>Local / S3 / Drive</small>
+      <small>Local / SFTP / S3 / Drive</small>
     </article>
 
     <article class="kpiCard">
-      <span>Runs exitosos</span>
-      <strong>{{ successRuns() }}</strong>
+      <span>Ejecucións exitosos</span>
+      <strong>{{ successEjecucións() }}</strong>
       <small>{{ runs().length }} recientes</small>
     </article>
 
-    <article class="kpiCard" [class.is-danger]="failedRuns()">
+    <article class="kpiCard" [class.is-danger]="failedEjecucións()">
       <span>Fallidos</span>
-      <strong>{{ failedRuns() }}</strong>
+      <strong>{{ failedEjecucións() }}</strong>
       <small>Últimos runs cargados</small>
     </article>
 
     <article class="kpiCard">
       <span>Volumen reciente</span>
-      <strong>{{ fmtBytes(lastRunSize()) }}</strong>
+      <strong>{{ fmtBytes(lastEjecuciónSize()) }}</strong>
       <small>Suma de runs visibles</small>
     </article>
   </section>
@@ -308,14 +308,14 @@
         </div>
       </div>
 
-      <div class="bkpDenseList" *ngIf="runs().length; else emptyRuns">
+      <div class="bkpDenseList" *ngIf="runs().length; else emptyEjecucións">
         <button
           type="button"
           class="bkpDenseRow"
           *ngFor="let run of runs().slice(0, 8)"
           (click)="go('/app/backups/runs')">
           <span class="bkpDenseRow__copy">
-            <strong>#{{ run.idBkpRun }} · {{ run.planNombre || ('Plan ' + run.idBkpPlanFk) }}</strong>
+            <strong>#{{ run.idBkpEjecución }} · {{ run.planNombre || ('Plan ' + run.idBkpPlanFk) }}</strong>
             <small>
               {{ run.sourceNombre || 'Origen' }}
               · {{ run.fileName || 'Sin archivo' }}
@@ -330,7 +330,7 @@
         </button>
       </div>
 
-      <ng-template #emptyRuns>
+      <ng-template #emptyEjecucións>
         <app-bkp-empty-state
           icon="pi pi-list"
           title="Aún no hay ejecuciones"
@@ -366,7 +366,7 @@
             <strong>Retención</strong>
             <small>Limpieza de archivos locales vencidos y registro de remotos.</small>
           </span>
-          <em>{{ retentionRuns().length }}</em>
+          <em>{{ retentionEjecucións().length }}</em>
         </button>
 
         <button type="button" class="operationItem" (click)="go('/app/backups/notifications')">

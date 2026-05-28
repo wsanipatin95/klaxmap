@@ -1,21 +1,2 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
-import { BkpPageHeaderComponent, BkpStatusBadgeComponent } from '../../components/bkp-ui.component';
-import { BkpRepository } from '../../data-access/bkp.repository';
-import { BkpRunDetail, BkpRunResumen } from '../../data-access/bkp.models';
-import { fmtBytes, fmtDate, jsonPretty } from '../../data-access/bkp.shared';
-import { NotifyService } from 'src/app/core/services/notify.service';
-
-@Component({selector:'app-bkp-runs',standalone:true,imports:[CommonModule,FormsModule,ButtonModule,BkpPageHeaderComponent,BkpStatusBadgeComponent],templateUrl:'./runs.component.html',styleUrl:'./runs.component.scss'})
-export class BkpRunsComponent implements OnInit{
-  private repo=inject(BkpRepository); private notify=inject(NotifyService);
-  q=signal(''); status=signal(''); loading=signal(false); runs=signal<BkpRunResumen[]>([]); selected=signal<BkpRunDetail|null>(null);
-  filters=['','PENDING','RUNNING','SUCCESS','FAILED','PARTIAL_SUCCESS','CANCELLED'];
-  ngOnInit(){this.cargar();}
-  cargar(){this.loading.set(true);this.repo.listarRuns(this.q(),0,100,this.status()||null).pipe(finalize(()=>this.loading.set(false))).subscribe({next:r=>{this.runs.set(r.items??[]); if(!this.selected()&&this.runs().length)this.seleccionar(this.runs()[0]);},error:e=>this.notify.error('No se pudo cargar ejecuciones',e?.message)});}
-  seleccionar(r:BkpRunResumen){this.repo.obtenerRunDetail(r.idBkpRun).subscribe({next:x=>this.selected.set(x),error:e=>{this.notify.warn('No se pudo cargar detalle',e?.message);this.selected.set({run:r as any,uploads:[],notifications:[]});}});}
-  fmtBytes=fmtBytes; fmtDate=fmtDate; jsonPretty=jsonPretty;
-}
+import { CommonModule } from '@angular/common';import { Component, OnInit, inject, signal } from '@angular/core';import { FormsModule } from '@angular/forms';import { RouterLink } from '@angular/router';import { finalize } from 'rxjs';import { BkpPageHeaderComponent, BkpEmptyStateComponent, BkpStatusBadgeComponent } from '../../components/bkp-ui.component';import { BkpRepository } from '../../data-access/bkp.repository';import { BkpRunResumen, BkpRunDetail } from '../../data-access/bkp.models';import { fmtBytes, fmtDate } from '../../data-access/bkp.ux';
+@Component({selector:'app-bkp-runs',standalone:true,imports:[CommonModule,FormsModule,RouterLink,BkpPageHeaderComponent,BkpEmptyStateComponent,BkpStatusBadgeComponent],templateUrl:'./runs.component.html',styleUrl:'./runs.component.scss'})export class BkpRunsComponent implements OnInit{private repo=inject(BkpRepository);items=signal<BkpRunResumen[]>([]);selected=signal<BkpRunResumen|null>(null);detail=signal<BkpRunDetail|null>(null);q=signal('');status=signal<string|null>(null);loading=signal(false);error=signal('');statuses=['','PENDING','RUNNING','SUCCESS','FAILED','PARTIAL_SUCCESS','CANCELLED'];ngOnInit(){this.cargar();}cargar(){this.loading.set(true);this.error.set('');this.repo.listarRuns(this.q(),0,200,this.status()).pipe(finalize(()=>this.loading.set(false))).subscribe({next:p=>{this.items.set(p.items??[]);if((p.items??[]).length&&!this.selected())this.seleccionar((p.items??[])[0]);if(!(p.items??[]).length){this.selected.set(null);this.detail.set(null);}},error:e=>this.error.set(this.msg(e))});}seleccionar(i:BkpRunResumen){this.selected.set(i);this.repo.obtenerRunDetail(i.idBkpRun).subscribe({next:d=>this.detail.set(d),error:e=>this.error.set(this.msg(e))});}fmtBytes=fmtBytes;fmtDate=fmtDate;private msg(e:unknown){return e instanceof Error?e.message:String((e as any)?.message||e||'Error');}}
