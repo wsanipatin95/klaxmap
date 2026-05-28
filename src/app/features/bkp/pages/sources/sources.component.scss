@@ -1,1 +1,131 @@
 @use '../shared-page';
+
+.sourcesPage {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  padding: .55rem .78rem .78rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sourcesToolbar {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.sourcesPage .bkpInfoStrip {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.sourcesWorkbench {
+  grid-template-columns: minmax(17rem, 24rem) minmax(0, 1fr);
+  gap: .62rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.sourcesListPanel,
+.sourceFormPanel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sourcesListPanel {
+  display: flex;
+  flex-direction: column;
+  padding: .68rem !important;
+}
+
+.sourcesScrollable {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.sourceFormPanel {
+  padding: .72rem !important;
+}
+
+.sourceForm {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.sourceFormHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .8rem;
+  padding-bottom: .48rem;
+  border-bottom: 1px solid #edf2f7;
+  flex: 0 0 auto;
+}
+
+.sourceFormHeader h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .95rem;
+  line-height: 1.15;
+}
+
+.sourceFormHeader p {
+  margin: .1rem 0 0;
+  color: #64748b;
+  font-size: .66rem;
+  line-height: 1.25;
+}
+
+.technicalToggle {
+  margin-top: .1rem;
+}
+
+.sourceFooter {
+  border-top: 1px solid #edf2f7;
+  padding-top: .62rem;
+  margin-top: .1rem;
+}
+
+@media (max-width: 1100px) {
+  .sourcesPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .sourcesWorkbench {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .sourcesListPanel,
+  .sourceFormPanel,
+  .sourceForm,
+  .sourcesScrollable {
+    overflow: visible;
+    height: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .sourcesPage {
+    padding: .45rem;
+  }
+
+  .sourceFormHeader {
+    display: grid;
+  }
+}

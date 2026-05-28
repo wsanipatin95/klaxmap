@@ -1,1 +1,210 @@
-<div class="bkpPageShell"><app-bkp-page-header eyebrow="Origen" title="Bases origen" subtitle="Conexión a la base que será respaldada."><button class="bkpLinkButton" type="button" (click)="cargar()">Actualizar</button><button class="bkpLinkButton primary" type="button" (click)="nuevo()">Nuevo origen</button></app-bkp-page-header><section class="bkpToolbar"><div class="bkpSearchBox"><i class="pi pi-search"></i><input [value]="q()" (input)="q.set($any($event.target).value)" placeholder="Buscar origen..."></div><button class="bkpLinkButton primary" type="button" (click)="cargar()">Buscar</button></section><section class="bkpInfoStrip" *ngIf="loading()||saving()||dirty()||error()||success()"><span class="bkpNotice info" *ngIf="loading()">Cargando</span><span class="bkpNotice info" *ngIf="saving()">Guardando</span><span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span><span class="bkpNotice danger" *ngIf="error()">{{error()}}</span><span class="bkpNotice success" *ngIf="success()">{{success()}}</span></section><section class="bkpWorkbench"><aside class="bkpPanel pad"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>Orígenes</h3><p>{{items().length}} registro(s)</p></div></div><div class="bkpList" *ngIf="items().length;else empty"><button class="bkpRow" type="button" *ngFor="let i of items()" [class.active]="selected()?.idBkpSourceDatabase===i.idBkpSourceDatabase" (click)="seleccionar(i)"><span><strong>{{i.nombre}}</strong><small>{{i.motor}} · {{i.host}}:{{i.puerto}}/{{i.nombreBase}}</small></span><span class="bkpBadge" [class.ok]="i.activo!==false">{{i.activo===false?'Inactivo':'Activo'}}</span></button></div><ng-template #empty><app-bkp-empty-state icon="pi pi-database" title="Sin bases origen" subtitle="Registra la conexión de la base que se va a respaldar."></app-bkp-empty-state></ng-template></aside><section class="bkpPanel pad"><form class="bkpForm" [formGroup]="form" (ngSubmit)="guardar()"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>{{selected()?'Editar origen':'Nuevo origen'}}</h3><p>El host y puerto deben ser accesibles desde el servidor KLAX API.</p></div><span class="bkpChip warning">* obligatorio</span></div><div class="bkpFormGrid"><div class="bkpField"><label>Nombre *</label><input formControlName="nombre" placeholder="Producción PostgreSQL"></div><div class="bkpField"><label>Motor *</label><select formControlName="motor"><option *ngFor="let m of motores()" [value]="m">{{m}}</option></select></div><div class="bkpField"><label>Host accesible desde KLAX API *</label><input formControlName="host" placeholder="localhost o IP/host remoto"></div><div class="bkpField"><label>Puerto *</label><input type="number" formControlName="puerto"></div><div class="bkpField"><label>Base *</label><input formControlName="nombreBase"></div><div class="bkpField" *ngIf="isPostgres()"><label>Schema PostgreSQL opcional</label><input formControlName="nombreSchema" placeholder="Vacío = toda la base"><small class="bkpHint">Si lo llenas, pg_dump respaldará solo ese schema.</small></div><div class="bkpField"><label>Usuario *</label><input formControlName="usuario"></div><div class="bkpField"><label>Secreto password *</label><select formControlName="idBkpSecretPasswordFk"><option [ngValue]="null">Sin secreto</option><option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">{{s.nombre}} · {{labelSecretType(s.tipoSecret)}}</option></select></div><div class="bkpField"><label>Estado</label><select formControlName="activo"><option [ngValue]="true">Activo</option><option [ngValue]="false">Inactivo</option></select></div><div class="bkpField full"><label>Observación opcional</label><textarea formControlName="observacion"></textarea></div></div><button class="bkpLinkButton" type="button" (click)="technicalOpen.set(!technicalOpen())">{{technicalOpen()?'Ocultar':'Mostrar'}} opciones técnicas</button><div class="bkpSoftBox" *ngIf="technicalOpen()"><div class="bkpFormGrid"><div class="bkpField"><label>SSL</label><select formControlName="sslEnabled"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div><div class="bkpField full"><label>Parámetros JSON</label><textarea formControlName="connectionParams"></textarea></div></div></div><div class="bkpActions"><button class="bkpLinkButton danger" type="button" [disabled]="!selected()" (click)="eliminar()">Desactivar</button><button class="bkpLinkButton primary" type="submit" [disabled]="saving()">Guardar origen</button></div></form></section></section></div>
+<div class="bkpPageShell sourcesPage">
+  <app-bkp-page-header
+    eyebrow="Origen"
+    title="Bases origen"
+    subtitle="Conexión a la base que será respaldada.">
+    <button class="bkpLinkButton" type="button" (click)="volverDashboard()">
+      <i class="pi pi-arrow-left"></i>
+      Volver
+    </button>
+
+    <button class="bkpLinkButton" type="button" (click)="cargar()">
+      <i class="pi pi-refresh"></i>
+      Actualizar
+    </button>
+
+    <button class="bkpLinkButton primary" type="button" (click)="nuevo()">
+      <i class="pi pi-plus"></i>
+      Nuevo origen
+    </button>
+  </app-bkp-page-header>
+
+  <section class="bkpToolbar sourcesToolbar">
+    <div class="bkpSearchBox">
+      <i class="pi pi-search"></i>
+      <input
+        [value]="q()"
+        (input)="q.set($any($event.target).value)"
+        placeholder="Buscar origen..."
+        (keyup.enter)="cargar()">
+    </div>
+
+    <button class="bkpLinkButton primary" type="button" (click)="cargar()">
+      Buscar
+    </button>
+  </section>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || saving() || dirty() || error() || success()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando</span>
+    <span class="bkpNotice info" *ngIf="saving()">Guardando</span>
+    <span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+    <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
+  </section>
+
+  <section class="bkpWorkbench sourcesWorkbench">
+    <aside class="bkpPanel pad sourcesListPanel">
+      <div class="bkpPanelHeader">
+        <div class="bkpPanelTitle">
+          <h3>Orígenes</h3>
+          <p>{{ items().length }} registro(s)</p>
+        </div>
+      </div>
+
+      <div class="bkpList sourcesScrollable" *ngIf="items().length; else empty">
+        <button
+          class="bkpRow"
+          type="button"
+          *ngFor="let i of items()"
+          [class.active]="selected()?.idBkpSourceDatabase===i.idBkpSourceDatabase"
+          (click)="seleccionar(i)">
+          <span>
+            <strong>{{ i.nombre }}</strong>
+            <small>{{ sourceSubtitle(i) }}</small>
+          </span>
+
+          <span class="bkpBadge" [class.ok]="i.activo!==false">
+            {{ i.activo===false ? 'Inactivo' : 'Activo' }}
+          </span>
+        </button>
+      </div>
+
+      <ng-template #empty>
+        <app-bkp-empty-state
+          icon="pi pi-database"
+          title="Sin bases origen"
+          subtitle="Registra la conexión de la base que se va a respaldar.">
+        </app-bkp-empty-state>
+      </ng-template>
+    </aside>
+
+    <section class="bkpPanel pad sourceFormPanel">
+      <form class="bkpForm sourceForm" [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="sourceFormHeader">
+          <div>
+            <h3>{{ selected() ? 'Editar origen' : 'Nuevo origen' }}</h3>
+            <p>El host, puerto y usuario deben ser accesibles desde KLAX API.</p>
+          </div>
+
+          <span class="bkpChip warning">* obligatorio</span>
+        </div>
+
+        <div class="bkpSoftBox">
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Nombre *</label>
+              <input formControlName="nombre" placeholder="Producción PostgreSQL">
+              <small class="bkpHint">Nombre interno para reconocer esta conexión.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Motor *</label>
+              <select formControlName="motor">
+                <option *ngFor="let m of motores()" [value]="m">{{ m }}</option>
+              </select>
+              <small class="bkpHint">{{ motorHint() }}</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Host accesible desde KLAX API *</label>
+              <input formControlName="host" placeholder="localhost o IP/host remoto">
+              <small class="bkpHint">Servidor donde está la base.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Puerto *</label>
+              <input type="number" formControlName="puerto">
+              <small class="bkpHint">PostgreSQL 5432, MySQL 3306.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Base *</label>
+              <input formControlName="nombreBase" placeholder="mi_base">
+              <small class="bkpHint">Nombre real de la base a respaldar.</small>
+            </div>
+
+            <div class="bkpField" *ngIf="isPostgres()">
+              <label>Schema PostgreSQL opcional</label>
+              <input formControlName="nombreSchema" placeholder="Vacío = toda la base">
+              <small class="bkpHint">{{ schemaHint() }}</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Usuario *</label>
+              <input formControlName="usuario" placeholder="usuario_backup">
+              <small class="bkpHint">Usuario con permisos de lectura/dump.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Secreto password *</label>
+              <select formControlName="idBkpSecretPasswordFk">
+                <option [ngValue]="null">Sin secreto</option>
+                <option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">
+                  {{ s.nombre }} · {{ labelSecretType(s.tipoSecret) }}
+                </option>
+              </select>
+              <small class="bkpHint">La contraseña se toma desde Secrets; no se escribe aquí.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Estado</label>
+              <select formControlName="activo">
+                <option [ngValue]="true">Activo</option>
+                <option [ngValue]="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button class="bkpLinkButton technicalToggle" type="button" (click)="technicalOpen.set(!technicalOpen())">
+          <i class="pi" [ngClass]="technicalOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          {{ technicalOpen() ? 'Ocultar' : 'Mostrar' }} opciones opcionales y técnicas
+        </button>
+
+        <div class="bkpSoftBox" *ngIf="technicalOpen()">
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>SSL opcional</label>
+              <select formControlName="sslEnabled">
+                <option [ngValue]="false">No</option>
+                <option [ngValue]="true">Sí</option>
+              </select>
+              <small class="bkpHint">Úsalo solo si la conexión de tu motor lo requiere.</small>
+            </div>
+
+            <div class="bkpField full">
+              <label>Observación opcional</label>
+              <textarea
+                formControlName="observacion"
+                placeholder="Ambiente, responsable, permisos, notas de conexión."></textarea>
+            </div>
+
+            <div class="bkpField full">
+              <label>Parámetros JSON técnico</label>
+              <textarea formControlName="connectionParams"></textarea>
+              <small class="bkpHint">Normalmente déjalo como objeto JSON vacío.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="bkpActions sourceFooter">
+          <button
+            class="bkpLinkButton danger"
+            type="button"
+            [disabled]="!selected()"
+            (click)="eliminar()">
+            Desactivar
+          </button>
+
+          <button
+            class="bkpLinkButton primary"
+            type="submit"
+            [disabled]="saving()">
+            <i class="pi pi-save"></i>
+            Guardar origen
+          </button>
+        </div>
+      </form>
+    </section>
+  </section>
+</div>
