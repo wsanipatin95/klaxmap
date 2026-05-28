@@ -14,9 +14,9 @@ import {
   BkpGeneralConfig,
   BkpIntegrationProvider,
   BkpPlan,
-  BkpRestoreEjecución,
-  BkpRetentionEjecución,
-  BkpEjecuciónResumen,
+  BkpRestoreRun,
+  BkpRetentionRun,
+  BkpRunResumen,
   BkpSchedule,
   BkpSecret,
   BkpSourceDatabase,
@@ -89,12 +89,12 @@ export class BkpDashboardComponent implements OnInit {
   readonly destinations = signal<BkpStorageDestination[]>([]);
   readonly schedules = signal<BkpSchedule[]>([]);
   readonly plans = signal<BkpPlan[]>([]);
-  readonly runs = signal<BkpEjecuciónResumen[]>([]);
+  readonly runs = signal<BkpRunResumen[]>([]);
   readonly integrations = signal<BkpIntegrationProvider[]>([]);
   readonly contacts = signal<any[]>([]);
   readonly rules = signal<any[]>([]);
-  readonly restores = signal<BkpRestoreEjecución[]>([]);
-  readonly retentionEjecucións = signal<BkpRetentionEjecución[]>([]);
+  readonly restores = signal<BkpRestoreRun[]>([]);
+  readonly retentionRuns = signal<BkpRetentionRun[]>([]);
   readonly configs = signal<BkpGeneralConfig[]>([]);
 
   readonly activeAgents = computed(() => this.active(this.agents()));
@@ -107,12 +107,12 @@ export class BkpDashboardComponent implements OnInit {
   readonly activeContacts = computed(() => this.active(this.contacts()));
   readonly activeRules = computed(() => this.active(this.rules()));
 
-  readonly latestEjecución = computed(() => this.runs()[0] ?? null);
-  readonly failedEjecucións = computed(() => this.runs().filter(x => this.norm(x.status) === 'FAILED').length);
-  readonly successEjecucións = computed(() => this.runs().filter(x => this.norm(x.status) === 'SUCCESS').length);
-  readonly partialEjecucións = computed(() => this.runs().filter(x => this.norm(x.status) === 'PARTIAL_SUCCESS').length);
-  readonly runningEjecucións = computed(() => this.runs().filter(x => ['RUNNING', 'PENDING'].includes(this.norm(x.status))).length);
-  readonly lastEjecuciónSize = computed(() => this.runs().reduce((acc, item) => acc + Number(item.fileSizeBytes ?? 0), 0));
+  readonly latestRun = computed(() => this.runs()[0] ?? null);
+  readonly failedRuns = computed(() => this.runs().filter(x => this.norm(x.status) === 'FAILED').length);
+  readonly successRuns = computed(() => this.runs().filter(x => this.norm(x.status) === 'SUCCESS').length);
+  readonly partialRuns = computed(() => this.runs().filter(x => this.norm(x.status) === 'PARTIAL_SUCCESS').length);
+  readonly runningRuns = computed(() => this.runs().filter(x => ['RUNNING', 'PENDING'].includes(this.norm(x.status))).length);
+  readonly lastRunSize = computed(() => this.runs().reduce((acc, item) => acc + Number(item.fileSizeBytes ?? 0), 0));
 
   readonly plansWithEncryptionIssue = computed(() =>
     this.activePlans().filter(plan => plan.encryptionEnabled && !plan.idBkpSecretEncryptionFk)
@@ -130,7 +130,7 @@ export class BkpDashboardComponent implements OnInit {
     const destinations = this.activeDestinations();
     const schedules = this.activeSchedules();
     const plans = this.activePlans();
-    const successfulEjecucións = this.successEjecucións();
+    const successfulRuns = this.successRuns();
 
     const steps: SetupStep[] = [
       {
@@ -229,7 +229,7 @@ export class BkpDashboardComponent implements OnInit {
         required: true,
         count: plans.length,
         tone: plans.length ? 'success' : 'danger',
-        help: 'El plan es la unidad ejecutable. Sin plan no hay runs.',
+        help: 'El plan es la unidad ejecutable. Sin plan no hay ejecuciones.',
       },
       {
         key: 'runs',
@@ -237,12 +237,12 @@ export class BkpDashboardComponent implements OnInit {
         title: 'Primera ejecución',
         subtitle: 'Ejecuta un plan manualmente y revisa uploads/notificaciones.',
         route: plans.length ? '/app/backups/plans' : '/app/backups/runs',
-        actionLabel: successfulEjecucións ? 'Ver runs' : 'Ejecutar backup',
+        actionLabel: successfulRuns ? 'Ver ejecuciones' : 'Ejecutar backup',
         icon: 'pi pi-play-circle',
-        ready: successfulEjecucións > 0,
+        ready: successfulRuns > 0,
         required: false,
-        count: successfulEjecucións,
-        tone: successfulEjecucións ? 'success' : (plans.length ? 'warning' : 'neutral'),
+        count: successfulRuns,
+        tone: successfulRuns ? 'success' : (plans.length ? 'warning' : 'neutral'),
         help: 'Cuando el plan esté listo, ejecútalo manualmente para validar el flujo completo.',
       },
     ];
@@ -303,7 +303,7 @@ export class BkpDashboardComponent implements OnInit {
     },
     {
       title: 'Destinos',
-      subtitle: 'Local, S3 o Google Drive.',
+      subtitle: 'Local, SFTP, SSH/SCP, S3 o Google Drive.',
       route: '/app/backups/destinations',
       icon: 'pi pi-cloud-upload',
       countLabel: `${this.activeDestinations().length} activos`,
@@ -333,12 +333,12 @@ export class BkpDashboardComponent implements OnInit {
     },
     {
       title: 'Ejecuciones',
-      subtitle: 'Ejecucións, archivos, checksums, uploads y errores.',
+      subtitle: 'Ejecuciones, archivos, checksums, uploads y errores.',
       route: '/app/backups/runs',
       icon: 'pi pi-list-check',
       countLabel: `${this.runs().length} recientes`,
-      statusLabel: this.failedEjecucións() ? `${this.failedEjecucións()} fallidos` : 'Monitoreo',
-      tone: this.failedEjecucións() ? 'danger' : (this.runs().length ? 'success' : 'neutral'),
+      statusLabel: this.failedRuns() ? `${this.failedRuns()} fallidos` : 'Monitoreo',
+      tone: this.failedRuns() ? 'danger' : (this.runs().length ? 'success' : 'neutral'),
       dependsOn: 'Nace desde un plan ejecutado',
     },
     {
@@ -349,16 +349,16 @@ export class BkpDashboardComponent implements OnInit {
       countLabel: `${this.restores().length} registros`,
       statusLabel: 'Restore',
       tone: this.restores().some(x => this.norm(x.status) === 'FAILED') ? 'danger' : 'neutral',
-      dependsOn: 'Depende de runs exitosos',
+      dependsOn: 'Depende de ejecuciones exitosas',
     },
     {
       title: 'Retención',
       subtitle: 'Limpieza local y registro remoto.',
       route: '/app/backups/retention',
       icon: 'pi pi-trash',
-      countLabel: `${this.retentionEjecucións().length} ejecuciones`,
+      countLabel: `${this.retentionRuns().length} ejecuciones`,
       statusLabel: 'Limpieza',
-      tone: this.retentionEjecucións().some(x => this.norm(x.status) === 'FAILED') ? 'danger' : 'neutral',
+      tone: this.retentionRuns().some(x => this.norm(x.status) === 'FAILED') ? 'danger' : 'neutral',
       dependsOn: 'Depende de destinos con retentionDays',
     },
     {
@@ -429,7 +429,7 @@ export class BkpDashboardComponent implements OnInit {
     if (!this.activeDestinations().length) {
       alerts.push({
         title: 'No tienes destinos activos',
-        message: 'Configura un destino LOCAL, S3 o GOOGLE_DRIVE para almacenar los archivos.',
+        message: 'Configura un destino LOCAL, SFTP, SSH/SCP, S3 o GOOGLE_DRIVE para almacenar los archivos.',
         tone: 'danger',
         route: '/app/backups/destinations',
         action: 'Agregar destino',
@@ -466,13 +466,13 @@ export class BkpDashboardComponent implements OnInit {
       });
     }
 
-    if (this.failedEjecucións()) {
+    if (this.failedRuns()) {
       alerts.push({
         title: 'Hay ejecuciones fallidas',
-        message: `Revisa ${this.failedEjecucións()} run(s) fallidos en las últimas ejecuciones cargadas.`,
+        message: `Revisa ${this.failedRuns()} ejecución(es) fallidas en las últimas ejecuciones cargadas.`,
         tone: 'danger',
         route: '/app/backups/runs',
-        action: 'Ver runs',
+        action: 'Ver ejecuciones',
       });
     }
 
@@ -506,12 +506,12 @@ export class BkpDashboardComponent implements OnInit {
       destinations: this.repo.listarDestinations('', 0, 100, null).pipe(catchError(error => this.fail('destinos', error))),
       schedules: this.repo.listarSchedules('', 0, 100, null).pipe(catchError(error => this.fail('horarios', error))),
       plans: this.repo.listarPlans('', 0, 100, null).pipe(catchError(error => this.fail('planes', error))),
-      runs: this.repo.listarEjecucións('', 0, 20, null).pipe(catchError(error => this.fail('ejecuciones', error))),
+      runs: this.repo.listarRuns('', 0, 20, null).pipe(catchError(error => this.fail('ejecuciones', error))),
       integrations: this.repo.listarIntegrations('', 0, 100, null).pipe(catchError(error => this.fail('integraciones', error))),
       contacts: this.repo.listarContacts('', 0, 100, null).pipe(catchError(error => this.fail('contactos', error))),
       rules: this.repo.listarRules('', 0, 100, null).pipe(catchError(error => this.fail('reglas', error))),
       restores: this.repo.listarRestores('', 0, 20, null).pipe(catchError(error => this.fail('restauraciones', error))),
-      retentionEjecucións: this.repo.listarRetentionEjecucións('', 0, 20, null).pipe(catchError(error => this.fail('retención', error))),
+      retentionRuns: this.repo.listarRetentionRuns('', 0, 20, null).pipe(catchError(error => this.fail('retención', error))),
       configs: this.repo.listarGeneralConfig('', 0, 20, null).pipe(catchError(error => this.fail('configuración', error))),
     })
       .pipe(finalize(() => this.loading.set(false)))
@@ -528,7 +528,7 @@ export class BkpDashboardComponent implements OnInit {
         this.contacts.set(result.contacts.items ?? []);
         this.rules.set(result.rules.items ?? []);
         this.restores.set(result.restores.items ?? []);
-        this.retentionEjecucións.set(result.retentionEjecucións.items ?? []);
+        this.retentionRuns.set(result.retentionRuns.items ?? []);
         this.configs.set(result.configs.items ?? []);
       });
   }
