@@ -570,21 +570,16 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
         const geomTipo = this.geomTipoFromLayerType(e.layerType);
         const wkt = this.layerToWkt(layer, geomTipo);
 
-        this.stopActiveDraw();
+        const stoppedHandler = this.stopActiveDraw();
 
-        if (!wkt) return;
+        if (!wkt) {
+          this.schedulePostDrawCleanup(stoppedHandler);
+          return;
+        }
 
         this.geometryCreated.emit({ wkt, geomTipo });
 
-        queueMicrotask(() => {
-          if (
-            this.toolMode !== 'draw-point' &&
-            this.toolMode !== 'draw-line' &&
-            this.toolMode !== 'draw-polygon'
-          ) {
-            this.stopActiveDraw();
-          }
-        });
+        this.schedulePostDrawCleanup(stoppedHandler);
       });
     }
   }
@@ -877,27 +872,125 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     this.activeDrawHandler?.enable?.();
   }
-  private stopActiveDraw() {
+  private stopActiveDraw(): any | null {
     const handler = this.activeDrawHandler;
     this.activeDrawHandler = null;
 
+    this.hardStopDrawHandler(handler);
+    this.cleanupLeafletDrawArtifacts(handler);
+    this.restoreMapInteractionAfterDraw();
+
+    return handler;
+  }
+
+  private hardStopDrawHandler(handler: any | null) {
+    if (!handler) {
+      return;
+    }
+
     try {
-      handler?.disable?.();
+      handler.disable?.();
     } catch (err) {
       console.warn('[MAPA][DRAW] No se pudo desactivar el handler de dibujo:', err);
     }
 
-    if (this.map) {
-      this.map.dragging.enable();
-
-      if (this.toolMode !== 'measure') {
-        this.map.doubleClickZoom.enable();
-      }
-
-      if (!this.editSession.active) {
-        this.map.getContainer().style.cursor = '';
-      }
+    try {
+      handler.removeHooks?.();
+    } catch (err) {
+      console.warn('[MAPA][DRAW] No se pudieron remover hooks de dibujo:', err);
     }
+  }
+
+  private restoreMapInteractionAfterDraw() {
+    if (!this.map) {
+      return;
+    }
+
+    this.map.dragging.enable();
+
+    if (this.toolMode !== 'measure') {
+      this.map.doubleClickZoom.enable();
+    }
+
+    if (!this.editSession.active) {
+      this.map.getContainer().style.cursor = '';
+    }
+  }
+
+  private cleanupLeafletDrawArtifacts(handler: any | null) {
+    if (!this.map) {
+      return;
+    }
+
+    const safeRemoveLayer = (layer: any) => {
+      if (!layer) {
+        return;
+      }
+
+      try {
+        if (typeof this.map.hasLayer === 'function' && this.map.hasLayer(layer)) {
+          this.map.removeLayer(layer);
+        }
+      } catch {
+        // no-op: algunos objetos internos de Leaflet Draw no siempre son Layer.
+      }
+    };
+
+    try {
+      handler?._markerGroup?.clearLayers?.();
+    } catch {
+      // no-op
+    }
+
+    safeRemoveLayer(handler?._markerGroup);
+    safeRemoveLayer(handler?._poly);
+    safeRemoveLayer(handler?._mouseMarker);
+
+    const markers = Array.isArray(handler?._markers) ? handler._markers : [];
+    for (const marker of markers) {
+      safeRemoveLayer(marker);
+    }
+
+    try {
+      handler?._tooltip?.dispose?.();
+    } catch {
+      // no-op
+    }
+
+    const selector =
+      '.leaflet-draw-tooltip, .leaflet-draw-guide-dash, .leaflet-draw-draw-tooltip';
+
+    const container = this.map.getContainer();
+    container.querySelectorAll(selector).forEach((el) => el.remove());
+
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll(selector).forEach((el) => el.remove());
+    }
+  }
+
+  private schedulePostDrawCleanup(handler: any | null) {
+    const cleanup = () => {
+      this.hardStopDrawHandler(handler);
+      this.cleanupLeafletDrawArtifacts(handler);
+      this.restoreMapInteractionAfterDraw();
+
+      if (
+        this.toolMode !== 'draw-point' &&
+        this.toolMode !== 'draw-line' &&
+        this.toolMode !== 'draw-polygon'
+      ) {
+        this.cleanupLeafletDrawArtifacts(this.activeDrawHandler);
+        this.activeDrawHandler = null;
+      }
+
+      this.scheduleRender();
+    };
+
+    cleanup();
+
+    window.setTimeout(cleanup, 0);
+    window.setTimeout(cleanup, 80);
+    window.setTimeout(cleanup, 220);
   }
 
   private enableLayerEditing(layer: L.Layer | null) {
