@@ -755,6 +755,32 @@ private setDrawingCursor(active: boolean) {
     this.map?.getContainer().classList.toggle('is-embed-drawing', active);
   }
 
+private nearbyLimitForRadius(radioM?: number | null): number {
+    const radio = Number(radioM ?? this.radioM());
+
+    if (!Number.isFinite(radio) || radio <= 0) {
+      return 50;
+    }
+
+    if (radio >= 5000) {
+      return 300;
+    }
+
+    if (radio >= 3000) {
+      return 200;
+    }
+
+    if (radio >= 1000) {
+      return 120;
+    }
+
+    if (radio >= 500) {
+      return 80;
+    }
+
+    return 50;
+  }
+
 private authenticate(expectedMode: MapaEmbedMode) {
     const code = this.route.snapshot.queryParamMap.get('code');
 

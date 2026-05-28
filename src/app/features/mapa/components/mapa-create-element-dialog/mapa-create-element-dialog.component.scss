@@ -528,3 +528,48 @@ textarea:disabled {
     max-height: 28vh;
   }
 }
+
+/* Ajuste final: el modal no debe mover toda la pantalla; solo scrollea Tipos */
+:host ::ng-deep .p-dialog-content {
+  overflow: hidden !important;
+}
+
+.dialog-shell,
+.dialog-view-scroll,
+.dialog-body,
+.dialog-fieldset {
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.field-tipo {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) auto;
+}
+
+.field-tipo .tipo-groups {
+  max-height: min(32vh, 18rem);
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+.field-tipo .tipo-options {
+  min-height: 0;
+}
+
+@media (max-width: 700px) {
+  .field-tipo .tipo-groups {
+    max-height: min(30vh, 15rem);
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .field-tipo .tipo-groups {
+    max-height: 28vh;
+  }
+}

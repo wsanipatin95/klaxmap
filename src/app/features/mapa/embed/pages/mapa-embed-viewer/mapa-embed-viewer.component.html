@@ -152,7 +152,7 @@
           <i class="pi pi-eraser"></i>
         </button>
 
-        <ng-container *ngIf="mode() === 'tecnico'">
+        <ng-container *ngIf="mode() === 'tecnico' && draftMode() === 'none'">
   <span class="tool-separator" aria-hidden="true"></span>
 
   <button type="button" class="tool-btn tech-tool-btn" [class.active]="draftMode() === 'box'" title="Crear caja / NAP" (click)="startCreateBox()" [disabled]="!can('puedeCrearCaja') || !actionEnabled('create_box')">
@@ -163,17 +163,8 @@
     <i class="pi pi-share-alt"></i>
   </button>
 
-  <button type="button" class="tool-btn" title="Finalizar fibra" (click)="openCreateDialogFromDraft()" [disabled]="draftMode() !== 'fiber' || draftPoints().length < 2">
-    <i class="pi pi-check"></i>
-  </button>
 
-  <button type="button" class="tool-btn" title="Deshacer punto" (click)="undoDraftPoint()" [disabled]="draftMode() === 'none' || !draftPoints().length">
-    <i class="pi pi-undo"></i>
-  </button>
 
-  <button type="button" class="tool-btn" title="Cancelar herramienta" (click)="clearDraft()" [disabled]="draftMode() === 'none'">
-    <i class="pi pi-times"></i>
-  </button>
 </ng-container>
       </div>
     </div>

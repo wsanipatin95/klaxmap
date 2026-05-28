@@ -215,7 +215,7 @@ export class MapaCreateElementDialogComponent {
     this.requestClose();
   }
 
-  requestClose() {
+requestClose() {
     if (this.saving()) {
       return;
     }
@@ -224,6 +224,17 @@ export class MapaCreateElementDialogComponent {
       this.discardAndClose();
       return;
     }
+
+    // PrimeNG emite visibleChange(false) cuando se pulsa la X o la máscara.
+    // Si el usuario elige "Seguir editando", el diálogo debe seguir visible.
+    // Forzamos visible=true antes del confirm para que no quede cerrado visualmente.
+    this.visible.set(true);
+
+    queueMicrotask(() => {
+      if (this.currentWkt()) {
+        this.visible.set(true);
+      }
+    });
 
     this.confirmDialog?.open(
       {
@@ -240,7 +251,7 @@ export class MapaCreateElementDialogComponent {
     );
   }
 
-  guardar() {
+guardar() {
     if (this.saving()) {
       return;
     }
@@ -303,7 +314,7 @@ export class MapaCreateElementDialogComponent {
     this.error.set(message || 'No se pudo guardar el elemento.');
   }
 
-private discardAndClose() {
+  private discardAndClose() {
     this.closeImmediately();
     this.cancelled.emit();
   }
