@@ -1,1 +1,221 @@
 @use '../shared-page';
+
+.destinationsPage {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  padding: .55rem .78rem .78rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.destinationsToolbar {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.destinationsPage .bkpInfoStrip {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.destinationsWorkbench {
+  grid-template-columns: minmax(17rem, 24rem) minmax(0, 1fr);
+  gap: .62rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.destinationsListPanel,
+.destinationFormPanel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.destinationsListPanel {
+  display: flex;
+  flex-direction: column;
+  padding: .68rem !important;
+}
+
+.destinationsScrollable {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.destinationFormPanel {
+  padding: .72rem !important;
+}
+
+.destinationForm {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.destinationFormHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .8rem;
+  padding-bottom: .48rem;
+  border-bottom: 1px solid #edf2f7;
+  flex: 0 0 auto;
+}
+
+.destinationFormHeader h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .95rem;
+  line-height: 1.15;
+}
+
+.destinationFormHeader p {
+  margin: .1rem 0 0;
+  color: #64748b;
+  font-size: .66rem;
+  line-height: 1.25;
+}
+
+.destinationTypeNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: .45rem;
+  padding: .52rem .62rem;
+  border-radius: .78rem;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: .66rem;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.destinationTypeNotice i {
+  margin-top: .05rem;
+}
+
+.destinationBlock {
+  border: 1px solid #e2e8f0;
+  border-radius: .88rem;
+  background: #ffffff;
+  padding: .68rem;
+  display: grid;
+  gap: .58rem;
+}
+
+.destinationBlock__head {
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: .45rem;
+}
+
+.destinationBlock__head h4,
+.paramsPanel__head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .84rem;
+  line-height: 1.15;
+}
+
+.destinationBlock__head p,
+.paramsPanel__head p {
+  margin: .08rem 0 0;
+  color: #64748b;
+  font-size: .63rem;
+  line-height: 1.2;
+}
+
+.paramsPanel {
+  border: 1px dashed #dbe3ef;
+  border-radius: .84rem;
+  background: #f8fafc;
+  padding: .6rem;
+  display: grid;
+  gap: .5rem;
+}
+
+.paramsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.paramPill {
+  display: grid;
+  gap: .08rem;
+  max-width: 16rem;
+  padding: .38rem .5rem;
+  border-radius: .68rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.paramPill.required {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.paramPill strong {
+  color: #0f172a;
+  font-size: .62rem;
+  line-height: 1;
+}
+
+.paramPill small {
+  color: #64748b;
+  font-size: .56rem;
+  line-height: 1.12;
+}
+
+.technicalToggle {
+  margin-top: .08rem;
+}
+
+.destinationFooter {
+  border-top: 1px solid #edf2f7;
+  padding-top: .62rem;
+  margin-top: .1rem;
+}
+
+@media (max-width: 1100px) {
+  .destinationsPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .destinationsWorkbench {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .destinationsListPanel,
+  .destinationFormPanel,
+  .destinationForm,
+  .destinationsScrollable {
+    overflow: visible;
+    height: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .destinationsPage {
+    padding: .45rem;
+  }
+
+  .destinationFormHeader {
+    display: grid;
+  }
+}
