@@ -1,41 +1,149 @@
 @use '../shared-page';
 
 .agentsPage {
-  gap: .48rem;
-  padding: .55rem .78rem 1rem;
+  gap: .45rem;
+  padding: .45rem .72rem .72rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 .agentsPage .bkpInfoStrip {
   margin: 0;
+  flex: 0 0 auto;
 }
 
 .agentsWorkbench {
-  grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
-  gap: .62rem;
-  align-items: start;
+  grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+  gap: .58rem;
+  align-items: stretch;
+  min-height: 0;
+  height: minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .agentsListPanel,
 .agentMainPanel {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agentsListPanel {
+  display: flex;
+  flex-direction: column;
+  padding: .62rem !important;
+}
+
+.agentsScrollable {
+  overflow: auto;
+  min-height: 0;
+  padding-right: .15rem;
 }
 
 .agentMainPanel {
-  padding: .72rem !important;
+  padding: .64rem !important;
+  display: flex;
+  flex-direction: column;
 }
 
-.compactHead {
+.agentMainHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
   padding-bottom: .42rem;
-  margin-bottom: .35rem;
+  border-bottom: 1px solid #edf2f7;
+  flex: 0 0 auto;
 }
 
-.compactHead .bkpPanelTitle p {
-  max-width: 62rem;
+.agentMainHeader h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .95rem;
+  line-height: 1.15;
+}
+
+.agentMainHeader p {
+  margin: .08rem 0 0;
+  color: #64748b;
+  font-size: .66rem;
+  line-height: 1.22;
+}
+
+.agentInnerTabs {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .48rem 0 .38rem;
+  border-bottom: 1px solid #edf2f7;
+  flex: 0 0 auto;
+}
+
+.agentInnerTabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 2rem;
+  padding: 0 .65rem;
+  border-radius: .68rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: .68rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+
+.agentInnerTabs button:hover:not(:disabled) {
+  border-color: #d98bbb;
+  background: #fff7fc;
+}
+
+.agentInnerTabs button.active {
+  border-color: #a0007d;
+  background: #fff0fa;
+  color: #7b0061;
+}
+
+.agentInnerTabs button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.agentInnerTabs span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .56rem;
+  font-weight: 900;
+}
+
+.agentInnerTabs button.active span {
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.agentSectionBody {
+  min-height: 0;
+  overflow: auto;
+  padding: .5rem .18rem .2rem 0;
+}
+
+.agentSectionBody > .bkpForm,
+.embeddedTools {
+  min-height: 100%;
 }
 
 .agentsPage .bkpSoftBox {
-  margin-top: .45rem;
+  margin-top: .4rem;
 }
 
 .technicalToggle {
@@ -43,11 +151,6 @@
 }
 
 .embeddedTools {
-  margin-top: .72rem;
-  border: 1px solid #e2e8f0;
-  border-radius: .9rem;
-  background: #ffffff;
-  padding: .68rem;
   display: grid;
   gap: .6rem;
 }
@@ -57,35 +160,43 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: .8rem;
-  padding-bottom: .5rem;
-  border-bottom: 1px solid #edf2f7;
+  padding: .58rem .62rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .82rem;
+  background: #ffffff;
 }
 
 .embeddedTools__header h3 {
   margin: 0;
   color: #0f172a;
-  font-size: .92rem;
+  font-size: .9rem;
   line-height: 1.15;
 }
 
 .embeddedTools__header p {
   margin: .08rem 0 0;
   color: #64748b;
-  font-size: .66rem;
+  font-size: .64rem;
   line-height: 1.25;
 }
 
 .toolGrid {
   display: grid;
-  grid-template-columns: minmax(16rem, .42fr) minmax(0, .58fr);
-  gap: .62rem;
-  align-items: start;
+  grid-template-columns: minmax(15rem, .42fr) minmax(0, .58fr);
+  gap: .58rem;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .toolList {
   display: grid;
+  align-content: start;
   gap: .38rem;
   min-width: 0;
+  min-height: 18rem;
+  max-height: calc(100vh - 20rem);
+  overflow: auto;
+  padding-right: .12rem;
 }
 
 .toolRow {
@@ -143,6 +254,8 @@
   display: grid;
   gap: .5rem;
   min-width: 0;
+  max-height: calc(100vh - 20rem);
+  overflow: auto;
 }
 
 .toolEditor__head {
@@ -196,16 +309,37 @@
   font-weight: 800;
 }
 
+.bkpPresetBar .activePreset {
+  border-color: #7b0061 !important;
+  background: #fff0fa !important;
+  color: #7b0061 !important;
+  font-weight: 900;
+}
+
 .agentFooter {
   border-top: 1px solid #edf2f7;
-  padding-top: .68rem;
-  margin-top: .7rem;
+  padding-top: .62rem;
+  margin-top: .62rem;
 }
 
 @media (max-width: 1180px) {
+  .agentsPage {
+    height: auto;
+    overflow: visible;
+  }
+
   .agentsWorkbench,
   .toolGrid {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .agentSectionBody,
+  .toolList,
+  .toolEditor {
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -214,8 +348,13 @@
     padding: .45rem;
   }
 
+  .agentMainHeader,
   .embeddedTools__header,
   .toolEditor__head {
+    display: grid;
+  }
+
+  .agentInnerTabs {
     display: grid;
   }
 }

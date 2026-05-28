@@ -52,7 +52,7 @@
         </div>
       </div>
 
-      <div class="bkpList" *ngIf="agents().length; else emptyAgents">
+      <div class="bkpList agentsScrollable" *ngIf="agents().length; else emptyAgents">
         <button
           type="button"
           class="bkpRow"
@@ -80,102 +80,147 @@
     </aside>
 
     <section class="bkpPanel pad agentMainPanel">
-      <form class="bkpForm" [formGroup]="agentForm" (ngSubmit)="guardarAgent()">
-        <div class="bkpPanelHeader compactHead">
-          <div class="bkpPanelTitle">
-            <h3>{{ selectedAgent() ? 'Editar agente' : 'Nuevo agente' }}</h3>
-            <p>Un agente representa el servidor de ejecución y contiene sus binarios.</p>
-          </div>
-
-          <span class="bkpChip warning">* obligatorio</span>
+      <div class="agentMainHeader">
+        <div>
+          <h3>{{ selectedAgent() ? 'Editar agente' : 'Nuevo agente' }}</h3>
+          <p>Un agente contiene sus datos operativos y sus binarios.</p>
         </div>
+        <span class="bkpChip warning">* obligatorio</span>
+      </div>
 
-        <div class="bkpSoftBox">
-          <div class="bkpFormGrid">
-            <div class="bkpField">
-              <label>Nombre del agente *</label>
-              <input formControlName="nombre" placeholder="BACKUP-SERVER-01">
-              <small class="bkpHint">Nombre interno para reconocer este servidor.</small>
-              <span class="bkpError" *ngIf="invalid('agent','nombre')">Requerido.</span>
-            </div>
-
-            <div class="bkpField">
-              <label>Sistema operativo *</label>
-              <select formControlName="osType">
-                <option value="LINUX">Linux</option>
-                <option value="WINDOWS">Windows</option>
-              </select>
-              <small class="bkpHint">Define las rutas sugeridas de binarios.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Hostname opcional</label>
-              <input formControlName="hostname" placeholder="SERVER1">
-              <small class="bkpHint">Nombre de red o alias del servidor.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>IP opcional</label>
-              <input formControlName="ipAddress" placeholder="192.168.2.100">
-              <small class="bkpHint">Referencia para ubicar el servidor.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Carpeta de trabajo</label>
-              <input formControlName="workDir" placeholder="C:\Backups\work o /opt/backup-agent">
-              <small class="bkpHint">Ruta base donde trabaja el agente.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Carpeta temporal</label>
-              <input formControlName="tempDir" placeholder="C:\Backups\tmp o /var/backups/tmp">
-              <small class="bkpHint">Aquí pueden generarse archivos grandes antes de subirlos.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Carpeta de logs opcional</label>
-              <input formControlName="logDir" placeholder="C:\Backups\logs o /var/log/klax-bkp">
-              <small class="bkpHint">Déjalo vacío si usarás los logs normales de la aplicación.</small>
-            </div>
-
-            <div class="bkpField">
-              <label>Backups simultáneos *</label>
-              <input type="number" formControlName="maxParallelJobs">
-              <small class="bkpHint">Usa 1 si no necesitas paralelismo.</small>
-              <span class="bkpError" *ngIf="invalid('agent','maxParallelJobs')">Debe estar entre 1 y 20.</span>
-            </div>
-
-            <div class="bkpField">
-              <label>Estado</label>
-              <select formControlName="activo">
-                <option [ngValue]="true">Activo</option>
-                <option [ngValue]="false">Inactivo</option>
-              </select>
-            </div>
-
-            <div class="bkpField full">
-              <label>Observación opcional</label>
-              <textarea formControlName="observacion" placeholder="Notas del servidor, usuario operativo o permisos."></textarea>
-            </div>
-          </div>
-        </div>
-
-        <button class="bkpLinkButton technicalToggle" type="button" (click)="agentTechOpen.set(!agentTechOpen())">
-          <i class="pi" [ngClass]="agentTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-          {{ agentTechOpen() ? 'Ocultar' : 'Mostrar' }} metadata técnica
+      <div class="agentInnerTabs">
+        <button
+          type="button"
+          [class.active]="activeSection()==='data'"
+          (click)="setSection('data')">
+          <i class="pi pi-server"></i>
+          Datos del agente
         </button>
 
-        <div class="bkpSoftBox" *ngIf="agentTechOpen()">
-          <div class="bkpFormGrid">
-            <div class="bkpField full">
-              <label>Metadata JSON técnico</label>
-              <textarea formControlName="metadataJson"></textarea>
-              <small class="bkpHint">Solo para parámetros internos adicionales. Normalmente déjalo como objeto JSON vacío.</small>
+        <button
+          type="button"
+          [class.active]="activeSection()==='tools'"
+          [disabled]="!selectedAgent()"
+          (click)="setSection('tools')">
+          <i class="pi pi-wrench"></i>
+          Binarios
+          <span>{{ selectedAgentTools().length }}</span>
+        </button>
+      </div>
+
+      <div class="agentSectionBody">
+        <form
+          class="bkpForm"
+          [formGroup]="agentForm"
+          (ngSubmit)="guardarAgent()"
+          *ngIf="activeSection()==='data'">
+          <div class="bkpSoftBox">
+            <div class="bkpFormGrid">
+              <div class="bkpField">
+                <label>Nombre del agente *</label>
+                <input formControlName="nombre" placeholder="BACKUP-SERVER-01">
+                <small class="bkpHint">Nombre interno para reconocer este servidor.</small>
+                <span class="bkpError" *ngIf="invalid('agent','nombre')">Requerido.</span>
+              </div>
+
+              <div class="bkpField">
+                <label>Sistema operativo *</label>
+                <select formControlName="osType">
+                  <option value="LINUX">Linux</option>
+                  <option value="WINDOWS">Windows</option>
+                </select>
+                <small class="bkpHint">Define las rutas sugeridas de binarios.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>Hostname opcional</label>
+                <input formControlName="hostname" placeholder="SERVER1">
+                <small class="bkpHint">Nombre de red o alias del servidor.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>IP opcional</label>
+                <input formControlName="ipAddress" placeholder="192.168.2.100">
+                <small class="bkpHint">Referencia para ubicar el servidor.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>Carpeta de trabajo</label>
+                <input formControlName="workDir" placeholder="C:\Backups\work o /opt/backup-agent">
+                <small class="bkpHint">Ruta base donde trabaja el agente.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>Carpeta temporal</label>
+                <input formControlName="tempDir" placeholder="C:\Backups\tmp o /var/backups/tmp">
+                <small class="bkpHint">Aquí pueden generarse archivos grandes antes de subirlos.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>Carpeta de logs opcional</label>
+                <input formControlName="logDir" placeholder="C:\Backups\logs o /var/log/klax-bkp">
+                <small class="bkpHint">Déjalo vacío si usarás los logs normales de la aplicación.</small>
+              </div>
+
+              <div class="bkpField">
+                <label>Backups simultáneos *</label>
+                <input type="number" formControlName="maxParallelJobs">
+                <small class="bkpHint">Usa 1 si no necesitas paralelismo.</small>
+                <span class="bkpError" *ngIf="invalid('agent','maxParallelJobs')">Debe estar entre 1 y 20.</span>
+              </div>
+
+              <div class="bkpField">
+                <label>Estado</label>
+                <select formControlName="activo">
+                  <option [ngValue]="true">Activo</option>
+                  <option [ngValue]="false">Inactivo</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <section class="embeddedTools">
+          <button class="bkpLinkButton technicalToggle" type="button" (click)="agentTechOpen.set(!agentTechOpen())">
+            <i class="pi" [ngClass]="agentTechOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            {{ agentTechOpen() ? 'Ocultar' : 'Mostrar' }} observación y metadata técnica
+          </button>
+
+          <div class="bkpSoftBox" *ngIf="agentTechOpen()">
+            <div class="bkpFormGrid">
+              <div class="bkpField full">
+                <label>Observación opcional</label>
+                <textarea formControlName="observacion" placeholder="Notas del servidor, usuario operativo o permisos."></textarea>
+              </div>
+
+              <div class="bkpField full">
+                <label>Metadata JSON técnico</label>
+                <textarea formControlName="metadataJson"></textarea>
+                <small class="bkpHint">Solo para parámetros internos adicionales. Normalmente déjalo como objeto JSON vacío.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="bkpActions agentFooter">
+            <button
+              pButton
+              type="button"
+              severity="danger"
+              [outlined]="true"
+              label="Desactivar"
+              [disabled]="!selectedAgent()"
+              (click)="eliminarAgent()">
+            </button>
+
+            <button
+              pButton
+              type="submit"
+              icon="pi pi-save"
+              label="Guardar agente"
+              [loading]="saving()">
+            </button>
+          </div>
+        </form>
+
+        <section class="embeddedTools" *ngIf="activeSection()==='tools'">
           <div class="embeddedTools__header">
             <div>
               <h3>Binarios de este agente</h3>
@@ -260,9 +305,21 @@
                 </div>
 
                 <div class="bkpPresetBar full">
-                  <span>Autollenar ruta típica:</span>
-                  <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('LINUX')">Linux</button>
-                  <button type="button" class="bkpLinkButton" (click)="setDefaultBinary('WINDOWS')">Windows</button>
+                  <span>Sistema operativo del agente:</span>
+                  <button
+                    type="button"
+                    class="bkpLinkButton"
+                    [class.activePreset]="agentOs()==='LINUX'"
+                    (click)="setDefaultBinary('LINUX')">
+                    Linux
+                  </button>
+                  <button
+                    type="button"
+                    class="bkpLinkButton"
+                    [class.activePreset]="agentOs()==='WINDOWS'"
+                    (click)="setDefaultBinary('WINDOWS')">
+                    Windows
+                  </button>
                 </div>
 
                 <div class="bkpField">
@@ -314,27 +371,7 @@
             </form>
           </div>
         </section>
-
-        <div class="bkpActions agentFooter">
-          <button
-            pButton
-            type="button"
-            severity="danger"
-            [outlined]="true"
-            label="Desactivar"
-            [disabled]="!selectedAgent()"
-            (click)="eliminarAgent()">
-          </button>
-
-          <button
-            pButton
-            type="submit"
-            icon="pi pi-save"
-            label="Guardar agente"
-            [loading]="saving()">
-          </button>
-        </div>
-      </form>
+      </div>
     </section>
   </section>
 </div>

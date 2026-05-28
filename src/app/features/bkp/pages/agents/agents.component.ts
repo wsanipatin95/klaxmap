@@ -13,6 +13,8 @@ import { PendingChangesAware } from '../../guards/pending-changes.guard';
 import { jsonPretty, parseJsonObjectStrict } from '../../data-access/bkp.shared';
 import { NotifyService } from 'src/app/core/services/notify.service';
 
+type AgentSection = 'data' | 'tools';
+
 @Component({
   selector: 'app-bkp-agents',
   standalone: true,
@@ -35,6 +37,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
+  activeSection = signal<AgentSection>('data');
   loading = signal(false);
   saving = signal(false);
   dirty = signal(false);
@@ -56,6 +59,8 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     if (!agentId) return [];
     return this.tools().filter(t => t.idBkpAgentNodeFk === agentId);
   });
+
+  agentOs = computed(() => String(this.agentForm.value.osType || 'LINUX').toUpperCase());
 
   agentForm = this.fb.group({
     nombre: ['', Validators.required],
@@ -115,14 +120,25 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         else this.nuevoAgent();
 
         const openTools = this.route.snapshot.queryParamMap.get('tab') === 'tools';
-        if (openTools && this.selectedAgent()?.idBkpAgentNode) {
-          this.toolEditorOpen.set(true);
-          this.nuevoTool(this.selectedAgent()?.idBkpAgentNode, false);
-        }
+        if (openTools) this.activeSection.set('tools');
 
         this.clean();
       },
       error: e => this.setError('No se pudo cargar agentes', e?.message),
+    });
+  }
+
+  setSection(section: AgentSection) {
+    if (section === 'tools' && !this.selectedAgent()?.idBkpAgentNode) {
+      this.setError('Guarda o selecciona un agente antes de configurar binarios.');
+      return;
+    }
+
+    this.activeSection.set(section);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: section === 'tools' ? 'tools' : 'agents' },
+      queryParamsHandling: 'merge',
     });
   }
 
@@ -131,6 +147,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   }
 
   nuevoAgent() {
+    this.activeSection.set('data');
     this.selectedAgent.set(null);
     this.selectedTool.set(null);
     this.toolEditorOpen.set(false);
@@ -185,19 +202,19 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       return;
     }
 
+    this.activeSection.set('tools');
     this.selectedTool.set(null);
     this.toolTechOpen.set(false);
     this.toolEditorOpen.set(true);
 
     const motor = 'POSTGRESQL';
     const herramienta = 'pg_dump';
-    const agent = this.agents().find(a => a.idBkpAgentNode === agentId) ?? this.selectedAgent();
 
     this.toolForm.reset({
       idBkpAgentNodeFk: agentId,
       motor,
       herramienta,
-      binaryPath: this.defaultBinaryPath(motor, herramienta, agent?.osType),
+      binaryPath: this.defaultBinaryPath(motor, herramienta, this.agentOs()),
       versionText: '',
       configJson: '{}',
       activo: true,
@@ -209,6 +226,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   async seleccionarTool(i: BkpEngineTool) {
     if (this.dirty() && !(await this.confirm.confirmDiscard())) return;
 
+    this.activeSection.set('tools');
     this.selectedTool.set(i);
     this.toolTechOpen.set(false);
     this.toolEditorOpen.set(true);
@@ -419,7 +437,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       binaryPath: this.defaultBinaryPath(
         this.toolForm.value.motor,
         this.toolForm.value.herramienta,
-        this.selectedAgent()?.osType
+        this.agentOs()
       ),
     }, { emitEvent: false });
   }
