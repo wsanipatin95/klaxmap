@@ -1,1 +1,142 @@
 @use '../shared-page';
+
+.agentsPage {
+  gap: .72rem;
+}
+
+.agentFlowCard {
+  display: flex;
+  align-items: stretch;
+  gap: .55rem;
+  padding: .62rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .9rem;
+  background: #ffffff;
+}
+
+.agentFlowCard > i {
+  align-self: center;
+  color: #94a3b8;
+  font-size: .8rem;
+}
+
+.agentFlowStep {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .2rem .48rem;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: .78rem;
+  background: #fff;
+  padding: .55rem .62rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.agentFlowStep:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.agentFlowStep:not(:disabled):hover {
+  border-color: #d98bbb;
+  background: #fff7fc;
+  transform: translateY(-1px);
+}
+
+.agentFlowStep.active {
+  border-color: #a0007d;
+  box-shadow: 0 0 0 1px rgba(160, 0, 125, .12);
+}
+
+.agentFlowStep.done {
+  border-color: #abefc6;
+}
+
+.agentFlowStep span {
+  grid-row: 1 / span 2;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.agentFlowStep.active span {
+  background: #7b0061;
+  color: #fff;
+}
+
+.agentFlowStep.done span {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.agentFlowStep strong {
+  color: #0f172a;
+  font-size: .78rem;
+  line-height: 1.1;
+}
+
+.agentFlowStep small {
+  color: #64748b;
+  font-size: .64rem;
+  line-height: 1.16;
+}
+
+.bkpPanelTitle p {
+  max-width: 62rem;
+}
+
+.bkpPresetBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem;
+  padding: .48rem;
+  border: 1px dashed #dbe3ef;
+  border-radius: .72rem;
+  background: #f8fafc;
+}
+
+.bkpPresetBar span {
+  color: #475569;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.bkpActions.split {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.bkpActions .spacer {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 900px) {
+  .agentFlowCard {
+    display: grid;
+  }
+
+  .agentFlowCard > i {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+
+  .bkpActions.split {
+    flex-wrap: wrap;
+  }
+
+  .bkpActions .spacer {
+    display: none;
+  }
+}

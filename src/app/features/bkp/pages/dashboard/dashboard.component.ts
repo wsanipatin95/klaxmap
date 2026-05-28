@@ -138,7 +138,7 @@ export class BkpDashboardComponent implements OnInit {
         order: 1,
         title: 'Agente de ejecución',
         subtitle: 'Servidor donde se ejecutan pg_dump, pg_restore, mysqldump o mysql.',
-        route: '/app/backups/agents',
+        route: '/app/backups/agents?tab=agents',
         actionLabel: agents.length ? 'Ver agentes' : 'Crear agente',
         icon: 'pi pi-server',
         ready: agents.length > 0,
@@ -152,7 +152,7 @@ export class BkpDashboardComponent implements OnInit {
         order: 2,
         title: 'Herramientas del motor',
         subtitle: 'Rutas de binarios por agente: pg_dump, pg_restore, psql, mysqldump, mysql.',
-        route: '/app/backups/agents',
+        route: '/app/backups/agents?tab=tools',
         actionLabel: tools.length ? 'Ver herramientas' : 'Agregar herramientas',
         icon: 'pi pi-wrench',
         ready: tools.length > 0,
@@ -391,7 +391,7 @@ export class BkpDashboardComponent implements OnInit {
         title: 'No tienes agente de backup',
         message: 'Configura el servidor que ejecutará los comandos de dump y restore.',
         tone: 'danger',
-        route: '/app/backups/agents',
+        route: '/app/backups/agents?tab=agents',
         action: 'Crear agente',
       });
     }
@@ -401,7 +401,7 @@ export class BkpDashboardComponent implements OnInit {
         title: 'Faltan herramientas del motor',
         message: 'Agrega rutas de pg_dump, pg_restore, psql, mysqldump o mysql para el agente.',
         tone: 'danger',
-        route: '/app/backups/agents',
+        route: '/app/backups/agents?tab=tools',
         action: 'Agregar herramientas',
       });
     }
