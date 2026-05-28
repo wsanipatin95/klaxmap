@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
@@ -14,6 +14,15 @@ import { jsonPretty, parseJsonObjectStrict } from '../../data-access/bkp.shared'
 import { NotifyService } from 'src/app/core/services/notify.service';
 
 type AgentSection = 'data' | 'tools';
+
+type ReloadState = {
+  agentId?: number | null;
+  agentName?: string | null;
+  section?: AgentSection;
+  toolId?: number | null;
+  toolKey?: string | null;
+  keepToolEditor?: boolean;
+};
 
 @Component({
   selector: 'app-bkp-agents',
@@ -54,14 +63,6 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   selectedAgent = signal<BkpAgentNode | null>(null);
   selectedTool = signal<BkpEngineTool | null>(null);
 
-  selectedAgentTools = computed(() => {
-    const agentId = this.selectedAgent()?.idBkpAgentNode;
-    if (!agentId) return [];
-    return this.tools().filter(t => t.idBkpAgentNodeFk === agentId);
-  });
-
-  agentOs = computed(() => String(this.agentForm.value.osType || 'LINUX').toUpperCase());
-
   agentForm = this.fb.group({
     nombre: ['', Validators.required],
     hostname: [''],
@@ -93,15 +94,44 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.toolForm.get('motor')?.valueChanges.subscribe(() => this.syncToolPathIfEmpty());
     this.toolForm.get('herramienta')?.valueChanges.subscribe(() => this.syncToolPathIfEmpty());
 
-    this.cargar();
+    this.cargar({
+      section: this.route.snapshot.queryParamMap.get('tab') === 'tools' ? 'tools' : 'data',
+    });
   }
 
   canDeactivate() {
     return !this.dirty() || this.confirm.confirmDiscard();
   }
 
-  cargar() {
+  selectedAgentTools() {
+    const agentId = this.selectedAgent()?.idBkpAgentNode;
+    if (!agentId) return [];
+    return this.tools().filter(t => t.idBkpAgentNodeFk === agentId);
+  }
+
+  agentOs() {
+    return String(this.agentForm.value.osType || 'LINUX').toUpperCase();
+  }
+
+  binaryPathOs() {
+    const path = String(this.toolForm.value.binaryPath || '').trim();
+    if (/^[a-zA-Z]:\\/.test(path) || path.includes('\\')) return 'WINDOWS';
+    if (path.startsWith('/')) return 'LINUX';
+    return this.agentOs();
+  }
+
+  cargar(state: ReloadState = {}) {
+    const snapshot: ReloadState = {
+      agentId: state.agentId ?? this.selectedAgent()?.idBkpAgentNode ?? null,
+      agentName: state.agentName ?? this.selectedAgent()?.nombre ?? null,
+      section: state.section ?? this.activeSection(),
+      toolId: state.toolId ?? this.selectedTool()?.idBkpEngineTool ?? null,
+      toolKey: state.toolKey ?? this.currentToolKey(),
+      keepToolEditor: state.keepToolEditor ?? this.toolEditorOpen(),
+    };
+
     this.loading.set(true);
+
     forkJoin({
       agents: this.repo.listarAgents('', 0, 200, null),
       tools: this.repo.listarTools('', 0, 200, null),
@@ -112,15 +142,28 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.tools.set(r.tools.items ?? []);
         this.catalogs.set(r.catalogs ?? {});
 
-        const currentId = this.selectedAgent()?.idBkpAgentNode;
-        const refreshed = currentId ? this.agents().find(a => a.idBkpAgentNode === currentId) : null;
-        const first = refreshed ?? this.agents()[0] ?? null;
+        const selected =
+          this.findAgent(snapshot.agentId, snapshot.agentName) ??
+          this.agents()[0] ??
+          null;
 
-        if (first) this.seleccionarAgentSinConfirmar(first);
+        if (selected) this.seleccionarAgentSinConfirmar(selected, { preserveSection: true });
         else this.nuevoAgent();
 
-        const openTools = this.route.snapshot.queryParamMap.get('tab') === 'tools';
-        if (openTools) this.activeSection.set('tools');
+        const targetSection = snapshot.section ?? (this.route.snapshot.queryParamMap.get('tab') === 'tools' ? 'tools' : 'data');
+        if (targetSection === 'tools' && selected) this.activeSection.set('tools');
+        else this.activeSection.set('data');
+
+        const selectedTool =
+          this.findTool(snapshot.toolId, snapshot.toolKey) ??
+          (this.activeSection() === 'tools' ? this.selectedAgentTools()[0] : null);
+
+        if (selectedTool) {
+          this.seleccionarToolSinConfirmar(selectedTool, { keepEditor: !!snapshot.keepToolEditor });
+        } else {
+          this.selectedTool.set(null);
+          this.toolEditorOpen.set(!!snapshot.keepToolEditor && this.activeSection() === 'tools');
+        }
 
         this.clean();
       },
@@ -139,6 +182,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       relativeTo: this.route,
       queryParams: { tab: section === 'tools' ? 'tools' : 'agents' },
       queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 
@@ -153,6 +197,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.toolEditorOpen.set(false);
     this.toolTechOpen.set(false);
     this.agentTechOpen.set(false);
+
     this.agentForm.reset({
       nombre: 'BACKUP-SERVER-01',
       hostname: '',
@@ -166,6 +211,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       metadataJson: '{}',
       activo: true,
     });
+
     this.clean();
   }
 
@@ -174,11 +220,14 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.seleccionarAgentSinConfirmar(i);
   }
 
-  private seleccionarAgentSinConfirmar(i: BkpAgentNode) {
+  private seleccionarAgentSinConfirmar(i: BkpAgentNode, opts: { preserveSection?: boolean } = {}) {
+    const section = this.activeSection();
+
     this.selectedAgent.set(i);
     this.selectedTool.set(null);
     this.toolTechOpen.set(false);
     this.toolEditorOpen.set(false);
+
     this.agentForm.reset({
       nombre: i.nombre ?? '',
       hostname: i.hostname ?? '',
@@ -192,7 +241,10 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       metadataJson: jsonPretty(i.metadata ?? {}),
       activo: i.activo !== false,
     });
+
     this.toolForm.patchValue({ idBkpAgentNodeFk: i.idBkpAgentNode }, { emitEvent: false });
+
+    if (opts.preserveSection) this.activeSection.set(section);
     this.clean();
   }
 
@@ -225,11 +277,14 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
 
   async seleccionarTool(i: BkpEngineTool) {
     if (this.dirty() && !(await this.confirm.confirmDiscard())) return;
+    this.seleccionarToolSinConfirmar(i, { keepEditor: true });
+  }
 
+  private seleccionarToolSinConfirmar(i: BkpEngineTool, opts: { keepEditor?: boolean } = {}) {
     this.activeSection.set('tools');
     this.selectedTool.set(i);
     this.toolTechOpen.set(false);
-    this.toolEditorOpen.set(true);
+    this.toolEditorOpen.set(opts.keepEditor !== false);
 
     this.toolForm.reset({
       idBkpAgentNodeFk: i.idBkpAgentNodeFk ?? this.selectedAgent()?.idBkpAgentNode ?? null,
@@ -276,6 +331,14 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     };
 
     const id = this.selectedAgent()?.idBkpAgentNode ?? 0;
+    const state: ReloadState = {
+      agentId: id || null,
+      agentName: payload.nombre ?? null,
+      section: this.activeSection(),
+      toolId: this.selectedTool()?.idBkpEngineTool ?? null,
+      keepToolEditor: this.toolEditorOpen(),
+    };
+
     const request = id
       ? this.repo.editarAgent(id, payload as Record<string, unknown>)
       : this.repo.crearAgent(payload);
@@ -286,7 +349,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.success.set(r?.mensaje || 'Agente guardado');
         this.notify.success('Agente guardado', r?.mensaje);
         this.dirty.set(false);
-        this.cargar();
+        this.cargar(state);
       },
       error: (e: any) => this.setError('No se pudo guardar el agente', e?.message),
     });
@@ -325,6 +388,14 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     };
 
     const id = this.selectedTool()?.idBkpEngineTool ?? 0;
+    const state: ReloadState = {
+      agentId: this.selectedAgent()?.idBkpAgentNode ?? null,
+      section: 'tools',
+      toolId: id || null,
+      toolKey: this.toolKey(payload),
+      keepToolEditor: true,
+    };
+
     const request = id
       ? this.repo.editarTool(id, payload as Record<string, unknown>)
       : this.repo.crearTool(payload);
@@ -335,8 +406,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.success.set(r?.mensaje || 'Binario guardado');
         this.notify.success('Binario guardado', r?.mensaje);
         this.dirty.set(false);
-        this.toolEditorOpen.set(false);
-        this.cargar();
+        this.cargar(state);
       },
       error: (e: any) => this.setError('No se pudo guardar el binario', e?.message),
     });
@@ -352,7 +422,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.success.set(r?.mensaje || 'Agente desactivado');
         this.notify.success('Agente desactivado', r?.mensaje);
         this.nuevoAgent();
-        this.cargar();
+        this.cargar({ section: 'data' });
       },
       error: (e: any) => this.setError('No se pudo desactivar el agente', e?.message),
     });
@@ -362,6 +432,8 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     if (!i) return;
     if (!(await this.confirm.confirmDelete(i.herramienta))) return;
 
+    const agentId = this.selectedAgent()?.idBkpAgentNode ?? null;
+
     this.saving.set(true);
     this.repo.eliminarTool(i.idBkpEngineTool).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (r: any) => {
@@ -369,7 +441,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
         this.notify.success('Binario desactivado', r?.mensaje);
         this.selectedTool.set(null);
         this.toolEditorOpen.set(false);
-        this.cargar();
+        this.cargar({ agentId, section: 'tools', keepToolEditor: false });
       },
       error: (e: any) => this.setError('No se pudo desactivar el binario', e?.message),
     });
@@ -454,5 +526,42 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     }
 
     return `/usr/bin/${herramienta}`;
+  }
+
+  private findAgent(id?: number | null, name?: string | null) {
+    if (id) {
+      const byId = this.agents().find(a => a.idBkpAgentNode === id);
+      if (byId) return byId;
+    }
+
+    const normalized = String(name || '').trim().toUpperCase();
+    if (!normalized) return null;
+
+    return this.agents().find(a => String(a.nombre || '').trim().toUpperCase() === normalized) ?? null;
+  }
+
+  private findTool(id?: number | null, key?: string | null) {
+    if (id) {
+      const byId = this.tools().find(t => t.idBkpEngineTool === id);
+      if (byId) return byId;
+    }
+
+    if (!key) return null;
+
+    return this.tools().find(t => this.toolKey(t) === key) ?? null;
+  }
+
+  private currentToolKey() {
+    if (this.selectedTool()) return this.toolKey(this.selectedTool()!);
+    return this.toolKey(this.toolForm.getRawValue());
+  }
+
+  private toolKey(tool: Partial<BkpEngineTool> | any) {
+    return [
+      tool?.idBkpAgentNodeFk ?? this.selectedAgent()?.idBkpAgentNode ?? '',
+      String(tool?.motor ?? '').trim().toUpperCase(),
+      String(tool?.herramienta ?? '').trim().toLowerCase(),
+      String(tool?.binaryPath ?? '').trim(),
+    ].join('|');
   }
 }

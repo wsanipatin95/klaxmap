@@ -19,7 +19,7 @@
   gap: .58rem;
   align-items: stretch;
   min-height: 0;
-  height: minmax(0, 1fr);
+  height: 100%;
   overflow: hidden;
 }
 
@@ -37,9 +37,11 @@
 }
 
 .agentsScrollable {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   padding-right: .15rem;
+  scrollbar-gutter: stable;
 }
 
 .agentMainPanel {
@@ -79,6 +81,7 @@
   padding: .48rem 0 .38rem;
   border-bottom: 1px solid #edf2f7;
   flex: 0 0 auto;
+  min-height: 2.9rem;
 }
 
 .agentInnerTabs button {
@@ -133,13 +136,16 @@
 
 .agentSectionBody {
   min-height: 0;
-  overflow: auto;
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: hidden;
   padding: .5rem .18rem .2rem 0;
+  scrollbar-gutter: stable;
 }
 
-.agentSectionBody > .bkpForm,
-.embeddedTools {
-  min-height: 100%;
+.dataFormPanel,
+.toolsPanel {
+  min-height: calc(100vh - 13rem);
 }
 
 .agentsPage .bkpSoftBox {
@@ -193,10 +199,12 @@
   align-content: start;
   gap: .38rem;
   min-width: 0;
-  min-height: 18rem;
-  max-height: calc(100vh - 20rem);
-  overflow: auto;
+  min-height: 24rem;
+  max-height: calc(100vh - 17rem);
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-right: .12rem;
+  scrollbar-gutter: stable;
 }
 
 .toolRow {
@@ -254,8 +262,11 @@
   display: grid;
   gap: .5rem;
   min-width: 0;
-  max-height: calc(100vh - 20rem);
-  overflow: auto;
+  min-height: 24rem;
+  max-height: calc(100vh - 17rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 .toolEditor__head {
