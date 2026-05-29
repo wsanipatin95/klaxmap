@@ -1,1 +1,427 @@
-<div class="bkpPageShell"><app-bkp-page-header eyebrow="Plan" title="Planes de backup" subtitle="Define qué se respalda, dónde se guarda y cómo se ejecuta."><button class="bkpLinkButton" type="button" (click)="cargar()">Actualizar</button><button class="bkpLinkButton primary" type="button" (click)="nuevo()">Nuevo plan</button></app-bkp-page-header><section class="bkpToolbar"><div class="bkpSearchBox"><i class="pi pi-search"></i><input [value]="q()" (input)="q.set($any($event.target).value)" placeholder="Buscar plan..."></div><button class="bkpLinkButton primary" type="button" (click)="cargar()">Buscar</button></section><section class="bkpInfoStrip" *ngIf="loading()||saving()||dirty()||error()||success()"><span class="bkpNotice info" *ngIf="loading()">Cargando</span><span class="bkpNotice info" *ngIf="saving()">Guardando</span><span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span><span class="bkpNotice danger" *ngIf="error()">{{error()}}</span><span class="bkpNotice success" *ngIf="success()">{{success()}}</span></section><section class="bkpWorkbench"><aside class="bkpPanel pad"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>Planes</h3><p>{{items().length}} registro(s)</p></div></div><div class="bkpList" *ngIf="items().length;else empty"><button class="bkpRow" type="button" *ngFor="let i of items()" [class.active]="selected()?.idBkpPlan===i.idBkpPlan" (click)="seleccionar(i)"><span><strong>{{i.nombre}}</strong><small>{{i.tipoBackup}} · {{i.formatoSalida}} · {{i.compressionEnabled?'GZIP':'sin compresión'}}</small></span><span class="bkpBadge" [class.ok]="i.activo!==false">{{i.activo===false?'Inactivo':'Activo'}}</span></button></div><ng-template #empty><app-bkp-empty-state icon="pi pi-calendar-plus" title="Sin planes" subtitle="Crea un plan cuando ya tengas origen, agente y destino."></app-bkp-empty-state></ng-template></aside><section class="bkpPanel pad"><form class="bkpForm" [formGroup]="form" (ngSubmit)="guardar()"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>{{selected()?'Editar plan':'Nuevo plan'}}</h3><p>Primero lo obligatorio; lo técnico queda disponible abajo.</p></div><span class="bkpChip warning">* obligatorio</span></div><h4>1. Qué respaldar</h4><div class="bkpFormGrid"><div class="bkpField full"><label>Nombre *</label><input formControlName="nombre"></div><div class="bkpField"><label>Base origen *</label><select formControlName="idBkpSourceDatabaseFk"><option [ngValue]="null">Seleccione...</option><option *ngFor="let s of sources()" [ngValue]="s.idBkpSourceDatabase">{{s.nombre}} · {{s.motor}}</option></select></div><div class="bkpField"><label>Agente *</label><select formControlName="idBkpAgentNodeFk"><option [ngValue]="null">Seleccione...</option><option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">{{a.nombre}} · {{a.osType}}</option></select></div><div class="bkpField full"><label>Destinos *</label><div class="bkpSoftBox"><label class="bkpCheck" *ngFor="let d of destinations()"><input type="checkbox" [checked]="selectedDestIds().includes(d.idBkpStorageDestination)" (change)="toggleDest(d.idBkpStorageDestination,$any($event.target).checked)"> {{d.nombre}} · {{labelStorageType(d.tipoStorage)}}</label></div></div></div><h4>2. Cómo generar el archivo</h4><div class="bkpFormGrid"><div class="bkpField"><label>Tipo backup *</label><select formControlName="tipoBackup"><option *ngFor="let t of backupTypes()" [value]="t">{{labelBackupType(t)}}</option></select></div><div class="bkpField"><label>Formato *</label><select formControlName="formatoSalida"><option *ngFor="let f of formatos()" [value]="f">{{labelFormat(f)}}</option></select><small class="bkpHint">MySQL genera SQL. PostgreSQL recomienda CUSTOM.</small></div><div class="bkpField"><label>Compresión *</label><select formControlName="compressionEnabled"><option [ngValue]="true">Sí, GZIP</option><option [ngValue]="false">No</option></select></div><div class="bkpField" *ngIf="form.value.compressionEnabled"><label>Tipo compresión</label><select formControlName="compressionType"><option *ngFor="let c of compressionTypes()" [value]="c">{{labelCompression(c)}}</option></select></div><div class="bkpField"><label>Cifrar archivo final *</label><select formControlName="encryptionEnabled"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div><div class="bkpField" *ngIf="form.value.encryptionEnabled"><label>Secreto de cifrado *</label><select formControlName="idBkpSecretEncryptionFk"><option [ngValue]="null">Sin secreto</option><option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">{{s.nombre}} · {{labelSecretType(s.tipoSecret)}}</option></select></div></div><h4>3. Cuándo ejecutar</h4><div class="bkpFormGrid"><div class="bkpField"><label>Horario opcional</label><select formControlName="idBkpScheduleFk"><option [ngValue]="null">Manual</option><option *ngFor="let h of schedules()" [ngValue]="h.idBkpSchedule">{{h.nombre}} · {{h.tipoSchedule}}</option></select><small class="bkpHint">Sin horario, el plan se ejecuta manualmente.</small></div><div class="bkpField"><label>Estado</label><select formControlName="activo"><option [ngValue]="true">Activo</option><option [ngValue]="false">Inactivo</option></select></div></div><h4>4. Trabajo local</h4><div class="bkpFormGrid"><div class="bkpField"><label>Retención local días *</label><input type="number" formControlName="localRetentionDays"></div><div class="bkpField"><label>Runtime máx. minutos *</label><input type="number" formControlName="maxRuntimeMinutes"></div><div class="bkpField full"><label>Ruta temporal local opcional</label><input formControlName="localTempPath" placeholder="Vacío = tmp/klax-bkp"><small class="bkpHint">Ruta donde KLAX genera el archivo antes de subirlo.</small></div></div><button class="bkpLinkButton" type="button" (click)="scopeOpen.set(!scopeOpen())">{{scopeOpen()?'Ocultar':'Mostrar'}} alcance del backup</button><div class="bkpSoftBox" *ngIf="scopeOpen()"><div class="bkpNotice warn" *ngIf="selected()">El alcance/filtros se aplican al crear. Para cambiar el alcance de un plan existente, crea un plan nuevo o agrega endpoint de edición de alcance.</div><div class="bkpFormGrid"><div class="bkpField"><label>Alcance</label><select formControlName="scopeType" [disabled]="!!selected()"><option value="FULL">Toda la base</option><option value="SCHEMA_ONLY">Solo estructura</option><option value="DATA_ONLY">Solo datos</option><option value="PARTIAL">Tablas específicas</option></select></div><div class="bkpField"><label>Incluir propietarios</label><select formControlName="includeOwner" [disabled]="!!selected()"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div><div class="bkpField"><label>Incluir privilegios</label><select formControlName="includePrivileges" [disabled]="!!selected()"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div><div class="bkpField full"><label>Filtros tabla JSON técnico</label><textarea formControlName="tableFiltersJson" [disabled]="!!selected()"></textarea><small class="bkpHint">Ejemplo: arreglo JSON con schemaName, tableName y filterType.</small></div></div></div><button class="bkpLinkButton" type="button" (click)="technicalOpen.set(!technicalOpen())">{{technicalOpen()?'Ocultar':'Mostrar'}} opciones técnicas</button><div class="bkpSoftBox" *ngIf="technicalOpen()"><div class="bkpFormGrid"><div class="bkpField"><label>Verificar backup</label><select formControlName="verifyAfterBackup"><option [ngValue]="true">Sí</option><option [ngValue]="false">No</option></select></div><div class="bkpField"><label>Checksum</label><select formControlName="calculateChecksum"><option [ngValue]="true">Sí</option><option [ngValue]="false">No</option></select></div><div class="bkpField full"><label>Extra dump args opcional</label><input formControlName="extraDumpArgs"><small class="bkpHint">Solo para usuarios técnicos. Puede cambiar el comportamiento del comando.</small></div><div class="bkpField full"><label>Scope config JSON</label><textarea formControlName="scopeConfigJson" [disabled]="!!selected()"></textarea></div></div></div><div class="bkpActions"><button class="bkpLinkButton danger" type="button" [disabled]="!selected()" (click)="eliminar()">Desactivar</button><button class="bkpLinkButton primary" type="submit" [disabled]="saving()">Guardar plan</button></div></form></section></section></div>
+<div class="bkpPageShell plansPage">
+  <app-bkp-page-header
+    eyebrow="Plan"
+    title="Planes de backup"
+    subtitle="Define qué se respalda, dónde se guarda y cómo se ejecuta.">
+    <button class="bkpLinkButton" type="button" (click)="volverDashboard()">
+      <i class="pi pi-arrow-left"></i>
+      Volver
+    </button>
+
+    <button class="bkpLinkButton" type="button" (click)="cargar()">
+      <i class="pi pi-refresh"></i>
+      Actualizar
+    </button>
+
+    <button class="bkpLinkButton primary" type="button" (click)="nuevo()">
+      <i class="pi pi-plus"></i>
+      Nuevo plan
+    </button>
+  </app-bkp-page-header>
+
+  <section class="bkpToolbar plansToolbar">
+    <div class="bkpSearchBox">
+      <i class="pi pi-search"></i>
+      <input
+        [value]="q()"
+        (input)="q.set($any($event.target).value)"
+        placeholder="Buscar plan..."
+        (keyup.enter)="cargar()">
+    </div>
+
+    <button class="bkpLinkButton primary" type="button" (click)="cargar()">
+      Buscar
+    </button>
+  </section>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || saving() || dirty() || error() || success()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando</span>
+    <span class="bkpNotice info" *ngIf="saving()">Guardando</span>
+    <span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+    <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
+  </section>
+
+  <section class="bkpWorkbench plansWorkbench">
+    <aside class="bkpPanel pad plansListPanel">
+      <div class="bkpPanelHeader">
+        <div class="bkpPanelTitle">
+          <h3>Planes</h3>
+          <p>{{ items().length }} registro(s)</p>
+        </div>
+      </div>
+
+      <div class="bkpList plansScrollable" *ngIf="items().length; else empty">
+        <button
+          class="bkpRow"
+          type="button"
+          *ngFor="let i of items()"
+          [class.active]="selected()?.idBkpPlan===i.idBkpPlan"
+          (click)="seleccionar(i)">
+          <span>
+            <strong>{{ i.nombre }}</strong>
+            <small>{{ planSummary(i) }}</small>
+          </span>
+
+          <span class="bkpBadge" [class.ok]="i.activo!==false">
+            {{ i.activo===false ? 'Inactivo' : 'Activo' }}
+          </span>
+        </button>
+      </div>
+
+      <ng-template #empty>
+        <app-bkp-empty-state
+          icon="pi pi-calendar-plus"
+          title="Sin planes"
+          subtitle="Crea un plan cuando ya tengas origen, agente y destino.">
+        </app-bkp-empty-state>
+      </ng-template>
+    </aside>
+
+    <section class="bkpPanel pad planFormPanel">
+      <form class="bkpForm planForm" [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="planFormHeader">
+          <div>
+            <h3>{{ selected() ? 'Editar plan' : 'Nuevo plan' }}</h3>
+            <p>Primero lo obligatorio; lo avanzado queda plegado.</p>
+          </div>
+
+          <span class="bkpChip warning">* obligatorio</span>
+        </div>
+
+        <section class="planBlock">
+          <div class="planBlock__head">
+            <span class="planStep">1</span>
+            <div>
+              <h4>Qué respaldar</h4>
+              <p>Selecciona base, agente y uno o más destinos.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField full">
+              <label>Nombre *</label>
+              <input formControlName="nombre" placeholder="Ej. Producción diario">
+              <small class="bkpHint">Nombre interno para reconocer el plan.</small>
+              <span class="bkpError" *ngIf="invalid('nombre')">Requerido.</span>
+            </div>
+
+            <div class="bkpField">
+              <label>Base origen *</label>
+              <select formControlName="idBkpSourceDatabaseFk">
+                <option [ngValue]="null">Seleccione...</option>
+                <option *ngFor="let s of sources()" [ngValue]="s.idBkpSourceDatabase">
+                  {{ s.nombre }} · {{ s.motor }}
+                </option>
+              </select>
+              <small class="bkpHint">{{ sourceSummary() }}</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Agente *</label>
+              <select formControlName="idBkpAgentNodeFk">
+                <option [ngValue]="null">Seleccione...</option>
+                <option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">
+                  {{ a.nombre }} · {{ a.osType }}
+                </option>
+              </select>
+              <small class="bkpHint">Servidor donde se ejecutará el dump.</small>
+            </div>
+          </div>
+
+          <div class="destinationsBox">
+            <div class="destinationsBox__head">
+              <div>
+                <strong>Destinos *</strong>
+                <small>{{ selectedDestIds().length }} seleccionado(s)</small>
+              </div>
+            </div>
+
+            <div class="destinationChoices" *ngIf="destinations().length; else noDestinations">
+              <label
+                class="destinationChoice"
+                *ngFor="let d of destinations()"
+                [class.active]="selectedDestIds().includes(d.idBkpStorageDestination)">
+                <input
+                  type="checkbox"
+                  [checked]="selectedDestIds().includes(d.idBkpStorageDestination)"
+                  (change)="toggleDest(d.idBkpStorageDestination, $any($event.target).checked)">
+                <span>
+                  <strong>{{ d.nombre }}</strong>
+                  <small>{{ labelStorageType(d.tipoStorage) }} · {{ destinationSummary(d) }}</small>
+                </span>
+              </label>
+            </div>
+
+            <ng-template #noDestinations>
+              <div class="bkpNotice warn">Primero crea un destino activo.</div>
+            </ng-template>
+          </div>
+        </section>
+
+        <section class="planBlock">
+          <div class="planBlock__head">
+            <span class="planStep">2</span>
+            <div>
+              <h4>Archivo final</h4>
+              <p>Define tipo de backup, formato, compresión y cifrado.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Tipo backup *</label>
+              <select formControlName="tipoBackup">
+                <option *ngFor="let t of backupTypes()" [value]="t">
+                  {{ labelBackupType(t) }}
+                </option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Formato *</label>
+              <select formControlName="formatoSalida">
+                <option *ngFor="let f of formatos()" [value]="f">
+                  {{ labelFormat(f) }}
+                </option>
+              </select>
+              <small class="bkpHint" *ngIf="canShowFormatHint()">PostgreSQL recomienda CUSTOM. MySQL usa SQL.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Compresión *</label>
+              <select formControlName="compressionEnabled">
+                <option [ngValue]="true">Sí</option>
+                <option [ngValue]="false">No</option>
+              </select>
+            </div>
+
+            <div class="bkpField" *ngIf="compressionOn()">
+              <label>Tipo compresión</label>
+              <select formControlName="compressionType">
+                <option *ngFor="let c of compressionTypes()" [value]="c">
+                  {{ labelCompression(c) }}
+                </option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Cifrar archivo final *</label>
+              <select formControlName="encryptionEnabled">
+                <option [ngValue]="false">No</option>
+                <option [ngValue]="true">Sí</option>
+              </select>
+              <small class="bkpHint">Opcional. Requiere secreto de cifrado.</small>
+            </div>
+
+            <div class="bkpField" *ngIf="encryptionOn()">
+              <label>Secreto de cifrado *</label>
+              <select formControlName="idBkpSecretEncryptionFk">
+                <option [ngValue]="null">Sin secreto</option>
+                <option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">
+                  {{ s.nombre }} · {{ labelSecretType(s.tipoSecret) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="planBlock">
+          <div class="planBlock__head">
+            <span class="planStep">3</span>
+            <div>
+              <h4>Cuándo ejecutar</h4>
+              <p>Con horario se automatiza; sin horario queda manual.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Horario opcional</label>
+              <select formControlName="idBkpScheduleFk">
+                <option [ngValue]="null">Manual</option>
+                <option *ngFor="let h of schedules()" [ngValue]="h.idBkpSchedule">
+                  {{ h.nombre }} · {{ scheduleSummary(h) }}
+                </option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Estado</label>
+              <select formControlName="activo">
+                <option [ngValue]="true">Activo</option>
+                <option [ngValue]="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="planBlock">
+          <div class="planBlock__head">
+            <span class="planStep">4</span>
+            <div>
+              <h4>Alcance</h4>
+              <p>Qué parte de la base incluirá el plan.</p>
+            </div>
+          </div>
+
+          <div class="bkpNotice warn" *ngIf="selected()">
+            El alcance se define al crear el plan. Para cambiarlo, crea un plan nuevo o agrega un endpoint de edición de alcance.
+          </div>
+
+          <div class="bkpFormGrid" *ngIf="!selected()">
+            <div class="bkpField">
+              <label>Alcance</label>
+              <select formControlName="scopeType">
+                <option *ngFor="let s of scopeOptions" [value]="s.value">
+                  {{ s.label }}
+                </option>
+              </select>
+              <small class="bkpHint">{{ scopeHint(scopeType()) }}</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Incluir propietarios</label>
+              <select formControlName="includeOwner">
+                <option [ngValue]="false">No</option>
+                <option [ngValue]="true">Sí</option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Incluir privilegios</label>
+              <select formControlName="includePrivileges">
+                <option [ngValue]="false">No</option>
+                <option [ngValue]="true">Sí</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="partialScope" *ngIf="!selected() && scopeType()==='PARTIAL'">
+            <div class="partialScope__head">
+              <strong>Tablas del backup parcial</strong>
+              <small>Agrega las tablas que deben incluirse.</small>
+            </div>
+
+            <div class="bkpFormGrid compact">
+              <div class="bkpField">
+                <label>Schema opcional</label>
+                <input formControlName="filterSchemaName" placeholder="public">
+              </div>
+
+              <div class="bkpField">
+                <label>Tabla *</label>
+                <input formControlName="filterTableName" placeholder="clientes">
+              </div>
+
+              <div class="bkpField">
+                <label>Tipo filtro</label>
+                <select formControlName="filterType">
+                  <option value="INCLUDE">Incluir</option>
+                  <option value="EXCLUDE">Excluir</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="bkpLinkButton" type="button" (click)="addTableFilter()">
+              <i class="pi pi-plus"></i>
+              Agregar tabla
+            </button>
+
+            <div class="tableFilterList" *ngIf="tableFilters().length">
+              <div class="tableFilterItem" *ngFor="let f of tableFilters(); let idx = index">
+                <span>
+                  <strong>{{ f.tableName }}</strong>
+                  <small>{{ f.schemaName || 'schema por defecto' }} · {{ f.filterType }}</small>
+                </span>
+
+                <button class="bkpIconButton" type="button" (click)="removeTableFilter(idx)">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="planBlock">
+          <div class="planBlock__head">
+            <span class="planStep">5</span>
+            <div>
+              <h4>Operación local</h4>
+              <p>Controla retención temporal y límite de ejecución.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Retención local días *</label>
+              <input type="number" formControlName="localRetentionDays">
+              <small class="bkpHint">Días para conservar archivos locales temporales.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Runtime máx. minutos *</label>
+              <input type="number" formControlName="maxRuntimeMinutes">
+              <small class="bkpHint">Corta la ejecución si supera este tiempo.</small>
+            </div>
+          </div>
+        </section>
+
+        <button class="bkpLinkButton technicalToggle" type="button" (click)="technicalOpen.set(!technicalOpen())">
+          <i class="pi" [ngClass]="technicalOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          {{ technicalOpen() ? 'Ocultar' : 'Mostrar' }} opciones avanzadas
+        </button>
+
+        <div class="bkpSoftBox" *ngIf="technicalOpen()">
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Verificar backup</label>
+              <select formControlName="verifyAfterBackup">
+                <option [ngValue]="true">Sí</option>
+                <option [ngValue]="false">No</option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Checksum</label>
+              <select formControlName="calculateChecksum">
+                <option [ngValue]="true">Sí</option>
+                <option [ngValue]="false">No</option>
+              </select>
+            </div>
+
+            <div class="bkpField full">
+              <label>Ruta temporal local opcional</label>
+              <input formControlName="localTempPath" placeholder="Vacío = tmp/klax-bkp">
+              <small class="bkpHint">Ruta donde KLAX genera el archivo antes de subirlo.</small>
+            </div>
+
+            <div class="bkpField full">
+              <label>Extra dump args opcional</label>
+              <input formControlName="extraDumpArgs">
+              <small class="bkpHint">Solo para usuarios técnicos. Puede cambiar el comando generado.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="bkpActions planFooter">
+          <button
+            class="bkpLinkButton danger"
+            type="button"
+            [disabled]="!selected()"
+            (click)="eliminar()">
+            Desactivar
+          </button>
+
+          <button
+            class="bkpLinkButton primary"
+            type="submit"
+            [disabled]="saving()">
+            <i class="pi pi-save"></i>
+            Guardar plan
+          </button>
+        </div>
+      </form>
+    </section>
+  </section>
+</div>

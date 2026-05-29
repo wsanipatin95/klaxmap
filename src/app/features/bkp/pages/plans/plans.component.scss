@@ -1,1 +1,320 @@
 @use '../shared-page';
+
+.plansPage {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  padding: .55rem .78rem .78rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.plansToolbar {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.plansPage .bkpInfoStrip {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.plansWorkbench {
+  grid-template-columns: minmax(17rem, 24rem) minmax(0, 1fr);
+  gap: .62rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.plansListPanel,
+.planFormPanel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.plansListPanel {
+  display: flex;
+  flex-direction: column;
+  padding: .68rem !important;
+}
+
+.plansScrollable {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.planFormPanel {
+  padding: .72rem !important;
+}
+
+.planForm {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.planFormHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .8rem;
+  padding-bottom: .48rem;
+  border-bottom: 1px solid #edf2f7;
+  flex: 0 0 auto;
+}
+
+.planFormHeader h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .95rem;
+  line-height: 1.15;
+}
+
+.planFormHeader p {
+  margin: .1rem 0 0;
+  color: #64748b;
+  font-size: .66rem;
+  line-height: 1.25;
+}
+
+.planBlock {
+  border: 1px solid #e2e8f0;
+  border-radius: .88rem;
+  background: #ffffff;
+  padding: .68rem;
+  display: grid;
+  gap: .58rem;
+}
+
+.planBlock__head {
+  display: flex;
+  align-items: flex-start;
+  gap: .52rem;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: .45rem;
+}
+
+.planStep {
+  width: 1.42rem;
+  height: 1.42rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdf2f8;
+  color: #9f006d;
+  border: 1px solid #f5c2e0;
+  font-size: .68rem;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.planBlock__head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .84rem;
+  line-height: 1.15;
+}
+
+.planBlock__head p {
+  margin: .08rem 0 0;
+  color: #64748b;
+  font-size: .63rem;
+  line-height: 1.2;
+}
+
+.destinationsBox {
+  border: 1px dashed #dbe3ef;
+  border-radius: .78rem;
+  padding: .58rem;
+  display: grid;
+  gap: .5rem;
+  background: #f8fafc;
+}
+
+.destinationsBox__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.destinationsBox__head strong {
+  display: block;
+  color: #0f172a;
+  font-size: .72rem;
+}
+
+.destinationsBox__head small {
+  color: #64748b;
+  font-size: .62rem;
+}
+
+.destinationChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4rem;
+}
+
+.destinationChoice {
+  display: flex;
+  align-items: flex-start;
+  gap: .45rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .72rem;
+  background: #ffffff;
+  padding: .48rem .55rem;
+  cursor: pointer;
+  transition: .14s ease;
+}
+
+.destinationChoice.active {
+  border-color: #9f006d;
+  background: #fdf2f8;
+  box-shadow: inset 0 0 0 1px #9f006d;
+}
+
+.destinationChoice input {
+  margin-top: .15rem;
+}
+
+.destinationChoice strong {
+  display: block;
+  color: #0f172a;
+  font-size: .66rem;
+  line-height: 1.12;
+}
+
+.destinationChoice small {
+  display: block;
+  margin-top: .08rem;
+  color: #64748b;
+  font-size: .58rem;
+  line-height: 1.12;
+}
+
+.partialScope {
+  display: grid;
+  gap: .5rem;
+  border: 1px dashed #dbe3ef;
+  border-radius: .78rem;
+  background: #f8fafc;
+  padding: .58rem;
+}
+
+.partialScope__head strong {
+  display: block;
+  color: #0f172a;
+  font-size: .72rem;
+}
+
+.partialScope__head small {
+  color: #64748b;
+  font-size: .62rem;
+}
+
+.bkpFormGrid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tableFilterList {
+  display: grid;
+  gap: .35rem;
+}
+
+.tableFilterItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .68rem;
+  background: #ffffff;
+  padding: .42rem .5rem;
+}
+
+.tableFilterItem strong {
+  display: block;
+  color: #0f172a;
+  font-size: .66rem;
+}
+
+.tableFilterItem small {
+  display: block;
+  color: #64748b;
+  font-size: .58rem;
+}
+
+.bkpIconButton {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  border-radius: .58rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  cursor: pointer;
+}
+
+.bkpIconButton:hover {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.technicalToggle {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.planFooter {
+  border-top: 1px solid #edf2f7;
+  padding-top: .62rem;
+  margin-top: .1rem;
+}
+
+@media (max-width: 1100px) {
+  .plansPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .plansWorkbench {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .plansListPanel,
+  .planFormPanel,
+  .planForm,
+  .plansScrollable {
+    overflow: visible;
+    height: auto;
+  }
+
+  .destinationChoices,
+  .bkpFormGrid.compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .plansPage {
+    padding: .45rem;
+  }
+
+  .planFormHeader {
+    display: grid;
+  }
+}
