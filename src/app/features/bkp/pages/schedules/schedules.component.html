@@ -1,1 +1,289 @@
-<p-confirmDialog></p-confirmDialog><div class="bkpPageShell"><app-bkp-page-header eyebrow="Automatización" title="Horarios" subtitle="Frecuencias automáticas para planes de backup."><button pButton type="button" severity="secondary" [text]="true" icon="pi pi-refresh" label="Recargar" [loading]="loading()" (click)="cargar()"></button><button pButton type="button" icon="pi pi-plus" label="Nuevo" (click)="nuevo()"></button></app-bkp-page-header><section class="bkpToolbar"><div class="bkpSearchBox"><i class="pi pi-search"></i><input [value]="q()" (input)="q.set($any($event.target).value)" placeholder="Buscar horario..." (keyup.enter)="cargar()"></div><button pButton type="button" label="Buscar" icon="pi pi-search" (click)="cargar()"></button></section><section class="bkpInfoStrip" *ngIf="loading()||saving()||dirty()||error()||success()"><span class="bkpNotice info" *ngIf="loading()">Cargando</span><span class="bkpNotice info" *ngIf="saving()">Guardando</span><span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span><span class="bkpNotice danger" *ngIf="error()">{{error()}}</span><span class="bkpNotice success" *ngIf="success()">{{success()}}</span></section><section class="bkpWorkbench"><aside class="bkpPanel pad"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>Horarios</h3><p>{{items().length}} registro(s)</p></div></div><div class="bkpList" *ngIf="items().length;else empty"><button class="bkpRow" type="button" *ngFor="let i of items()" [class.active]="selected()?.idBkpSchedule===i.idBkpSchedule" (click)="seleccionar(i)"><span><strong>{{i.nombre}}</strong><small>{{i.tipoSchedule}} · {{i.timezone}}</small></span><span class="bkpBadge" [class.ok]="i.activo!==false">{{i.activo===false?'Inactivo':'Activo'}}</span></button></div><ng-template #empty><app-bkp-empty-state icon="pi pi-clock" title="Sin horarios" subtitle="Puedes ejecutar manualmente, pero un horario permite automatizar."></app-bkp-empty-state></ng-template></aside><section class="bkpPanel pad"><form class="bkpForm" [formGroup]="form" (ngSubmit)="guardar()"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>{{selected()?'Editar horario':'Nuevo horario'}}</h3><p>Configura frecuencia y zona horaria.</p></div></div><div class="bkpFormGrid"><div class="bkpField"><label>Nombre *</label><input formControlName="nombre"></div><div class="bkpField"><label>Tipo *</label><select formControlName="tipoSchedule"><option *ngFor="let t of scheduleTypes()" [value]="t">{{t}}</option></select></div><div class="bkpField full" *ngIf="form.value.tipoSchedule==='CRON'"><label>Cron *</label><input formControlName="cronExpression"></div><div class="bkpField" *ngIf="form.value.tipoSchedule==='INTERVAL'"><label>Intervalo minutos *</label><input type="number" formControlName="intervalMinutes"></div><div class="bkpField"><label>Hora</label><input type="number" formControlName="hora"></div><div class="bkpField"><label>Minuto</label><input type="number" formControlName="minuto"></div><div class="bkpField" *ngIf="form.value.tipoSchedule==='WEEKLY'"><label>Días semana</label><input formControlName="diasSemana"></div><div class="bkpField" *ngIf="form.value.tipoSchedule==='MONTHLY'"><label>Día mes</label><input type="number" formControlName="diaMes"></div><div class="bkpField"><label>Timezone *</label><input formControlName="timezone"></div><div class="bkpField"><label>Estado</label><select formControlName="activo"><option [ngValue]="true">Activo</option><option [ngValue]="false">Inactivo</option></select></div></div><div class="bkpActions"><button pButton type="button" severity="danger" [outlined]="true" label="Desactivar" [disabled]="!selected()" (click)="eliminar()"></button><button pButton type="submit" icon="pi pi-save" label="Guardar horario" [loading]="saving()"></button></div></form></section></section></div>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="bkpPageShell schedulesPage">
+  <app-bkp-page-header
+    eyebrow="Automatización"
+    title="Horarios"
+    subtitle="Frecuencias automáticas para planes de backup.">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-arrow-left"
+      label="Volver"
+      (click)="volverDashboard()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      icon="pi pi-refresh"
+      label="Recargar"
+      [loading]="loading()"
+      (click)="cargar()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-plus"
+      label="Nuevo horario"
+      (click)="nuevo()">
+    </button>
+  </app-bkp-page-header>
+
+  <section class="bkpToolbar schedulesToolbar">
+    <div class="bkpSearchBox">
+      <i class="pi pi-search"></i>
+      <input
+        [value]="q()"
+        (input)="q.set($any($event.target).value)"
+        placeholder="Buscar horario..."
+        (keyup.enter)="cargar()">
+    </div>
+
+    <button
+      pButton
+      type="button"
+      label="Buscar"
+      icon="pi pi-search"
+      (click)="cargar()">
+    </button>
+  </section>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || saving() || dirty() || error() || success()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando</span>
+    <span class="bkpNotice info" *ngIf="saving()">Guardando</span>
+    <span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+    <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
+  </section>
+
+  <section class="bkpWorkbench schedulesWorkbench">
+    <aside class="bkpPanel pad schedulesListPanel">
+      <div class="bkpPanelHeader">
+        <div class="bkpPanelTitle">
+          <h3>Horarios</h3>
+          <p>{{ items().length }} registro(s)</p>
+        </div>
+      </div>
+
+      <div class="bkpList schedulesScrollable" *ngIf="items().length; else empty">
+        <button
+          class="bkpRow"
+          type="button"
+          *ngFor="let i of items()"
+          [class.active]="selected()?.idBkpSchedule===i.idBkpSchedule"
+          (click)="seleccionar(i)">
+          <span>
+            <strong>{{ i.nombre }}</strong>
+            <small>{{ scheduleLabel(i.tipoSchedule) }} · {{ scheduleSummary(i) }}</small>
+          </span>
+
+          <span class="bkpBadge" [class.ok]="i.activo!==false">
+            {{ i.activo===false ? 'Inactivo' : 'Activo' }}
+          </span>
+        </button>
+      </div>
+
+      <ng-template #empty>
+        <app-bkp-empty-state
+          icon="pi pi-clock"
+          title="Sin horarios"
+          subtitle="Puedes ejecutar manualmente, pero un horario permite automatizar.">
+        </app-bkp-empty-state>
+      </ng-template>
+    </aside>
+
+    <section class="bkpPanel pad scheduleFormPanel">
+      <form class="bkpForm scheduleForm" [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="scheduleFormHeader">
+          <div>
+            <h3>{{ selected() ? 'Editar horario' : 'Nuevo horario' }}</h3>
+            <p>{{ typeHint() }}</p>
+          </div>
+
+          <span class="bkpChip warning">* obligatorio</span>
+        </div>
+
+        <div class="bkpSoftBox">
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Nombre *</label>
+              <input formControlName="nombre" placeholder="Ej. Diario 02:00">
+              <small class="bkpHint">Nombre interno para reconocer el horario.</small>
+              <span class="bkpError" *ngIf="invalid('nombre')">Requerido.</span>
+            </div>
+
+            <div class="bkpField">
+              <label>Tipo *</label>
+              <select formControlName="tipoSchedule">
+                <option *ngFor="let t of scheduleTypes()" [value]="t">
+                  {{ scheduleLabel(t) }}
+                </option>
+              </select>
+              <small class="bkpHint">Cada tipo muestra solo los campos necesarios.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Timezone *</label>
+              <input formControlName="timezone" placeholder="America/Guayaquil">
+              <small class="bkpHint">Zona horaria usada para evaluar el horario.</small>
+              <span class="bkpError" *ngIf="invalid('timezone')">Requerido.</span>
+            </div>
+
+            <div class="bkpField">
+              <label>Estado</label>
+              <select formControlName="activo">
+                <option [ngValue]="true">Activo</option>
+                <option [ngValue]="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <section class="scheduleBlock" *ngIf="isHourly()">
+          <div class="scheduleBlock__head">
+            <h4>Cada hora</h4>
+            <p>Se ejecuta todos los horarios en el minuto indicado.</p>
+          </div>
+
+          <div class="bkpFormGrid compact">
+            <div class="bkpField">
+              <label>Minuto *</label>
+              <input type="number" formControlName="minuto" min="0" max="59">
+              <small class="bkpHint">Ej. 15 = 00:15, 01:15, 02:15...</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="scheduleBlock" *ngIf="isDaily()">
+          <div class="scheduleBlock__head">
+            <h4>Diario</h4>
+            <p>Se ejecuta todos los días a la hora seleccionada.</p>
+          </div>
+
+          <div class="bkpFormGrid compact">
+            <div class="bkpField">
+              <label>Hora *</label>
+              <input type="number" formControlName="hora" min="0" max="23">
+            </div>
+
+            <div class="bkpField">
+              <label>Minuto *</label>
+              <input type="number" formControlName="minuto" min="0" max="59">
+            </div>
+          </div>
+        </section>
+
+        <section class="scheduleBlock" *ngIf="isWeekly()">
+          <div class="scheduleBlock__head">
+            <h4>Semanal</h4>
+            <p>Se ejecuta en los días marcados a una hora fija.</p>
+          </div>
+
+          <div class="weekSelector">
+            <button
+              type="button"
+              class="weekDay"
+              *ngFor="let d of weekDays"
+              [class.active]="daySelected(d.value)"
+              (click)="toggleDay(d.value)">
+              {{ d.short }}
+            </button>
+          </div>
+
+          <div class="bkpFormGrid compact">
+            <div class="bkpField">
+              <label>Hora *</label>
+              <input type="number" formControlName="hora" min="0" max="23">
+            </div>
+
+            <div class="bkpField">
+              <label>Minuto *</label>
+              <input type="number" formControlName="minuto" min="0" max="59">
+            </div>
+          </div>
+        </section>
+
+        <section class="scheduleBlock" *ngIf="isMonthly()">
+          <div class="scheduleBlock__head">
+            <h4>Mensual</h4>
+            <p>Se ejecuta cada mes en el día y hora seleccionados.</p>
+          </div>
+
+          <div class="bkpFormGrid compact">
+            <div class="bkpField">
+              <label>Día del mes *</label>
+              <input type="number" formControlName="diaMes" min="1" max="31">
+              <small class="bkpHint">Si el mes no tiene ese día, no se ejecutará ese mes.</small>
+            </div>
+
+            <div class="bkpField">
+              <label>Hora *</label>
+              <input type="number" formControlName="hora" min="0" max="23">
+            </div>
+
+            <div class="bkpField">
+              <label>Minuto *</label>
+              <input type="number" formControlName="minuto" min="0" max="59">
+            </div>
+          </div>
+        </section>
+
+        <section class="scheduleBlock" *ngIf="isInterval()">
+          <div class="scheduleBlock__head">
+            <h4>Cada intervalo</h4>
+            <p>Úsalo para pruebas o ejecuciones frecuentes. El backend evita duplicados por ventana.</p>
+          </div>
+
+          <div class="bkpFormGrid compact">
+            <div class="bkpField">
+              <label>Intervalo minutos *</label>
+              <input type="number" formControlName="intervalMinutes" min="1">
+              <small class="bkpHint">Ej. 60 = cada hora, 1440 = cada día.</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="scheduleBlock" *ngIf="isCron()">
+          <div class="scheduleBlock__head">
+            <h4>Cron avanzado</h4>
+            <p>Acepta cron de 5 campos o 6 campos con segundos al inicio.</p>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField full">
+              <label>Expresión cron *</label>
+              <input formControlName="cronExpression" placeholder="0 2 * * *">
+              <small class="bkpHint">Ej. 0 2 * * * = todos los días 02:00.</small>
+            </div>
+          </div>
+        </section>
+
+        <div class="bkpActions scheduleFooter">
+          <button
+            pButton
+            type="button"
+            severity="danger"
+            [outlined]="true"
+            label="Desactivar"
+            [disabled]="!selected()"
+            (click)="eliminar()">
+          </button>
+
+          <button
+            pButton
+            type="submit"
+            icon="pi pi-save"
+            label="Guardar horario"
+            [loading]="saving()">
+          </button>
+        </div>
+      </form>
+    </section>
+  </section>
+</div>
