@@ -1,1 +1,159 @@
 @use '../shared-page';
+
+.runsPage {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  padding: .55rem .78rem .78rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.runsToolbar {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.runsPage .bkpInfoStrip {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.runsWorkbench {
+  grid-template-columns: minmax(18rem, 25rem) minmax(0, 1fr);
+  gap: .62rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.runsListPanel,
+.runDetailPanel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.runsListPanel {
+  display: flex;
+  flex-direction: column;
+  padding: .68rem !important;
+}
+
+.runsScrollable {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.runRow {
+  align-items: flex-start;
+}
+
+.runRow small + small {
+  margin-top: .1rem;
+}
+
+.runDetailPanel {
+  padding: .72rem !important;
+}
+
+.runDetailScroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+.runSection {
+  border: 1px solid #e2e8f0;
+  border-radius: .86rem;
+  background: #ffffff;
+  padding: .62rem;
+  display: grid;
+  gap: .5rem;
+}
+
+.runSection__head {
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: .38rem;
+}
+
+.runSection__head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: .82rem;
+  line-height: 1.12;
+}
+
+.runSection__head p {
+  margin: .08rem 0 0;
+  color: #64748b;
+  font-size: .62rem;
+  line-height: 1.2;
+}
+
+.runKeyValue {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.runKeyValue .wide {
+  grid-column: 1 / -1;
+}
+
+.errorBlock {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
+.errorBlock pre {
+  margin: 0;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: .7rem;
+  padding: .65rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: .68rem;
+}
+
+@media (max-width: 1100px) {
+  .runsPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .runsWorkbench {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .runsListPanel,
+  .runDetailPanel,
+  .runDetailScroll,
+  .runsScrollable {
+    overflow: visible;
+    height: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .runsPage {
+    padding: .45rem;
+  }
+
+  .runKeyValue {
+    grid-template-columns: 1fr;
+  }
+}

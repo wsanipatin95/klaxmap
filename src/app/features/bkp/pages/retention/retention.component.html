@@ -1,11 +1,163 @@
 <p-confirmDialog></p-confirmDialog>
-<div class="bkpPage">
-  <app-bkp-page-header title="Retención" subtitle="Limpieza de backups locales vencidos y registro de lifecycle remoto.">
-    <button pButton type="button" label="Actualizar" icon="pi pi-refresh" [loading]="loading()" (click)="cargar()"></button>
-    <button pButton type="button" label="Ejecutar todos" icon="pi pi-trash" severity="danger" [loading]="running()" (click)="ejecutarTodos()"></button>
+
+<div class="bkpPageShell retentionPage">
+  <app-bkp-page-header
+    eyebrow="Retención"
+    title="Retención"
+    subtitle="Limpieza local y registro de lifecycle remoto.">
+    <button class="bkpLinkButton" type="button" (click)="volverDashboard()">
+      <i class="pi pi-arrow-left"></i>
+      Volver
+    </button>
+
+    <button class="bkpLinkButton" type="button" [disabled]="loading()" (click)="cargar()">
+      <i class="pi pi-refresh"></i>
+      Actualizar
+    </button>
+
+    <button class="bkpLinkButton danger" type="button" [disabled]="running()" (click)="ejecutarTodos()">
+      <i class="pi pi-trash"></i>
+      Ejecutar todos
+    </button>
   </app-bkp-page-header>
-  <div class="grid">
-    <div class="panel"><h3>Destinos activos</h3><div class="list"><button class="row" type="button" *ngFor="let d of destinations()" (click)="ejecutarDestino(d)"><strong>{{ d.nombre }}</strong><span>{{ d.tipoStorage }} · {{ d.retentionDays }} días · {{ d.basePath || d.bucketName || d.folderId || '-' }}</span></button></div></div>
-    <div class="panel"><h3>Ejecuciones</h3><div class="tableWrap"><table><thead><tr><th>ID</th><th>Destino</th><th>Estado</th><th>Escaneados</th><th>Eliminados</th><th>Bytes</th><th>Fin</th></tr></thead><tbody><tr *ngFor="let r of runs()" (click)="selected.set(r)"><td>{{ r.idBkpRetentionRun }}</td><td>{{ destinoLabel(r.idBkpStorageDestinationFk) }}</td><td><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge></td><td>{{ r.filesScanned || 0 }}</td><td>{{ r.filesDeleted || 0 }}</td><td>{{ fmtBytes(r.bytesDeleted) }}</td><td>{{ fmtDate(r.finishedAt) }}</td></tr></tbody></table></div><pre *ngIf="selected()">{{ jsonPretty(selected()) }}</pre></div>
-  </div>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || running() || error() || success()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando</span>
+    <span class="bkpNotice info" *ngIf="running()">Ejecutando retención</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+    <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
+  </section>
+
+  <section class="bkpWorkbench retentionWorkbench">
+    <aside class="bkpPanel pad retentionDestPanel">
+      <div class="bkpPanelHeader">
+        <div class="bkpPanelTitle">
+          <h3>Destinos activos</h3>
+          <p>{{ destinations().length }} destino(s)</p>
+        </div>
+      </div>
+
+      <div class="retentionDestList" *ngIf="destinations().length; else noDestinations">
+        <button class="retentionDest" type="button" *ngFor="let d of destinations()" (click)="ejecutarDestino(d)">
+          <span class="retentionDest__icon" [class.remote]="!isLocal(d)">
+            <i class="pi" [ngClass]="isLocal(d) ? 'pi-folder' : 'pi-cloud'"></i>
+          </span>
+
+          <span class="retentionDest__copy">
+            <strong>{{ d.nombre }}</strong>
+            <small>{{ labelStorageType(d.tipoStorage) }} · {{ retentionLabel(d) }}</small>
+            <small>{{ destinationPath(d) }}</small>
+            <em>{{ retentionMode(d) }}</em>
+          </span>
+
+          <i class="pi pi-play"></i>
+        </button>
+      </div>
+
+      <ng-template #noDestinations>
+        <app-bkp-empty-state
+          icon="pi pi-cloud-upload"
+          title="Sin destinos activos"
+          subtitle="Primero configura un destino para poder aplicar retención.">
+        </app-bkp-empty-state>
+      </ng-template>
+    </aside>
+
+    <section class="bkpPanel pad retentionRunsPanel">
+      <div class="retentionRunsScroll">
+        <div class="bkpPanelHeader">
+          <div class="bkpPanelTitle">
+            <h3>Ejecuciones</h3>
+            <p>Resultado de cada limpieza o revisión.</p>
+          </div>
+        </div>
+
+        <div class="bkpTableWrap" *ngIf="runs().length; else noRuns">
+          <table class="bkpTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Destino</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Escaneados</th>
+                <th>Eliminados</th>
+                <th>Bytes</th>
+                <th>Fin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let r of runs()"
+                [class.active]="selected()?.idBkpRetentionRun===r.idBkpRetentionRun"
+                (click)="seleccionarRun(r)">
+                <td>{{ r.idBkpRetentionRun }}</td>
+                <td>{{ destinoLabel(r.idBkpStorageDestinationFk) }}</td>
+                <td>{{ labelStorageType(destinoTipo(r.idBkpStorageDestinationFk)) }}</td>
+                <td><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge></td>
+                <td>{{ r.filesScanned || 0 }}</td>
+                <td>{{ r.filesDeleted || 0 }}</td>
+                <td>{{ fmtBytes(r.bytesDeleted) }}</td>
+                <td>{{ fmtDate(r.finishedAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #noRuns>
+          <app-bkp-empty-state
+            icon="pi pi-trash"
+            title="Sin ejecuciones de retención"
+            subtitle="Ejecuta un destino o todos para ver resultados.">
+          </app-bkp-empty-state>
+        </ng-template>
+
+        <section class="retentionDetail" *ngIf="selected() as r">
+          <div class="retentionDetail__head">
+            <h4>Detalle #{{ r.idBkpRetentionRun }}</h4>
+            <app-bkp-status-badge [status]="r.status"></app-bkp-status-badge>
+          </div>
+
+          <div class="bkpKeyValue">
+            <div>
+              <small>Destino</small>
+              <strong>{{ destinoLabel(r.idBkpStorageDestinationFk) }}</strong>
+            </div>
+
+            <div>
+              <small>Retención usada</small>
+              <strong>{{ r.retentionDays ?? 30 }} día(s)</strong>
+            </div>
+
+            <div>
+              <small>Escaneados</small>
+              <span>{{ r.filesScanned || 0 }}</span>
+            </div>
+
+            <div>
+              <small>Eliminados</small>
+              <span>{{ r.filesDeleted || 0 }}</span>
+            </div>
+
+            <div>
+              <small>Bytes eliminados</small>
+              <span>{{ fmtBytes(r.bytesDeleted) }}</span>
+            </div>
+
+            <div>
+              <small>Fin</small>
+              <span>{{ fmtDate(r.finishedAt) }}</span>
+            </div>
+
+            <div class="wide" *ngIf="r.errorMessage">
+              <small>Error</small>
+              <span>{{ r.errorMessage }}</span>
+            </div>
+          </div>
+
+          <pre *ngIf="selectedMetadata()">{{ selectedMetadata() }}</pre>
+        </section>
+      </div>
+    </section>
+  </section>
 </div>

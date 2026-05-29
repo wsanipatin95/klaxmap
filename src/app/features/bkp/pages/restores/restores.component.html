@@ -1,30 +1,226 @@
 <p-confirmDialog></p-confirmDialog>
-<div class="bkpPage">
-  <app-bkp-page-header title="Restauraciones" subtitle="TEST, DRILL y REAL con confirmación fuerte.">
-    <button pButton type="button" label="Nuevo" icon="pi pi-plus" (click)="nuevo()"></button>
-    <button pButton type="button" label="Actualizar" icon="pi pi-refresh" [loading]="loading()" (click)="cargar()"></button>
+
+<div class="bkpPageShell restoresPage">
+  <app-bkp-page-header
+    eyebrow="Restauración"
+    title="Restauraciones"
+    subtitle="TEST, DRILL y REAL con confirmación fuerte.">
+    <button class="bkpLinkButton" type="button" (click)="volverDashboard()">
+      <i class="pi pi-arrow-left"></i>
+      Volver
+    </button>
+
+    <button class="bkpLinkButton" type="button" (click)="nuevo()">
+      <i class="pi pi-plus"></i>
+      Nuevo
+    </button>
+
+    <button class="bkpLinkButton primary" type="button" [disabled]="loading()" (click)="cargar()">
+      <i class="pi pi-refresh"></i>
+      Actualizar
+    </button>
   </app-bkp-page-header>
-  <div class="grid">
-    <div class="panel list">
-      <button class="row" type="button" *ngFor="let r of restores()" [class.active]="selected()?.idBkpRestoreRun===r.idBkpRestoreRun" (click)="seleccionar(r)">
-        <strong>#{{ r.idBkpRestoreRun }} · {{ r.restoreType }}</strong><span><app-bkp-status-badge [status]="r.status"></app-bkp-status-badge> {{ r.targetDatabase || '-' }} · {{ fmtDate(r.finishedAt || r.startedAt) }}</span>
-      </button>
-    </div>
-    <form class="panel" [formGroup]="form">
-      <h3>Solicitud</h3>
-      <div class="formGrid">
-        <div class="field full"><label>Run exitoso *</label><select formControlName="idBkpRun"><option [ngValue]="null">Seleccione...</option><option *ngFor="let r of runs()" [ngValue]="r.idBkpRun">{{ runLabel(r.idBkpRun) }}</option></select></div>
-        <div class="field"><label>Agente</label><select formControlName="idBkpAgentNode"><option [ngValue]="null">Usar agente del run</option><option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">{{ a.nombre }}</option></select></div>
-        <div class="field"><label>Tipo *</label><select formControlName="restoreType"><option value="TEST">TEST</option><option value="DRILL">DRILL</option><option value="REAL">REAL</option></select></div>
-        <div class="field"><label>Host destino</label><input formControlName="targetHost"></div><div class="field"><label>Puerto</label><input type="number" formControlName="targetPort"></div>
-        <div class="field"><label>Base destino *</label><input formControlName="targetDatabase"></div><div class="field"><label>Schema</label><input formControlName="targetSchema"></div>
-        <div class="field"><label>Usuario</label><input formControlName="targetUsuario"></div><div class="field"><label>Secreto password</label><select formControlName="idBkpSecretPassword"><option [ngValue]="null">Usar origen</option><option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">{{ s.nombre }} · {{ s.tipoSecret }}</option></select></div>
-        <div class="field"><label>Clean before</label><select formControlName="cleanBeforeRestore"><option [ngValue]="false">No</option><option [ngValue]="true">Sí</option></select></div>
-        <div class="field full"><label>Extra args</label><input formControlName="extraRestoreArgs"></div>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || saving() || dirty() || error() || success()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando</span>
+    <span class="bkpNotice info" *ngIf="saving()">Procesando</span>
+    <span class="bkpNotice warn" *ngIf="dirty()">Cambios pendientes</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+    <span class="bkpNotice success" *ngIf="success()">{{ success() }}</span>
+  </section>
+
+  <section class="bkpWorkbench restoresWorkbench">
+    <aside class="bkpPanel pad restoreListPanel">
+      <div class="bkpPanelHeader">
+        <div class="bkpPanelTitle">
+          <h3>Historial restore</h3>
+          <p>{{ restores().length }} registro(s)</p>
+        </div>
       </div>
-      <p class="hint" *ngIf="form.value.restoreType==='REAL'">Para REAL se pedirá escribir RESTAURAR.</p>
-      <div class="actions"><button pButton type="button" label="Registrar" (click)="registrar()" [loading]="saving()"></button><button pButton type="button" label="Ejecutar ahora" severity="danger" (click)="ejecutar()" [loading]="saving()"></button><button pButton type="button" label="Ejecutar registrado" [disabled]="!selected()" (click)="ejecutarRegistrado()"></button></div>
-      <pre *ngIf="selected()">{{ jsonPretty(selected()) }}</pre>
-    </form>
-  </div>
+
+      <div class="bkpList restoresScrollable" *ngIf="restores().length; else emptyRestores">
+        <button
+          class="bkpRow restoreRow"
+          type="button"
+          *ngFor="let r of restores()"
+          [class.active]="selected()?.idBkpRestoreRun===r.idBkpRestoreRun"
+          (click)="seleccionar(r)">
+          <span>
+            <strong>#{{ r.idBkpRestoreRun }} · {{ r.restoreType }}</strong>
+            <small>{{ r.targetDatabase || '-' }} · {{ fmtDate(r.finishedAt || r.startedAt) }}</small>
+          </span>
+
+          <app-bkp-status-badge [status]="r.status"></app-bkp-status-badge>
+        </button>
+      </div>
+
+      <ng-template #emptyRestores>
+        <app-bkp-empty-state
+          icon="pi pi-replay"
+          title="Sin restauraciones"
+          subtitle="Registra o ejecuta un restore desde un run exitoso.">
+        </app-bkp-empty-state>
+      </ng-template>
+    </aside>
+
+    <section class="bkpPanel pad restoreFormPanel">
+      <form class="restoreForm" [formGroup]="form">
+        <div class="restoreFormHeader">
+          <div>
+            <h3>Solicitud de restore</h3>
+            <p>{{ restoreTypeHint() || 'Selecciona un run exitoso y una base destino.' }}</p>
+          </div>
+
+          <span class="bkpChip warning">* obligatorio</span>
+        </div>
+
+        <section class="restoreBlock">
+          <div class="restoreBlock__head">
+            <span class="restoreStep">1</span>
+            <div>
+              <h4>Run origen</h4>
+              <p>Solo se listan ejecuciones SUCCESS porque tienen archivo válido.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField full">
+              <label>Run exitoso *</label>
+              <select formControlName="idBkpRun">
+                <option [ngValue]="null">Seleccione...</option>
+                <option *ngFor="let r of runs()" [ngValue]="r.idBkpRun">
+                  {{ runLabel(r.idBkpRun) }}
+                </option>
+              </select>
+              <small class="bkpHint" *ngIf="selectedRun() as r">
+                {{ r.sourceNombre }} · {{ r.fileName || 'archivo backup' }}
+              </small>
+              <span class="bkpError" *ngIf="invalid('idBkpRun')">Requerido.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="restoreBlock">
+          <div class="restoreBlock__head">
+            <span class="restoreStep">2</span>
+            <div>
+              <h4>Tipo de restore</h4>
+              <p>TEST y DRILL son validación; REAL requiere confirmación fuerte.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Tipo *</label>
+              <select formControlName="restoreType">
+                <option *ngFor="let t of restoreTypes" [value]="t.value">{{ t.label }}</option>
+              </select>
+            </div>
+
+            <div class="bkpField">
+              <label>Agente</label>
+              <select formControlName="idBkpAgentNode">
+                <option [ngValue]="null">Usar agente del run</option>
+                <option *ngFor="let a of agents()" [ngValue]="a.idBkpAgentNode">
+                  {{ a.nombre }} · {{ a.osType }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bkpNotice danger" *ngIf="isRestoreType('REAL')">
+            Restore REAL puede sobrescribir datos. Se pedirá confirmación fuerte antes de ejecutar.
+          </div>
+        </section>
+
+        <section class="restoreBlock">
+          <div class="restoreBlock__head">
+            <span class="restoreStep">3</span>
+            <div>
+              <h4>Destino de restauración</h4>
+              <p>Indica dónde restaurar. Si host/puerto quedan vacíos, el backend usará valores del flujo/origen cuando aplique.</p>
+            </div>
+          </div>
+
+          <div class="bkpFormGrid">
+            <div class="bkpField">
+              <label>Base destino *</label>
+              <input formControlName="targetDatabase" placeholder="base_restore_test">
+              <span class="bkpError" *ngIf="invalid('targetDatabase')">Requerido.</span>
+            </div>
+
+            <div class="bkpField">
+              <label>Schema opcional</label>
+              <input formControlName="targetSchema" placeholder="public">
+            </div>
+
+            <div class="bkpField">
+              <label>Host destino opcional</label>
+              <input formControlName="targetHost" placeholder="Vacío = origen/defecto">
+            </div>
+
+            <div class="bkpField">
+              <label>Puerto opcional</label>
+              <input type="number" formControlName="targetPort" placeholder="5432">
+            </div>
+
+            <div class="bkpField">
+              <label>Usuario opcional</label>
+              <input formControlName="targetUsuario">
+            </div>
+
+            <div class="bkpField">
+              <label>Secreto password</label>
+              <select formControlName="idBkpSecretPassword">
+                <option [ngValue]="null">Usar origen</option>
+                <option *ngFor="let s of secrets()" [ngValue]="s.idBkpSecret">
+                  {{ s.nombre }} · {{ s.tipoSecret }}
+                </option>
+              </select>
+            </div>
+
+            <div class="bkpField" *ngIf="!isRestoreType('TEST')">
+              <label>Limpiar antes</label>
+              <select formControlName="cleanBeforeRestore">
+                <option [ngValue]="false">No</option>
+                <option [ngValue]="true">Sí</option>
+              </select>
+              <small class="bkpHint">Úsalo solo si la base destino debe quedar limpia.</small>
+            </div>
+          </div>
+        </section>
+
+        <button class="bkpLinkButton technicalToggle" type="button" (click)="technicalOpen.set(!technicalOpen())">
+          <i class="pi" [ngClass]="technicalOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          {{ technicalOpen() ? 'Ocultar' : 'Mostrar' }} opciones técnicas
+        </button>
+
+        <section class="bkpSoftBox" *ngIf="technicalOpen()">
+          <div class="bkpFormGrid">
+            <div class="bkpField full">
+              <label>Extra restore args opcional</label>
+              <input formControlName="extraRestoreArgs">
+              <small class="bkpHint">Solo para usuarios técnicos. Puede alterar el comando de restore.</small>
+            </div>
+          </div>
+
+          <pre *ngIf="selected()">{{ jsonPretty(selected()) }}</pre>
+        </section>
+
+        <div class="bkpActions restoreFooter">
+          <button class="bkpLinkButton" type="button" (click)="registrar()" [disabled]="saving()">
+            Registrar
+          </button>
+
+          <button class="bkpLinkButton danger" type="button" (click)="ejecutar()" [disabled]="saving()">
+            Ejecutar ahora
+          </button>
+
+          <button class="bkpLinkButton primary" type="button" [disabled]="!selected() || saving()" (click)="ejecutarRegistrado()">
+            Ejecutar registrado
+          </button>
+        </div>
+      </form>
+    </section>
+  </section>
 </div>

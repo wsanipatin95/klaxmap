@@ -1,1 +1,214 @@
-<div class="bkpPageShell"><app-bkp-page-header eyebrow="Ejecuciones" title="Ejecuciones" subtitle="Dumps, checksums, uploads y errores de cada backup."><button class="bkpLinkButton primary" type="button" (click)="cargar()">Actualizar</button></app-bkp-page-header><section class="bkpToolbar"><div class="bkpSearchBox"><i class="pi pi-search"></i><input [ngModel]="q()" (ngModelChange)="q.set($event)" placeholder="Buscar ejecución..."></div><select [ngModel]="status()" (ngModelChange)="status.set($event || null)"><option *ngFor="let s of statuses" [ngValue]="s || null">{{s || 'Todos los estados'}}</option></select><button class="bkpLinkButton primary" type="button" (click)="cargar()">Buscar</button></section><section class="bkpInfoStrip" *ngIf="loading()||error()"><span class="bkpNotice info" *ngIf="loading()">Cargando</span><span class="bkpNotice danger" *ngIf="error()">{{error()}}</span></section><ng-container *ngIf="items().length;else emptyRuns"><section class="bkpWorkbench"><aside class="bkpPanel pad"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>Historial</h3><p>{{items().length}} ejecución(es)</p></div></div><div class="bkpList"><button class="bkpRow" type="button" *ngFor="let i of items()" [class.active]="selected()?.idBkpRun===i.idBkpRun" (click)="seleccionar(i)"><span><strong>#{{i.idBkpRun}} · {{i.planNombre}}</strong><small>{{i.sourceNombre}} · {{fmtDate(i.startedAt)}} · {{fmtBytes(i.fileSizeBytes)}}</small></span><app-bkp-status-badge [status]="i.status"></app-bkp-status-badge></button></div></aside><section class="bkpPanel pad" *ngIf="detail() as d"><div class="bkpPanelHeader"><div class="bkpPanelTitle"><h3>Detalle ejecución #{{d.run.idBkpRun}}</h3><p>{{d.run.fileName || 'Sin archivo'}} · {{fmtBytes(d.run.fileSizeBytes)}}</p></div><app-bkp-status-badge [status]="d.run.status"></app-bkp-status-badge></div><div class="bkpKeyValue"><div><small>Inicio</small><strong>{{fmtDate(d.run.startedAt)}}</strong></div><div><small>Fin</small><strong>{{fmtDate(d.run.finishedAt)}}</strong></div><div><small>Archivo local</small><span>{{d.run.localFilePath || '-'}}</span></div><div><small>Checksum SHA256</small><span>{{d.run.checksumSha256 || '-'}}</span></div><div><small>Comando</small><span>{{d.run.commandPreview || '-'}}</span></div><div><small>Error</small><span>{{d.run.errorMessage || '-'}}</span></div></div><h4>Uploads</h4><div class="bkpTableWrap"><table class="bkpTable"><thead><tr><th>Destino</th><th>Estado</th><th>Ruta remota</th><th>Bytes</th><th>Error</th></tr></thead><tbody><tr *ngFor="let u of d.uploads"><td>{{u.idBkpStorageDestinationFk}}</td><td><app-bkp-status-badge [status]="u.status"></app-bkp-status-badge></td><td>{{u.remotePath || u.remoteUrl || '-'}}</td><td>{{fmtBytes(u.bytesUploaded)}}</td><td>{{u.errorMessage || '-'}}</td></tr></tbody></table></div><h4 *ngIf="d.run.errorDetail">Detalle error</h4><pre *ngIf="d.run.errorDetail">{{d.run.errorDetail}}</pre></section></section></ng-container><ng-template #emptyRuns><app-bkp-empty-state icon="pi pi-play-circle" title="Aún no hay ejecuciones" subtitle="Crea o ejecuta un plan para ver resultados aquí."><a class="bkpLinkButton primary" routerLink="/app/backups/plans">Ir a planes</a></app-bkp-empty-state></ng-template></div>
+<div class="bkpPageShell runsPage">
+  <app-bkp-page-header
+    eyebrow="Ejecuciones"
+    title="Ejecuciones"
+    subtitle="Dumps, checksums, uploads y errores de cada backup.">
+    <button class="bkpLinkButton" type="button" (click)="volverDashboard()">
+      <i class="pi pi-arrow-left"></i>
+      Volver
+    </button>
+
+    <button class="bkpLinkButton primary" type="button" [disabled]="loading()" (click)="cargar()">
+      <i class="pi pi-refresh"></i>
+      Actualizar
+    </button>
+  </app-bkp-page-header>
+
+  <section class="bkpToolbar runsToolbar">
+    <div class="bkpSearchBox">
+      <i class="pi pi-search"></i>
+      <input
+        [ngModel]="q()"
+        (ngModelChange)="q.set($event)"
+        placeholder="Buscar por plan, origen o archivo..."
+        (keyup.enter)="cargar()">
+    </div>
+
+    <select [ngModel]="status()" (ngModelChange)="status.set($event)">
+      <option *ngFor="let s of statuses" [ngValue]="s.value">{{ s.label }}</option>
+    </select>
+
+    <button class="bkpLinkButton primary" type="button" (click)="cargar()">
+      Buscar
+    </button>
+  </section>
+
+  <section class="bkpInfoStrip" *ngIf="loading() || detailLoading() || error()">
+    <span class="bkpNotice info" *ngIf="loading()">Cargando ejecuciones</span>
+    <span class="bkpNotice info" *ngIf="detailLoading()">Cargando detalle</span>
+    <span class="bkpNotice danger" *ngIf="error()">{{ error() }}</span>
+  </section>
+
+  <ng-container *ngIf="items().length; else emptyRuns">
+    <section class="bkpWorkbench runsWorkbench">
+      <aside class="bkpPanel pad runsListPanel">
+        <div class="bkpPanelHeader">
+          <div class="bkpPanelTitle">
+            <h3>Historial</h3>
+            <p>{{ items().length }} ejecución(es)</p>
+          </div>
+        </div>
+
+        <div class="bkpList runsScrollable">
+          <button
+            class="bkpRow runRow"
+            type="button"
+            *ngFor="let i of items()"
+            [class.active]="selected()?.idBkpRun===i.idBkpRun"
+            (click)="seleccionar(i)">
+            <span>
+              <strong>#{{ i.idBkpRun }} · {{ i.planNombre || ('Plan ' + i.idBkpPlanFk) }}</strong>
+              <small>{{ i.sourceNombre || 'Origen' }} · {{ fmtDate(i.startedAt || i.queuedAt) }}</small>
+              <small>{{ i.fileName || 'Sin archivo' }} · {{ fmtBytes(i.fileSizeBytes) }}</small>
+            </span>
+
+            <app-bkp-status-badge [status]="i.status"></app-bkp-status-badge>
+          </button>
+        </div>
+      </aside>
+
+      <section class="bkpPanel pad runDetailPanel" *ngIf="detail() as d">
+        <div class="runDetailScroll">
+          <div class="bkpPanelHeader">
+            <div class="bkpPanelTitle">
+              <h3>Detalle ejecución #{{ d.run.idBkpRun }}</h3>
+              <p>{{ d.run.fileName || 'Sin archivo final' }} · {{ fmtBytes(d.run.fileSizeBytes) }}</p>
+            </div>
+
+            <app-bkp-status-badge [status]="d.run.status"></app-bkp-status-badge>
+          </div>
+
+          <section class="runSection">
+            <div class="runSection__head">
+              <h4>Resumen</h4>
+              <p>Estado general del backup y tiempos principales.</p>
+            </div>
+
+            <div class="bkpKeyValue runKeyValue">
+              <div>
+                <small>Plan</small>
+                <strong>{{ d.run.planNombre || ('Plan ' + d.run.idBkpPlanFk) }}</strong>
+              </div>
+
+              <div>
+                <small>Origen</small>
+                <strong>{{ d.run.sourceNombre || '-' }}</strong>
+              </div>
+
+              <div>
+                <small>Inicio</small>
+                <strong>{{ fmtDate(d.run.startedAt || d.run.queuedAt) }}</strong>
+              </div>
+
+              <div>
+                <small>Fin</small>
+                <strong>{{ fmtDate(d.run.finishedAt) }}</strong>
+              </div>
+
+              <div>
+                <small>Trigger</small>
+                <span>{{ triggerLabel(d.run.triggerType) }}</span>
+              </div>
+
+              <div>
+                <small>Exit code</small>
+                <span>{{ d.run.exitCode ?? '-' }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="runSection" *ngIf="hasDumpInfo(d)">
+            <div class="runSection__head">
+              <h4>Archivo y comando</h4>
+              <p>Información generada por el dump, compresión, cifrado y checksum.</p>
+            </div>
+
+            <div class="bkpKeyValue runKeyValue">
+              <div class="wide">
+                <small>Archivo local</small>
+                <span>{{ d.run.localFilePath || '-' }}</span>
+              </div>
+
+              <div>
+                <small>Checksum SHA256</small>
+                <span>{{ d.run.checksumSha256 || '-' }}</span>
+              </div>
+
+              <div>
+                <small>Checksum MD5</small>
+                <span>{{ d.run.checksumMd5 || '-' }}</span>
+              </div>
+
+              <div class="wide">
+                <small>Comando</small>
+                <span>{{ d.run.commandPreview || '-' }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="runSection">
+            <div class="runSection__head">
+              <h4>Uploads</h4>
+              <p>Subidas realizadas a los destinos configurados en el plan.</p>
+            </div>
+
+            <div class="bkpTableWrap" *ngIf="d.uploads.length; else noUploads">
+              <table class="bkpTable">
+                <thead>
+                  <tr>
+                    <th>Destino</th>
+                    <th>Estado</th>
+                    <th>Ruta remota</th>
+                    <th>Bytes</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let u of d.uploads">
+                    <td>{{ u.idBkpStorageDestinationFk }}</td>
+                    <td><app-bkp-status-badge [status]="u.status"></app-bkp-status-badge></td>
+                    <td>{{ uploadTarget(u) }}</td>
+                    <td>{{ fmtBytes(u.bytesUploaded) }}</td>
+                    <td>{{ u.errorMessage || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ng-template #noUploads>
+              <div class="bkpNotice warn">Esta ejecución no tiene uploads registrados.</div>
+            </ng-template>
+          </section>
+
+          <section class="runSection errorBlock" *ngIf="hasError(d)">
+            <div class="runSection__head">
+              <h4>Error</h4>
+              <p>Detalles reportados por dump, upload o validación.</p>
+            </div>
+
+            <div class="bkpKeyValue">
+              <div class="wide">
+                <small>Mensaje</small>
+                <span>{{ d.run.errorMessage || '-' }}</span>
+              </div>
+            </div>
+
+            <pre *ngIf="d.run.errorDetail">{{ d.run.errorDetail }}</pre>
+          </section>
+        </div>
+      </section>
+    </section>
+  </ng-container>
+
+  <ng-template #emptyRuns>
+    <app-bkp-empty-state
+      icon="pi pi-play-circle"
+      title="Aún no hay ejecuciones"
+      subtitle="Crea o ejecuta un plan para ver resultados aquí."
+      [hasActions]="true">
+      <button class="bkpLinkButton primary" type="button" (click)="irPlanes()">
+        Ir a planes
+      </button>
+    </app-bkp-empty-state>
+  </ng-template>
+</div>

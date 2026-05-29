@@ -563,3 +563,66 @@
     height: 2.2rem;
   }
 }
+
+/* BKP dashboard final layout patch */
+.bkpDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: .58rem;
+  height: calc(100vh - 4.35rem);
+  min-height: 0;
+  padding: .55rem .78rem .78rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+.bkpDashboard > app-bkp-page-header,
+.bkpDashboard > .bkpNoticeStrip,
+.bkpDashboard > .setupHero,
+.bkpDashboard > .kpiRail {
+  flex: 0 0 auto;
+}
+
+.bkpDashboard .dashboardGrid {
+  flex: 0 0 auto;
+  align-items: stretch;
+}
+
+.bkpDashboard .setupChecklist,
+.bkpDashboard .dashboardSide,
+.bkpDashboard .alertPanel,
+.bkpDashboard .quickPanel {
+  min-height: 0;
+}
+
+.bkpDashboard .stepList,
+.bkpDashboard .alertList,
+.bkpDashboard .quickActionList,
+.bkpDashboard .bkpDenseList {
+  max-height: 24rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: .16rem;
+  scrollbar-gutter: stable;
+}
+
+.bkpDashboard .runsPanel {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .bkpDashboard {
+    height: auto;
+    overflow: visible;
+  }
+
+  .bkpDashboard .stepList,
+  .bkpDashboard .alertList,
+  .bkpDashboard .quickActionList,
+  .bkpDashboard .bkpDenseList {
+    max-height: none;
+    overflow: visible;
+  }
+}
