@@ -354,7 +354,7 @@ export class BkpPlansComponent implements OnInit {
       if (!id) {
         const payload: BkpPlanGuardarRequest = {
           ...base,
-          destinationIds: this.selectedDestIds(),
+          destinationIds: this.uniqueIds(this.selectedDestIds()),
           scope: this.buildScopePayload(v),
         };
 
@@ -374,7 +374,7 @@ export class BkpPlansComponent implements OnInit {
 
       this.repo.editarPlan(id, base as Record<string, unknown>).subscribe({
         next: () => {
-          this.repo.reemplazarPlanDestinations(id, this.selectedDestIds())
+          this.repo.reemplazarPlanDestinations(id, this.uniqueIds(this.selectedDestIds()))
             .pipe(finalize(() => this.saving.set(false)))
             .subscribe({
               next: r => {
@@ -553,6 +553,10 @@ export class BkpPlansComponent implements OnInit {
   labelCompression = labelCompression;
   labelSecretType = labelSecretType;
   labelScheduleType = labelScheduleType;
+
+  private uniqueIds(values: number[]): number[] {
+    return Array.from(new Set((values || []).filter((x): x is number => typeof x === 'number' && Number.isFinite(x))));
+  }
 
   private findPlan(id?: number | null, name?: string | null) {
     if (id) {
