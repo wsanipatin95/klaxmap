@@ -62,6 +62,8 @@ export class BkpPlansComponent implements OnInit {
   catalogs = signal<Partial<BkpCatalogs>>({});
   selected = signal<BkpPlan | null>(null);
   selectedDestIds = signal<number[]>([]);
+  lastSavedDestIds = signal<number[]>([]);
+  destinationsTouched = signal(false);
   tableFilters = signal<BkpPlanTableFilterRequest[]>([]);
 
   q = signal('');
@@ -205,6 +207,8 @@ export class BkpPlansComponent implements OnInit {
   nuevo() {
     this.selected.set(null);
     this.selectedDestIds.set([]);
+    this.lastSavedDestIds.set([]);
+    this.destinationsTouched.set(false);
     this.tableFilters.set([]);
     this.technicalOpen.set(false);
     this.scopeOpen.set(true);
@@ -295,7 +299,10 @@ export class BkpPlansComponent implements OnInit {
             .filter((x: any) => x.activo !== false)
             .map((x: any) => x.idBkpStorageDestinationFk);
 
-          this.selectedDestIds.set(this.uniqueIds(destinationIds));
+          const normalizedDestinationIds = this.uniqueIds(destinationIds);
+          this.selectedDestIds.set(normalizedDestinationIds);
+          this.lastSavedDestIds.set(normalizedDestinationIds);
+          this.destinationsTouched.set(false);
 
           this.ensureFormatAllowed();
           this.clean();
@@ -314,6 +321,7 @@ export class BkpPlansComponent implements OnInit {
     const set = new Set(this.uniqueIds(this.selectedDestIds()));
     checked ? set.add(normalizedId) : set.delete(normalizedId);
     this.selectedDestIds.set(this.uniqueIds([...set]));
+    this.destinationsTouched.set(true);
     this.dirty.set(true);
     this.error.set('');
   }
@@ -351,7 +359,8 @@ export class BkpPlansComponent implements OnInit {
 
     try {
       const v = this.form.getRawValue();
-      const base = this.buildBasePayload(v);
+      const destinationIds = this.destinationIdsForSave();
+      const base = this.buildBasePayload(v, destinationIds);
       const id = this.selected()?.idBkpPlan ?? 0;
       const state: PlanReloadState = {
         id: id || null,
@@ -363,7 +372,7 @@ export class BkpPlansComponent implements OnInit {
       if (!id) {
         const payload: BkpPlanGuardarRequest = {
           ...base,
-          destinationIds: this.uniqueIds(this.selectedDestIds()),
+          destinationIds,
           scope: this.buildScopePayload(v),
         };
 
@@ -382,13 +391,23 @@ export class BkpPlansComponent implements OnInit {
       }
 
       this.repo.editarPlan(id, base as Record<string, unknown>).subscribe({
-        next: () => {
-          this.repo.reemplazarPlanDestinations(id, this.uniqueIds(this.selectedDestIds()))
+        next: r => {
+          if (!this.destinationsTouched()) {
+            this.saving.set(false);
+            this.success.set(r.mensaje || 'Plan guardado');
+            this.dirty.set(false);
+            this.cargar(state);
+            return;
+          }
+
+          this.repo.reemplazarPlanDestinations(id, destinationIds)
             .pipe(finalize(() => this.saving.set(false)))
             .subscribe({
-              next: r => {
-                this.success.set(r.mensaje);
+              next: rr => {
+                this.success.set(rr.mensaje);
                 this.dirty.set(false);
+                this.destinationsTouched.set(false);
+                this.lastSavedDestIds.set(destinationIds);
                 this.cargar(state);
               },
               error: e => this.error.set(this.msg(e)),
@@ -403,6 +422,36 @@ export class BkpPlansComponent implements OnInit {
       this.saving.set(false);
       this.error.set(this.msg(e));
     }
+  }
+
+  ejecutarAhora() {
+    const id = this.selected()?.idBkpPlan;
+
+    if (!id) {
+      this.error.set('Guarda el plan antes de ejecutarlo.');
+      return;
+    }
+
+    if (this.dirty()) {
+      this.error.set('Guarda los cambios antes de ejecutar el backup.');
+      return;
+    }
+
+    if (!confirm('¿Ejecutar este backup ahora?')) return;
+
+    this.saving.set(true);
+    this.error.set('');
+    this.success.set('');
+
+    this.repo.ejecutarPlan(id)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: r => {
+          this.success.set(r.mensaje || 'Backup enviado a ejecución.');
+          this.router.navigateByUrl('/app/backups/runs');
+        },
+        error: e => this.error.set(this.msg(e)),
+      });
   }
 
   eliminar() {
@@ -423,7 +472,7 @@ export class BkpPlansComponent implements OnInit {
       });
   }
 
-  private buildBasePayload(v: any): Omit<BkpPlan, 'idBkpPlan'> {
+  private buildBasePayload(v: any, destinationIds: number[]): Omit<BkpPlan, 'idBkpPlan'> {
     const nombre = String(v.nombre || '').trim();
     const formato = String(v.formatoSalida || '').toUpperCase();
     const compressionEnabled = v.compressionEnabled !== false;
@@ -432,7 +481,7 @@ export class BkpPlansComponent implements OnInit {
     if (!nombre) throw new Error('Nombre es obligatorio.');
     if (!v.idBkpSourceDatabaseFk) throw new Error('Base origen es obligatoria.');
     if (!v.idBkpAgentNodeFk) throw new Error('Agente es obligatorio.');
-    if (!this.uniqueIds(this.selectedDestIds()).length) throw new Error('Selecciona al menos un destino.');
+    if (!destinationIds.length) throw new Error('Selecciona al menos un destino.');
     if (!this.formatos().includes(formato)) throw new Error('Formato no permitido para el motor seleccionado.');
     if (compressionEnabled && !this.compressionTypes().includes(String(v.compressionType || '').toUpperCase())) {
       throw new Error('Tipo de compresión no permitido.');
@@ -552,6 +601,12 @@ export class BkpPlansComponent implements OnInit {
     return this.scopeOptions.find((x: ScopeOption) => x.value === t)?.hint ?? '';
   }
 
+  scopeReadonlyText() {
+    return `Este plan respalda: ${this.scopeLabel(this.scopeType())}.`;
+  }
+
+
+
   canShowFormatHint() {
     return String(this.sourceMotor()).toUpperCase() === 'POSTGRESQL';
   }
@@ -563,8 +618,20 @@ export class BkpPlansComponent implements OnInit {
   labelSecretType = labelSecretType;
   labelScheduleType = labelScheduleType;
 
+  destinationIdsForSave(): number[] {
+    const current = this.uniqueIds(this.selectedDestIds());
+
+    if (current.length) return current;
+
+    if (this.selected() && !this.destinationsTouched()) {
+      return this.uniqueIds(this.lastSavedDestIds());
+    }
+
+    return [];
+  }
+
   selectedDestinationCount() {
-    return this.uniqueIds(this.selectedDestIds()).length;
+    return this.destinationIdsForSave().length;
   }
 
   destinationId(d: BkpStorageDestination | any): number {

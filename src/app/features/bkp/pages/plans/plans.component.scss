@@ -381,3 +381,46 @@
   background: #fdf2f8 !important;
   box-shadow: inset 0 0 0 1px #9f006d !important;
 }
+
+/* BKP plans save/execute/scope patch */
+.plansPage .scopeReadonly {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-radius: .74rem;
+  padding: .55rem .62rem;
+}
+
+.plansPage .scopeReadonly i {
+  margin-top: .12rem;
+  color: #2563eb;
+}
+
+.plansPage .scopeReadonly strong {
+  display: block;
+  font-size: .7rem;
+  line-height: 1.15;
+}
+
+.plansPage .scopeReadonly small {
+  display: block;
+  margin-top: .08rem;
+  font-size: .62rem;
+  color: #475569;
+  line-height: 1.25;
+}
+
+.plansPage .planFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+}
+
+.plansPage .planFooter .runNow {
+  margin-right: auto;
+}

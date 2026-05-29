@@ -265,8 +265,12 @@
             </div>
           </div>
 
-          <div class="bkpNotice warn" *ngIf="selected()">
-            El alcance se define al crear el plan. Para cambiarlo, crea un plan nuevo o agrega un endpoint de edición de alcance.
+          <div class="scopeReadonly" *ngIf="selected()">
+            <i class="pi pi-info-circle"></i>
+            <span>
+              <strong>{{ scopeReadonlyText() }}</strong>
+              <small>El alcance se fija al crear el plan. Para cambiarlo, crea un plan nuevo con otro alcance.</small>
+            </span>
           </div>
 
           <div class="bkpFormGrid" *ngIf="!selected()">
@@ -405,6 +409,16 @@
         </div>
 
         <div class="bkpActions planFooter">
+          <button
+            class="bkpLinkButton runNow"
+            type="button"
+            [disabled]="!selected() || dirty() || saving()"
+            title="Guarda cambios pendientes antes de ejecutar"
+            (click)="ejecutarAhora()">
+            <i class="pi pi-play"></i>
+            Ejecutar ahora
+          </button>
+
           <button
             class="bkpLinkButton danger"
             type="button"
