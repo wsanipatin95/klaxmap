@@ -219,3 +219,23 @@
     display: grid;
   }
 }
+
+/* BKP destinations reactive type cleanup */
+.paramsPanel,
+.paramsGrid,
+.paramPill {
+  display: none !important;
+}
+
+.destinationTypeNotice {
+  display: none;
+}
+
+.destinationBlock {
+  margin-top: .04rem;
+}
+
+.technicalToggle {
+  justify-content: flex-start;
+  width: 100%;
+}

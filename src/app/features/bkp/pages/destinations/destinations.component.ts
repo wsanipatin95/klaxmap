@@ -81,7 +81,8 @@ export class BkpDestinationsComponent implements OnInit {
     s3EndpointOverride: [''],
   });
 
-  tipo = computed(() => String(this.form.value.tipoStorage || 'LOCAL').toUpperCase());
+  // Reactive Forms no es signal; por eso tipoStorage alimenta este signal real.
+  tipo = signal('LOCAL');
   typeHint = computed(() => destinationTypeHint(this.tipo()));
 
   ngOnInit() {
@@ -91,7 +92,11 @@ export class BkpDestinationsComponent implements OnInit {
     });
 
     this.form.get('tipoStorage')?.valueChanges.subscribe(value => {
-      this.applyDefaultsForType(String(value || '').toUpperCase());
+      const type = this.normalizeStorageType(value);
+      this.tipo.set(type);
+      this.technicalOpen.set(false);
+      this.generatedJsonOpen.set(false);
+      this.applyDefaultsForType(type);
     });
 
     this.cargar();
@@ -142,6 +147,7 @@ export class BkpDestinationsComponent implements OnInit {
 
   nuevo() {
     this.selected.set(null);
+    this.tipo.set('LOCAL');
     this.technicalOpen.set(false);
     this.generatedJsonOpen.set(false);
     this.preservedConfig.set({});
@@ -183,9 +189,10 @@ export class BkpDestinationsComponent implements OnInit {
 
   private seleccionarSinConfirmar(i: BkpStorageDestination) {
     const cfg = i.configJson ?? {};
-    const type = String(i.tipoStorage || 'LOCAL').toUpperCase();
+    const type = this.normalizeStorageType(i.tipoStorage);
 
     this.selected.set(i);
+    this.tipo.set(type);
     this.technicalOpen.set(false);
     this.generatedJsonOpen.set(false);
     this.preservedConfig.set(this.extractUnknownConfig(type, cfg));
@@ -273,7 +280,7 @@ export class BkpDestinationsComponent implements OnInit {
 
   private payload(): Partial<BkpStorageDestination> {
     const v = this.form.getRawValue();
-    const type = String(v.tipoStorage || '').toUpperCase();
+    const type = this.normalizeStorageType(v.tipoStorage);
 
     if (!v.nombre?.trim()) throw new Error('Nombre es obligatorio.');
     if (!type) throw new Error('Tipo de destino es obligatorio.');
@@ -330,7 +337,7 @@ export class BkpDestinationsComponent implements OnInit {
       p.configJson = this.generatedConfigJson(type);
     }
 
-    if (type === 'SSH' || type === 'SCP') {
+    if (type === 'SCP') {
       this.validateRemoteBase();
 
       if (!v.identityFile?.trim()) {
@@ -379,7 +386,7 @@ export class BkpDestinationsComponent implements OnInit {
       });
     }
 
-    if (t === 'SSH' || t === 'SCP') {
+    if (t === 'SCP') {
       return this.cleanObject({
         ...base,
         host: v.remoteHost,
@@ -439,7 +446,7 @@ export class BkpDestinationsComponent implements OnInit {
       ];
     }
 
-    if (t === 'SSH' || t === 'SCP') {
+    if (t === 'SCP') {
       return [
         { key: 'host', label: 'Host remoto', required: true, source: 'configJson' },
         { key: 'port', label: 'Puerto remoto', required: true, source: 'configJson' },
@@ -461,7 +468,7 @@ export class BkpDestinationsComponent implements OnInit {
       return 'SFTP puede autenticarse con password guardado en Secrets o con identity file. Si la llave tiene passphrase, guárdala como secreto.';
     }
 
-    if (t === 'SSH' || t === 'SCP') {
+    if (t === 'SCP') {
       return 'SSH/SCP usa los binarios ssh/scp del servidor KLAX API. Con el backend actual requiere identity file; para password usa SFTP.';
     }
 
@@ -492,6 +499,12 @@ export class BkpDestinationsComponent implements OnInit {
     return i.prefixPath || 'config remoto';
   }
 
+  displayStorageType(v?: string | null) {
+    const x = this.normalizeStorageType(v);
+    if (x === 'SCP') return 'SSH / SCP';
+    return labelStorageType(x);
+  }
+
   labelStorageType = labelStorageType;
   labelSecretType = labelSecretType;
 
@@ -512,15 +525,19 @@ export class BkpDestinationsComponent implements OnInit {
   }
 
   isSshLike() {
-    return ['SSH', 'SCP'].includes(this.tipo());
+    return this.tipo() === 'SCP';
   }
 
   isRemote() {
-    return ['SFTP', 'SSH', 'SCP'].includes(this.tipo());
+    return ['SFTP', 'SCP'].includes(this.tipo());
+  }
+
+  hasAdvancedOptions() {
+    return this.isS3() || this.isSftp() || this.isSshLike();
   }
 
   private applyDefaultsForType(type: string) {
-    const t = String(type || '').toUpperCase();
+    const t = this.normalizeStorageType(type);
 
     if (t === 'LOCAL' && !this.form.value.basePath) {
       this.form.patchValue({ basePath: '/var/backups/klax' }, { emitEvent: false });
@@ -530,22 +547,31 @@ export class BkpDestinationsComponent implements OnInit {
       this.form.patchValue({ s3Region: this.form.value.s3Region || 'us-east-1' }, { emitEvent: false });
     }
 
-    if (['SFTP', 'SSH', 'SCP'].includes(t)) {
+    if (['SFTP', 'SCP'].includes(t)) {
       this.form.patchValue({
         remotePort: this.form.value.remotePort || 22,
         sshBinary: this.form.value.sshBinary || 'ssh',
         scpBinary: this.form.value.scpBinary || 'scp',
       }, { emitEvent: false });
     }
+
+    if (t === 'SCP') {
+      this.form.patchValue({ idBkpSecretCredentialFk: null }, { emitEvent: false });
+    }
+  }
+
+  private normalizeStorageType(value?: string | null) {
+    const raw = String(value || 'LOCAL').trim().toUpperCase();
+    if (raw === 'SSH') return 'SCP';
+    if (['LOCAL', 'SFTP', 'SCP', 'GOOGLE_DRIVE', 'S3'].includes(raw)) return raw;
+    return 'LOCAL';
   }
 
   private normalizeStorageTypes(values: string[]) {
-    const allowed = ['LOCAL', 'GOOGLE_DRIVE', 'S3', 'SFTP', 'SSH', 'SCP'];
-    const normalized = values
-      .map(v => String(v || '').toUpperCase())
-      .filter(v => allowed.includes(v));
-
-    return Array.from(new Set(normalized.length ? normalized : allowed));
+    const normalized = new Set(values.map(v => this.normalizeStorageType(v)));
+    const ordered = ['LOCAL', 'SFTP', 'SCP', 'GOOGLE_DRIVE', 'S3'];
+    const out = ordered.filter(v => normalized.has(v));
+    return out.length ? out : ordered;
   }
 
   private findDestination(id?: number | null, name?: string | null) {
@@ -577,7 +603,6 @@ export class BkpDestinationsComponent implements OnInit {
       GOOGLE_DRIVE: [],
       S3: ['region', 'endpointOverride'],
       SFTP: ['host', 'port', 'username', 'remotePath', 'identityFile', 'strictHostKey', 'knownHosts'],
-      SSH: ['host', 'port', 'username', 'remotePath', 'identityFile', 'sshBinary', 'scpBinary'],
       SCP: ['host', 'port', 'username', 'remotePath', 'identityFile', 'sshBinary', 'scpBinary'],
     };
 

@@ -60,7 +60,7 @@
           (click)="seleccionar(i)">
           <span>
             <strong>{{ i.nombre }}</strong>
-            <small>{{ labelStorageType(i.tipoStorage) }} · {{ destinationSummary(i) }}</small>
+            <small>{{ displayStorageType(i.tipoStorage) }} · {{ destinationSummary(i) }}</small>
           </span>
 
           <span class="bkpBadge" [class.ok]="i.activo!==false">
@@ -106,7 +106,7 @@
               <label>Tipo *</label>
               <select formControlName="tipoStorage">
                 <option *ngFor="let t of storageTypes()" [value]="t">
-                  {{ labelStorageType(t) }}
+                  {{ displayStorageType(t) }}
                 </option>
               </select>
               <small class="bkpHint">Al cambiar el tipo cambian los campos necesarios.</small>
@@ -267,29 +267,16 @@
           </div>
         </section>
 
-        <section class="paramsPanel">
-          <div class="paramsPanel__head">
-            <h4>Parámetros que usará este tipo</h4>
-            <p>La interfaz arma el JSON técnico automáticamente.</p>
-          </div>
-
-          <div class="paramsGrid">
-            <span
-              class="paramPill"
-              *ngFor="let p of destinationParams()"
-              [class.required]="p.required">
-              <strong>{{ p.key }}</strong>
-              <small>{{ p.label }}</small>
-            </span>
-          </div>
-        </section>
-
-        <button class="bkpLinkButton technicalToggle" type="button" (click)="technicalOpen.set(!technicalOpen())">
+        <button
+          class="bkpLinkButton technicalToggle"
+          type="button"
+          *ngIf="hasAdvancedOptions()"
+          (click)="technicalOpen.set(!technicalOpen())">
           <i class="pi" [ngClass]="technicalOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-          {{ technicalOpen() ? 'Ocultar' : 'Mostrar' }} opciones técnicas
+          {{ technicalOpen() ? 'Ocultar' : 'Mostrar' }} opciones avanzadas
         </button>
 
-        <div class="bkpSoftBox" *ngIf="technicalOpen()">
+        <div class="bkpSoftBox" *ngIf="hasAdvancedOptions() && technicalOpen()">
           <div class="bkpFormGrid">
             <div class="bkpField" *ngIf="isS3()">
               <label>Endpoint compatible opcional</label>
@@ -332,19 +319,6 @@
               <label>scp binary</label>
               <input formControlName="scpBinary" placeholder="scp">
             </div>
-          </div>
-        </div>
-
-        <button class="bkpLinkButton technicalToggle" type="button" (click)="generatedJsonOpen.set(!generatedJsonOpen())">
-          <i class="pi" [ngClass]="generatedJsonOpen() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-          {{ generatedJsonOpen() ? 'Ocultar' : 'Ver' }} JSON técnico generado
-        </button>
-
-        <div class="bkpSoftBox" *ngIf="generatedJsonOpen()">
-          <div class="bkpField full">
-            <label>configJson generado</label>
-            <textarea readonly [value]="generatedConfigJsonText()"></textarea>
-            <small class="bkpHint">Solo lectura. Se guarda automáticamente según el tipo y los campos llenados.</small>
           </div>
         </div>
 
