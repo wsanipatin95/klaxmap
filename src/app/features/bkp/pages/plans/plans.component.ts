@@ -291,9 +291,11 @@ export class BkpPlansComponent implements OnInit {
             filterType: 'INCLUDE',
           });
 
-          this.selectedDestIds.set((d.destinations ?? [])
+          const destinationIds = (d.destinations ?? [])
             .filter((x: any) => x.activo !== false)
-            .map((x: any) => x.idBkpStorageDestinationFk));
+            .map((x: any) => x.idBkpStorageDestinationFk);
+
+          this.selectedDestIds.set(this.uniqueIds(destinationIds));
 
           this.ensureFormatAllowed();
           this.clean();
@@ -302,11 +304,18 @@ export class BkpPlansComponent implements OnInit {
       });
   }
 
-  toggleDest(id: number, checked: boolean) {
-    const set = new Set(this.selectedDestIds());
-    checked ? set.add(id) : set.delete(id);
-    this.selectedDestIds.set([...set]);
+  toggleDest(id: unknown, checked: boolean) {
+    const normalizedId = this.toId(id);
+    if (normalizedId === null) {
+      this.error.set('Destino inválido. Recarga la pantalla y vuelve a intentar.');
+      return;
+    }
+
+    const set = new Set(this.uniqueIds(this.selectedDestIds()));
+    checked ? set.add(normalizedId) : set.delete(normalizedId);
+    this.selectedDestIds.set(this.uniqueIds([...set]));
     this.dirty.set(true);
+    this.error.set('');
   }
 
   addTableFilter() {
@@ -423,7 +432,7 @@ export class BkpPlansComponent implements OnInit {
     if (!nombre) throw new Error('Nombre es obligatorio.');
     if (!v.idBkpSourceDatabaseFk) throw new Error('Base origen es obligatoria.');
     if (!v.idBkpAgentNodeFk) throw new Error('Agente es obligatorio.');
-    if (!this.selectedDestIds().length) throw new Error('Selecciona al menos un destino.');
+    if (!this.uniqueIds(this.selectedDestIds()).length) throw new Error('Selecciona al menos un destino.');
     if (!this.formatos().includes(formato)) throw new Error('Formato no permitido para el motor seleccionado.');
     if (compressionEnabled && !this.compressionTypes().includes(String(v.compressionType || '').toUpperCase())) {
       throw new Error('Tipo de compresión no permitido.');
@@ -554,8 +563,37 @@ export class BkpPlansComponent implements OnInit {
   labelSecretType = labelSecretType;
   labelScheduleType = labelScheduleType;
 
-  private uniqueIds(values: number[]): number[] {
-    return Array.from(new Set((values || []).filter((x): x is number => typeof x === 'number' && Number.isFinite(x))));
+  selectedDestinationCount() {
+    return this.uniqueIds(this.selectedDestIds()).length;
+  }
+
+  destinationId(d: BkpStorageDestination | any): number {
+    return this.toId(d?.idBkpStorageDestination) ?? 0;
+  }
+
+  isDestSelected(d: BkpStorageDestination | any): boolean {
+    const id = this.destinationId(d);
+    return id > 0 && this.uniqueIds(this.selectedDestIds()).includes(id);
+  }
+
+  private uniqueIds(values: unknown[]): number[] {
+    const unique = new Set<number>();
+
+    for (const value of values || []) {
+      const id = this.toId(value);
+      if (id !== null) unique.add(id);
+    }
+
+    return Array.from(unique);
+  }
+
+  private toId(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+
+    const n = Number(value);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return null;
+
+    return n;
   }
 
   private findPlan(id?: number | null, name?: string | null) {

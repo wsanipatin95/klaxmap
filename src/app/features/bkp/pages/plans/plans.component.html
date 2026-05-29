@@ -133,7 +133,7 @@
             <div class="destinationsBox__head">
               <div>
                 <strong>Destinos *</strong>
-                <small>{{ selectedDestIds().length }} seleccionado(s)</small>
+                <small>{{ selectedDestinationCount() }} seleccionado(s)</small>
               </div>
             </div>
 
@@ -141,11 +141,11 @@
               <label
                 class="destinationChoice"
                 *ngFor="let d of destinations()"
-                [class.active]="selectedDestIds().includes(d.idBkpStorageDestination)">
+                [class.active]="isDestSelected(d)">
                 <input
                   type="checkbox"
-                  [checked]="selectedDestIds().includes(d.idBkpStorageDestination)"
-                  (change)="toggleDest(d.idBkpStorageDestination, $any($event.target).checked)">
+                  [checked]="isDestSelected(d)"
+                  (change)="toggleDest(destinationId(d), $any($event.target).checked)">
                 <span>
                   <strong>{{ d.nombre }}</strong>
                   <small>{{ labelStorageType(d.tipoStorage) }} · {{ destinationSummary(d) }}</small>
