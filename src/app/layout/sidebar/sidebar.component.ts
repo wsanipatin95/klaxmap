@@ -69,12 +69,13 @@ export class SidebarComponent {
           icon: 'pi pi-history',
           route: '/app/adm/auditoria',
         });
-        items.push({
-          label: 'Backups',
-          icon: 'pi pi-database',
-          route: '/app/backups/',
-        });
       }
+    } if (this.env.company === 'klax') {
+      items.push({
+        label: 'Backups',
+        icon: 'pi pi-database',
+        route: '/app/backups/',
+      });
     } else if (this.env.company === 'dumax') {
       items.push({
         label: 'Importación',
@@ -87,6 +88,8 @@ export class SidebarComponent {
         icon: 'pi pi-car',
         route: '/app/vehiculos/',
       });
+
+    }else{
 
     }
     return items;
