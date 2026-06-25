@@ -60,12 +60,11 @@ export class RedBetaApi {
     });
   }
 
-  /** Capa fisica base: elementos del mapa existente (lectura ligera). */
-  listarBaseElementos() {
-    return this.http.get<ApiEnvelope<RedBaseElemento[] | { content: RedBaseElemento[] }>>(
-      `${this.mapaBase}/elemento/listar`,
-      { params: this.toParams({ all: true }) }
-    );
+  /** Capa fisica base: endpoint liviano dedicado de la beta (/api/erp/red/base-elemento/listar). */
+  listarBaseElementos(params: { idRedNodo?: number; idGeoTipoElemento?: number; q?: string; bbox?: string; limit?: number } = {}) {
+    return this.http.get<ApiEnvelope<RedBaseElemento[]>>(`${this.base}/base-elemento/listar`, {
+      params: this.toParams({ ...params }),
+    });
   }
 
   // ---------------------------------------------------------------- Acciones relacion fisica
@@ -97,6 +96,9 @@ export class RedBetaApi {
   }
   splitterPendienteCampo(id: number, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-pasivo/${id}/pendiente-campo`, { observacion });
+  }
+  noEncontradoSplitter(id: number, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-pasivo/${id}/no-encontrado`, { observacion });
   }
 
   // ---------------------------------------------------------------- Procesos (cursores kxfp_)

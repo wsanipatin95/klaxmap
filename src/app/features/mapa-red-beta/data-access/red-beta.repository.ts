@@ -43,13 +43,8 @@ export class RedBetaRepository {
     return this.api.listarPuertos(params).pipe(map((r) => unwrapOrThrow<RedDispositivoPuerto[]>(r)));
   }
 
-  listarBaseElementos() {
-    return this.api.listarBaseElementos().pipe(
-      map((r) => {
-        const data = unwrapOrThrow<RedBaseElemento[] | { content: RedBaseElemento[] }>(r);
-        return Array.isArray(data) ? data : data?.content ?? [];
-      })
-    );
+  listarBaseElementos(params: { idRedNodo?: number; idGeoTipoElemento?: number; q?: string; bbox?: string; limit?: number } = {}) {
+    return this.api.listarBaseElementos(params).pipe(map((r) => unwrapOrThrow<RedBaseElemento[]>(r)));
   }
 
   // Acciones
@@ -73,6 +68,9 @@ export class RedBetaRepository {
   }
   splitterPendienteCampo(id: number, observacion?: string) {
     return this.api.splitterPendienteCampo(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  noEncontradoSplitter(id: number, observacion?: string) {
+    return this.api.noEncontradoSplitter(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
 
   // Procesos

@@ -1,12 +1,11 @@
 import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { RedBetaEstadoBadgeComponent } from '../red-beta-estado-badge/red-beta-estado-badge.component';
-import type { RedAccionEvento, RedElementoRelacion } from '../../data-access/red-beta.models';
+import type { RedAccionEvento, RedDispositivoPuerto, RedElementoRelacion } from '../../data-access/red-beta.models';
 import type { RedSeleccion } from '../../application/red-beta.facade';
 
 /**
- * Panel de detalle / explicacion. Responde: que encontro el sistema, por que, confianza,
- * que falta, que accion tomar y que pasa despues. Ademas lista las CONEXIONES del elemento
- * seleccionado (relaciones que lo tocan), cada una navegable.
+ * Panel de detalle / explicacion. Responde: que encontro el sistema, por que, confianza, que falta,
+ * que accion tomar y que pasa despues. Lista las CONEXIONES del elemento y, para splitter, sus puertos.
  */
 @Component({
   selector: 'app-red-beta-detalle-panel',
@@ -40,6 +39,21 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
           <p class="text-slate-600">{{ motivo() }}</p>
         </div>
 
+        @if (esSplitter()) {
+          <div>
+            <div class="text-xs uppercase tracking-wide text-slate-400 mb-1">Puertos</div>
+            <div class="grid grid-cols-3 gap-y-1 gap-x-2 text-xs text-slate-600">
+              <div>Entradas: <b>{{ d().cantidadEntradas }}</b></div>
+              <div>Salidas: <b>{{ d().cantidadSalidas }}</b></div>
+              <div>Total: <b>{{ puertos.length }}</b></div>
+              <div>Libres: <b>{{ cuenta('Libre') }}</b></div>
+              <div>Ocupados: <b>{{ cuentaOcupados() }}</b></div>
+              <div>Pendientes: <b>{{ cuenta('Pendiente validar') }}</b></div>
+              <div class="text-red-600">Conflicto: <b>{{ cuenta('Conflicto') }}</b></div>
+            </div>
+          </div>
+        }
+
         @if (conexiones.length > 0) {
           <div>
             <div class="text-xs uppercase tracking-wide text-slate-400 mb-1">Conexiones ({{ conexiones.length }})</div>
@@ -60,9 +74,15 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
           </div>
         }
 
+        @if (recomendacion()) {
+          <div class="text-xs text-slate-700 bg-blue-50 border border-blue-100 rounded-md p-2">
+            <b>Accion recomendada:</b> {{ recomendacion() }}
+          </div>
+        }
+
         @if (accionable()) {
           <div>
-            <div class="text-xs uppercase tracking-wide text-slate-400 mb-1">Observacion (opcional)</div>
+            <div class="text-xs uppercase tracking-wide text-slate-400 mb-1">Observacion {{ seleccion.tipo === 'splitter' ? '(obligatoria para "No encontrado")' : '(opcional)' }}</div>
             <textarea class="w-full border border-slate-300 rounded-md p-2 text-sm" rows="2" placeholder="Nota del usuario..."
               [value]="obs()" (input)="obs.set($any($event.target).value)"></textarea>
           </div>
@@ -82,7 +102,8 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                 <button class="b ok" (click)="emitRatio('1:8')">Confirmar 1:8</button>
                 <button class="b alt" (click)="emitRatio('1:4')">Cambiar a 1:4</button>
                 <button class="b alt" (click)="emitRatio('1:16')">Cambiar a 1:16</button>
-                <button class="b campo" (click)="emit('no-encontrado')">Marcar no encontrado</button>
+                <button class="b campo" (click)="emit('pendiente-campo')">Mandar a campo</button>
+                <button class="b no" (click)="emit('no-encontrado')">No encontrado</button>
               </div>
             }
           </div>
@@ -111,6 +132,7 @@ export class RedBetaDetallePanelComponent {
   }
 
   @Input() conexiones: RedElementoRelacion[] = [];
+  @Input() puertos: RedDispositivoPuerto[] = [];
 
   @Output() accionEmit = new EventEmitter<RedAccionEvento>();
   @Output() irA = new EventEmitter<RedSeleccion>();
@@ -125,10 +147,20 @@ export class RedBetaDetallePanelComponent {
   esBase(): boolean {
     return this._sel()?.tipo === 'base';
   }
+  esSplitter(): boolean {
+    return this._sel()?.tipo === 'splitter';
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   d(): any {
     return this._sel()?.data ?? {};
+  }
+
+  cuenta(estado: string): number {
+    return this.puertos.filter((p) => p.estadoPuerto === estado).length;
+  }
+  cuentaOcupados(): number {
+    return this.puertos.filter((p) => p.estadoPuerto === 'Ocupado' || p.estadoPuerto === 'Ocupado confirmado').length;
   }
 
   titulo(): string {
@@ -184,12 +216,25 @@ export class RedBetaDetallePanelComponent {
     return 'Confirmar en oficina o en campo. Mientras tanto es un supuesto, no un dato verificado.';
   }
 
+  recomendacion(): string {
+    switch (this._sel()?.tipo) {
+      case 'relacion':
+        return 'Validar oficina si el nombre/carpeta es correcto. Mandar a campo si hay duda. Rechazar si la relacion es incorrecta.';
+      case 'splitter':
+        return 'Confirmar 1:8 si Bryan sabe que es correcto. Mandar a campo si necesita validacion fisica. Marcar no encontrado solo si el tecnico confirmo que no existe.';
+      case 'ponfo':
+        return 'Validar con Bryan antes de dar por firme.';
+      default:
+        return '';
+    }
+  }
+
   quePasa(): string {
     const t = this._sel()?.tipo;
     if (t === 'relacion')
       return 'Al validar, la relacion pasa a validado (verde) y deja de ser sugerencia. Al rechazar queda marcada como rechazada (gris) sin borrarse.';
     if (t === 'splitter')
-      return 'Al confirmar el ratio se ajustan los puertos: se crean las salidas faltantes y las sobrantes libres se anulan (las ocupadas pasan a conflicto). Nunca se borran puertos con uso.';
+      return 'Al confirmar el ratio se ajustan los puertos. Al marcar "No encontrado" el dispositivo pasa a "No encontrado en campo" y su ratio a "Rechazado".';
     return '';
   }
 

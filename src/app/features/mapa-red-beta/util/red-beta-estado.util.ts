@@ -37,6 +37,21 @@ const VISUALS: Record<string, RedEstadoVisual> = {
   Conflicto: { color: '#dc2626', dashed: false, strike: false, label: 'Conflicto' },                        // rojo
   Rechazado: { color: '#9ca3af', dashed: false, strike: true, label: 'Rechazado' },                         // gris tachado
   Historico: { color: '#a78bfa', dashed: false, strike: true, label: 'Historico' },
+  // Estados de puertos / hilos
+  'Libre': { color: '#22c55e', dashed: false, strike: false, label: 'Libre' },
+  'Libre confirmado': { color: '#16a34a', dashed: false, strike: false, label: 'Libre confirmado' },
+  'Ocupado': { color: '#15803d', dashed: false, strike: false, label: 'Ocupado' },
+  'Ocupado confirmado': { color: '#166534', dashed: false, strike: false, label: 'Ocupado confirmado' },
+  'Reservado': { color: '#eab308', dashed: false, strike: false, label: 'Reservado' },
+  'Averiado': { color: '#dc2626', dashed: false, strike: false, label: 'Averiado' },
+  'Dañado': { color: '#dc2626', dashed: false, strike: false, label: 'Dañado' },
+  'No identificado': { color: '#9ca3af', dashed: false, strike: false, label: 'No identificado' },
+  'No encontrado': { color: '#9ca3af', dashed: false, strike: true, label: 'No encontrado' },
+  'No encontrado en campo': { color: '#9ca3af', dashed: false, strike: true, label: 'No encontrado en campo' },
+  'Drop conectado sin servicio': { color: '#7c3aed', dashed: false, strike: false, label: 'Drop conectado sin servicio' },
+  'Cambio domicilio': { color: '#f59e0b', dashed: false, strike: false, label: 'Cambio domicilio' },
+  'Derivacion': { color: '#0ea5e9', dashed: false, strike: false, label: 'Derivacion' },
+  'Corregido campo': { color: '#16a34a', dashed: false, strike: false, label: 'Corregido campo' },
 };
 
 /** Orden de la leyenda en pantalla. */

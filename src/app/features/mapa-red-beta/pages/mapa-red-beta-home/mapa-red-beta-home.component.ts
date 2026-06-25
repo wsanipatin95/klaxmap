@@ -17,6 +17,7 @@ import { RedBetaHilosPanelComponent } from '../../components/red-beta-hilos-pane
 import { RedBetaPuertosPanelComponent } from '../../components/red-beta-puertos-panel/red-beta-puertos-panel.component';
 import { RedBetaConflictosPanelComponent } from '../../components/red-beta-conflictos-panel/red-beta-conflictos-panel.component';
 import { RedBetaDetallePanelComponent } from '../../components/red-beta-detalle-panel/red-beta-detalle-panel.component';
+import { RedBetaProcesoDialogComponent, RedProcesoParams } from '../../components/red-beta-proceso-dialog/red-beta-proceso-dialog.component';
 
 type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puertos' | 'conflictos';
 
@@ -42,6 +43,7 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
     RedBetaPuertosPanelComponent,
     RedBetaConflictosPanelComponent,
     RedBetaDetallePanelComponent,
+    RedBetaProcesoDialogComponent,
   ],
   template: `
     <div class="flex flex-col h-[calc(100vh-4rem)] p-3 gap-3 bg-slate-100">
@@ -90,6 +92,8 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
             [relaciones]="facade.relaciones()"
             [splitters]="facade.splitters()"
             [ponFo]="facade.ponFo()"
+            [hilos]="facade.hilos()"
+            [puertos]="facade.puertos()"
             [hiddenCapas]="capas.ocultas()"
             [etiquetas]="etiquetasBase()"
             [seleccion]="facade.seleccion()"
@@ -133,10 +137,16 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
 
           <div class="bg-white rounded-lg shadow-sm p-3 max-h-[45%] overflow-auto">
             <h3 class="font-semibold text-slate-700 mb-2">Detalle / explicacion</h3>
-            <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" (accionEmit)="onAccion($event)" (irA)="facade.seleccionar($event)" />
+            <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" [puertos]="facade.puertosSeleccion()" (accionEmit)="onAccion($event)" (irA)="facade.seleccionar($event)" />
           </div>
         </aside>
       </div>
+
+      <app-red-beta-proceso-dialog
+        [kind]="procesoPendiente()"
+        (confirmar)="onConfirmarProceso($event)"
+        (cancelar)="procesoPendiente.set(null)"
+      />
     </div>
   `,
   styles: [
@@ -152,6 +162,7 @@ export class MapaRedBetaHomeComponent implements OnInit {
   readonly panelIzq = signal(false);
   readonly panelDer = signal(true);
   readonly etiquetasBase = signal(true);
+  readonly procesoPendiente = signal<RedProcesoKind | null>(null);
   readonly tabs: { key: TabKey; label: string }[] = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'relaciones', label: 'Relaciones' },
@@ -178,7 +189,12 @@ export class MapaRedBetaHomeComponent implements OnInit {
   }
 
   onProceso(kind: RedProcesoKind) {
-    this.facade.generar(kind);
+    this.procesoPendiente.set(kind);
+  }
+
+  onConfirmarProceso(ev: { kind: RedProcesoKind; params: RedProcesoParams }) {
+    this.procesoPendiente.set(null);
+    this.facade.generar(ev.kind, ev.params);
   }
 
   onSeleccion(sel: RedSeleccion) {

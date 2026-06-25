@@ -17,7 +17,9 @@ import type {
   RedBaseElemento,
   RedCapaKey,
   RedDispositivoPasivo,
+  RedDispositivoPuerto,
   RedElementoRelacion,
+  RedFoHilo,
   RedPonElementoRelacion,
 } from '../../data-access/red-beta.models';
 import type { RedSeleccion } from '../../application/red-beta.facade';
@@ -26,15 +28,19 @@ import { estadoVisual, esConflicto, esPendienteCampo, esValidado, parseLatLon } 
 const BASE_CAP = 2500;
 const LABEL_CAP = 200;
 const OVERLAY_CAP = 1500;
+const HILOS_CAP = 600;
+const PUERTOS_SPLIT_CAP = 200;
 const POINTS_MIN_ZOOM = 15;
 const LABELS_MIN_ZOOM = 17;
 const VIEWPORT_PAD = 0.1;
 const FANOUT_CAP = 80;
+const PUERTO_RADIO = 0.00012;
 
 /**
- * Mapa Leaflet de la beta. Carga el universo una vez y NO lo dibuja todo de golpe; recorta al
- * viewport y por umbral de zoom (lineas siempre, puntos/etiquetas al acercar). Cada elemento es
- * clicable; al seleccionar uno se resalta y se animan en abanico TODAS sus conexiones.
+ * Mapa Leaflet de la beta. Dibuja el mapa fisico base (geometria real, color, icono, etiqueta),
+ * y encima las capas operativas: relaciones, splitters, PON/VLAN -> FO, hilos (sobre su FO) y
+ * puertos (en abanico alrededor del splitter). Cada elemento es clicable; al seleccionar se
+ * resalta y animan sus conexiones / puertos.
  */
 @Component({
   selector: 'app-red-beta-map',
@@ -56,6 +62,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() relaciones: RedElementoRelacion[] = [];
   @Input() splitters: RedDispositivoPasivo[] = [];
   @Input() ponFo: RedPonElementoRelacion[] = [];
+  @Input() hilos: RedFoHilo[] = [];
+  @Input() puertos: RedDispositivoPuerto[] = [];
   @Input() hiddenCapas: Set<RedCapaKey> = new Set();
   @Input() etiquetas = true;
   @Input() seleccion: RedSeleccion | null = null;
@@ -72,6 +80,11 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   private fitted = false;
   private resizeObs?: ResizeObserver;
   private frame: number | null = null;
+
+  private baseSrc: RedBaseElemento[] | null = null;
+  private baseIdx = new Map<number, RedBaseElemento>();
+  private puertosSrc: RedDispositivoPuerto[] | null = null;
+  private puertosIdx = new Map<number, RedDispositivoPuerto[]>();
 
   ngAfterViewInit(): void {
     this.map = L.map(this.mapEl.nativeElement, { center: [-0.22985, -78.52495], zoom: 13, zoomControl: true });
@@ -94,8 +107,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.viewInit) return;
-    if (changes['baseElementos'] || changes['relaciones'] || changes['splitters'] ||
-        changes['ponFo'] || changes['hiddenCapas'] || changes['etiquetas']) {
+    if (changes['baseElementos'] || changes['relaciones'] || changes['splitters'] || changes['ponFo'] ||
+        changes['hilos'] || changes['puertos'] || changes['hiddenCapas'] || changes['etiquetas']) {
       this.renderBase();
       this.renderOverlay();
       this.fitOnce();
@@ -132,7 +145,29 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     return false;
   }
 
-  // --------------------------------------------------------------- capa base (culling + clic)
+  private baseIndex(): Map<number, RedBaseElemento> {
+    if (this.baseSrc !== this.baseElementos) {
+      this.baseIdx = new Map();
+      for (const e of this.baseElementos) this.baseIdx.set(e.idGeoElemento, e);
+      this.baseSrc = this.baseElementos;
+    }
+    return this.baseIdx;
+  }
+
+  private puertosBySplitter(): Map<number, RedDispositivoPuerto[]> {
+    if (this.puertosSrc !== this.puertos) {
+      this.puertosIdx = new Map();
+      for (const p of this.puertos) {
+        const arr = this.puertosIdx.get(p.idDispositivoPasivoFk) ?? [];
+        arr.push(p);
+        this.puertosIdx.set(p.idDispositivoPasivoFk, arr);
+      }
+      this.puertosSrc = this.puertos;
+    }
+    return this.puertosIdx;
+  }
+
+  // --------------------------------------------------------------- capa base
   private renderBase(): void {
     if (!this.map) return;
     this.baseGroup.clearLayers();
@@ -198,7 +233,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
   }
 
-  // --------------------------------------------------------------- capas operativas (culling)
+  // --------------------------------------------------------------- capas operativas
   private renderOverlay(): void {
     if (!this.map) return;
     this.overlayGroup.clearLayers();
@@ -247,6 +282,91 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
         m.addTo(this.overlayGroup);
       }
     }
+
+    this.renderHilos(view);
+    this.renderPuertos(view);
+  }
+
+  // hilos: dibujados sobre su FO (linea fina) o como marcador en el centro de la FO
+  private renderHilos(view: L.LatLngBounds): void {
+    if (!this.visible('hilos')) return;
+    const idx = this.baseIndex();
+    let n = 0;
+    for (const h of this.hilos) {
+      if (n >= HILOS_CAP) break;
+      const fo = idx.get(h.idGeoElementoFoFk);
+      if (!fo) continue;
+      const vis = estadoVisual(h.estadoHilo);
+      const tip =
+        'FO: ' + (fo.nombre || '') + '<br>Hilo: ' + h.numeroHilo + '<br>Color: ' + h.colorHilo +
+        '<br>Estado: ' + h.estadoHilo + '<br>Origen: ' + h.origenRegistro;
+      const wkt = fo.wkt || '';
+      let drew = false;
+      if (/LINESTRING/i.test(wkt) || (fo.geomTipo || '').toLowerCase().includes('line')) {
+        for (const coords of this.ringsFromWkt(wkt)) {
+          if (coords.length < 2) continue;
+          if (!view.intersects(L.latLngBounds(coords))) continue;
+          const line = L.polyline(coords, { color: vis.color, weight: 2, opacity: 0.95 });
+          line.bindTooltip(tip);
+          line.on('click', () => this.seleccionar.emit({ tipo: 'hilo', data: h }));
+          line.addTo(this.overlayGroup);
+          drew = true;
+          n++;
+          break;
+        }
+      }
+      if (!drew) {
+        const ll = parseLatLon(fo.latLon);
+        if (!ll || !view.contains(ll)) continue;
+        const m = L.circleMarker(ll, { radius: 4, color: vis.color, weight: 1, fillColor: vis.color, fillOpacity: 0.9 });
+        m.bindTooltip(tip);
+        m.on('click', () => this.seleccionar.emit({ tipo: 'hilo', data: h }));
+        m.addTo(this.overlayGroup);
+        n++;
+      }
+    }
+  }
+
+  // puertos: en abanico alrededor de su splitter
+  private renderPuertos(view: L.LatLngBounds): void {
+    if (!this.visible('puertos')) return;
+    const bySplit = this.puertosBySplitter();
+    let drawnSplit = 0;
+    for (const s of this.splitters) {
+      if (drawnSplit >= PUERTOS_SPLIT_CAP) break;
+      const ll = parseLatLon(s.contenedorLatLon) ?? parseLatLon(s.splitterOrigenLatLon);
+      if (!ll || !view.contains(ll)) continue;
+      const ps = bySplit.get(s.idDispositivoPasivo);
+      if (!ps || ps.length === 0) continue;
+      drawnSplit++;
+      const positions = this.fanout(ll, ps.length);
+      ps.forEach((p, i) => {
+        const vis = estadoVisual(p.estadoPuerto);
+        const m = L.circleMarker(positions[i], { radius: 4, color: '#ffffff', weight: 1, fillColor: vis.color, fillOpacity: 1 });
+        m.bindTooltip(this.puertoTip(p));
+        m.on('click', () => this.seleccionar.emit({ tipo: 'puerto', data: p }));
+        m.addTo(this.overlayGroup);
+      });
+    }
+  }
+
+  private puertoTip(p: RedDispositivoPuerto): string {
+    let t = 'Dispositivo: ' + (p.dispositivoNombre || '') + '<br>Puerto: ' + p.nombrePuerto +
+      '<br>Tipo: ' + p.tipoPuerto + '<br>Numero: ' + p.numeroPuerto + '<br>Estado: ' + p.estadoPuerto;
+    if (p.colorHilo) t += '<br>Hilo: ' + (p.numeroHilo ?? '') + ' ' + p.colorHilo;
+    if (p.destinoNombre) t += '<br>Destino: ' + p.destinoNombre;
+    return t;
+  }
+
+  private fanout(center: L.LatLngTuple, count: number): L.LatLngTuple[] {
+    const out: L.LatLngTuple[] = [];
+    const n = Math.max(count, 1);
+    const start = -Math.PI / 2;
+    for (let i = 0; i < count; i++) {
+      const a = start + (2 * Math.PI * i) / n;
+      out.push([center[0] + PUERTO_RADIO * Math.sin(a) * 0.7, center[1] + PUERTO_RADIO * Math.cos(a)]);
+    }
+    return out;
   }
 
   private punto(ll: L.LatLngExpression, color: string, onClick: () => void, estado: string): void {
@@ -264,7 +384,6 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (!sel) return;
     const d = sel.data;
 
-    // Relacion: conexion directa inicio -> fin
     if (sel.tipo === 'relacion') {
       const o = parseLatLon(d.origenLatLon);
       const f = parseLatLon(d.destinoLatLon);
@@ -277,7 +396,35 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       }
     }
 
-    // Nodo (base / splitter / ponfo): abanico de TODAS sus conexiones
+    if (sel.tipo === 'splitter') {
+      const ll = parseLatLon(d.contenedorLatLon) ?? parseLatLon(d.splitterOrigenLatLon);
+      if (ll) {
+        this.pulse(ll, estadoVisual(d.estadoDispositivo).color, d.nombreOperativo || '');
+        const ps = this.puertosBySplitter().get(d.idDispositivoPasivo) ?? [];
+        const positions = this.fanout(ll, ps.length);
+        const idx = this.baseIndex();
+        const pts: L.LatLngTuple[] = [ll];
+        ps.forEach((p, i) => {
+          const vis = estadoVisual(p.estadoPuerto);
+          L.polyline([ll, positions[i]], { color: vis.color, weight: 2, opacity: 0.85 }).addTo(this.highlightGroup);
+          this.pulseSmall(positions[i], vis.color);
+          pts.push(positions[i]);
+          if (p.idGeoElementoDestinoFk != null) {
+            const dest = idx.get(p.idGeoElementoDestinoFk);
+            const dll = dest ? parseLatLon(dest.latLon) : null;
+            if (dll) {
+              L.polyline([positions[i], dll], { color: vis.color, weight: 2, opacity: 0.6, dashArray: '4 4' }).addTo(this.highlightGroup);
+              pts.push(dll);
+            }
+          }
+        });
+        if (pts.length >= 2) this.map.fitBounds(L.latLngBounds(pts), { padding: [70, 70], maxZoom: 18 });
+        else this.map.setView(ll, Math.max(this.map.getZoom(), 17));
+        return;
+      }
+    }
+
+    // base / ponfo: abanico de conexiones
     const center = this.centerOf(sel);
     const gid = this.geoIdOf(sel);
     const pts: L.LatLngTuple[] = [];
@@ -300,11 +447,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
         pts.push(other);
       }
     }
-    if (pts.length >= 2) {
-      this.map.fitBounds(L.latLngBounds(pts), { padding: [70, 70], maxZoom: 17 });
-    } else if (center) {
-      this.map.setView(center, Math.max(this.map.getZoom(), 16));
-    }
+    if (pts.length >= 2) this.map.fitBounds(L.latLngBounds(pts), { padding: [70, 70], maxZoom: 17 });
+    else if (center) this.map.setView(center, Math.max(this.map.getZoom(), 16));
   }
 
   private flowLine(a: L.LatLngTuple, b: L.LatLngTuple, color: string): void {

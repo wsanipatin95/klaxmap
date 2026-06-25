@@ -72,6 +72,15 @@ export class RedBetaFacade {
     return this.relaciones().filter((r) => r.idOrigen === id || r.idDestino === id);
   });
 
+  /** Puertos del splitter seleccionado (para estadisticas en el detalle). */
+  readonly puertosSeleccion = computed<RedDispositivoPuerto[]>(() => {
+    const sel = this.seleccion();
+    if (!sel || sel.tipo !== 'splitter') return [];
+    const id = sel.data?.idDispositivoPasivo;
+    if (id == null) return [];
+    return this.puertos().filter((p) => p.idDispositivoPasivoFk === id);
+  });
+
   // -------- carga
   cargarTodo() {
     this.loading.set(true);
@@ -133,7 +142,11 @@ export class RedBetaFacade {
           .subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;
       case 'no-encontrado':
-        this.repo.splitterPendienteCampo(ev.id, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
+        if (!ev.observacion || !ev.observacion.trim()) {
+          this.error.set('Para marcar "No encontrado en campo" agrega una observacion en el panel de Detalle.');
+          return;
+        }
+        this.repo.noEncontradoSplitter(ev.id, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;
     }
   }
@@ -149,27 +162,36 @@ export class RedBetaFacade {
   }
 
   // -------- procesos (cursores kxfp_)
-  generar(kind: 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo') {
-    const after = (r: { mensaje: string }) => {
-      this.mensaje.set(r.mensaje);
+  generar(
+    kind: 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo',
+    params: { idRedNodo?: number; minConfianza?: number; radioM?: number; idDispositivoPasivo?: number; idGeoElementoFo?: number } = {}
+  ) {
+    this.error.set(null);
+    const after = (res: { data: number; mensaje: string }) => {
+      const n = res?.data ?? 0;
+      this.mensaje.set(
+        n > 0
+          ? `Proceso ejecutado. Generados: ${n}. Los registros nacieron como sugeridos/supuestos/pendientes. Revise los paneles correspondientes.`
+          : 'No se generaron registros nuevos. Puede deberse a que ya existian, no hubo candidatos o los filtros fueron muy restrictivos.'
+      );
       this.cargarTodo();
     };
     const fail = (e: unknown) => this.error.set((e as Error)?.message ?? 'Error en el proceso');
     switch (kind) {
       case 'nap':
-        this.repo.generarRelacionesNap(undefined, 70).subscribe({ next: after, error: fail });
+        this.repo.generarRelacionesNap(params.idRedNodo, params.minConfianza ?? 70).subscribe({ next: after, error: fail });
         break;
       case 'splitters':
-        this.repo.generarSplittersContenidos(10, 65).subscribe({ next: after, error: fail });
+        this.repo.generarSplittersContenidos(params.radioM ?? 10, params.minConfianza ?? 65).subscribe({ next: after, error: fail });
         break;
       case 'puertos':
-        this.repo.generarPuertosSplitters().subscribe({ next: after, error: fail });
+        this.repo.generarPuertosSplitters(params.idDispositivoPasivo).subscribe({ next: after, error: fail });
         break;
       case 'hilos':
-        this.repo.generarHilosFo().subscribe({ next: after, error: fail });
+        this.repo.generarHilosFo(params.idGeoElementoFo).subscribe({ next: after, error: fail });
         break;
       case 'ponfo':
-        this.repo.generarPonFoSugerido(70).subscribe({ next: after, error: fail });
+        this.repo.generarPonFoSugerido(params.minConfianza ?? 70).subscribe({ next: after, error: fail });
         break;
     }
   }
