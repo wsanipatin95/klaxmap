@@ -63,6 +63,11 @@ export class SidebarComponent {
         icon: 'pi pi-map',
         route: '/app/mapa/home',
       });
+      items.push({
+        label: 'Red operativa (beta)',
+        icon: 'pi pi-sitemap',
+        route: '/app/mapa-red-beta',
+      });
       if (this.auditoriaRed()) {
         items.push({
           label: 'Historial',

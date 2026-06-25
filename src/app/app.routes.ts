@@ -104,9 +104,11 @@ export const routes: Routes = [
           import('src/app/features/mapa/mapa.routes').then((m) => m.MAPA_ROUTES),
       },
       {
-        path: 'red',
+        path: 'mapa-red-beta',
         loadChildren: () =>
-          import('src/app/features/red/red.routes').then((m) => m.RED_ROUTES),
+          import('src/app/features/mapa-red-beta/mapa-red-beta.routes').then(
+            (m) => m.MAPA_RED_BETA_ROUTES
+          ),
       },
       {
         path: 'importacion',
