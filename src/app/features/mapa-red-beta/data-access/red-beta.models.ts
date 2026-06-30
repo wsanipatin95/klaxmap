@@ -34,6 +34,9 @@ export interface RedElementoRelacion {
   idRedNodoDestino?: number | null;
   nodoDestino?: string | null;
   pathDestino?: string | null;
+  origenWkt?: string | null;
+  destinoWkt?: string | null;
+  confianzaSugerida?: number | null;
   payloadSugerencia?: Record<string, unknown> | null;
   fecGen?: string | null;
   fecFin?: string | null;
@@ -85,6 +88,9 @@ export interface RedDispositivoPasivo {
   contenedorLatLon?: string | null;
   idSplitterOrigen?: number | null;
   splitterOrigenNombre?: string | null;
+  contenedorWkt?: string | null;
+  splitterOrigenWkt?: string | null;
+  confianzaSugerida?: number | null;
   splitterOrigenLatLon?: string | null;
   idRedNodo?: number | null;
   nodo?: string | null;
@@ -109,6 +115,10 @@ export interface RedFoHilo {
   estadoHilo: string;
   origenRegistro: string;
   observacion?: string | null;
+  foLatLon?: string | null;
+  foWkt?: string | null;
+  fechaValidacion?: string | null;
+  validadoPor?: number | null;
   payloadSugerencia?: Record<string, unknown> | null;
   fecGen?: string | null;
   fecFin?: string | null;
@@ -162,7 +172,15 @@ export type RedAccionKind =
   | 'rechazar'
   | 'pendiente-campo'
   | 'confirmar-ratio'
-  | 'no-encontrado';
+  | 'no-encontrado'
+  | 'hilo-estado'
+  | 'puerto-estado'
+  | 'asociar-hilo'
+  | 'asociar-destino'
+  | 'pon-validar-oficina'
+  | 'pon-validar-campo'
+  | 'pon-pendiente-campo'
+  | 'pon-rechazar';
 
 export interface RedAccionEvento {
   kind: RedAccionKind;
@@ -170,6 +188,37 @@ export interface RedAccionEvento {
   observacion?: string;
   ratioSplitter?: string;
   validadoEnCampo?: boolean;
+  estadoNuevo?: string;
+  idFoHilo?: number | null;
+  idGeoElementoDestino?: number | null;
+}
+
+/** Destino navegable de una linea del anillo (estructuralmente compatible con RedSeleccion). */
+export interface RedAnilloNav {
+  tipo: 'base' | 'relacion' | 'splitter' | 'ponfo' | 'hilo' | 'puerto';
+  data: unknown;
+}
+
+/** Linea del anillo operativo (padre/entrada, centro, hijos/salidas/destinos). */
+export interface RedAnilloLinea {
+  label: string;
+  nombre?: string;
+  estado?: string | null;
+  vacio?: string;
+  /** Si existe, la linea es clicable y navega a ese elemento (p.ej. un hilo, splitter o puerto). */
+  sel?: RedAnilloNav;
+  /** Color fisico del hilo (Azul, Verde...) para mostrar un swatch en el arbol. */
+  color?: string;
+}
+
+/** Anillo operativo del elemento seleccionado. */
+export interface RedAnillo {
+  arribaLabel: string;
+  arriba: RedAnilloLinea[];
+  centro: string;
+  abajoLabel: string;
+  abajo: RedAnilloLinea[];
+  faltantes: string[];
 }
 
 /** Identificadores de capa para el control de visibilidad. */

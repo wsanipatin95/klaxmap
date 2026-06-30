@@ -82,6 +82,19 @@ export class RedBetaApi {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/elemento-relacion/${id}/pendiente-campo`, { observacion });
   }
 
+  ponValidarOficina(id: number, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/pon-elemento-relacion/${id}/validar-oficina`, { observacion });
+  }
+  ponValidarCampo(id: number, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/pon-elemento-relacion/${id}/validar-campo`, { observacion });
+  }
+  ponPendienteCampo(id: number, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/pon-elemento-relacion/${id}/pendiente-campo`, { observacion });
+  }
+  ponRechazar(id: number, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/pon-elemento-relacion/${id}/rechazar`, { observacion });
+  }
+
   // ---------------------------------------------------------------- Acciones splitter
 
   confirmarRatio(id: number, ratioSplitter: string, validadoEnCampo: boolean, observacion?: string) {
@@ -99,6 +112,20 @@ export class RedBetaApi {
   }
   noEncontradoSplitter(id: number, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-pasivo/${id}/no-encontrado`, { observacion });
+  }
+
+  // ---------------------------------------------------------------- Edicion hilos / puertos
+  hiloEstado(id: number, estado: string, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/fo-hilo/${id}/estado`, { estado, observacion });
+  }
+  puertoEstado(id: number, estado: string, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/estado`, { estado, observacion });
+  }
+  puertoAsociarHilo(id: number, idFoHilo: number | null, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/asociar-hilo`, { idFoHilo, observacion });
+  }
+  puertoAsociarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/asociar-destino`, { idGeoElementoDestino, observacion });
   }
 
   // ---------------------------------------------------------------- Procesos (cursores kxfp_)

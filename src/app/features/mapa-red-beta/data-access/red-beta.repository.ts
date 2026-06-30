@@ -60,6 +60,19 @@ export class RedBetaRepository {
   relacionPendienteCampo(id: number, observacion?: string) {
     return this.api.relacionPendienteCampo(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
+
+  ponValidarOficina(id: number, observacion?: string) {
+    return this.api.ponValidarOficina(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  ponValidarCampo(id: number, observacion?: string) {
+    return this.api.ponValidarCampo(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  ponPendienteCampo(id: number, observacion?: string) {
+    return this.api.ponPendienteCampo(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  ponRechazar(id: number, observacion?: string) {
+    return this.api.ponRechazar(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
   confirmarRatio(id: number, ratio: string, campo: boolean, observacion?: string) {
     return this.api.confirmarRatio(id, ratio, campo, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
@@ -71,6 +84,19 @@ export class RedBetaRepository {
   }
   noEncontradoSplitter(id: number, observacion?: string) {
     return this.api.noEncontradoSplitter(id, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+
+  hiloEstado(id: number, estado: string, observacion?: string) {
+    return this.api.hiloEstado(id, estado, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  puertoEstado(id: number, estado: string, observacion?: string) {
+    return this.api.puertoEstado(id, estado, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  puertoAsociarHilo(id: number, idFoHilo: number | null, observacion?: string) {
+    return this.api.puertoAsociarHilo(id, idFoHilo, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  puertoAsociarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
+    return this.api.puertoAsociarDestino(id, idGeoElementoDestino, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
 
   // Procesos
