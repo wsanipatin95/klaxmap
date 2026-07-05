@@ -453,6 +453,19 @@ export class BkpSchedulesComponent implements OnInit, PendingChangesAware {
   private applyDefaultsForType(type: string) {
     const t = this.normalizeScheduleType(type);
 
+    const cron = this.form.get('cronExpression');
+    const interval = this.form.get('intervalMinutes');
+    const dias = this.form.get('diasSemana');
+    const diaMes = this.form.get('diaMes');
+    cron?.setValidators(t === 'CRON' ? [Validators.required] : []);
+    interval?.setValidators(t === 'INTERVAL' ? [Validators.required, Validators.min(1)] : []);
+    dias?.setValidators(t === 'WEEKLY' ? [Validators.required] : []);
+    diaMes?.setValidators(t === 'MONTHLY' ? [Validators.required, Validators.min(1), Validators.max(31)] : []);
+    cron?.updateValueAndValidity({ emitEvent: false });
+    interval?.updateValueAndValidity({ emitEvent: false });
+    dias?.updateValueAndValidity({ emitEvent: false });
+    diaMes?.updateValueAndValidity({ emitEvent: false });
+
     if (t === 'HOURLY') {
       this.form.patchValue({
         nombre: this.form.value.nombre || 'Cada hora',

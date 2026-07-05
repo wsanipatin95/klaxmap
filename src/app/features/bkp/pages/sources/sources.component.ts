@@ -41,7 +41,7 @@ export class BkpSourcesComponent implements OnInit {
     nombre: ['', Validators.required],
     motor: ['POSTGRESQL', Validators.required],
     host: ['localhost', Validators.required],
-    puerto: [5432, [Validators.required, Validators.min(1)]],
+    puerto: [5432, [Validators.required, Validators.min(1), Validators.max(65535)]],
     nombreBase: ['', Validators.required],
     nombreSchema: [''],
     usuario: ['', Validators.required],

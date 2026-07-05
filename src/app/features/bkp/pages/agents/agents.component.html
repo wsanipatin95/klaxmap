@@ -92,18 +92,92 @@
                 </select>
                 <small class="bkpHint">Define las rutas sugeridas de binarios.</small>
               </div>
-
               <div class="bkpField">
-                <label>Hostname opcional</label>
+                <label>Modo de ejecucion *</label>
+                <select formControlName="executionMode">
+                  <option value="LOCAL">Local (en este servidor)</option>
+                  <option value="SSH_REMOTE">Remoto por SSH</option>
+                </select>
+                <small class="bkpHint">Local usa los binarios de este servidor. Remoto ejecuta el backup en otro host por SSH y trae el archivo.</small>
+              </div>
+
+              <div class="bkpField" *ngIf="!isRemoteMode()">
+                <label>Hostname opcional (informativo)</label>
                 <input formControlName="hostname" placeholder="SERVER1">
-                <small class="bkpHint">Nombre de red o alias del servidor.</small>
+                <small class="bkpHint">Solo referencia. En modo remoto se usa el Host SSH de abajo.</small>
               </div>
 
-              <div class="bkpField">
-                <label>IP opcional</label>
+              <div class="bkpField" *ngIf="!isRemoteMode()">
+                <label>IP opcional (informativo)</label>
                 <input formControlName="ipAddress" placeholder="192.168.2.100">
-                <small class="bkpHint">Referencia para ubicar el servidor.</small>
+                <small class="bkpHint">Solo referencia. En modo remoto se usa el Host SSH de abajo.</small>
               </div>
+            </div>
+          </div>
+
+          <div class="bkpSoftBox" *ngIf="isRemoteMode()">
+            <h4>Conexion SSH del agente remoto</h4>
+            <div class="bkpFormGrid">
+              <div class="bkpField">
+                <label>Host / IP remoto *</label>
+                <input formControlName="sshHost" placeholder="192.168.10.58">
+              </div>
+              <div class="bkpField">
+                <label>Puerto SSH</label>
+                <input type="number" formControlName="sshPort" placeholder="22">
+              </div>
+              <div class="bkpField">
+                <label>Usuario SSH *</label>
+                <input formControlName="sshUsername" placeholder="klax">
+              </div>
+              <div class="bkpField">
+                <label>Tipo de autenticacion</label>
+                <select formControlName="sshAuthType">
+                  <option value="PASSWORD">Contrasena</option>
+                  <option value="KEY">Llave privada</option>
+                </select>
+              </div>
+              <div class="bkpField" *ngIf="!isKeyAuth()">
+                <label>Secreto (contrasena SSH) *</label>
+                <select formControlName="idBkpSecretSshFk">
+                  <option [ngValue]="null">- Selecciona un secreto -</option>
+                  <option *ngFor="let sec of secrets()" [ngValue]="sec.idBkpSecret">{{ sec.nombre }} ({{ sec.tipoSecret }})</option>
+                </select>
+                <small class="bkpHint">Crea la contrasena en Secretos cifrados y seleccionala aqui.</small>
+              </div>
+              <div class="bkpField" *ngIf="isKeyAuth()">
+                <label>Ruta de la llave privada *</label>
+                <input formControlName="sshIdentityFile" placeholder="/home/klax/.ssh/id_rsa">
+                <small class="bkpHint">Ruta del identity file en el servidor de la app (klaxapi).</small>
+              </div>
+              <div class="bkpField" *ngIf="isKeyAuth()">
+                <label>Secreto (passphrase de la llave)</label>
+                <select formControlName="idBkpSecretSshFk">
+                  <option [ngValue]="null">- Opcional -</option>
+                  <option *ngFor="let sec of secrets()" [ngValue]="sec.idBkpSecret">{{ sec.nombre }} ({{ sec.tipoSecret }})</option>
+                </select>
+              </div>
+              <div class="bkpField">
+                <label>Validar host key</label>
+                <select formControlName="sshStrictHostKey">
+                  <option [ngValue]="false">No (mas simple)</option>
+                  <option [ngValue]="true">Si (recomendado en produccion)</option>
+                </select>
+              </div>
+              <div class="bkpField" *ngIf="agentForm.value.sshStrictHostKey">
+                <label>Ruta known_hosts</label>
+                <input formControlName="sshKnownHosts" placeholder="/home/klax/.ssh/known_hosts">
+              </div>
+              <div class="bkpField">
+                <label>Timeout de conexion (seg)</label>
+                <input type="number" formControlName="sshConnectTimeoutSeconds" placeholder="30">
+              </div>
+            </div>
+            <small class="bkpHint">La carpeta temporal (arriba) se usa como directorio remoto donde se genera el dump antes de traerlo. El binario del remoto se define en la pestana Binarios.</small>
+          </div>
+
+          <div class="bkpSoftBox">
+            <div class="bkpFormGrid">
 
               <div class="bkpField">
                 <label>Carpeta de trabajo</label>
@@ -126,7 +200,7 @@
               <div class="bkpField">
                 <label>Backups simultáneos *</label>
                 <input type="number" formControlName="maxParallelJobs">
-                <small class="bkpHint">Usa 1 si no necesitas paralelismo.</small>
+                <small class="bkpHint">1 = en cola, uno a la vez (recomendado). Mas de 1 = permite ese numero de backups en paralelo en este agente.</small>
                 <span class="bkpError" *ngIf="invalid('agent','maxParallelJobs')">Debe estar entre 1 y 20.</span>
               </div>
 
@@ -160,8 +234,18 @@
             </div>
           </div>
 
+          <div class="bkpSoftBox" *ngIf="testResult() as tr">
+            <strong>Prueba de conexion - modo {{ tr.modo }} - {{ tr.ok ? 'OK' : 'Revisar' }}</strong>
+            <p class="bkpHint" *ngIf="tr.info">{{ tr.info }}</p>
+            <ul *ngIf="tr.binarios?.length">
+              <li *ngFor="let b of tr.binarios">{{ b.herramienta }} - {{ b.binaryPath }} - {{ b.existe ? 'OK' : 'FALTA' }}</li>
+            </ul>
+            <small class="bkpHint" *ngIf="!tr.binarios?.length">Sin binarios registrados para este agente. Agregalos en la pestana Binarios.</small>
+          </div>
+
           <div class="bkpActions agentFooter">
             <button pButton type="button" severity="danger" [outlined]="true" label="Desactivar" [disabled]="!selectedAgent()" (click)="eliminarAgent()"></button>
+            <button pButton type="button" [outlined]="true" icon="pi pi-plug" label="Probar conexion" [disabled]="!selectedAgent()" [loading]="testing()" (click)="probarConexion()"></button>
             <button pButton type="submit" icon="pi pi-save" label="Guardar agente" [loading]="saving()"></button>
           </div>
         </form>

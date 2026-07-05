@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { BkpPageHeaderComponent, BkpEmptyStateComponent } from '../../components/bkp-ui.component';
 import { BkpRepository } from '../../data-access/bkp.repository';
-import { BkpAgentNode, BkpEngineTool, BkpCatalogs } from '../../data-access/bkp.models';
+import { BkpAgentNode, BkpEngineTool, BkpCatalogs, BkpSecret } from '../../data-access/bkp.models';
 import { BkpConfirmService } from '../../services/bkp-confirm.service';
 import { PendingChangesAware } from '../../guards/pending-changes.guard';
 import { jsonPretty, parseJsonObjectStrict } from '../../data-access/bkp.shared';
@@ -52,6 +52,8 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   dirty = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
+  testing = signal(false);
+  testResult = signal<any | null>(null);
 
   agentTechOpen = signal(false);
   toolTechOpen = signal(false);
@@ -60,6 +62,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   agents = signal<BkpAgentNode[]>([]);
   tools = signal<BkpEngineTool[]>([]);
   catalogs = signal<Partial<BkpCatalogs>>({});
+  secrets = signal<BkpSecret[]>([]);
   selectedAgent = signal<BkpAgentNode | null>(null);
   selectedTool = signal<BkpEngineTool | null>(null);
 
@@ -72,6 +75,16 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     tempDir: [''],
     logDir: [''],
     maxParallelJobs: [1, [Validators.required, Validators.min(1), Validators.max(20)]],
+    executionMode: ['LOCAL', Validators.required],
+    sshHost: [''],
+    sshPort: [22 as number | null, [Validators.min(1), Validators.max(65535)]],
+    sshUsername: [''],
+    sshAuthType: ['PASSWORD'],
+    idBkpSecretSshFk: [null as number | null],
+    sshIdentityFile: [''],
+    sshStrictHostKey: [false],
+    sshKnownHosts: [''],
+    sshConnectTimeoutSeconds: [30 as number | null, [Validators.min(1), Validators.max(3600)]],
     observacion: [''],
     metadataJson: ['{}'],
     activo: [true],
@@ -113,6 +126,9 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     return String(this.agentForm.value.osType || 'LINUX').toUpperCase();
   }
 
+  isRemoteMode() { return String(this.agentForm.value.executionMode || 'LOCAL').toUpperCase() === 'SSH_REMOTE'; }
+  isKeyAuth() { return String(this.agentForm.value.sshAuthType || 'PASSWORD').toUpperCase() === 'KEY'; }
+
   binaryPathOs() {
     const path = String(this.toolForm.value.binaryPath || '').trim();
     if (/^[a-zA-Z]:\\/.test(path) || path.includes('\\')) return 'WINDOWS';
@@ -136,11 +152,13 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       agents: this.repo.listarAgents('', 0, 200, null),
       tools: this.repo.listarTools('', 0, 200, null),
       catalogs: this.repo.catalogos(),
+      secrets: this.repo.listarSecrets('', 0, 200, true),
     }).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: r => {
         this.agents.set(r.agents.items ?? []);
         this.tools.set(r.tools.items ?? []);
         this.catalogs.set(r.catalogs ?? {});
+        this.secrets.set(r.secrets.items ?? []);
 
         const selected =
           this.findAgent(snapshot.agentId, snapshot.agentName) ??
@@ -193,6 +211,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
   nuevoAgent() {
     this.activeSection.set('data');
     this.selectedAgent.set(null);
+    this.testResult.set(null);
     this.selectedTool.set(null);
     this.toolEditorOpen.set(false);
     this.toolTechOpen.set(false);
@@ -207,6 +226,16 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       tempDir: '',
       logDir: '',
       maxParallelJobs: 1,
+      executionMode: 'LOCAL',
+      sshHost: '',
+      sshPort: 22,
+      sshUsername: '',
+      sshAuthType: 'PASSWORD',
+      idBkpSecretSshFk: null,
+      sshIdentityFile: '',
+      sshStrictHostKey: false,
+      sshKnownHosts: '',
+      sshConnectTimeoutSeconds: 30,
       observacion: '',
       metadataJson: '{}',
       activo: true,
@@ -224,6 +253,7 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     const section = this.activeSection();
 
     this.selectedAgent.set(i);
+    this.testResult.set(null);
     this.selectedTool.set(null);
     this.toolTechOpen.set(false);
     this.toolEditorOpen.set(false);
@@ -237,6 +267,16 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       tempDir: i.tempDir ?? '',
       logDir: i.logDir ?? '',
       maxParallelJobs: i.maxParallelJobs ?? 1,
+      executionMode: i.executionMode ?? 'LOCAL',
+      sshHost: i.sshHost ?? '',
+      sshPort: i.sshPort ?? 22,
+      sshUsername: i.sshUsername ?? '',
+      sshAuthType: i.sshAuthType ?? 'PASSWORD',
+      idBkpSecretSshFk: i.idBkpSecretSshFk ?? null,
+      sshIdentityFile: i.sshIdentityFile ?? '',
+      sshStrictHostKey: i.sshStrictHostKey ?? false,
+      sshKnownHosts: i.sshKnownHosts ?? '',
+      sshConnectTimeoutSeconds: i.sshConnectTimeoutSeconds ?? 30,
       observacion: i.observacion ?? '',
       metadataJson: jsonPretty(i.metadata ?? {}),
       activo: i.activo !== false,
@@ -299,6 +339,22 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     this.clean();
   }
 
+  probarConexion() {
+    const id = this.selectedAgent()?.idBkpAgentNode;
+    if (!id) { this.setError('Guarda el agente antes de probar la conexion.'); return; }
+    if (this.dirty()) { this.setError('Guarda los cambios antes de probar la conexion.'); return; }
+    this.testing.set(true);
+    this.testResult.set(null);
+    this.repo.probarConexionAgent(id).pipe(finalize(() => this.testing.set(false))).subscribe({
+      next: (r: any) => {
+        this.testResult.set(r?.data ?? null);
+        this.success.set(r?.mensaje || 'Prueba completada');
+        this.notify.success('Prueba de conexion', r?.mensaje);
+      },
+      error: (e: any) => this.setError('Fallo la prueba de conexion', e?.message),
+    });
+  }
+
   guardarAgent() {
     this.agentForm.markAllAsTouched();
 
@@ -316,6 +372,14 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
     }
 
     const v = this.agentForm.getRawValue();
+    const modo = String(v.executionMode || 'LOCAL').toUpperCase();
+    if (modo === 'SSH_REMOTE') {
+      if (!String(v.sshHost || '').trim()) { this.setError('El agente remoto requiere host SSH.'); return; }
+      if (!String(v.sshUsername || '').trim()) { this.setError('El agente remoto requiere usuario SSH.'); return; }
+      const auth = String(v.sshAuthType || 'PASSWORD').toUpperCase();
+      if (auth === 'PASSWORD' && !v.idBkpSecretSshFk) { this.setError('Auth por contrasena requiere seleccionar un secreto.'); return; }
+      if (auth === 'KEY' && !String(v.sshIdentityFile || '').trim()) { this.setError('Auth por llave requiere la ruta del identity file.'); return; }
+    }
     const payload: Partial<BkpAgentNode> = {
       nombre: v.nombre ?? '',
       hostname: v.hostname || null,
@@ -325,6 +389,16 @@ export class BkpAgentsComponent implements OnInit, PendingChangesAware {
       tempDir: v.tempDir || null,
       logDir: v.logDir || null,
       maxParallelJobs: Number(v.maxParallelJobs ?? 1),
+      executionMode: modo,
+      sshHost: v.sshHost || null,
+      sshPort: v.sshPort != null ? Number(v.sshPort) : (modo === 'SSH_REMOTE' ? 22 : null),
+      sshUsername: v.sshUsername || null,
+      sshAuthType: modo === 'SSH_REMOTE' ? String(v.sshAuthType || 'PASSWORD').toUpperCase() : null,
+      idBkpSecretSshFk: v.idBkpSecretSshFk || null,
+      sshIdentityFile: v.sshIdentityFile || null,
+      sshStrictHostKey: !!v.sshStrictHostKey,
+      sshKnownHosts: v.sshKnownHosts || null,
+      sshConnectTimeoutSeconds: v.sshConnectTimeoutSeconds != null ? Number(v.sshConnectTimeoutSeconds) : null,
       observacion: v.observacion || null,
       metadata,
       activo: v.activo ?? true,

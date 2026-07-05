@@ -64,11 +64,11 @@ export class BkpDestinationsComponent implements OnInit {
     idBkpSecretCredentialFk: [null as number | null],
     retentionDays: [30, [Validators.required, Validators.min(1)]],
     immutableEnabled: [false],
-    immutableDays: [null as number | null],
+    immutableDays: [null as number | null, [Validators.min(1)]],
     activo: [true],
 
     remoteHost: [''],
-    remotePort: [22],
+    remotePort: [22, [Validators.min(1), Validators.max(65535)]],
     remoteUsername: [''],
     remotePath: [''],
     identityFile: [''],
@@ -538,6 +538,17 @@ export class BkpDestinationsComponent implements OnInit {
 
   private applyDefaultsForType(type: string) {
     const t = this.normalizeStorageType(type);
+
+    const setV = (name: string, v: any[]) => { const c = this.form.get(name); c?.setValidators(v); c?.updateValueAndValidity({ emitEvent: false }); };
+    const isRemoteT = t === 'SFTP' || t === 'SSH' || t === 'SCP';
+    setV('basePath', t === 'LOCAL' ? [Validators.required] : []);
+    setV('bucketName', t === 'S3' ? [Validators.required] : []);
+    setV('s3Region', t === 'S3' ? [Validators.required] : []);
+    setV('folderId', t === 'GOOGLE_DRIVE' ? [Validators.required] : []);
+    setV('remoteHost', isRemoteT ? [Validators.required] : []);
+    setV('remoteUsername', isRemoteT ? [Validators.required] : []);
+    setV('remotePath', isRemoteT ? [Validators.required] : []);
+    setV('remotePort', isRemoteT ? [Validators.required, Validators.min(1), Validators.max(65535)] : [Validators.min(1), Validators.max(65535)]);
 
     if (t === 'LOCAL' && !this.form.value.basePath) {
       this.form.patchValue({ basePath: '/var/backups/klax' }, { emitEvent: false });

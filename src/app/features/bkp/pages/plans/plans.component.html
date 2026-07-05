@@ -134,6 +134,7 @@
               <div>
                 <strong>Destinos *</strong>
                 <small>{{ selectedDestinationCount() }} seleccionado(s)</small>
+                <small class="bkpError" *ngIf="selectedDestinationCount() === 0">Debe seleccionar al menos un destino.</small>
               </div>
             </div>
 
@@ -226,6 +227,7 @@
           </div>
         </section>
 
+        <div class="planPairRow">
         <section class="planBlock">
           <div class="planBlock__head">
             <span class="planStep">3</span>
@@ -261,7 +263,7 @@
             <span class="planStep">4</span>
             <div>
               <h4>Alcance</h4>
-              <p>Qué parte de la base incluirá el plan.</p>
+              <p>Cuánto de la base se respalda: todo, solo la estructura, solo los datos, o tablas específicas.</p>
             </div>
           </div>
 
@@ -269,6 +271,7 @@
             <i class="pi pi-info-circle"></i>
             <span>
               <strong>{{ scopeReadonlyText() }}</strong>
+              <small>{{ scopeHint(scopeType()) }}</small>
               <small>El alcance se fija al crear el plan. Para cambiarlo, crea un plan nuevo con otro alcance.</small>
             </span>
           </div>
@@ -290,6 +293,7 @@
                 <option [ngValue]="false">No</option>
                 <option [ngValue]="true">Sí</option>
               </select>
+              <small class="bkpHint">Guarda quién es el dueño (rol) de cada objeto. Útil si restauras en el mismo servidor. Normalmente No.</small>
             </div>
 
             <div class="bkpField">
@@ -298,6 +302,7 @@
                 <option [ngValue]="false">No</option>
                 <option [ngValue]="true">Sí</option>
               </select>
+              <small class="bkpHint">Guarda los permisos (GRANT) sobre los objetos. Normalmente No.</small>
             </div>
           </div>
 
@@ -347,12 +352,14 @@
           </div>
         </section>
 
+        </div>
+
         <section class="planBlock">
           <div class="planBlock__head">
             <span class="planStep">5</span>
             <div>
               <h4>Operación local</h4>
-              <p>Controla retención temporal y límite de ejecución.</p>
+              <p>Limpieza de copias temporales locales y tiempo máximo de ejecución. No afecta a los destinos.</p>
             </div>
           </div>
 
@@ -360,7 +367,7 @@
             <div class="bkpField">
               <label>Retención local días *</label>
               <input type="number" formControlName="localRetentionDays">
-              <small class="bkpHint">Días para conservar archivos locales temporales.</small>
+              <small class="bkpHint">Días que se conservan las copias TEMPORALES en la máquina que ejecuta el backup. No borra los archivos ya subidos a los destinos (eso lo hace la Retención del destino).</small>
             </div>
 
             <div class="bkpField">

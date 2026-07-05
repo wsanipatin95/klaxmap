@@ -69,7 +69,7 @@ export class BkpRestoresComponent implements OnInit, PendingChangesAware {
     idBkpAgentNode: [null as number | null],
     restoreType: ['TEST', Validators.required],
     targetHost: [''],
-    targetPort: [null as number | null],
+    targetPort: [null as number | null, [Validators.min(1), Validators.max(65535)]],
     targetDatabase: ['', Validators.required],
     targetSchema: [''],
     targetUsuario: [''],

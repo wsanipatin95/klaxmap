@@ -90,6 +90,7 @@
         </div>
 
         <div class="bkpSoftBox">
+          <h4>Identificación</h4>
           <div class="bkpFormGrid">
             <div class="bkpField">
               <label>Nombre *</label>
@@ -104,7 +105,12 @@
               </select>
               <small class="bkpHint">{{ motorHint() }}</small>
             </div>
+          </div>
+        </div>
 
+        <div class="bkpSoftBox">
+          <h4>Conexión a la base</h4>
+          <div class="bkpFormGrid">
             <div class="bkpField">
               <label>Host accesible desde KLAX API *</label>
               <input formControlName="host" placeholder="localhost o IP/host remoto">

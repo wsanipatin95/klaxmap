@@ -130,6 +130,8 @@ export class BkpSecretsComponent implements OnInit, PendingChangesAware {
       valorPlano: '',
       confirmarValor: '',
     });
+    this.form.get('valorPlano')?.setValidators([Validators.required]);
+    this.form.get('valorPlano')?.updateValueAndValidity({ emitEvent: false });
     this.clean();
   }
 
@@ -149,6 +151,8 @@ export class BkpSecretsComponent implements OnInit, PendingChangesAware {
       valorPlano: '',
       confirmarValor: '',
     });
+    this.form.get('valorPlano')?.clearValidators();
+    this.form.get('valorPlano')?.updateValueAndValidity({ emitEvent: false });
     this.clean();
   }
 

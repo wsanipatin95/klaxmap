@@ -424,3 +424,32 @@
 .plansPage .planFooter .runNow {
   margin-right: auto;
 }
+
+/* --- Compactar formulario del plan: inputs al ancho del valor, no al 100% de la columna --- */
+.planForm .bkpField input,
+.planForm .bkpField select {
+  max-width: 26rem;
+}
+
+.planForm .bkpField.full input,
+.planForm .bkpField.full select,
+.planForm .bkpField.full textarea {
+  max-width: none;
+}
+
+/* secciones un poco más compactas en vertical */
+.planForm .planBlock {
+  padding: .55rem .6rem;
+  gap: .45rem;
+}
+
+/* Dos secciones cortas lado a lado (Cuándo ejecutar + Alcance) */
+.planForm .planPairRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .planForm .planPairRow { grid-template-columns: 1fr; }
+}

@@ -136,16 +136,27 @@ export class BkpPlansComponent implements OnInit {
     this.form.get('compressionEnabled')?.valueChanges.subscribe(value => {
       const enabled = value !== false;
       this.compressionOn.set(enabled);
-      if (enabled && !this.form.value.compressionType) {
-        this.form.patchValue({ compressionType: 'GZIP' }, { emitEvent: false });
+      const ct = this.form.get('compressionType');
+      if (enabled) {
+        if (!this.form.value.compressionType) this.form.patchValue({ compressionType: 'GZIP' }, { emitEvent: false });
+        ct?.setValidators([Validators.required]);
+      } else {
+        ct?.clearValidators();
       }
+      ct?.updateValueAndValidity({ emitEvent: false });
     });
 
     this.form.get('encryptionEnabled')?.valueChanges.subscribe(value => {
-      this.encryptionOn.set(value === true);
-      if (value !== true) {
+      const on = value === true;
+      this.encryptionOn.set(on);
+      const sec = this.form.get('idBkpSecretEncryptionFk');
+      if (on) {
+        sec?.setValidators([Validators.required]);
+      } else {
+        sec?.clearValidators();
         this.form.patchValue({ idBkpSecretEncryptionFk: null }, { emitEvent: false });
       }
+      sec?.updateValueAndValidity({ emitEvent: false });
     });
 
     this.form.get('scopeType')?.valueChanges.subscribe(value => {
@@ -303,6 +314,7 @@ export class BkpPlansComponent implements OnInit {
           this.selectedDestIds.set(normalizedDestinationIds);
           this.lastSavedDestIds.set(normalizedDestinationIds);
           this.destinationsTouched.set(false);
+          this.error.set('');
 
           this.ensureFormatAllowed();
           this.clean();
