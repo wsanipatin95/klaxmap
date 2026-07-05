@@ -112,3 +112,23 @@ export interface MapaEmbedInitMessage {
   ordenId?: number;
   metadata?: Record<string, unknown>;
 }
+
+
+export interface MapaOtaCrearRequest {
+  idGeoElemento: number;
+  nivel?: string | null;
+  clave: string;
+}
+
+export interface MapaOtaCrearResponse {
+  ok: boolean;
+  idTicket?: number | null;
+  idOrden?: number | null;
+  idRuta?: number | null;
+  hora?: string | null;
+  reutilizada?: boolean;
+  rutaNueva?: boolean;
+}
+
+/** tipoCodigo de NAP elegibles para crear OT-A. */
+export const OTA_TIPOS_ELEGIBLES = ['NAP_PROYECTADA', 'NAP_1ER_NIVEL', 'NAP_2DO_NIVEL'];

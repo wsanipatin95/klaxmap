@@ -61,7 +61,7 @@
 <app-mapa-export-dialog #exportDialog [nodos]="nodos()" [tipos]="tipos()"></app-mapa-export-dialog>
 
 <app-mapa-create-element-dialog #createDialog [nodos]="nodos()" [tipos]="tipos()"
-  (submitted)="crearElemento($event)" (cancelled)="onCreateElementCancelled()"></app-mapa-create-element-dialog>
+  (submitted)="crearElemento($event)" (cancelled)="onCreateElementCancelled()" (requestAdjust)="onRequestAdjustGeometry($event)"></app-mapa-create-element-dialog>
 
 <app-mapa-node-dialog #nodeDialog (createSubmitted)="onCreateNodeSubmitted($event)"
   (editSubmitted)="onEditNodeSubmitted($event)" (deleted)="onNodeDeleted($event)"
@@ -93,3 +93,11 @@
     <div class="mapa-action-text">{{ actionBusyText() }}</div>
   </div>
 </div>
+
+@if (adjustingGeometry()) {
+  <div class="adjust-bar" style="position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%);z-index:3000;display:flex;align-items:center;gap:.75rem;background:#1e293b;color:#fff;border-radius:.6rem;padding:.6rem .9rem;box-shadow:0 8px 24px rgba(15,23,42,.35);font-size:.85rem;">
+    <span>Ajustando trazo: arrastra los vértices para moverlos, o arrastra los puntos medios para agregar un nodo.</span>
+    <button type="button" (click)="terminarAjuste()" style="background:#16a34a;color:#fff;border:none;border-radius:.4rem;padding:.35rem .8rem;cursor:pointer;">Terminar ajuste</button>
+    <button type="button" (click)="cancelarAjuste()" style="background:transparent;color:#cbd5e1;border:1px solid #475569;border-radius:.4rem;padding:.35rem .8rem;cursor:pointer;">Cancelar</button>
+  </div>
+}

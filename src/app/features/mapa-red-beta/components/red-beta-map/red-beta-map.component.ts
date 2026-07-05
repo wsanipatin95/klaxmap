@@ -3,6 +3,7 @@ import {
   Output, SimpleChanges, ViewChild, ViewEncapsulation,
 } from '@angular/core';
 import * as L from 'leaflet';
+import 'leaflet-rotate';
 
 import type {
   RedBaseElemento, RedCapaKey, RedDispositivoPasivo, RedDispositivoPuerto,
@@ -84,7 +85,18 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   private splitterIdx = new Map<number, RedDispositivoPasivo>();
 
   ngAfterViewInit(): void {
-    this.map = L.map(this.mapEl.nativeElement, { center: [-0.22985, -78.52495], zoom: 13, zoomControl: true });
+    const mapOpts = {
+      center: [-0.22985, -78.52495] as L.LatLngTuple,
+      zoom: 13,
+      zoomControl: true,
+      // Rotacion (plugin leaflet-rotate): brujula + giro con 2 dedos o Shift+arrastrar.
+      rotate: true,
+      touchRotate: true,
+      shiftKeyRotate: true,
+      bearing: 0,
+      rotateControl: { closeOnZeroBearing: false, position: 'topleft' },
+    } as unknown as L.MapOptions;
+    this.map = L.map(this.mapEl.nativeElement, mapOpts);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OpenStreetMap' }).addTo(this.map);
     this.baseGroup.addTo(this.map);
     this.overlayGroup.addTo(this.map);

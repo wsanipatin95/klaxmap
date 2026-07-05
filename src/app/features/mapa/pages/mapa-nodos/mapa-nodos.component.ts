@@ -20,6 +20,7 @@ export class MapaNodosComponent {
   error = signal<string | null>(null);
   nodos = signal<MapaNodo[]>([]);
   selected = signal<MapaNodo | null>(null);
+  confirmandoEliminar = signal(false);
 
   constructor() {
     this.cargar();
@@ -51,6 +52,7 @@ export class MapaNodosComponent {
   }
 
   seleccionar(n: MapaNodo) {
+    this.confirmandoEliminar.set(false);
     this.selected.set(n);
   }
 
@@ -75,6 +77,7 @@ export class MapaNodosComponent {
   }
 
   eliminar(id: number) {
+    this.confirmandoEliminar.set(false);
     this.repo.eliminar(id).subscribe({
       next: () => {
         this.selected.set(null);

@@ -12,7 +12,8 @@ export type KlaxMapMessageType =
   | 'KLAX_MAP_BOX_SELECTED'
   | 'KLAX_MAP_BOX_CREATED'
   | 'KLAX_MAP_FIBER_CREATED'
-  | 'KLAX_MAP_CREATE_DRAFT_CHANGED';
+  | 'KLAX_MAP_CREATE_DRAFT_CHANGED'
+  | 'KLAX_MAP_OTA_CREATED';
 
 @Injectable({ providedIn: 'root' })
 export class MapaEmbedMessagingService {
@@ -62,5 +63,9 @@ export class MapaEmbedMessagingService {
 
   fiberCreated(item: MapaElemento) {
     this.post('KLAX_MAP_FIBER_CREATED', item);
+  }
+
+  otaCreated(payload: unknown) {
+    this.post('KLAX_MAP_OTA_CREATED', payload);
   }
 }

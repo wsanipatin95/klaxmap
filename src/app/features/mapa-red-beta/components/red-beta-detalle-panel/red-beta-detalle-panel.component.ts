@@ -173,13 +173,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                 }
               }
               @if (seleccion.tipo === 'ponfo') {
-                <p class="rb-help">¿La relacion logica PON/VLAN → FO es correcta? Validala (oficina/campo), mandala a verificar o rechazala.</p>
-                <div class="flex flex-wrap gap-1.5">
-                  <button class="b ok" (click)="emit('pon-validar-oficina')">Validar oficina</button>
-                  <button class="b ok2" (click)="emit('pon-validar-campo')">Validar campo</button>
-                  <button class="b campo" (click)="emit('pon-pendiente-campo')">Mandar a campo</button>
-                  <button class="b no" (click)="emit('pon-rechazar')">Rechazar</button>
-                </div>
+                <p class="rb-help">Relación PON/VLAN → FO <b>derivada</b> (contrato→vlan + equipo→geo + grafo). Es de <b>solo lectura</b>: no se valida a mano; si algo no cuadra se corrige el dato de origen.</p>
               }
               @if (seleccion.tipo === 'base') {
                 <p class="rb-help">Elemento fisico base: valida sus relaciones/splitters desde el arbol o ejecuta procesos.</p>

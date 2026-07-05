@@ -1,33 +1,6 @@
 <div class="mapa-layout mapa-embed-layout sidebar-expanded">
   <aside class="sidebar">
     <div class="sidebar-shell">
-      <div class="sidebar-geo-search embed-location-strip">
-        <div class="embed-location-title">
-          <i class="pi pi-map-marker"></i>
-          <span>Ubicación</span>
-          <strong *ngIf="origin()">OK</strong>
-        </div>
-
-        <div class="embed-location-controls" *ngIf="ready()">
-          <label>
-            <span>Radio</span>
-            <input type="number" min="1" [ngModel]="radioM()" (ngModelChange)="radioM.set(+$event || 1)" />
-          </label>
-
-          <button type="button" class="edit-action edit-action--primary embed-search-btn" title="Buscar cercanos" (click)="refreshNearby()" [disabled]="loadingItems()">
-            <i class="pi pi-search"></i>
-            <span>Buscar</span>
-          </button>
-
-          <button type="button" class="tool-btn embed-center-btn" title="Usar GPS" (click)="locateBrowser()">
-            <i class="pi pi-map-marker"></i>
-          </button>
-
-          <button type="button" class="tool-btn embed-center-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
-            <i class="pi pi-send"></i>
-          </button>
-        </div>
-      </div>
 
       <div class="sidebar-sections">
         <section class="sidebar-pane pane-places">
@@ -66,7 +39,7 @@
 
               <article
                 class="embed-nearby-row"
-                *ngFor="let item of items()"
+                *ngFor="let item of items(); trackBy: trackByElementId"
                 [class.selected]="selected()?.idGeoElemento === item.idGeoElemento"
               >
                 <button type="button" class="embed-row-main" (click)="focusItem(item)">
@@ -120,6 +93,45 @@
 
   <header class="toolbar">
     <div class="ge-toolbar-shell">
+      <div class="embed-head">
+        <div class="embed-head-titles">
+          <h2 class="embed-head-title">Buscar NAP cercanas</h2>
+          <div class="embed-head-sub">{{ items().length }} NAP · radio {{ radioM() }} m</div>
+        </div>
+      </div>
+
+      <div class="sidebar-geo-search embed-location-strip embed-location-strip--head">
+        <div class="embed-location-title">
+          <span class="embed-loc-coords">
+            <i class="pi pi-map-marker"></i>
+            <span>{{ originLabel() || 'Esperando ubicación…' }}</span>
+          </span>
+          <span class="embed-loc-actions">
+            <button type="button" class="tool-btn embed-center-btn" title="Usar GPS" (click)="locateBrowser()">
+              <i class="pi pi-map-marker"></i>
+            </button>
+            <button type="button" class="tool-btn embed-center-btn" title="Centrar ubicación" (click)="centerOrigin()" [disabled]="!origin()">
+              <i class="pi pi-send"></i>
+            </button>
+          </span>
+        </div>
+
+        <div class="embed-location-controls" *ngIf="ready()">
+          <select class="embed-radio-select" [ngModel]="radioM()" (ngModelChange)="onRadioChange($event)">
+            <option [ngValue]="500">500 m</option>
+            <option [ngValue]="1000">1 km</option>
+            <option [ngValue]="2000">2 km</option>
+            <option [ngValue]="3000">3 km</option>
+            <option [ngValue]="5000">5 km</option>
+          </select>
+
+          <button type="button" class="edit-action edit-action--primary embed-search-btn" title="Buscar cercanos" (click)="refreshNearby()" [disabled]="loadingItems()">
+            <i class="pi pi-search"></i>
+            <span>Buscar</span>
+          </button>
+        </div>
+      </div>
+
       <div class="ge-toolbar-strip" role="toolbar" aria-label="Herramientas mapa embed">
         <div class="toolbar-dropdown" (click)="$event.stopPropagation()">
           <button
@@ -250,26 +262,84 @@
           <dt>Estado</dt>
           <dd>{{ selected()?.estado || 'N/D' }}</dd>
         </div>
+        <div *ngIf="selected()?.tipoNombre">
+          <dt>Tipo</dt>
+          <dd>{{ selected()?.tipoNombre }}</dd>
+        </div>
         <div *ngIf="selected()?.codigo || selected()?.etiqueta">
           <dt>Código</dt>
-          <dd>{{ selected()?.codigo || selected()?.etiqueta }}</dd>
+          <dd class="embed-info-code" [title]="selected()?.codigo || selected()?.etiqueta || ''">{{ selected()?.codigo || selected()?.etiqueta }}</dd>
         </div>
       </dl>
 
       <p *ngIf="selected()?.descripcion">{{ selected()?.descripcion }}</p>
 
       <footer>
-        <button type="button" class="edit-action edit-action--primary" (click)="selectForErp()">
-          <i class="pi pi-check"></i>
-          <span>Usar</span>
-        </button>
-
-        <button type="button" class="edit-action" (click)="traceRoute(selected()!)">
-          <i class="pi pi-directions"></i>
-          <span>Ruta</span>
+        <button type="button" class="edit-action" (click)="closeInfo()">
+          <i class="pi pi-times"></i>
+          <span>Cerrar</span>
         </button>
       </footer>
     </section>
+  </div>
+
+
+  <div class="embed-info-modal-backdrop embed-ota-backdrop" *ngIf="otaModalOpen()" (click)="cancelOta()">
+    <section class="embed-info-modal embed-ota-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <strong>Confirmar creación de OT-A</strong>
+          <span>{{ selected()?.nombre }} · {{ nivelDe(selected()) }}</span>
+        </div>
+        <button type="button" class="tool-btn" title="Cerrar" (click)="cancelOta()" [disabled]="otaBusy()">
+          <i class="pi pi-times"></i>
+        </button>
+      </header>
+
+      <p>Vas a generar una Orden de Trabajo Autogenerada (OT-A) para la NAP seleccionada.</p>
+
+      <label class="embed-ota-lbl">Contraseña de inicio de sesión</label>
+      <input class="embed-ota-input" type="password" autocomplete="current-password" placeholder="••••••••"
+             [ngModel]="otaClave()" (ngModelChange)="otaClave.set($event)"
+             (keyup.enter)="confirmarOta()" [disabled]="otaBusy()" />
+
+      <p class="embed-ota-err" *ngIf="otaError()">{{ otaError() }}</p>
+
+      <footer>
+        <button type="button" class="edit-action" (click)="cancelOta()" [disabled]="otaBusy()">
+          <i class="pi pi-times"></i><span>Cancelar</span>
+        </button>
+        <button type="button" class="edit-action edit-action--primary"
+                (click)="confirmarOta()" [disabled]="otaBusy() || !otaClave().trim()">
+          <span class="mini-loader" *ngIf="otaBusy()"></span>
+          <i class="pi pi-check" *ngIf="!otaBusy()"></i>
+          <span>{{ otaBusy() ? 'Creando...' : 'Confirmar' }}</span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+
+  <div class="embed-ctx-backdrop" *ngIf="ctxOpen()" (click)="closeCtx()"
+       (contextmenu)="$event.preventDefault(); closeCtx()"></div>
+  <div class="embed-ctx" *ngIf="ctxOpen()" [style.left.px]="ctxX()" [style.top.px]="ctxY()"
+       (contextmenu)="$event.preventDefault()">
+    <div class="embed-ctx-title">{{ ctxItem()?.nombre || ctxItem()?.codigo }}</div>
+    <button type="button" class="embed-ctx-item" (click)="ctxRuta()">
+      <i class="pi pi-directions"></i><span>Ruta</span>
+    </button>
+    <button type="button" class="embed-ctx-item" (click)="ctxInfo()">
+      <i class="pi pi-info-circle"></i><span>Ver información</span>
+    </button>
+    <button type="button" class="embed-ctx-item embed-ctx-item--ota"
+            *ngIf="mode() === 'tecnico' && napElegible(ctxItem())" (click)="ctxOrden()">
+      <i class="pi pi-bolt"></i><span>Crear orden</span>
+    </button>
+  </div>
+
+
+  <div class="embed-ok-toast" *ngIf="okMsg()">
+    <i class="pi pi-check-circle"></i><span>{{ okMsg() }}</span>
   </div>
 
 

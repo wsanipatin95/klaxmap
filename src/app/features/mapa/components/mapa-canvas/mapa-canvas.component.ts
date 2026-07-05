@@ -133,11 +133,32 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   private readonly labelsLayer = new L.LayerGroup();
   private readonly renderedLayers = new Map<number, L.Layer>();
   private readonly elementBoundsCache = new Map<number, CachedElementBounds>();
-  private readonly vectorRenderer = L.canvas({ padding: 0.8, tolerance: 10 });
+  // Renderer SVG (no canvas): permite rotacion (leaflet-rotate) manteniendo el clic en lineas/puntos.
+  private readonly vectorRenderer = L.svg({ padding: 0.8 });
 
   private activeDrawHandler: any = null;
+  private draftEditLayer: L.Layer | null = null;
+  private draftEditGeomTipo: MapaGeomTipo | null = null;
+  private drawingKeyType: 'point' | 'line' | 'polygon' | null = null;
+  // Borrar el ultimo nodo (Backspace/Supr) o cancelar el trazo (Esc) mientras se dibuja una linea/poligono.
+  private onDrawKeydown = (e: KeyboardEvent) => {
+    if (!this.activeDrawHandler) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.stopActiveDraw();
+      return;
+    }
+    if ((e.key === 'Backspace' || e.key === 'Delete') && this.drawingKeyType !== 'point') {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      e.preventDefault();
+      this.activeDrawHandler?.deleteLastVertex?.();
+    }
+  };
   private renderFrameId: number | null = null;
   private resizeRefreshFrameId: number | null = null;
+  private lastRefreshSize: L.Point | null = null;
   private currentViewBounds: L.LatLngBounds | null = null;
   private hasInitialAutoFit = false;
   private drawPluginAvailable = false;
@@ -201,6 +222,8 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
 
     this.resizeObserver?.disconnect();
+    window.removeEventListener('keydown', this.onDrawKeydown);
+    this.cancelDraftGeometryEdit();
 
     if (this.map) {
       this.map.remove();
@@ -261,6 +284,26 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   refreshMapLayout(preserveView = true) {
     this.scheduleMapResizeRefresh(preserveView);
     this.scheduleRobustMapLayoutRefresh(preserveView);
+    this.forceBaseTilesRedraw();
+  }
+
+  /**
+   * Fuerza la recarga de los tiles de la capa base tras un cambio de layout
+   * explicito (abrir/cerrar el panel lateral, entrar a modo responsive/movil).
+   * En esos casos Leaflet puede dejar el mapa en gris aunque el tamano no cambie;
+   * un redraw garantiza que los tiles se vuelvan a pedir y el mapa nunca quede gris.
+   */
+  private forceBaseTilesRedraw() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      if (!this.map || !this.baseLayer) {
+        return;
+      }
+      this.lastRefreshSize = this.map.getSize();
+      this.baseLayer.redraw?.();
+    });
   }
 
   clearMeasurement() {
@@ -499,6 +542,72 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.scheduleRender();
   }
 
+  // ---- Ajuste del trazo de un elemento NUEVO (aun no guardado), desde el formulario.
+  /** Construye una capa simple editable (sin estilos compuestos) desde un WKT, para ajustar vertices. */
+  private buildSimpleEditableLayer(wkt: string, geomTipo: MapaGeomTipo): L.Layer | null {
+    const parsed = parseWktGeometry(wkt);
+    if (!parsed) return null;
+    if (geomTipo === 'point' && parsed.point) {
+      return L.marker(L.latLng(parsed.point[0], parsed.point[1]), { draggable: true });
+    }
+    if (geomTipo === 'linestring' && parsed.line) {
+      return L.polyline(parsed.line as L.LatLngExpression[], { color: this.EDIT_STROKE, weight: 4 });
+    }
+    if (geomTipo === 'polygon' && parsed.polygon) {
+      return L.polygon(parsed.polygon as L.LatLngExpression[][], {
+        color: this.EDIT_STROKE, weight: 3, fillColor: this.EDIT_FILL, fillOpacity: 0.2,
+      });
+    }
+    return null;
+  }
+
+  /** Inicia el ajuste del trazo nuevo: muestra la geometria editable (arrastrar vertices, puntos medios para agregar). */
+  startDraftGeometryEdit(wkt: string, geomTipo: MapaGeomTipo): boolean {
+    if (!this.map) return false;
+    this.cancelDraftGeometryEdit();
+    const layer = this.buildSimpleEditableLayer(wkt, geomTipo);
+    if (!layer) return false;
+    layer.addTo(this.map);
+    const anyLayer = layer as any;
+    if (typeof anyLayer.editing?.enable === 'function') anyLayer.editing.enable();
+    if (geomTipo === 'point' && typeof anyLayer.dragging?.enable === 'function') anyLayer.dragging.enable();
+    this.draftEditLayer = layer;
+    this.draftEditGeomTipo = geomTipo;
+    try {
+      if (typeof anyLayer.getBounds === 'function') {
+        this.map.fitBounds(anyLayer.getBounds(), { padding: [40, 40], maxZoom: 18 });
+      } else if (typeof anyLayer.getLatLng === 'function') {
+        this.map.setView(anyLayer.getLatLng(), Math.max(this.map.getZoom(), 17));
+      }
+    } catch { /* geometria invalida */ }
+    return true;
+  }
+
+  /** Termina el ajuste y devuelve el WKT actualizado del trazo. */
+  finishDraftGeometryEdit(): { wkt: string; geomTipo: MapaGeomTipo } | null {
+    if (!this.draftEditLayer || !this.draftEditGeomTipo) return null;
+    const anyLayer = this.draftEditLayer as any;
+    anyLayer.editing?.disable?.();
+    anyLayer.dragging?.disable?.();
+    const geomTipo = this.draftEditGeomTipo;
+    const wkt = this.layerToWkt(this.draftEditLayer, geomTipo);
+    this.map?.removeLayer(this.draftEditLayer);
+    this.draftEditLayer = null;
+    this.draftEditGeomTipo = null;
+    return wkt ? { wkt, geomTipo } : null;
+  }
+
+  /** Cancela el ajuste sin cambios (descarta el ajuste, no el trazo: el formulario conserva el WKT anterior). */
+  cancelDraftGeometryEdit(): void {
+    if (!this.draftEditLayer) return;
+    const anyLayer = this.draftEditLayer as any;
+    anyLayer.editing?.disable?.();
+    anyLayer.dragging?.disable?.();
+    this.map?.removeLayer(this.draftEditLayer);
+    this.draftEditLayer = null;
+    this.draftEditGeomTipo = null;
+  }
+
   private getDrawRef(): any | null {
     const drawRef = (L as any)?.Draw ?? null;
     return drawRef;
@@ -516,13 +625,20 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   private initMap() {
+    // Rotacion habilitada (leaflet-rotate, cargado por angular.json scripts).
+    // Con renderer SVG el clic en lineas/puntos sigue funcionando aunque se rote.
     this.map = L.map(this.mapContainer.nativeElement, {
       center: this.mapCenter,
       zoom: this.mapZoom,
       zoomControl: true,
-      preferCanvas: true,
+      preferCanvas: false,
       maxZoom: 20,
-    });
+      rotate: true,
+      bearing: 0,
+      rotateControl: { closeOnZeroBearing: false, position: 'topleft' },
+      touchRotate: true,
+      shiftKeyRotate: true,
+    } as any);
 
     this.applyBasemap(this.basemap);
 
@@ -656,6 +772,23 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
 
       if (center && zoom != null) {
         this.map.setView(center, zoom, { animate: false });
+      }
+
+      // Tras un cambio de tamano del contenedor (entrar a modo movil/responsive,
+      // abrir o cerrar el panel lateral a ancho angosto, cambio de orientacion o
+      // de devicePixelRatio) Leaflet recalcula la geometria pero la capa de tiles
+      // no siempre vuelve a pedir los tiles del area nueva: el mapa queda gris.
+      // Cuando el tamano del mapa realmente cambia forzamos un redraw de la capa
+      // base para que los tiles se vuelvan a cargar y nunca quede en gris.
+      const size = this.map.getSize();
+      const sizeChanged =
+        !this.lastRefreshSize ||
+        this.lastRefreshSize.x !== size.x ||
+        this.lastRefreshSize.y !== size.y;
+
+      if (sizeChanged) {
+        this.lastRefreshSize = size;
+        this.baseLayer?.redraw?.();
       }
 
       this.updateViewBounds();
@@ -870,9 +1003,13 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       });
     }
 
+    this.drawingKeyType = type;
     this.activeDrawHandler?.enable?.();
+    window.addEventListener('keydown', this.onDrawKeydown);
   }
   private stopActiveDraw(): any | null {
+    window.removeEventListener('keydown', this.onDrawKeydown);
+    this.drawingKeyType = null;
     const handler = this.activeDrawHandler;
     this.activeDrawHandler = null;
 
@@ -889,16 +1026,27 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
 
     try {
-      handler.disable?.();
+      // disable() YA invoca removeHooks() internamente y esta protegido por _enabled.
+      // No llamamos removeHooks() de nuevo: hacerlo provoca un doble teardown (tooltip ya null)
+      // que lanza error y deja los hooks de dibujo a medio quitar, bloqueando los clics del mapa.
+      const enabled = typeof handler.enabled === 'function' ? handler.enabled() : handler._enabled;
+      if (enabled) {
+        handler.disable?.();
+      }
     } catch (err) {
       console.warn('[MAPA][DRAW] No se pudo desactivar el handler de dibujo:', err);
     }
 
-    try {
-      handler.removeHooks?.();
-    } catch (err) {
-      console.warn('[MAPA][DRAW] No se pudieron remover hooks de dibujo:', err);
-    }
+    // Por si quedo alguna guia de dibujo residual en el DOM (defensa adicional).
+    this.removeLeftoverDrawGuides();
+  }
+
+  private removeLeftoverDrawGuides() {
+    const container = this.map?.getContainer();
+    if (!container) return;
+    container
+      .querySelectorAll('.leaflet-draw-guides, .leaflet-draw-guide-dash, .leaflet-draw-tooltip')
+      .forEach((el) => el.remove());
   }
 
   private restoreMapInteractionAfterDraw() {
@@ -1299,15 +1447,15 @@ export class MapaCanvasComponent implements AfterViewInit, OnChanges, OnDestroy 
       return this.shouldRenderElement(el);
     });
 
+    // Precomputar zIndex una sola vez por elemento (antes el sort llamaba resolveElementStyle por comparacion -> O(N log N)).
+    const zIndexById = new Map<number, number>();
+    for (const el of candidates) {
+      const tipo = tipoMap.get(el.idGeoTipoElementoFk) ?? null;
+      zIndexById.set(el.idGeoElemento, this.resolveElementStyle(el, tipo).zIndex);
+    }
     const renderQueue = candidates.sort((a, b) => {
-      const tipoA = tipoMap.get(a.idGeoTipoElementoFk) ?? null;
-      const tipoB = tipoMap.get(b.idGeoTipoElementoFk) ?? null;
-
-      const styleA = this.resolveElementStyle(a, tipoA);
-      const styleB = this.resolveElementStyle(b, tipoB);
-
       return (
-        styleA.zIndex - styleB.zIndex ||
+        (zIndexById.get(a.idGeoElemento) ?? 0) - (zIndexById.get(b.idGeoElemento) ?? 0) ||
         Number(a.ordenDibujo ?? 0) - Number(b.ordenDibujo ?? 0) ||
         a.idGeoElemento - b.idGeoElemento
       );

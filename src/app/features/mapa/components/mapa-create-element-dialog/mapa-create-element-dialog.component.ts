@@ -89,10 +89,12 @@ export class MapaCreateElementDialogComponent {
 
   @Output() submitted = new EventEmitter<MapaElementoSaveRequest>();
   @Output() cancelled = new EventEmitter<void>();
+  @Output() requestAdjust = new EventEmitter<{ wkt: string; geomTipo: MapaGeomTipo }>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
 
   readonly visible = signal(false);
+  private readonly adjusting = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly currentWkt = signal<string | null>(null);
@@ -210,8 +212,36 @@ export class MapaCreateElementDialogComponent {
       this.visible.set(true);
       return;
     }
+    // Si se oculto para ajustar el trazo en el mapa, no preguntar por descartar.
+    if (this.adjusting()) {
+      this.visible.set(false);
+      return;
+    }
 
     this.requestClose();
+  }
+
+  /** Pide ajustar el trazo en el mapa: oculta el formulario (sin descartar) y avisa al contenedor. */
+  pedirAjuste() {
+    const wkt = this.currentWkt();
+    const geomTipo = this.currentGeomTipo();
+    if (!wkt || !geomTipo || this.saving()) return;
+    this.adjusting.set(true);
+    this.visible.set(false);
+    this.requestAdjust.emit({ wkt, geomTipo });
+  }
+
+  /** Aplica el trazo ya ajustado y reabre el formulario con los mismos datos. */
+  applyAdjustedWkt(wkt: string) {
+    this.currentWkt.set(wkt);
+    this.adjusting.set(false);
+    this.visible.set(true);
+  }
+
+  /** Cancela el ajuste y reabre el formulario sin cambios en la geometria. */
+  cancelAdjust() {
+    this.adjusting.set(false);
+    this.visible.set(true);
   }
   requestClose() {
     if (this.saving()) {

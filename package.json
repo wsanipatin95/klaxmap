@@ -30,6 +30,7 @@
     "fullcalendar": "^6.1.20",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
+    "leaflet-rotate": "^0.2.8",
     "ngx-sonner": "^3.1.0",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.3",

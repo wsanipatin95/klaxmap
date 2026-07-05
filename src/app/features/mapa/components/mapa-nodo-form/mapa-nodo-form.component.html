@@ -32,6 +32,8 @@
     Visible
   </label>
 
+  <p class="form-error" *ngIf="error" style="color:#b91c1c;font-size:.8rem;margin:.25rem 0;">{{ error }}</p>
+
   <button type="button" class="save-btn" (click)="submit()">
     {{ modo === 'crear' ? 'Crear' : 'Guardar' }}
   </button>

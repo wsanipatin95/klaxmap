@@ -405,7 +405,7 @@ export class MapaCrudFacade {
   }
 
   private parseListResult<T>(data: PagedResponse<T> | T[]): T[] {
-    return Array.isArray(data) ? data : data.content ?? [];
+    return Array.isArray(data) ? data : (data?.content ?? []);
   }
 
   private syncSelectionWithData(nodos: MapaNodo[], elementos: MapaElemento[]) {

@@ -885,7 +885,7 @@
 @media (max-width: 860px) {
   .mapa-embed-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--toolbar-height) minmax(0, 1fr) 42vh var(--status-height);
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 34vh) var(--status-height);
     grid-template-areas:
       'toolbar'
       'canvas'
@@ -1296,7 +1296,7 @@
     --toolbar-height: 36px;
     --status-height: 28px;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--toolbar-height) minmax(0, 58dvh) minmax(0, calc(42dvh - var(--status-height))) var(--status-height);
+    grid-template-rows: auto minmax(0, 58dvh) minmax(0, calc(42dvh - var(--status-height))) var(--status-height);
     grid-template-areas:
       'toolbar'
       'canvas'
@@ -1394,7 +1394,7 @@
 
 @media (max-width: 420px) {
   .mapa-embed-layout {
-    grid-template-rows: var(--toolbar-height) minmax(0, 54dvh) minmax(0, calc(46dvh - var(--status-height))) var(--status-height);
+    grid-template-rows: auto minmax(0, 54dvh) minmax(0, calc(46dvh - var(--status-height))) var(--status-height);
   }
 
   .embed-location-controls {
@@ -1605,7 +1605,7 @@
     --status-height: 28px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
-      var(--toolbar-height)
+      auto
       minmax(220px, 44dvh)
       minmax(0, calc(56dvh - var(--toolbar-height) - var(--status-height)))
       var(--status-height);
@@ -1762,7 +1762,7 @@
 @media (max-width: 420px) {
   .mapa-embed-layout {
     grid-template-rows:
-      var(--toolbar-height)
+      auto
       minmax(210px, 42dvh)
       minmax(0, calc(58dvh - var(--toolbar-height) - var(--status-height)))
       var(--status-height);
@@ -2018,3 +2018,477 @@
     font-size: 0.58rem;
   }
 }
+
+/* ============================================================
+   KLAXMAP EMBED — Animacion de ruta (palpitar 2 puntos + trazo en flujo)
+   y toques de finesse alineados al estandar del mapa principal.
+   ============================================================ */
+
+/* Trazo de ruta: la linea morada KLAX fluye continuamente (marching ants).
+   Requiere renderer SVG (lo forzamos en paintRoute). */
+.embed-route-flow {
+  stroke-dasharray: 10 8;
+  animation: embed-route-dash 0.85s linear infinite;
+  filter: drop-shadow(0 0 2px rgba(123, 0, 97, 0.45));
+}
+
+@keyframes embed-route-dash {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+.embed-route-casing {
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.28));
+}
+
+/* Puntos extremos de la ruta: anillo que palpita (ping) + nucleo solido. */
+.embed-route-pulse-host {
+  background: transparent;
+  border: 0;
+}
+
+.embed-route-pulse {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.embed-route-pulse-core {
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.4);
+}
+
+.embed-route-pulse-ring {
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  animation: embed-route-ping 1.35s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.embed-route-pulse--origin .embed-route-pulse-core {
+  background: #2563eb;
+}
+.embed-route-pulse--origin .embed-route-pulse-ring {
+  color: rgba(37, 99, 235, 0.55);
+}
+
+.embed-route-pulse--target .embed-route-pulse-core {
+  background: #7b0061;
+}
+.embed-route-pulse--target .embed-route-pulse-ring {
+  color: rgba(123, 0, 97, 0.55);
+}
+
+@keyframes embed-route-ping {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 0.85;
+    transform: scale(0.8);
+  }
+  70% {
+    box-shadow: 0 0 0 15px transparent;
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+/* Finesse: etiqueta de distancia de la ruta mas elegante (pildora morada KLAX). */
+.mapa-embed-layout .mapa-measure-label {
+  border: 1px solid rgba(123, 0, 97, 0.35);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(123, 0, 97, 0.96) 0%, rgba(96, 0, 76, 0.96) 100%);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 0.26rem 0.56rem;
+  box-shadow: 0 6px 16px rgba(123, 0, 97, 0.28);
+}
+
+/* Finesse: fila seleccionada con acento mas marcado (consistente con el mapa). */
+.embed-nearby-row.selected {
+  background: linear-gradient(180deg, #fdf2f8 0%, #fbe6f2 100%);
+  border-color: #b02365;
+  box-shadow:
+    inset 3px 0 0 #7b0061,
+    0 1px 3px rgba(176, 35, 101, 0.12);
+}
+
+.embed-nearby-row.selected .embed-row-text strong {
+  color: #7b0061;
+}
+
+/* Finesse: icono de fila con un realce sutil al pasar/seleccionar. */
+.embed-nearby-row:hover .embed-row-icon,
+.embed-nearby-row.selected .embed-row-icon {
+  box-shadow: 0 0 0 2px rgba(123, 0, 97, 0.14), 0 1px 3px rgba(15, 23, 42, 0.18);
+}
+
+/* === OT-A: modal de confirmacion con clave === */
+.embed-ota-lbl {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  margin: 0.5rem 0 0.25rem;
+}
+.embed-ota-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.embed-ota-input:focus {
+  outline: none;
+  border-color: #7b0061;
+  box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.12);
+}
+.embed-ota-err {
+  color: #b91c1c;
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin: 0.45rem 0 0;
+}
+
+/* === OT-A / embed: encabezado tipo prototipo (titulo + Salir + Ubicacion arriba del mapa) === */
+.mapa-embed-layout .toolbar { min-height: 0; }
+
+.embed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem 0.35rem;
+  border-bottom: 1px solid #eef0f4;
+}
+.embed-head-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #7b0061;
+  line-height: 1.1;
+}
+.embed-head-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 1px;
+}
+.embed-exit {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  border-radius: 8px;
+  background: #7b0061;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.4rem 0.62rem;
+  cursor: pointer;
+}
+.embed-exit:hover { background: #66004f; }
+
+/* la Ubicacion ahora vive en el header */
+.embed-location-strip--head {
+  padding: 0.4rem 0.7rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.embed-location-strip--head .embed-location-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* === embed OT-A: Salir va en el modal contenedor (no en el embed); ocultar barra de base === */
+.mapa-embed-layout .ge-toolbar-strip {
+  display: none;
+}
+.embed-head {
+  justify-content: flex-start;
+}
+
+/* === embed OT-A: sin lista lateral; acciones por clic derecho en la NAP === */
+.mapa-embed-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(0, 1fr) var(--status-height) !important;
+  grid-template-areas: 'toolbar' 'canvas' 'status' !important;
+}
+.mapa-embed-layout .sidebar {
+  display: none !important;
+}
+
+.embed-ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+}
+.embed-ctx {
+  position: fixed;
+  z-index: 6001;
+  min-width: 184px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+  padding: 0.3rem;
+  overflow: hidden;
+}
+.embed-ctx-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #7b0061;
+  padding: 0.35rem 0.5rem 0.3rem;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+.embed-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.55rem;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.embed-ctx-item:hover {
+  background: #f1f5f9;
+  color: #7b0061;
+}
+.embed-ctx-item i {
+  font-size: 0.85rem;
+  width: 1rem;
+  text-align: center;
+}
+.embed-ctx-item--ota {
+  color: #7b0061;
+  font-weight: 800;
+}
+.embed-ctx-item--ota:hover {
+  background: linear-gradient(180deg, #f3aad6 0%, #eb79ba 100%);
+  color: #fff;
+}
+
+/* === embed OT-A: encabezado seccionado + coords con iconos + etiqueta tipo prototipo === */
+.mapa-embed-layout .toolbar {
+  background: #ffffff;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 30;
+}
+.embed-head {
+  padding: 0.55rem 0.75rem 0.4rem;
+}
+.embed-location-strip--head {
+  background: linear-gradient(180deg, #fbfcfe 0%, #f4f6fb 100%);
+  border-top: 1px solid #eef1f6;
+}
+.embed-location-strip--head .embed-location-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.embed-loc-coords {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  color: #0f766e;
+  font-weight: 700;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.embed-loc-coords i { color: #7b0061; }
+.embed-loc-actions {
+  display: inline-flex;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+.embed-loc-actions .tool-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+}
+.embed-loc-actions .tool-btn:hover:not(:disabled) {
+  border-color: #7b0061;
+  color: #7b0061;
+}
+
+/* Etiqueta de la NAP en el mapa (prototipo: nombre corto + tipo/distancia) */
+.mapa-element-label {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  max-width: 150px;
+  padding: 0.2rem 0.45rem;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.16);
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  line-height: 1.05;
+}
+.mapa-element-label .mel-name {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #0f172a;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mapa-element-label .mel-sub {
+  font-size: 0.56rem;
+  font-weight: 600;
+  color: #64748b;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mapa-element-label.is-selected {
+  border-color: #7b0061;
+  box-shadow: 0 4px 12px rgba(123, 0, 97, 0.25);
+}
+.mapa-element-label.is-selected .mel-name { color: #7b0061; }
+
+/* === embed OT-A: etiqueta legible (no truncar de mas) + select de radio bonito === */
+.mapa-element-label {
+  width: max-content;
+  max-width: 180px;
+}
+.mapa-element-label .mel-name { max-width: 172px; }
+.mapa-element-label .mel-sub { max-width: 172px; }
+
+.embed-radio-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: auto;
+}
+.embed-radio-select:focus {
+  outline: none;
+  border-color: #7b0061;
+  box-shadow: 0 0 0 3px rgba(123, 0, 97, 0.12);
+}
+.embed-location-strip--head .embed-location-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* === embed OT-A: modal Ver informacion profesional (solo lectura) === */
+.embed-info-modal {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.3);
+}
+.embed-info-modal > header {
+  background: linear-gradient(180deg, #7b0061 0%, #66004f 100%);
+  color: #fff;
+  padding: 0.8rem 0.95rem;
+}
+.embed-info-modal > header strong { color: #fff; font-size: 0.98rem; }
+.embed-info-modal > header span { color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; }
+.embed-info-modal > header .tool-btn { color: #fff; }
+.embed-info-modal > header .tool-btn:hover { background: rgba(255, 255, 255, 0.16); }
+.embed-info-modal dl {
+  margin: 0;
+  padding: 0.4rem 0.95rem 0.2rem;
+}
+.embed-info-modal dl > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.42rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.embed-info-modal dt { font-size: 0.74rem; font-weight: 700; color: #64748b; }
+.embed-info-modal dd { margin: 0; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
+.embed-info-code {
+  font-size: 0.7rem !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.embed-info-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.55rem 0.95rem 0.8rem;
+}
+
+/* === embed OT-A: centrado robusto de modales (responsive) + toast de éxito === */
+.embed-info-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 6000;
+}
+.embed-info-modal {
+  margin: auto;
+  width: min(390px, calc(100vw - 1.5rem));
+}
+
+.embed-ok-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 6200;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.6rem 0.95rem;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+}
+.embed-ok-toast i { font-size: 0.95rem; }

@@ -11,6 +11,8 @@ import type {
   MapaEmbedExchangeResponse,
   MapaEmbedMode,
   MapaElementosCercanosResponse,
+  MapaOtaCrearRequest,
+  MapaOtaCrearResponse,
 } from './mapa-embed.models';
 
 const PUBLIC = new HttpContext().set(SKIP_AUTH, true).set(SKIP_TENANT, true);
@@ -59,6 +61,14 @@ export class MapaEmbedApi {
         params: httpParams,
         headers: this.headersFromContext(params.ctx),
       }
+    );
+  }
+
+  crearOta(payload: MapaOtaCrearRequest, ctx?: MapaEmbedContext | null) {
+    return this.http.post<ApiEnvelope<MapaOtaCrearResponse>>(
+      `${this.erpBaseUrl}/mapa/ota/crear`,
+      payload,
+      { headers: this.headersFromContext(ctx) }
     );
   }
 

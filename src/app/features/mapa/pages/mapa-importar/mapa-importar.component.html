@@ -8,5 +8,6 @@
   <p *ngIf="loading()">Importando...</p>
   <p *ngIf="error() as err" class="error">{{ err }}</p>
 
+  <p *ngIf="mensaje() as m" class="ok">{{ m }}</p>
   <pre *ngIf="result() as r">{{ r | json }}</pre>
 </div>

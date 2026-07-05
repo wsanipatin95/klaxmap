@@ -326,3 +326,25 @@
   }
 }
 /* === KLAXMAP MOBILE BACKDROP MAP FIX: END === */
+
+/* === KLAXMAP MOBILE GRID FIX (canvas 0px / mapa gris al ocultar lista): BEGIN ===
+   En movil (<=860px) el sidebar es un drawer flotante (position:fixed), por lo que
+   el grid del layout debe tener SIEMPRE una sola columna y el canvas ocupar el ancho
+   completo. El bug: las clases .sidebar-hidden / .sidebar-compact (mas especificas)
+   reimponian "grid-template-columns: <ancho> minmax(0,1fr)" -> 2 columnas, mientras
+   grid-template-areas seguia siendo de 1 columna ('toolbar'/'canvas'/'status').
+   Resultado: el area 'canvas' caia en la primera columna (0px en hidden) y el mapa
+   quedaba con 0px de ancho => gris. Forzamos 1 sola columna en todos los estados. */
+@media (max-width: 860px) {
+  .mapa-layout,
+  .mapa-layout.sidebar-expanded,
+  .mapa-layout.sidebar-compact,
+  .mapa-layout.sidebar-hidden {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      'toolbar'
+      'canvas'
+      'status' !important;
+  }
+}
+/* === KLAXMAP MOBILE GRID FIX: END === */

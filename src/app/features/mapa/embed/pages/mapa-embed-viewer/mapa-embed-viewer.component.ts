@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   OnInit,
@@ -14,6 +15,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import * as L from 'leaflet';
 
 import { unwrapOrThrow } from 'src/app/core/api/api-envelope';
@@ -28,7 +30,9 @@ import type {
   MapaEmbedInitMessage,
   MapaEmbedMode,
   MapaElementoCercano,
+  MapaOtaCrearResponse,
 } from '../../data-access/mapa-embed.models';
+import { OTA_TIPOS_ELEGIBLES } from '../../data-access/mapa-embed.models';
 import { MapaEmbedAuthService } from '../../services/mapa-embed-auth.service';
 import { MapaEmbedMessagingService } from '../../services/mapa-embed-messaging.service';
 import { MapaEmbedContextStore } from '../../store/mapa-embed-context.store';
@@ -103,6 +107,15 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   readonly items = signal<MapaElementoCercano[]>([]);
   readonly selected = signal<MapaElementoCercano | null>(null);
   readonly infoOpen = signal(false);
+  readonly otaModalOpen = signal(false);
+  readonly otaClave = signal('');
+  readonly otaBusy = signal(false);
+  readonly otaError = signal<string | null>(null);
+  readonly ctxOpen = signal(false);
+  readonly ctxX = signal(0);
+  readonly ctxY = signal(0);
+  readonly ctxItem = signal<MapaElementoCercano | null>(null);
+  readonly okMsg = signal<string | null>(null);
 
   readonly origin = signal<LatLngPoint | null>(null);
   readonly radioM = signal<number>(500);
@@ -116,6 +129,10 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   readonly createError = signal<string | null>(null);
 
   readonly selectedName = computed(() => this.selected()?.nombre ?? null);
+  readonly originLabel = computed(() => {
+    const o = this.origin();
+    return o ? `${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}` : null;
+  });
   readonly basemapLabel = computed(() => {
     return this.basemapOptions.find((item) => item.key === this.basemapKey())?.label ?? 'Mapa';
   });
@@ -134,7 +151,14 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   };
 
   private map?: L.Map;
+  private destroyRef = inject(DestroyRef);
+  private routeAbort?: AbortController;
   private baseLayer?: L.TileLayer;
+  private resizeObserver: ResizeObserver | null = null;
+  private resizeRefreshFrameId: number | null = null;
+  private lastRefreshSize: L.Point | null = null;
+  private readonly viewportResizeHandler = () => this.scheduleMapResizeRefresh();
+  private routeRenderer?: L.Renderer;
   private originLayer?: L.LayerGroup;
   private routeLayer?: L.LayerGroup;
   private itemsLayer?: L.LayerGroup;
@@ -170,6 +194,17 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     if (typeof window !== 'undefined') {
       window.removeEventListener('message', this.messageHandler);
     }
+    this.routeAbort?.abort();
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.viewportResizeHandler);
+      window.removeEventListener('orientationchange', this.viewportResizeHandler);
+      if (this.resizeRefreshFrameId != null) {
+        window.cancelAnimationFrame(this.resizeRefreshFrameId);
+      }
+    }
+    this.resizeObserver?.disconnect();
+
     this.map?.remove();
   }
 
@@ -239,7 +274,7 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   elementLabel(item: MapaElementoCercano) {
-    return item.etiqueta || item.codigo || item.nombre;
+    return item.nombre || item.codigo || item.etiqueta || '';
   }
 
   formatDistance(meters?: number | null): string {
@@ -281,12 +316,14 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     this.map?.setView([origin.lat, origin.lng], Math.max(this.map?.getZoom() ?? 16, 16));
   }
 
+  trackByElementId(_: number, item: MapaElementoCercano): number { return item.idGeoElemento; }
+
   focusItem(item: MapaElementoCercano, openInfo = false) {
     this.selected.set(item);
     if (openInfo) this.infoOpen.set(true);
 
     this.messaging.elementViewed(item);
-    this.drawItems();
+    this.drawItems(false);
 
     const layer = this.layersByElementId.get(item.idGeoElemento);
     if (!layer || !this.map) return;
@@ -306,8 +343,130 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     this.focusItem(item, true);
   }
 
+  openCtx(e: L.LeafletMouseEvent, item: MapaElementoCercano) {
+    const oe = e.originalEvent;
+    if (oe) {
+      oe.preventDefault();
+      oe.stopPropagation();
+    }
+    this.selected.set(item);
+    this.ctxItem.set(item);
+    this.ctxX.set(oe?.clientX ?? 0);
+    this.ctxY.set(oe?.clientY ?? 0);
+    this.ctxOpen.set(true);
+  }
+
+  closeCtx() {
+    this.ctxOpen.set(false);
+  }
+
+  ctxRuta() {
+    const it = this.ctxItem();
+    this.closeCtx();
+    if (it) this.traceRoute(it);
+  }
+
+  ctxInfo() {
+    const it = this.ctxItem();
+    this.closeCtx();
+    if (it) this.openInfo(it);
+  }
+
+  ctxOrden() {
+    const it = this.ctxItem();
+    this.closeCtx();
+    if (it && this.napElegible(it)) {
+      this.selected.set(it);
+      this.pedirOta();
+    }
+  }
+
+  private okMsgTimer: any = null;
+  private showOkMsg(msg: string) {
+    this.okMsg.set(msg);
+    if (this.okMsgTimer) clearTimeout(this.okMsgTimer);
+    this.okMsgTimer = setTimeout(() => this.okMsg.set(null), 4500);
+  }
+
+  salir() {
+    this.messaging.cancel();
+  }
+
   closeInfo() {
     this.infoOpen.set(false);
+  }
+
+  /** Una NAP es elegible para OT-A solo en estado Proyectada / 1er / 2do nivel. */
+  napElegible(item: MapaElementoCercano | null): boolean {
+    if (!item) return false;
+    return OTA_TIPOS_ELEGIBLES.includes((item.tipoCodigo ?? '').toUpperCase());
+  }
+
+  nivelDe(item: MapaElementoCercano | null): string | null {
+    switch ((item?.tipoCodigo ?? '').toUpperCase()) {
+      case 'NAP_PROYECTADA':
+        return 'Proyectada';
+      case 'NAP_1ER_NIVEL':
+        return '1er nivel';
+      case 'NAP_2DO_NIVEL':
+        return '2do nivel';
+      default:
+        return null;
+    }
+  }
+
+  pedirOta() {
+    if (this.mode() !== 'tecnico' || !this.napElegible(this.selected())) return;
+    this.otaClave.set('');
+    this.otaError.set(null);
+    this.otaModalOpen.set(true);
+  }
+
+  cancelOta() {
+    this.otaModalOpen.set(false);
+    this.otaClave.set('');
+    this.otaError.set(null);
+  }
+
+  confirmarOta() {
+    const nap = this.selected();
+    const clave = this.otaClave().trim();
+    if (!nap || !this.napElegible(nap)) return;
+    if (!clave) {
+      this.otaError.set('Ingresa tu contrase\u00f1a.');
+      return;
+    }
+
+    this.otaBusy.set(true);
+    this.otaError.set(null);
+
+    this.embedApi
+      .crearOta({ idGeoElemento: nap.idGeoElemento, nivel: this.nivelDe(nap), clave }, this.context())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resp) => {
+          this.otaBusy.set(false);
+          try {
+            const data = unwrapOrThrow<MapaOtaCrearResponse>(resp);
+            this.otaModalOpen.set(false);
+            this.otaClave.set('');
+            this.infoOpen.set(false);
+            this.messaging.otaCreated({
+              ...data,
+              idGeoElemento: nap.idGeoElemento,
+              nombre: nap.nombre,
+            });
+            const h = data.hora ? (' · ' + String(data.hora).substring(11, 16)) : '';
+            this.showOkMsg('OT-A creada' + (data.idOrden ? ' · orden #' + data.idOrden : '') + h);
+          } catch (e: any) {
+            this.otaError.set(e?.message || 'No se pudo crear la OT-A.');
+          }
+        },
+        error: (err) => {
+          this.otaBusy.set(false);
+          this.otaError.set(err?.error?.mensaje || err?.message || 'No se pudo crear la OT-A.');
+        },
+      });
   }
 
   selectForErp() {
@@ -324,6 +483,14 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
   cancel() {
     this.messaging.cancel();
+  }
+
+  onRadioChange(radioM: number) {
+    const r = Number(radioM) || 500;
+    this.radioM.set(r);
+    if (this.origin()) {
+      this.refreshNearby();
+    }
   }
 
   locateBrowser() {
@@ -406,7 +573,14 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     url.searchParams.set('alternatives', 'false');
     url.searchParams.set('steps', 'false');
 
-    const response = await fetch(url.toString());
+    this.routeAbort?.abort();
+    this.routeAbort = new AbortController();
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), { signal: this.routeAbort.signal });
+    } catch {
+      return [];
+    }
     if (!response.ok) return [];
 
     const data = await response.json();
@@ -429,21 +603,41 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
     const latLngs = points.map((p) => [p.lat, p.lng] as L.LatLngExpression);
 
+    // Casing blanco (debajo) para dar contraste sobre cualquier mapa base.
     L.polyline(latLngs, {
+      renderer: this.routeRenderer,
+      className: 'embed-route-casing',
       color: '#ffffff',
       weight: 7,
-      opacity: 0.78,
+      opacity: 0.85,
       lineCap: 'round',
       lineJoin: 'round',
     }).addTo(this.routeLayer);
 
+    // Linea morada KLAX con flujo animado (marching ants) via CSS sobre el <path> SVG.
     L.polyline(latLngs, {
+      renderer: this.routeRenderer,
+      className: 'embed-route-flow',
       color: this.KLAX_PRIMARY,
-      weight: 3,
+      weight: 3.5,
       opacity: 0.98,
-      dashArray: '10 7',
+      dashArray: '10 8',
       lineCap: 'round',
       lineJoin: 'round',
+    }).addTo(this.routeLayer);
+
+    // Puntos extremos palpitando: origen (azul) y destino (morado).
+    const startPt = points[0];
+    const endPt = points[points.length - 1];
+    L.marker([startPt.lat, startPt.lng], {
+      interactive: false,
+      icon: this.createRoutePulseIcon('origin'),
+      zIndexOffset: 1500,
+    }).addTo(this.routeLayer);
+    L.marker([endPt.lat, endPt.lng], {
+      interactive: false,
+      icon: this.createRoutePulseIcon('target'),
+      zIndexOffset: 1600,
     }).addTo(this.routeLayer);
 
     const middle = this.middleRoutePoint(points);
@@ -452,6 +646,21 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
       icon: this.createRouteLabelIcon(this.formatDistance(distance)),
       zIndexOffset: 1800,
     }).addTo(this.routeLayer);
+  }
+
+  /** Icono palpitante para los extremos de la ruta (origen/destino). */
+  private createRoutePulseIcon(kind: 'origin' | 'target'): L.DivIcon {
+    return L.divIcon({
+      className: 'embed-route-pulse-host',
+      html: `
+        <span class="embed-route-pulse embed-route-pulse--${kind}">
+          <span class="embed-route-pulse-ring"></span>
+          <span class="embed-route-pulse-core"></span>
+        </span>
+      `,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
   }
 
   private fitRoute(points: LatLngPoint[]) {
@@ -587,7 +796,7 @@ saveDraft() {
     this.saving.set(true);
     this.createError.set(null);
 
-    this.elementosApi.crear(payload).subscribe({
+    this.elementosApi.crear(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (resp) => {
         this.saving.set(false);
         try {
@@ -673,7 +882,7 @@ openCreateDialogFromDraft() {
     this.saving.set(true);
     this.createError.set(null);
 
-    this.elementosApi.crear(enriched).subscribe({
+    this.elementosApi.crear(enriched).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (resp) => {
         this.saving.set(false);
 
@@ -794,7 +1003,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
       return;
     }
 
-    this.auth.exchange(code, expectedMode).subscribe({
+    this.auth.exchange(code, expectedMode).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.afterAuthenticated(),
       error: (err) => this.fail(err?.error?.mensaje || err?.message || 'No se pudo iniciar el mapa.'),
     });
@@ -818,7 +1027,8 @@ private authenticate(expectedMode: MapaEmbedMode) {
     if (lat != null && lng != null) {
       this.setOrigin(lat, lng, this.radioM(), true);
     } else {
-      this.error.set('Esperando ubicación desde el ERP o GPS.');
+      // Cargar la ubicacion automaticamente (GPS del navegador), sin que el usuario de clic.
+      this.locateBrowser();
     }
 
     this.messaging.ready(this.mode(), ctx);
@@ -836,6 +1046,11 @@ private authenticate(expectedMode: MapaEmbedMode) {
 
     this.applyBasemap(this.basemapKey());
 
+    // Renderer SVG dedicado SOLO para la ruta: el resto del mapa usa canvas, pero
+    // la linea de ruta necesita ser un <path> SVG para poder animar el trazo (flujo)
+    // con CSS (stroke-dashoffset). padding alto para que no se recorte al hacer pan.
+    this.routeRenderer = L.svg({ padding: 0.8 });
+
     this.originLayer = L.layerGroup().addTo(this.map);
     this.routeLayer = L.layerGroup().addTo(this.map);
     this.itemsLayer = L.layerGroup().addTo(this.map);
@@ -850,6 +1065,73 @@ private authenticate(expectedMode: MapaEmbedMode) {
 
     setTimeout(() => this.map?.invalidateSize(), 80);
     setTimeout(() => this.map?.invalidateSize(), 260);
+
+    this.setupResizeObserver();
+  }
+
+  /**
+   * Observa el contenedor del mapa (y su padre) y la ventana para mantener
+   * sincronizado el tamano de Leaflet en responsive/movil. Sin esto, al entrar
+   * a modo dispositivo, rotar el telefono o cambiar el tamano, el mapa del visor
+   * (vendedor/tecnico) podia quedarse gris porque Leaflet no recalculaba.
+   */
+  private setupResizeObserver() {
+    if (!this.map || !this.mapEl?.nativeElement) {
+      return;
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const container = this.mapEl.nativeElement;
+      this.resizeObserver = new ResizeObserver(() => this.scheduleMapResizeRefresh());
+      this.resizeObserver.observe(container);
+      if (container.parentElement) {
+        this.resizeObserver.observe(container.parentElement);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this.viewportResizeHandler);
+      window.addEventListener('orientationchange', this.viewportResizeHandler);
+    }
+  }
+
+  private scheduleMapResizeRefresh() {
+    if (!this.map || typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.resizeRefreshFrameId != null) {
+      window.cancelAnimationFrame(this.resizeRefreshFrameId);
+    }
+
+    this.resizeRefreshFrameId = window.requestAnimationFrame(() => {
+      this.resizeRefreshFrameId = null;
+      if (!this.map) {
+        return;
+      }
+
+      const center = this.map.getCenter();
+      const zoom = this.map.getZoom();
+
+      this.map.invalidateSize({ pan: false });
+      this.map.setView(center, zoom, { animate: false });
+
+      // Tras un cambio de tamano del contenedor (entrar a responsive/movil,
+      // cambio de orientacion o de devicePixelRatio) Leaflet recalcula la
+      // geometria pero la capa de tiles no siempre vuelve a pedir los tiles del
+      // area nueva: el mapa queda gris. Cuando el tamano realmente cambia
+      // forzamos un redraw de la capa base para que los tiles se recarguen.
+      const size = this.map.getSize();
+      const sizeChanged =
+        !this.lastRefreshSize ||
+        this.lastRefreshSize.x !== size.x ||
+        this.lastRefreshSize.y !== size.y;
+
+      if (sizeChanged) {
+        this.lastRefreshSize = size;
+        this.baseLayer?.redraw?.();
+      }
+    });
   }
 
   private applyBasemap(key: BasemapKey) {
@@ -895,6 +1177,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
         limit: this.nearbyLimitForRadius(radioM),
         ctx: this.context(),
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resp) => {
           this.loadingItems.set(false);
@@ -902,10 +1185,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
             const data = unwrapOrThrow(resp);
             this.items.set(data.items ?? []);
             this.drawItems();
-
-            if (!data.items?.length) {
-              this.error.set('No se encontraron elementos cercanos.');
-            }
+            // Un resultado vacio es valido: la plantilla ya muestra un mensaje de "sin elementos", no es un error.
           } catch (err: any) {
             this.error.set(err?.message || 'No se pudo leer elementos cercanos.');
           }
@@ -945,7 +1225,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
       .addTo(this.originLayer);
   }
 
-  private drawItems() {
+  private drawItems(fit = true) {
     this.itemsLayer?.clearLayers();
     this.labelsLayer?.clearLayers();
     this.layersByElementId.clear();
@@ -960,7 +1240,8 @@ private authenticate(expectedMode: MapaEmbedMode) {
       const layer = this.layerFromItem(item);
       if (!layer) continue;
 
-      layer.on('click', () => this.focusItem(item, true));
+      layer.on('click', (e: L.LeafletMouseEvent) => this.openCtx(e, item));
+      layer.on('contextmenu', (e: L.LeafletMouseEvent) => this.openCtx(e, item));
       layer.addTo(this.itemsLayer);
       this.layersByElementId.set(item.idGeoElemento, layer);
 
@@ -978,7 +1259,7 @@ private authenticate(expectedMode: MapaEmbedMode) {
       }
     }
 
-    if (this.map && bounds.length > 1) {
+    if (fit && this.map && bounds.length > 1) {
       this.map.fitBounds(L.latLngBounds(bounds), { padding: [34, 34], maxZoom: 17 });
     }
   }
@@ -1435,7 +1716,10 @@ private seedCreateForm(defaultName: string) {
   private createElementLabelIcon(item: MapaElementoCercano, selected = false): L.DivIcon {
     return L.divIcon({
       className: 'mapa-element-label-host',
-      html: `<div class="mapa-element-label${selected ? ' is-selected' : ''}">${this.escapeHtml(this.elementLabel(item))}</div>`,
+      html: `<div class="mapa-element-label${selected ? ' is-selected' : ''}">`
+        + `<span class="mel-name">${this.escapeHtml(item.nombre || item.codigo || '')}</span>`
+        + `<span class="mel-sub">${this.escapeHtml((item.tipoNombre || '') + (item.distanciaM != null ? ' \u00b7 ' + this.formatDistance(item.distanciaM) : ''))}</span>`
+        + `</div>`,
       iconSize: [0, 0],
       iconAnchor: [0, 0],
     });

@@ -136,6 +136,7 @@ export class MapaHomeComponent {
   readonly selectedBasemap = signal<BasemapKey>('osm');
   readonly labelsVisible = signal(true);
   readonly locatingMyPosition = signal(false);
+  readonly adjustingGeometry = signal(false);
 
   readonly actionBusy = signal(false);
   readonly actionBusyTitle = signal('Guardando cambios');
@@ -471,6 +472,34 @@ export class MapaHomeComponent {
     this.defer(() => {
       this.mapCanvas?.refreshMapLayout(true);
     });
+  }
+
+  /** El formulario pidio ajustar el trazo: entra a editar la geometria del elemento nuevo en el mapa. */
+  onRequestAdjustGeometry(payload: { wkt: string; geomTipo: MapaGeomTipo }) {
+    const ok = this.mapCanvas?.startDraftGeometryEdit(payload.wkt, payload.geomTipo) ?? false;
+    if (ok) {
+      this.adjustingGeometry.set(true);
+    } else {
+      this.createDialog?.cancelAdjust();
+    }
+  }
+
+  /** Termina el ajuste: toma el trazo actualizado y reabre el formulario con esa geometria. */
+  terminarAjuste() {
+    const result = this.mapCanvas?.finishDraftGeometryEdit() ?? null;
+    this.adjustingGeometry.set(false);
+    if (result) {
+      this.createDialog?.applyAdjustedWkt(result.wkt);
+    } else {
+      this.createDialog?.cancelAdjust();
+    }
+  }
+
+  /** Cancela el ajuste y reabre el formulario sin cambiar la geometria. */
+  cancelarAjuste() {
+    this.mapCanvas?.cancelDraftGeometryEdit();
+    this.adjustingGeometry.set(false);
+    this.createDialog?.cancelAdjust();
   }
 
   onEditSessionStateChanged(state: MapaEditSessionState) {

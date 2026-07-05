@@ -32,9 +32,17 @@
       [nodosPadre]="nodos()"
       (updateSubmitted)="editar($event)"
     />
-    <button type="button" class="delete-btn" (click)="eliminar(sel.idRedNodo)">
-      Eliminar
-    </button>
+    @if (!confirmandoEliminar()) {
+      <button type="button" class="delete-btn" (click)="confirmandoEliminar.set(true)">
+        Eliminar
+      </button>
+    } @else {
+      <div class="delete-confirm" style="margin-top:.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:.4rem;padding:.5rem;">
+        <p style="margin:0 0 .4rem;font-size:.85rem;color:#991b1b;">¿Eliminar el nodo "{{ sel.nodo }}"? Esta acción no se puede deshacer fácilmente.</p>
+        <button type="button" class="delete-btn" (click)="eliminar(sel.idRedNodo)">Sí, eliminar</button>
+        <button type="button" (click)="confirmandoEliminar.set(false)" style="margin-left:.5rem;">Cancelar</button>
+      </div>
+    }
   </section>
 
   <section class="panel panel-history">

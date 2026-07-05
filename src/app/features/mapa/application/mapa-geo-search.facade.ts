@@ -47,7 +47,8 @@ export class MapaGeoSearchFacade {
       if (results.length === 1 && results[0].source === 'coordinates') {
         options?.onAutoSelectCoordinates?.(results[0]);
       }
-    } catch {
+    } catch (err) {
+      console.error('[MAPA][GEO-SEARCH] error:', err);
       this.error.set('No se pudo consultar la ubicación en este momento.');
     } finally {
       this.loading.set(false);
