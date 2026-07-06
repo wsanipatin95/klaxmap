@@ -98,6 +98,12 @@ export class RedBetaRepository {
   puertoAsociarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
     return this.api.puertoAsociarDestino(id, idGeoElementoDestino, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
+  relacionReasignarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
+    return this.api.elementoRelacionReasignarDestino(id, idGeoElementoDestino, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+  crearRelacion(idOrigen: number, idDestino: number, observacion?: string) {
+    return this.api.crearRelacion(idOrigen, idDestino, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
 
   // Procesos
   generarRelacionesNap(idRedNodo?: number, minConfianza?: number) {

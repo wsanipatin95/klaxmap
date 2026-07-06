@@ -163,6 +163,7 @@ export interface RedBaseElemento {
   colorStroke?: string | null;
   colorTexto?: string | null;
   strokeWidth?: number | null;
+  contratos?: number | null;
 }
 
 /** Acciones humanas que la beta puede ejecutar sobre una sugerencia. */
@@ -177,6 +178,8 @@ export type RedAccionKind =
   | 'puerto-estado'
   | 'asociar-hilo'
   | 'asociar-destino'
+  | 'reasignar-destino'
+  | 'crear-relacion'
   | 'pon-validar-oficina'
   | 'pon-validar-campo'
   | 'pon-pendiente-campo'

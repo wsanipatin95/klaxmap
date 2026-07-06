@@ -34,8 +34,9 @@ export class SessionHeartbeatService {
         effect(() => {
             const authed = this.sessionStore.isAuthenticated();
             const locked = this.lockStore.locked();
+            const enEmbed = typeof location !== 'undefined' && location.pathname.includes('/embed/');
 
-            if (!authed || locked) {
+            if (!authed || locked || enEmbed) {
                 this.stopInternal();
                 return;
             }

@@ -37,6 +37,8 @@ const DIM = 0.12;
   styles: [
     `:host{display:block;height:100%;width:100%;}
      .rb-map .leaflet-tooltip.rb-label{background:transparent;border:none;box-shadow:none;padding:0;color:#1f2937;font-size:10px;font-weight:600;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 2px #fff;}
+     .rb-map .leaflet-div-icon{background:transparent;border:none;}
+     .rb-map path.rb-hit{pointer-events:stroke;stroke-opacity:0;cursor:pointer;}
      .rb-map .leaflet-tooltip.rb-label::before{display:none;}
      .rb-flow{stroke-dasharray:9 7;animation:rb-dash 0.6s linear infinite;stroke-linecap:round;}
      @keyframes rb-dash{from{stroke-dashoffset:0;}to{stroke-dashoffset:-16;}}
@@ -65,6 +67,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() centrarReq = 0;
 
   @Output() seleccionar = new EventEmitter<RedSeleccion>();
+  @Input() conectar: { kind: 'hilo' | 'destino' | 'splitter' } | null = null;
+  @Output() conectarTarget = new EventEmitter<{ geoId?: number; hiloId?: number; splitterId?: number }>();
 
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
@@ -114,12 +118,15 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (!this.viewInit) return;
     if (changes['baseElementos'] || changes['relaciones'] || changes['splitters'] || changes['ponFo'] ||
         changes['hilos'] || changes['puertos'] || changes['hiddenCapas'] || changes['etiquetas'] ||
-        changes['seleccion'] || changes['relatedGeoIds'] || changes['soloAnillo']) {
+        changes['seleccion'] || changes['relatedGeoIds'] || changes['soloAnillo'] || changes['conectar']) {
       this.renderAll();
       if (changes['relaciones'] || changes['splitters']) this.fitOnce();
     }
     if (changes['centrarReq'] && !changes['centrarReq'].firstChange) {
       this.centrarSeleccion();
+    }
+    if (changes['conectar'] && this.mapEl) {
+      this.mapEl.nativeElement.style.cursor = this.conectar ? 'crosshair' : '';
     }
   }
 
@@ -137,7 +144,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   private scheduleRender(): void {
     if (this.frame != null) cancelAnimationFrame(this.frame);
-    this.frame = requestAnimationFrame(() => { this.frame = null; this.renderBase(); this.renderOverlay(); });
+    this.frame = requestAnimationFrame(() => { this.frame = null; this.renderBase(); this.renderOverlay(); this.renderHighlight(); });
   }
 
   private visible(key: RedCapaKey): boolean { return !this.hiddenCapas.has(key); }
@@ -151,7 +158,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   // ---- resaltado / atenuacion
   private selActive(): boolean { return !!this.seleccion && this.relatedGeoIds.size > 0; }
   private skip(rel: boolean): boolean { return this.soloAnillo && this.selActive() && !rel; }
-  private op(base: number, rel: boolean): number { return this.selActive() ? (rel ? base : base * DIM) : base; }
+  private op(base: number, _rel: boolean): number { return base; }
   private geoRel(id: number | null | undefined): boolean { return id != null && this.relatedGeoIds.has(id); }
 
   private baseIndex(): Map<number, RedBaseElemento> {
@@ -199,7 +206,11 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       const tipo = (e.geomTipo || '').toLowerCase();
       const nombre = e.etiqueta || e.nombre || '';
       const wkt = e.wkt || '';
-      const onClick = () => this.seleccionar.emit({ tipo: 'base', data: e });
+      const onClick = () => {
+        if (this.conectar && this.conectar.kind === 'destino') {
+          if (this.validoDestino(e.tipoCodigo)) { this.conectarTarget.emit({ geoId: e.idGeoElemento }); }
+        } else { this.onSelect({ tipo: 'base', data: e }); }
+      };
       try {
         const esPunto = tipo.includes('point') || /^POINT/i.test(wkt) || (!wkt && !!e.latLon);
         if (esPunto) {
@@ -208,26 +219,41 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
           if (!ll || !view.contains(ll)) continue;
           drawn++;
           let marker: L.Layer;
-          if (e.icono && /^https?:\/\//i.test(e.icono) && (!this.selActive() || rel)) {
+          if (e.icono && /^https?:\/\//i.test(e.icono)) {
             marker = L.marker(ll, { icon: L.icon({ iconUrl: e.icono, iconSize: [16, 16], iconAnchor: [8, 8] }), opacity: this.op(1, rel) });
           } else {
-            marker = L.circleMarker(ll, { radius: 3, color: stroke, weight: 1, fillColor: fill, fillOpacity: this.op(0.85, rel), opacity: this.op(0.85, rel) });
+            marker = L.marker(ll, { icon: this.iconoTipo(e), opacity: this.op(1, rel) });
           }
           marker.on('click', onClick);
-          if (nombre && (!this.selActive() || rel)) {
-            if (showLabels && labels < LABEL_CAP) { marker.bindTooltip(nombre, { permanent: true, direction: 'top', className: 'rb-label', offset: [0, -6] }); labels++; }
-            else marker.bindTooltip(nombre);
+          const nc = e.contratos || 0;
+          if (nc > 0) {
+            L.circleMarker(ll, { radius: 8, color: '#7C0061', weight: 2, fill: false, opacity: this.op(0.9, rel) }).addTo(this.baseGroup);
+          }
+          const lbl = nombre + (nc > 0 ? ' 👥' + nc : '');
+          if (lbl) {
+            if (showLabels && labels < LABEL_CAP) { marker.bindTooltip(lbl, { permanent: true, direction: 'top', className: 'rb-label', offset: [0, -6] }); labels++; }
+            else marker.bindTooltip(lbl);
           }
           marker.addTo(this.baseGroup);
+          if (this.conectar && this.conectar.kind === 'destino' && this.validoDestino(e.tipoCodigo)) {
+            L.circleMarker(ll, { radius: 12, color: '#2563eb', weight: 2.5, fill: false, className: 'rb-pulse', interactive: false }).addTo(this.baseGroup);
+          }
         } else {
           const esPoligono = /POLYGON/i.test(wkt) || tipo.includes('polygon');
           for (const coords of this.ringsFromWkt(wkt)) {
             if (coords.length < 2) continue;
             if (!view.intersects(L.latLngBounds(coords))) continue;
             drawn++;
-            const layer = esPoligono
-              ? L.polygon(coords, { color: stroke, weight, fillColor: fill, fillOpacity: this.op(0.12, rel), opacity: this.op(0.85, rel) })
-              : L.polyline(coords, { color: stroke, weight, opacity: this.op(0.85, rel) });
+            let layer: L.Path;
+            if (esPoligono) {
+              layer = L.polygon(coords, { color: stroke, weight, fillColor: fill, fillOpacity: this.op(0.12, rel), opacity: this.op(0.85, rel) });
+            } else {
+              // cable de fibra: grosor por Nº de hilos + casing blanco + piso de opacidad
+              const w = this.foWeight(nombre, weight);
+              const opl = Math.max(this.op(0.95, rel), rel ? 0.95 : 0.5);
+              L.polyline(coords, { color: '#ffffff', weight: w + 3, opacity: opl * 0.55, lineCap: 'round' }).addTo(this.baseGroup);
+              layer = L.polyline(coords, { color: stroke, weight: w, opacity: opl, lineCap: 'round' });
+            }
             layer.on('click', onClick);
             if (nombre) layer.bindTooltip(nombre);
             layer.addTo(this.baseGroup);
@@ -256,12 +282,13 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       const vis = estadoVisual(r.estadoRelacion);
       drawn++;
       if (o && d) {
-        const line = L.polyline([o, d], { color: vis.color, weight: this.selActive() && rel ? 5 : 4, opacity: this.op(vis.strike ? 0.4 : 0.95, rel), dashArray: vis.dashed ? '6 6' : undefined, className: this.selActive() && rel ? 'rb-relpulse' : undefined });
-        line.on('click', () => this.seleccionar.emit({ tipo: 'relacion', data: r }));
+        const line = L.polyline([o, d], { color: vis.color, weight: this.selActive() && rel ? 5 : 4, opacity: this.op(vis.strike ? 0.4 : 0.95, rel), dashArray: vis.dashed ? '6 6' : undefined, className: this.selActive() && rel ? 'rb-flow rb-relpulse' : 'rb-flow' });
+        line.on('click', () => this.onSelect({ tipo: 'relacion', data: r }));
         line.bindTooltip((r.origenNombre || '') + ' -> ' + (r.destinoNombre || '') + ' (' + r.estadoRelacion + ')');
         line.addTo(this.overlayGroup);
+        this.hitLine([o, d], () => this.onSelect({ tipo: 'relacion', data: r }), (r.origenNombre || '') + ' -> ' + (r.destinoNombre || ''));
       } else if (o) {
-        this.punto(o, vis.color, () => this.seleccionar.emit({ tipo: 'relacion', data: r }), r.estadoRelacion, rel);
+        this.punto(o, vis.color, () => this.onSelect({ tipo: 'relacion', data: r }), r.estadoRelacion, rel);
       }
     }
     for (const s of this.splitters) {
@@ -272,7 +299,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       if (!ll || !view.contains(ll)) continue;
       const vis = estadoVisual(s.estadoDispositivo);
       const m = L.circleMarker(ll, { radius: 8, color: vis.color, weight: 2, fillColor: vis.color, fillOpacity: this.op(0.65, rel), opacity: this.op(1, rel) });
-      m.on('click', () => this.seleccionar.emit({ tipo: 'splitter', data: s }));
+      m.on('click', () => this.onSplitterClick(s));
       m.bindTooltip(s.nombreOperativo + ' (' + s.ratioSplitter + ', ' + s.estadoDispositivo + ')');
       m.addTo(this.overlayGroup);
     }
@@ -284,7 +311,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
         if (!ll || !view.contains(ll)) continue;
         const vis = estadoVisual(p.estadoRelacion);
         const m = L.circleMarker(ll, { radius: 7, color: vis.color, weight: 2, fillColor: '#ffffff', fillOpacity: this.op(0.9, rel), opacity: this.op(1, rel), dashArray: vis.dashed ? '4 4' : undefined });
-        m.on('click', () => this.seleccionar.emit({ tipo: 'ponfo', data: p }));
+        m.on('click', () => this.onSelect({ tipo: 'ponfo', data: p }));
         m.bindTooltip('PON/VLAN ' + p.idRedVlanFk + ' -> ' + (p.elementoNombre || '') + ' (' + p.estadoRelacion + ')');
         m.addTo(this.overlayGroup);
       }
@@ -311,10 +338,11 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
         for (const coords of this.ringsFromWkt(wkt)) {
           if (coords.length < 2) continue;
           if (!view.intersects(L.latLngBounds(coords))) continue;
-          const line = L.polyline(coords, { color: vis.color, weight: 2, opacity: this.op(0.95, rel) });
+          const line = L.polyline(coords, { color: vis.color, weight: (this.conectar && this.conectar.kind === 'hilo') ? 6 : 2, opacity: this.op(0.95, rel) });
           line.bindTooltip(tip);
-          line.on('click', () => this.seleccionar.emit({ tipo: 'hilo', data: h }));
+          line.on('click', () => this.onHiloClick(h));
           line.addTo(this.overlayGroup);
+          this.hitLine(coords, () => this.onHiloClick(h), tip);
           drew = true; n++; break;
         }
       }
@@ -323,7 +351,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
         if (!ll || !view.contains(ll)) continue;
         const m = L.circleMarker(ll, { radius: 4, color: vis.color, weight: 1, fillColor: vis.color, fillOpacity: this.op(0.9, rel) });
         m.bindTooltip(tip);
-        m.on('click', () => this.seleccionar.emit({ tipo: 'hilo', data: h }));
+        m.on('click', () => this.onHiloClick(h));
         m.addTo(this.overlayGroup);
         n++;
       }
@@ -333,6 +361,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   private renderPuertos(view: L.LatLngBounds): void {
     if (!this.visible('puertos')) return;
     const bySplit = this.puertosBySplitter();
+    const idx = this.baseIndex();
     let drawnSplit = 0;
     for (const s of this.splitters) {
       if (drawnSplit >= PUERTOS_SPLIT_CAP) break;
@@ -343,14 +372,34 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       const ps = bySplit.get(s.idDispositivoPasivo);
       if (!ps || ps.length === 0) continue;
       drawnSplit++;
-      const positions = this.fanout(ll, ps.length);
-      ps.forEach((p, i) => {
-        const vis = estadoVisual(p.estadoPuerto);
-        const m = L.circleMarker(positions[i], { radius: 4, color: '#ffffff', weight: 1, fillColor: vis.color, fillOpacity: this.op(1, rel), opacity: this.op(1, rel) });
-        m.bindTooltip(this.puertoTip(p));
-        m.on('click', () => this.seleccionar.emit({ tipo: 'puerto', data: p }));
-        m.addTo(this.overlayGroup);
-      });
+      let ocup = 0, libre = 0, pend = 0;
+      for (const p of ps) {
+        const est = p.estadoPuerto || '';
+        if (/ocupad/i.test(est)) ocup++; else if (/libre/i.test(est)) libre++; else pend++;
+        // bajada dibujada SOLO si hay destino fisico real (nada inventado)
+        if (p.idGeoElementoDestinoFk != null) {
+          const dest = idx.get(p.idGeoElementoDestinoFk);
+          const dll = dest ? parseLatLon(dest.latLon) : null;
+          if (dll) {
+            const vis = estadoVisual(p.estadoPuerto);
+            const line = L.polyline([ll, dll], { color: vis.color, weight: 2, opacity: this.op(0.9, rel) });
+            line.bindTooltip(this.puertoTip(p));
+            line.on('click', () => this.onSelect({ tipo: 'puerto', data: p }));
+            line.addTo(this.overlayGroup);
+            this.hitLine([ll, dll], () => this.onSelect({ tipo: 'puerto', data: p }), this.puertoTip(p));
+            const dm = L.circleMarker(dll, { radius: 3, color: '#ffffff', weight: 1, fillColor: vis.color, fillOpacity: this.op(1, rel) });
+            dm.on('click', () => this.onSelect({ tipo: 'puerto', data: p }));
+            dm.addTo(this.overlayGroup);
+          }
+        }
+      }
+      const node = L.circleMarker(ll, { radius: 6, color: '#ffffff', weight: 2, fillColor: estadoVisual(s.estadoDispositivo).color, fillOpacity: this.op(0.95, rel), opacity: this.op(1, rel) });
+      node.bindTooltip('Splitter ' + (s.nombreOperativo || '') + ' (' + (s.ratioSplitter || '') + ')<br>Ocupados: ' + ocup + ' &middot; Libres: ' + libre + ' &middot; Pendientes: ' + pend);
+      node.on('click', () => this.onSplitterClick(s));
+      node.addTo(this.overlayGroup);
+      if (this.conectar && this.conectar.kind === 'splitter') {
+        L.circleMarker(ll, { radius: 12, color: '#2563eb', weight: 2.5, fill: false, className: 'rb-pulse', interactive: false }).addTo(this.overlayGroup);
+      }
     }
   }
 
@@ -359,6 +408,66 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (p.colorHilo) t += '<br>Hilo: ' + (p.numeroHilo ?? '') + ' ' + p.colorHilo;
     if (p.destinoNombre) t += '<br>Destino: ' + p.destinoNombre;
     return t;
+  }
+
+  private onSelect(sel: RedSeleccion): void {
+    if (this.conectar) { return; }
+    this.seleccionar.emit(sel);
+  }
+  private validoDestino(tipo: string | null | undefined): boolean {
+    const t = (tipo || '').toUpperCase();
+    return t.includes('NAP') || t.includes('CAJA') || t.includes('CLIENTE') || t.includes('RESERVA') || t.includes('MANGA');
+  }
+  private onSplitterClick(s: RedDispositivoPasivo): void {
+    if (this.conectar && this.conectar.kind === 'splitter') { this.conectarTarget.emit({ splitterId: s.idDispositivoPasivo }); }
+    else { this.onSelect({ tipo: 'splitter', data: s }); }
+  }
+  private onHiloClick(h: RedFoHilo): void {
+    if (this.conectar && this.conectar.kind === 'hilo') { this.conectarTarget.emit({ hiloId: h.idFoHilo }); }
+    else { this.onSelect({ tipo: 'hilo', data: h }); }
+  }
+
+  private hitLine(coords: L.LatLngExpression[], onClick: () => void, tip: string): void {
+    const h = L.polyline(coords, { weight: 16, opacity: 0, className: 'rb-hit', interactive: true });
+    h.bindTooltip(tip);
+    h.on('click', onClick);
+    h.addTo(this.overlayGroup);
+  }
+
+  private foWeight(nombre: string, base: number): number {
+    const m = /(\d+)\s*H/i.exec(nombre || '');
+    const hilos = m ? parseInt(m[1], 10) : 0;
+    if (hilos >= 96) return 6;
+    if (hilos >= 48) return 5;
+    if (hilos >= 24) return 4;
+    if (hilos >= 12) return 3;
+    return Math.max(base, 2.5);
+  }
+
+  private iconoTipo(e: RedBaseElemento): L.DivIcon {
+    const t = (e.tipoCodigo || '').toUpperCase();
+    const c = e.colorStroke || '#64748b';
+    const f = e.colorFill || c;
+    let html: string;
+    if (t.includes('OLT') || t.includes('NODO') || t.includes('CENTRAL')) {
+      html = '<div style="width:16px;height:16px;border-radius:50%;background:' + f + ';border:3px solid ' + c + ';box-shadow:0 0 0 2px #fff;"></div>';
+    } else if (t.includes('NAP') || t.includes('CAJA')) {
+      html = '<div style="width:12px;height:12px;border-radius:3px;background:#fff;border:2.5px solid ' + c + ';box-shadow:0 0 0 1px #fff;"></div>';
+    } else if (t.includes('SPLITTER')) {
+      html = '<div style="width:11px;height:11px;background:' + f + ';border:2px solid ' + c + ';transform:rotate(45deg);box-shadow:0 0 0 1px #fff;"></div>';
+    } else if (t.includes('MANGA')) {
+      html = '<div style="width:16px;height:9px;border-radius:6px;background:#fff;border:2.5px solid ' + c + ';"></div>';
+    } else {
+      html = '<div style="width:8px;height:8px;border-radius:50%;background:' + f + ';border:1.5px solid ' + c + ';"></div>';
+    }
+    return L.divIcon({ html, className: 'rb-typeicon', iconSize: [18, 18], iconAnchor: [9, 9] });
+  }
+
+  private tierR(tipo: string | null | undefined): number {
+    const t = (tipo || '').toUpperCase();
+    if (t.includes('OLT') || t.includes('NODO') || t.includes('CENTRAL')) return 8;
+    if (t.includes('NAP') || t.includes('CAJA') || t.includes('MANGA') || t.includes('SPLITTER')) return 5;
+    return 3;
   }
 
   private fanout(center: L.LatLngTuple, count: number): L.LatLngTuple[] {
@@ -399,16 +508,12 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       if (ll) {
         this.halo(ll, estadoVisual(d.estadoDispositivo).color, d.nombreOperativo || '');
         const ps = this.puertosBySplitter().get(d.idDispositivoPasivo) ?? [];
-        const positions = this.fanout(ll, ps.length);
         const idx = this.baseIndex();
-        ps.forEach((p, i) => {
-          const vis = estadoVisual(p.estadoPuerto);
-          L.polyline([ll, positions[i]], { color: vis.color, weight: 2, opacity: 0.85 }).addTo(this.highlightGroup);
-          this.pulseSmall(positions[i], vis.color);
+        ps.forEach((p) => {
           if (p.idGeoElementoDestinoFk != null) {
             const dest = idx.get(p.idGeoElementoDestinoFk);
             const dll = dest ? parseLatLon(dest.latLon) : null;
-            if (dll) L.polyline([positions[i], dll], { color: vis.color, weight: 2, opacity: 0.6, dashArray: '4 4' }).addTo(this.highlightGroup);
+            if (dll) { const col = estadoVisual(p.estadoPuerto).color; this.flowLine(ll, dll, col); this.pulseSmall(dll, col); }
           }
         });
         return;

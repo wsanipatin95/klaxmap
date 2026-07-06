@@ -81,6 +81,12 @@ export class RedBetaApi {
   relacionPendienteCampo(id: number, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/elemento-relacion/${id}/pendiente-campo`, { observacion });
   }
+  elementoRelacionReasignarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/elemento-relacion/${id}/reasignar-destino`, { idGeoElementoDestino, observacion });
+  }
+  crearRelacion(idGeoElementoOrigen: number, idGeoElementoDestino: number, observacion?: string) {
+    return this.http.post<ApiEnvelope<unknown>>(`${this.base}/elemento-relacion`, { idGeoElementoOrigen, idGeoElementoDestino, observacion });
+  }
 
   ponValidarOficina(id: number, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/pon-elemento-relacion/${id}/validar-oficina`, { observacion });

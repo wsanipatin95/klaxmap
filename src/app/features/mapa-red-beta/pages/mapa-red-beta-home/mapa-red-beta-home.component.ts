@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 
 import { RedBetaFacade } from '../../application/red-beta.facade';
 import type { RedSeleccion } from '../../application/red-beta.facade';
@@ -56,13 +56,14 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
         <div class="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-3 py-1.5">{{ facade.mensaje() }}</div>
       }
 
-      <div class="flex-1 grid grid-cols-12 gap-2 min-h-0">
+      <div class="flex-1 relative min-h-0">
         <!-- IZQUIERDA: tabs + lista (compacta) -->
-        <aside class="col-span-12 lg:col-span-3 bg-white rounded-lg shadow-sm p-2 flex flex-col min-h-0" [class.hidden]="!panelLista()">
+        <aside class="absolute z-[1100] top-14 left-2 bottom-2 w-[300px] max-w-[80%] bg-white/95 rounded-lg shadow-lg border border-slate-200 p-2 flex flex-col min-h-0" [class.hidden]="!panelLista()">
           <div class="flex flex-wrap gap-1 mb-2">
             @for (t of tabs; track t.key) {
               <button
                 class="px-1.5 py-0.5 text-[11px] rounded border"
+                [title]="t.desc"
                 [class.bg-blue-600]="tab() === t.key"
                 [class.text-white]="tab() === t.key"
                 [class.border-blue-600]="tab() === t.key"
@@ -90,13 +91,7 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
         </aside>
 
         <!-- CENTRO: mapa -->
-        <section
-          class="col-span-12 bg-white rounded-lg shadow-sm p-2 min-h-[60vh] flex flex-col"
-          [class.lg:col-span-5]="panelLista() && !!facade.seleccion()"
-          [class.lg:col-span-9]="panelLista() && !facade.seleccion()"
-          [class.lg:col-span-8]="!panelLista() && !!facade.seleccion()"
-          [class.lg:col-span-12]="!panelLista() && !facade.seleccion()"
-        >
+        <section class="absolute inset-0 bg-white rounded-lg shadow-sm p-2 flex flex-col">
           <div class="flex items-center gap-1.5 mb-2">
             <button class="cic" (click)="panelLista.set(!panelLista())" [title]="panelLista() ? 'Ocultar lista' : 'Mostrar lista'" aria-label="Lista">&#9776;</button>
             <button class="cic" [class.cic-on]="etiquetasBase()" (click)="etiquetasBase.set(!etiquetasBase())" [title]="etiquetasBase() ? 'Ocultar etiquetas' : 'Mostrar etiquetas'" aria-label="Etiquetas">Aa</button>
@@ -119,8 +114,17 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
               [relatedGeoIds]="facade.relatedGeoIds()"
               [soloAnillo]="facade.soloAnillo()"
               [centrarReq]="facade.centrarReq()"
+              [conectar]="conectar()"
               (seleccionar)="onFocus($event)"
+              (conectarTarget)="onConectarTarget($event)"
             />
+
+            @if (conectar()) {
+              <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[1200] bg-blue-600 text-white text-xs rounded-full px-4 py-1.5 shadow-lg flex items-center gap-3">
+                <span>Toc&aacute; en el mapa {{ conectar()!.kind === 'destino' ? 'la caja/NAP destino' : (conectar()!.kind === 'splitter' ? 'el splitter' : 'el hilo') }} para conectar &ldquo;{{ conectar()!.label }}&rdquo;</span>
+                <button class="underline" (click)="cancelarConectar()">Cancelar</button>
+              </div>
+            }
 
             <!-- Panel de capas/leyenda: esquina inferior izquierda, colapsado por defecto -->
             <div class="rb-float">
@@ -145,7 +149,7 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
 
         <!-- DERECHA: inspector — solo aparece cuando hay un elemento enfocado -->
         @if (facade.seleccion()) {
-          <aside class="col-span-12 lg:col-span-4 bg-white rounded-lg shadow-sm p-3 flex flex-col min-h-0">
+          <aside class="absolute z-[1100] top-14 right-2 bottom-2 w-[340px] max-w-[90%] bg-white/95 rounded-lg shadow-lg border border-slate-200 p-3 flex flex-col min-h-0">
             <div class="flex items-center justify-between mb-2 shrink-0">
               <h3 class="font-semibold text-slate-700">Inspector</h3>
               <div class="flex items-center gap-1">
@@ -154,7 +158,7 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
               </div>
             </div>
             <div class="flex-1 overflow-auto pr-1">
-              <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" [puertos]="facade.puertosSeleccion()" [anillo]="facade.anillo()" [soloAnillo]="facade.soloAnillo()" [hilosCandidatos]="facade.hilosCandidatos()" [destinoCandidatos]="facade.destinoCandidatos()" [puedeVolver]="historial().length > 0" (accionEmit)="onAccion($event)" (irA)="navegar($event)" (volver)="volver()" (centrar)="facade.centrar()" (verAnillo)="facade.toggleSoloAnillo()" />
+              <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" [puertos]="facade.puertosSeleccion()" [anillo]="facade.anillo()" [soloAnillo]="facade.soloAnillo()" [hilosCandidatos]="facade.hilosCandidatos()" [destinoCandidatos]="facade.destinoCandidatos()" [puedeVolver]="historial().length > 0" (accionEmit)="onAccion($event)" (irA)="navegar($event)" (volver)="volver()" (centrar)="facade.centrar()" (verAnillo)="facade.toggleSoloAnillo()" (conectarMapa)="onConectarMapa($event)" />
             </div>
           </aside>
         }
@@ -168,7 +172,7 @@ type TabKey = 'resumen' | 'relaciones' | 'splitters' | 'ponfo' | 'hilos' | 'puer
               <h3 class="font-bold text-slate-800">Inspector detallado</h3>
               <button class="ctrl" (click)="inspectorModal.set(false)" title="Cerrar">&#10005; Cerrar</button>
             </div>
-            <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" [puertos]="facade.puertosSeleccion()" [anillo]="facade.anillo()" [soloAnillo]="facade.soloAnillo()" [hilosCandidatos]="facade.hilosCandidatos()" [destinoCandidatos]="facade.destinoCandidatos()" [puedeVolver]="historial().length > 0" (accionEmit)="onAccion($event)" (irA)="navegar($event)" (volver)="volver()" (centrar)="facade.centrar()" (verAnillo)="facade.toggleSoloAnillo()" />
+            <app-red-beta-detalle-panel [seleccionInput]="facade.seleccion()" [conexiones]="facade.conexiones()" [puertos]="facade.puertosSeleccion()" [anillo]="facade.anillo()" [soloAnillo]="facade.soloAnillo()" [hilosCandidatos]="facade.hilosCandidatos()" [destinoCandidatos]="facade.destinoCandidatos()" [puedeVolver]="historial().length > 0" (accionEmit)="onAccion($event)" (irA)="navegar($event)" (volver)="volver()" (centrar)="facade.centrar()" (verAnillo)="facade.toggleSoloAnillo()" (conectarMapa)="onConectarMapa($event)" />
           </div>
         </div>
       }
@@ -207,14 +211,14 @@ export class MapaRedBetaHomeComponent implements OnInit {
   readonly etiquetasBase = signal(false);
   readonly procesoPendiente = signal<RedProcesoKind | null>(null);
   readonly historial = signal<RedSeleccion[]>([]);
-  readonly tabs: { key: TabKey; label: string }[] = [
-    { key: 'resumen', label: 'Resumen' },
-    { key: 'relaciones', label: 'Relaciones' },
-    { key: 'splitters', label: 'Splitters' },
-    { key: 'ponfo', label: 'PON→FO' },
-    { key: 'hilos', label: 'Hilos' },
-    { key: 'puertos', label: 'Puertos' },
-    { key: 'conflictos', label: 'Conflictos' },
+  readonly tabs: { key: TabKey; label: string; desc: string }[] = [
+    { key: 'resumen', label: 'Resumen', desc: 'Cómo va todo: cuánto falta validar' },
+    { key: 'relaciones', label: 'Conexiones', desc: 'Qué caja alimenta a qué caja' },
+    { key: 'splitters', label: 'Splitters', desc: 'Repartidores de señal: 1 entra, varias salen' },
+    { key: 'ponfo', label: 'Enlace lógico', desc: 'Qué VLAN/PON usa cada fibra (automático, solo mirar)' },
+    { key: 'hilos', label: 'Fibras/hilos', desc: 'Los cables y cada hilo de color' },
+    { key: 'puertos', label: 'Puertos', desc: 'Dónde se conecta cada cliente (libre/ocupado)' },
+    { key: 'conflictos', label: 'Conflictos', desc: 'Cosas marcadas con problema' },
   ];
 
   readonly conflictosTotal = computed(() => this.facade.conflictos().total);
@@ -230,6 +234,51 @@ export class MapaRedBetaHomeComponent implements OnInit {
   onAccion(ev: RedAccionEvento) {
     this.facade.ejecutarAccion(ev);
   }
+
+  readonly conectar = signal<{ kind: 'hilo' | 'destino' | 'splitter'; action: 'puerto' | 'relacion' | 'crear' | 'hilo-splitter'; id: number; label: string } | null>(null);
+
+  onConectarMapa(ev: { kind: 'hilo' | 'destino' | 'splitter'; action: 'puerto' | 'relacion' | 'crear' | 'hilo-splitter' }) {
+    const sel = this.facade.seleccion();
+    if (!sel) return;
+    if (ev.action === 'puerto') {
+      if (sel.tipo !== 'puerto') return;
+      const pu = sel.data as { idDispositivoPuerto: number; nombrePuerto?: string; numeroPuerto?: number };
+      this.conectar.set({ kind: ev.kind, action: 'puerto', id: pu.idDispositivoPuerto, label: pu.nombrePuerto || ('Puerto ' + (pu.numeroPuerto ?? '')) });
+    } else if (ev.action === 'relacion') {
+      if (sel.tipo !== 'relacion') return;
+      const r = sel.data as { idRedElementoRelacion: number; origenNombre?: string; destinoNombre?: string };
+      this.conectar.set({ kind: ev.kind, action: 'relacion', id: r.idRedElementoRelacion, label: (r.origenNombre || '') + ' -> ' + (r.destinoNombre || '') });
+    } else if (ev.action === 'hilo-splitter') {
+      if (sel.tipo !== 'hilo') return;
+      const h = sel.data as { idFoHilo: number; foNombre?: string; numeroHilo?: number; colorHilo?: string };
+      this.conectar.set({ kind: 'splitter', action: 'hilo-splitter', id: h.idFoHilo, label: (h.foNombre || 'Hilo') + ' ' + (h.numeroHilo ?? '') + ' ' + (h.colorHilo ?? '') });
+    } else {
+      if (sel.tipo !== 'base') return;
+      const b = sel.data as { idGeoElemento: number; nombre?: string; etiqueta?: string };
+      this.conectar.set({ kind: ev.kind, action: 'crear', id: b.idGeoElemento, label: b.etiqueta || b.nombre || 'Origen' });
+    }
+  }
+
+  onConectarTarget(t: { geoId?: number; hiloId?: number; splitterId?: number }) {
+    const c = this.conectar();
+    if (!c) return;
+    if (c.kind === 'destino' && t.geoId != null) {
+      if (c.action === 'relacion') { this.onAccion({ kind: 'reasignar-destino', id: c.id, idGeoElementoDestino: t.geoId }); }
+      else if (c.action === 'crear') { this.onAccion({ kind: 'crear-relacion', id: c.id, idGeoElementoDestino: t.geoId }); }
+      else { this.onAccion({ kind: 'asociar-destino', id: c.id, idGeoElementoDestino: t.geoId }); }
+    } else if (c.kind === 'hilo' && t.hiloId != null) {
+      this.onAccion({ kind: 'asociar-hilo', id: c.id, idFoHilo: t.hiloId });
+    } else if (c.kind === 'splitter' && t.splitterId != null) {
+      const entrada = this.facade.puertos().find((p) => p.idDispositivoPasivoFk === t.splitterId && p.tipoPuerto === 'ENTRADA');
+      if (entrada) { this.onAccion({ kind: 'asociar-hilo', id: entrada.idDispositivoPuerto, idFoHilo: c.id }); }
+    }
+    this.conectar.set(null);
+  }
+
+  cancelarConectar() { this.conectar.set(null); }
+
+  @HostListener('document:keydown.escape')
+  onEscConectar() { if (this.conectar()) this.cancelarConectar(); }
 
   onProceso(kind: RedProcesoKind) {
     this.procesoPendiente.set(kind);

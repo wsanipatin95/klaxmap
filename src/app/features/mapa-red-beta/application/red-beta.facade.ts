@@ -430,6 +430,14 @@ export class RedBetaFacade {
       case 'asociar-destino':
         this.repo.puertoAsociarDestino(ev.id, ev.idGeoElementoDestino ?? null, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;
+      case 'reasignar-destino':
+        this.repo.relacionReasignarDestino(ev.id, ev.idGeoElementoDestino ?? null, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
+        break;
+      case 'crear-relacion':
+        if (ev.idGeoElementoDestino != null) {
+          this.repo.crearRelacion(ev.id, ev.idGeoElementoDestino, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
+        }
+        break;
       case 'pon-validar-oficina':
         this.repo.ponValidarOficina(ev.id, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;

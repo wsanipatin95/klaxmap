@@ -40,11 +40,11 @@ const VISUALS: Record<string, RedEstadoVisual> = {
   // Estados de puertos / hilos
   'Libre': { color: '#22c55e', dashed: false, strike: false, label: 'Libre' },
   'Libre confirmado': { color: '#16a34a', dashed: false, strike: false, label: 'Libre confirmado' },
-  'Ocupado': { color: '#15803d', dashed: false, strike: false, label: 'Ocupado' },
-  'Ocupado confirmado': { color: '#166534', dashed: false, strike: false, label: 'Ocupado confirmado' },
+  'Ocupado': { color: '#ef4444', dashed: false, strike: false, label: 'Ocupado' },
+  'Ocupado confirmado': { color: '#dc2626', dashed: false, strike: false, label: 'Ocupado confirmado' },
   'Reservado': { color: '#eab308', dashed: false, strike: false, label: 'Reservado' },
-  'Averiado': { color: '#dc2626', dashed: false, strike: false, label: 'Averiado' },
-  'Dañado': { color: '#dc2626', dashed: false, strike: false, label: 'Dañado' },
+  'Averiado': { color: '#7f1d1d', dashed: false, strike: false, label: 'Averiado' },
+  'Dañado': { color: '#7f1d1d', dashed: false, strike: false, label: 'Dañado' },
   'No identificado': { color: '#9ca3af', dashed: false, strike: false, label: 'No identificado' },
   'No encontrado': { color: '#9ca3af', dashed: false, strike: true, label: 'No encontrado' },
   'No encontrado en campo': { color: '#9ca3af', dashed: false, strike: true, label: 'No encontrado en campo' },
@@ -64,6 +64,10 @@ export const RED_ESTADOS_LEYENDA: string[] = [
   'Pendiente campo',
   'Conflicto',
   'Rechazado',
+  'Libre',
+  'Ocupado',
+  'Reservado',
+  'Averiado',
 ];
 
 export function estadoVisual(estado: string | null | undefined): RedEstadoVisual {

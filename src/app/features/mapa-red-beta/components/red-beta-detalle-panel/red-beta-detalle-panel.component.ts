@@ -98,6 +98,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                   <button class="b ok2" (click)="emit('validar-campo')">Validar campo</button>
                   <button class="b campo" (click)="emit('pendiente-campo')">Mandar a campo</button>
                   <button class="b no" (click)="emit('rechazar')">Rechazar</button>
+                  <button class="b alt" (click)="conectarMapa.emit({ kind: 'destino', action: 'relacion' })" title="Elegir el destino correcto tocandolo en el mapa">Corregir destino en el mapa</button>
                 </div>
               }
               @if (seleccion.tipo === 'splitter') {
@@ -118,6 +119,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                   <button class="b alt" (click)="emitHilo('Reservado')">Reservado</button>
                   <button class="b no" (click)="emitHilo('Averiado')">Averiado</button>
                   <button class="b campo" (click)="emitHilo('Pendiente validar')">A campo</button>
+                  <button class="b alt" (click)="conectarMapa.emit({ kind: 'splitter', action: 'hilo-splitter' })" title="Conectar este hilo a un splitter tocandolo en el mapa">Conectar a un splitter</button>
                 </div>
               }
               @if (seleccion.tipo === 'puerto') {
@@ -139,6 +141,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                   </select>
                   <button class="b alt" (click)="pedirAsociar('hilo')" [disabled]="!hiloSel()">Asociar</button>
                   <button class="b no" (click)="quitarHilo()" title="Quitar el hilo del puerto">Quitar</button>
+                  <button class="b alt" (click)="conectarMapa.emit({ kind: 'hilo', action: 'puerto' })" title="Elegir el hilo tocandolo en el mapa">Conectar en el mapa</button>
                 </div>
                 @if (hilosCandidatos.length === 0) { <p class="rb-help">No hay hilos candidatos (revisa la FO de entrada del splitter).</p> }
                 @if (confirmar()?.kind === 'hilo') {
@@ -161,6 +164,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                   </select>
                   <button class="b alt" (click)="pedirAsociar('destino')" [disabled]="!destSel()">Asociar</button>
                   <button class="b no" (click)="quitarDestino()" title="Quitar el destino del puerto">Quitar</button>
+                  <button class="b alt" (click)="conectarMapa.emit({ kind: 'destino', action: 'puerto' })" title="Elegir el destino tocandolo en el mapa">Conectar en el mapa</button>
                 </div>
                 @if (confirmar()?.kind === 'destino') {
                   <div class="rb-confirm">
@@ -177,6 +181,7 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
               }
               @if (seleccion.tipo === 'base') {
                 <p class="rb-help">Elemento fisico base: valida sus relaciones/splitters desde el arbol o ejecuta procesos.</p>
+                <button class="b alt" (click)="conectarMapa.emit({ kind: 'destino', action: 'crear' })" title="Crear una conexion tocando la caja destino en el mapa">Conectar a otra caja</button>
               }
 
               @if (seleccion.tipo !== 'base') {
@@ -264,6 +269,7 @@ export class RedBetaDetallePanelComponent {
   @Output() centrar = new EventEmitter<void>();
   @Output() verAnillo = new EventEmitter<void>();
   @Output() volver = new EventEmitter<void>();
+  @Output() conectarMapa = new EventEmitter<{ kind: 'hilo' | 'destino' | 'splitter'; action: 'puerto' | 'relacion' | 'crear' | 'hilo-splitter' }>();
 
   readonly obs = signal('');
   readonly hiloSel = signal('');
@@ -361,7 +367,7 @@ export class RedBetaDetallePanelComponent {
     const s = this._sel(); const d = this.d();
     switch (s?.tipo) {
       case 'relacion': return `El sistema cree que ${d.origenNombre} alimenta fisicamente a ${d.destinoNombre}.`;
-      case 'ponfo': return 'El sistema cree que esta VLAN/PON logica se alimenta por esta fibra fisica.';
+      case 'ponfo': return 'Relacion PON/VLAN → FO DERIVADA del dato (contrato→vlan + equipo→geo + grafo). Es de solo lectura.';
       case 'splitter': return 'Dispositivo pasivo que reparte una entrada en varias salidas.';
       case 'hilo': return 'Una fibra individual dentro del cable FO; debe confirmarse si esta libre, ocupada, averiada o reservada.';
       case 'puerto': return 'Punto de conexion del splitter; debe confirmarse a que hilo/destino/drop se conecta.';
@@ -374,7 +380,7 @@ export class RedBetaDetallePanelComponent {
     switch (this._sel()?.tipo) {
       case 'relacion': return 'Valida en oficina si el nombre/carpeta es correcto; manda a campo si hay duda; rechaza si es incorrecta.';
       case 'splitter': return 'Confirma el ratio si es correcto; a campo si necesita validacion fisica.';
-      case 'ponfo': return 'Validar la relacion PON/VLAN → FO antes de darla por firme.';
+      case 'ponfo': return 'Solo lectura: si algo no cuadra, se corrige en el dato de origen (vlan / equipo / grafo), no aqui.';
       case 'hilo': return 'Campo confirma si esta libre/ocupado/averiado/reservado.';
       case 'puerto': return 'Confirma estado y a que hilo/destino se conecta.';
       case 'base': return 'Revisa el arbol; valida relaciones o ejecuta procesos si esta sin procesar.';

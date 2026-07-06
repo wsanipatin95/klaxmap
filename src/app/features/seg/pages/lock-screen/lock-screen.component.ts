@@ -71,7 +71,9 @@ export class LockScreenComponent {
                 next: () => {
                     this.lockStore.unlock();
                     this.form.reset();
-                    this.notify.success('Sesión reactivada ');
+                    // Recarga la vista para que mapas y datos se vuelvan a pedir con el token nuevo
+                    // (si no, las requests que fallaron con 401 no se reintentan y el mapa queda en blanco).
+                    setTimeout(() => window.location.reload(), 150);
                 },
                 error: (err: any) => {
                     const msg =

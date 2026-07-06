@@ -24,6 +24,12 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 401 || error.status === 403) {
+        // En el mapa embebido la auth se hace por 'code' (no por contraseña):
+        // no mostrar el lock-screen, dejar que el embed maneje su propia sesión.
+        const enEmbed = typeof location !== 'undefined' && location.pathname.includes('/embed/');
+        if (enEmbed) {
+          return throwError(() => error);
+        }
         notify.error('Sesión expirada', backendError);
         lockStore.lock(backendError);
         return throwError(() => error);
