@@ -70,7 +70,7 @@ export interface RedPonElementoRelacion {
 
 /** kxvp_red_dispositivo_pasivo */
 export interface RedDispositivoPasivo {
-  idDispositivoPasivo: number;
+  idRedDispositivoPasivo: number;
   tipoDispositivo: string;
   nombreOperativo: string;
   ratioSplitter: string;
@@ -102,7 +102,7 @@ export interface RedDispositivoPasivo {
 
 /** kxvp_red_fo_hilo */
 export interface RedFoHilo {
-  idFoHilo: number;
+  idRedFoHilo: number;
   idGeoElementoFoFk: number;
   foNombre?: string | null;
   foTipo?: string | null;
@@ -126,8 +126,8 @@ export interface RedFoHilo {
 
 /** kxvp_red_dispositivo_puerto */
 export interface RedDispositivoPuerto {
-  idDispositivoPuerto: number;
-  idDispositivoPasivoFk: number;
+  idRedDispositivoPuerto: number;
+  idRedDispositivoPasivoFk: number;
   dispositivoNombre?: string | null;
   ratioSplitter?: string | null;
   estadoDispositivo?: string | null;
@@ -135,7 +135,7 @@ export interface RedDispositivoPuerto {
   numeroPuerto: number;
   nombrePuerto: string;
   estadoPuerto: string;
-  idFoHiloFk?: number | null;
+  idRedFoHiloFk?: number | null;
   numeroHilo?: number | null;
   colorHilo?: string | null;
   estadoHilo?: string | null;
@@ -192,7 +192,7 @@ export interface RedAccionEvento {
   ratioSplitter?: string;
   validadoEnCampo?: boolean;
   estadoNuevo?: string;
-  idFoHilo?: number | null;
+  idRedFoHilo?: number | null;
   idGeoElementoDestino?: number | null;
 }
 

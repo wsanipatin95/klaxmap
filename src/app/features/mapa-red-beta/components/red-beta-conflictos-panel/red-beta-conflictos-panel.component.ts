@@ -33,13 +33,13 @@ export interface RedConflictos {
             Relacion: {{ r.origenNombre }} → {{ r.destinoNombre }}
           </li>
         }
-        @for (s of data.spl; track s.idDispositivoPasivo) {
+        @for (s of data.spl; track s.idRedDispositivoPasivo) {
           <li class="conf" (click)="seleccionar.emit({ tipo: 'splitter', data: s })">Splitter: {{ s.nombreOperativo }}</li>
         }
-        @for (p of data.pue; track p.idDispositivoPuerto) {
+        @for (p of data.pue; track p.idRedDispositivoPuerto) {
           <li class="conf" (click)="seleccionar.emit({ tipo: 'puerto', data: p })">Puerto: {{ p.dispositivoNombre }} · {{ p.nombrePuerto }}</li>
         }
-        @for (h of data.hil; track h.idFoHilo) {
+        @for (h of data.hil; track h.idRedFoHilo) {
           <li class="conf" (click)="seleccionar.emit({ tipo: 'hilo', data: h })">Hilo: {{ h.foNombre }} #{{ h.numeroHilo }}</li>
         }
       </ul>

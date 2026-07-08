@@ -135,8 +135,8 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
                 <div class="flex items-center gap-1.5">
                   <select class="sel" (change)="hiloSel.set($any($event.target).value)">
                     <option value="" [selected]="hiloSel() === ''">— elige un hilo —</option>
-                    @for (h of hilosCandidatos; track h.idFoHilo) {
-                      <option [value]="h.idFoHilo" [selected]="hiloSel() === (h.idFoHilo + '')">{{ h.foNombre }} · Hilo {{ h.numeroHilo }} {{ h.colorHilo }} · {{ h.estadoHilo }}</option>
+                    @for (h of hilosCandidatos; track h.idRedFoHilo) {
+                      <option [value]="h.idRedFoHilo" [selected]="hiloSel() === (h.idRedFoHilo + '')">{{ h.foNombre }} · Hilo {{ h.numeroHilo }} {{ h.colorHilo }} · {{ h.estadoHilo }}</option>
                     }
                   </select>
                   <button class="b alt" (click)="pedirAsociar('hilo')" [disabled]="!hiloSel()">Asociar</button>
@@ -248,7 +248,7 @@ export class RedBetaDetallePanelComponent {
     this._sel.set(v);
     this.obs.set('');
     const d = v?.data ?? {};
-    this.hiloSel.set(v?.tipo === 'puerto' && d.idFoHiloFk != null ? String(d.idFoHiloFk) : '');
+    this.hiloSel.set(v?.tipo === 'puerto' && d.idRedFoHiloFk != null ? String(d.idRedFoHiloFk) : '');
     this.destSel.set(v?.tipo === 'puerto' && d.idGeoElementoDestinoFk != null ? String(d.idGeoElementoDestinoFk) : '');
     this.confirmar.set(null);
   }
@@ -278,7 +278,7 @@ export class RedBetaDetallePanelComponent {
 
   private hiloLabel(): string {
     const id = Number(this.hiloSel());
-    const h = this.hilosCandidatos.find((x) => x.idFoHilo === id);
+    const h = this.hilosCandidatos.find((x) => x.idRedFoHilo === id);
     return h ? `${h.foNombre} · Hilo ${h.numeroHilo} ${h.colorHilo}` : 'el hilo elegido';
   }
   private destinoLabel(): string {
@@ -397,9 +397,9 @@ export class RedBetaDetallePanelComponent {
   private id(): number {
     const s = this._sel(); const d = this.d();
     switch (s?.tipo) {
-      case 'splitter': return d.idDispositivoPasivo;
-      case 'hilo': return d.idFoHilo;
-      case 'puerto': return d.idDispositivoPuerto;
+      case 'splitter': return d.idRedDispositivoPasivo;
+      case 'hilo': return d.idRedFoHilo;
+      case 'puerto': return d.idRedDispositivoPuerto;
       case 'ponfo': return d.idRedPonElementoRelacion;
       default: return d.idRedElementoRelacion;
     }
@@ -419,11 +419,11 @@ export class RedBetaDetallePanelComponent {
   }
   asociarHilo(): void {
     const v = this.hiloSel().trim();
-    this.accionEmit.emit({ kind: 'asociar-hilo', id: this.id(), idFoHilo: v ? Number(v) : null, observacion: this.obs() || undefined });
+    this.accionEmit.emit({ kind: 'asociar-hilo', id: this.id(), idRedFoHilo: v ? Number(v) : null, observacion: this.obs() || undefined });
   }
   quitarHilo(): void {
     this.hiloSel.set('');
-    this.accionEmit.emit({ kind: 'asociar-hilo', id: this.id(), idFoHilo: null, observacion: this.obs() || undefined });
+    this.accionEmit.emit({ kind: 'asociar-hilo', id: this.id(), idRedFoHilo: null, observacion: this.obs() || undefined });
   }
   asociarDestino(): void {
     const v = this.destSel().trim();

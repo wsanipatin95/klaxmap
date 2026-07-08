@@ -172,7 +172,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   private puertosBySplitter(): Map<number, RedDispositivoPuerto[]> {
     if (this.puertosSrc !== this.puertos) {
       this.puertosIdx = new Map();
-      for (const p of this.puertos) { const a = this.puertosIdx.get(p.idDispositivoPasivoFk) ?? []; a.push(p); this.puertosIdx.set(p.idDispositivoPasivoFk, a); }
+      for (const p of this.puertos) { const a = this.puertosIdx.get(p.idRedDispositivoPasivoFk) ?? []; a.push(p); this.puertosIdx.set(p.idRedDispositivoPasivoFk, a); }
       this.puertosSrc = this.puertos;
     }
     return this.puertosIdx;
@@ -180,7 +180,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   private splitterIndex(): Map<number, RedDispositivoPasivo> {
     if (this.splitterSrc !== this.splitters) {
       this.splitterIdx = new Map();
-      for (const s of this.splitters) this.splitterIdx.set(s.idDispositivoPasivo, s);
+      for (const s of this.splitters) this.splitterIdx.set(s.idRedDispositivoPasivo, s);
       this.splitterSrc = this.splitters;
     }
     return this.splitterIdx;
@@ -369,7 +369,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       if (this.skip(rel)) continue;
       const ll = parseLatLon(s.contenedorLatLon) ?? parseLatLon(s.splitterOrigenLatLon);
       if (!ll || !view.contains(ll)) continue;
-      const ps = bySplit.get(s.idDispositivoPasivo);
+      const ps = bySplit.get(s.idRedDispositivoPasivo);
       if (!ps || ps.length === 0) continue;
       drawnSplit++;
       let ocup = 0, libre = 0, pend = 0;
@@ -419,11 +419,11 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     return t.includes('NAP') || t.includes('CAJA') || t.includes('CLIENTE') || t.includes('RESERVA') || t.includes('MANGA');
   }
   private onSplitterClick(s: RedDispositivoPasivo): void {
-    if (this.conectar && this.conectar.kind === 'splitter') { this.conectarTarget.emit({ splitterId: s.idDispositivoPasivo }); }
+    if (this.conectar && this.conectar.kind === 'splitter') { this.conectarTarget.emit({ splitterId: s.idRedDispositivoPasivo }); }
     else { this.onSelect({ tipo: 'splitter', data: s }); }
   }
   private onHiloClick(h: RedFoHilo): void {
-    if (this.conectar && this.conectar.kind === 'hilo') { this.conectarTarget.emit({ hiloId: h.idFoHilo }); }
+    if (this.conectar && this.conectar.kind === 'hilo') { this.conectarTarget.emit({ hiloId: h.idRedFoHilo }); }
     else { this.onSelect({ tipo: 'hilo', data: h }); }
   }
 
@@ -507,7 +507,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       const ll = parseLatLon(d.contenedorLatLon) ?? parseLatLon(d.splitterOrigenLatLon);
       if (ll) {
         this.halo(ll, estadoVisual(d.estadoDispositivo).color, d.nombreOperativo || '');
-        const ps = this.puertosBySplitter().get(d.idDispositivoPasivo) ?? [];
+        const ps = this.puertosBySplitter().get(d.idRedDispositivoPasivo) ?? [];
         const idx = this.baseIndex();
         ps.forEach((p) => {
           if (p.idGeoElementoDestinoFk != null) {
@@ -520,12 +520,12 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       }
     }
     if (sel.tipo === 'puerto') {
-      const sp = this.splitterIndex().get(d.idDispositivoPasivoFk);
+      const sp = this.splitterIndex().get(d.idRedDispositivoPasivoFk);
       const ll = sp ? (parseLatLon(sp.contenedorLatLon) ?? parseLatLon(sp.splitterOrigenLatLon)) : null;
       if (ll) {
         // Entrada: pintar la FO del hilo de subida en su color fisico (si esta asociado) y conectar al splitter.
-        if (d.idFoHiloFk != null) {
-          const hilo = this.hilos.find((h) => h.idFoHilo === d.idFoHiloFk);
+        if (d.idRedFoHiloFk != null) {
+          const hilo = this.hilos.find((h) => h.idRedFoHilo === d.idRedFoHiloFk);
           if (hilo) {
             const colH = this.colorHiloCss(hilo.colorHilo ?? d.colorHilo);
             const fo = this.baseIndex().get(hilo.idGeoElementoFoFk);
@@ -628,7 +628,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
       case 'ponfo': return parseLatLon(d.elementoLatLon);
       case 'hilo': return parseLatLon(d.foLatLon);
       case 'puerto': {
-        const sp = this.splitterIndex().get(d.idDispositivoPasivoFk);
+        const sp = this.splitterIndex().get(d.idRedDispositivoPasivoFk);
         return sp ? (parseLatLon(sp.contenedorLatLon) ?? parseLatLon(sp.splitterOrigenLatLon)) : null;
       }
       default: return null;

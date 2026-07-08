@@ -16,15 +16,15 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
         <p class="text-sm text-slate-400">Sin splitters. Ejecuta "Splitters".</p>
       }
       <ul class="space-y-1 max-h-[calc(100vh-11rem)] overflow-auto pr-1">
-        @for (s of items; track s.idDispositivoPasivo) {
+        @for (s of items; track s.idRedDispositivoPasivo) {
           <li class="border rounded p-1.5 hover:bg-slate-50 cursor-pointer text-xs"
-              [class.border-slate-200]="!isSel(s.idDispositivoPasivo)"
-              [class.border-2]="isSel(s.idDispositivoPasivo)"
-              [class.border-blue-500]="isSel(s.idDispositivoPasivo)"
-              [class.bg-blue-50]="isSel(s.idDispositivoPasivo)"
-              [rbScrollSelected]="isSel(s.idDispositivoPasivo)"
+              [class.border-slate-200]="!isSel(s.idRedDispositivoPasivo)"
+              [class.border-2]="isSel(s.idRedDispositivoPasivo)"
+              [class.border-blue-500]="isSel(s.idRedDispositivoPasivo)"
+              [class.bg-blue-50]="isSel(s.idRedDispositivoPasivo)"
+              [rbScrollSelected]="isSel(s.idRedDispositivoPasivo)"
               (click)="seleccionar.emit({ tipo: 'splitter', data: s })">
-            @if (isSel(s.idDispositivoPasivo)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
+            @if (isSel(s.idRedDispositivoPasivo)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
             <div class="flex items-center justify-between gap-2">
               <span class="text-sm font-medium text-slate-700 truncate">{{ s.nombreOperativo }}</span>
               <span class="text-xs font-semibold text-slate-600 shrink-0">{{ s.ratioSplitter }}</span>
@@ -58,10 +58,10 @@ export class RedBetaSplittersPanelComponent {
 
   ratio(ev: Event, s: RedDispositivoPasivo, r: string) {
     ev.stopPropagation();
-    this.accionEmit.emit({ kind: 'confirmar-ratio', id: s.idDispositivoPasivo, ratioSplitter: r, validadoEnCampo: true });
+    this.accionEmit.emit({ kind: 'confirmar-ratio', id: s.idRedDispositivoPasivo, ratioSplitter: r, validadoEnCampo: true });
   }
   noEncontrado(ev: Event, s: RedDispositivoPasivo) {
     ev.stopPropagation();
-    this.accionEmit.emit({ kind: 'no-encontrado', id: s.idDispositivoPasivo });
+    this.accionEmit.emit({ kind: 'no-encontrado', id: s.idRedDispositivoPasivo });
   }
 }

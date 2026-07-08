@@ -80,9 +80,9 @@ export class RedBetaFacade {
   readonly puertosSeleccion = computed<RedDispositivoPuerto[]>(() => {
     const sel = this.seleccion();
     if (!sel || sel.tipo !== 'splitter') return [];
-    const id = sel.data?.idDispositivoPasivo;
+    const id = sel.data?.idRedDispositivoPasivo;
     if (id == null) return [];
-    return this.puertos().filter((p) => p.idDispositivoPasivoFk === id);
+    return this.puertos().filter((p) => p.idRedDispositivoPasivoFk === id);
   });
 
   // -------- modo inspector / anillo
@@ -98,10 +98,10 @@ export class RedBetaFacade {
     const d = sel.data;
     const id =
       sel.tipo === 'relacion' ? d?.idRedElementoRelacion :
-      sel.tipo === 'splitter' ? d?.idDispositivoPasivo :
+      sel.tipo === 'splitter' ? d?.idRedDispositivoPasivo :
       sel.tipo === 'ponfo' ? d?.idRedPonElementoRelacion :
-      sel.tipo === 'hilo' ? d?.idFoHilo :
-      sel.tipo === 'puerto' ? d?.idDispositivoPuerto :
+      sel.tipo === 'hilo' ? d?.idRedFoHilo :
+      sel.tipo === 'puerto' ? d?.idRedDispositivoPuerto :
       sel.tipo === 'base' ? d?.idGeoElemento : null;
     return id == null ? null : `${sel.tipo}:${id}`;
   });
@@ -119,12 +119,12 @@ export class RedBetaFacade {
   });
   private readonly puertosBySplit = computed(() => {
     const m = new Map<number, RedDispositivoPuerto[]>();
-    for (const p of this.puertos()) { const a = m.get(p.idDispositivoPasivoFk) ?? []; a.push(p); m.set(p.idDispositivoPasivoFk, a); }
+    for (const p of this.puertos()) { const a = m.get(p.idRedDispositivoPasivoFk) ?? []; a.push(p); m.set(p.idRedDispositivoPasivoFk, a); }
     return m;
   });
   private readonly puertosByHilo = computed(() => {
     const m = new Map<number, RedDispositivoPuerto[]>();
-    for (const p of this.puertos()) { if (p.idFoHiloFk != null) { const a = m.get(p.idFoHiloFk) ?? []; a.push(p); m.set(p.idFoHiloFk, a); } }
+    for (const p of this.puertos()) { if (p.idRedFoHiloFk != null) { const a = m.get(p.idRedFoHiloFk) ?? []; a.push(p); m.set(p.idRedFoHiloFk, a); } }
     return m;
   });
   private readonly splittersByCont = computed(() => {
@@ -134,7 +134,7 @@ export class RedBetaFacade {
   });
   private readonly splitterById = computed(() => {
     const m = new Map<number, RedDispositivoPasivo>();
-    for (const s of this.splitters()) m.set(s.idDispositivoPasivo, s);
+    for (const s of this.splitters()) m.set(s.idRedDispositivoPasivo, s);
     return m;
   });
 
@@ -156,13 +156,13 @@ export class RedBetaFacade {
         break;
       case 'splitter': {
         add(d.idContenedor);
-        for (const p of (this.puertosBySplit().get(d.idDispositivoPasivo) ?? [])) add(p.idGeoElementoDestinoFk);
+        for (const p of (this.puertosBySplit().get(d.idRedDispositivoPasivo) ?? [])) add(p.idGeoElementoDestinoFk);
         break;
       }
       case 'ponfo': add(d.idGeoElementoFk); break;
       case 'hilo': add(d.idGeoElementoFoFk); break;
       case 'puerto': {
-        const sp = this.splitterById().get(d.idDispositivoPasivoFk);
+        const sp = this.splitterById().get(d.idRedDispositivoPasivoFk);
         if (sp) add(sp.idContenedor);
         add(d.idGeoElementoDestinoFk);
         break;
@@ -214,17 +214,17 @@ export class RedBetaFacade {
       };
     }
     if (sel.tipo === 'splitter') {
-      const ps = this.puertosBySplit().get(d.idDispositivoPasivo) ?? [];
+      const ps = this.puertosBySplit().get(d.idRedDispositivoPasivo) ?? [];
       const entrada = ps.filter((p) => p.tipoPuerto === 'ENTRADA');
       const salidas = ps.filter((p) => p.tipoPuerto === 'SALIDA');
       const falt: string[] = [];
-      if (!entrada.some((p) => p.idFoHiloFk != null)) falt.push('No hay FO/hilo de entrada conectado todavia.');
+      if (!entrada.some((p) => p.idRedFoHiloFk != null)) falt.push('No hay FO/hilo de entrada conectado todavia.');
       if (!salidas.some((p) => p.idGeoElementoDestinoFk != null)) falt.push('Ninguna salida tiene destino fisico todavia.');
       return {
         arribaLabel: 'Contenedor / entrada',
         arriba: [
           L('Contenedor', d.contenedorNombre, d.contenedorTipo),
-          ...entrada.map((p) => L('Entrada ' + p.numeroPuerto, p.colorHilo ? `Hilo ${p.numeroHilo} ${p.colorHilo}` : null, p.estadoPuerto, p.idFoHiloFk ? undefined : 'Sin hilo de entrada', { tipo: 'puerto', data: p }, p.colorHilo)),
+          ...entrada.map((p) => L('Entrada ' + p.numeroPuerto, p.colorHilo ? `Hilo ${p.numeroHilo} ${p.colorHilo}` : null, p.estadoPuerto, p.idRedFoHiloFk ? undefined : 'Sin hilo de entrada', { tipo: 'puerto', data: p }, p.colorHilo)),
         ],
         centro: d.nombreOperativo,
         abajoLabel: 'Salidas',
@@ -250,7 +250,7 @@ export class RedBetaFacade {
       };
     }
     if (sel.tipo === 'hilo') {
-      const pe = this.puertosByHilo().get(d.idFoHilo) ?? [];
+      const pe = this.puertosByHilo().get(d.idRedFoHilo) ?? [];
       const falt: string[] = [];
       if (pe.length === 0) { falt.push('No conectado a ningun puerto de splitter todavia.'); falt.push('Destino no identificado.'); falt.push('No asociado a contrato/drop.'); }
       return {
@@ -264,15 +264,15 @@ export class RedBetaFacade {
     }
     if (sel.tipo === 'puerto') {
       const falt: string[] = [];
-      if (d.idFoHiloFk == null) falt.push('Sin hilo de entrada asociado.');
+      if (d.idRedFoHiloFk == null) falt.push('Sin hilo de entrada asociado.');
       if (d.idGeoElementoDestinoFk == null) falt.push('Sin destino fisico asociado.');
       falt.push('Sin drop/cliente asociado.');
-      const hiloEntrada = d.idFoHiloFk != null ? this.hilos().find((h) => h.idFoHilo === d.idFoHiloFk) : null;
+      const hiloEntrada = d.idRedFoHiloFk != null ? this.hilos().find((h) => h.idRedFoHilo === d.idRedFoHiloFk) : null;
       return {
         arribaLabel: 'Entrada / splitter',
         arriba: [
-          L('Splitter', d.dispositivoNombre, null, undefined, this.splitterById().get(d.idDispositivoPasivoFk) ? { tipo: 'splitter', data: this.splitterById().get(d.idDispositivoPasivoFk) } : undefined),
-          d.idFoHiloFk != null
+          L('Splitter', d.dispositivoNombre, null, undefined, this.splitterById().get(d.idRedDispositivoPasivoFk) ? { tipo: 'splitter', data: this.splitterById().get(d.idRedDispositivoPasivoFk) } : undefined),
+          d.idRedFoHiloFk != null
             ? L('Hilo', `${d.numeroHilo ?? ''} ${d.colorHilo ?? ''}`, null, undefined, hiloEntrada ? { tipo: 'hilo', data: hiloEntrada } : undefined, d.colorHilo)
             : L('Hilo', null, null, 'No conectado'),
         ],
@@ -293,8 +293,8 @@ export class RedBetaFacade {
   }
 
   /** Punto del splitter del puerto seleccionado (para buscar candidatos cercanos). */
-  private splitterPointOf(d: { idDispositivoPasivoFk?: number }): [number, number] | null {
-    const sp = d.idDispositivoPasivoFk != null ? this.splitterById().get(d.idDispositivoPasivoFk) : null;
+  private splitterPointOf(d: { idRedDispositivoPasivoFk?: number }): [number, number] | null {
+    const sp = d.idRedDispositivoPasivoFk != null ? this.splitterById().get(d.idRedDispositivoPasivoFk) : null;
     if (!sp) return null;
     return parseLatLon(sp.contenedorLatLon) ?? parseLatLon(sp.splitterOrigenLatLon);
   }
@@ -310,9 +310,9 @@ export class RedBetaFacade {
     // Para una SALIDA: hilos de la FO que ya entra al splitter. Para una ENTRADA: estas eligiendo la
     // fibra de subida, asi que se ofrecen los hilos mas cercanos (no se encierra en una sola FO).
     if (d.tipoPuerto === 'SALIDA') {
-      const ent = (this.puertosBySplit().get(d.idDispositivoPasivoFk) ?? []).find((p) => p.tipoPuerto === 'ENTRADA' && p.idFoHiloFk != null);
-      if (ent?.idFoHiloFk != null) {
-        const h = this.hilos().find((x) => x.idFoHilo === ent.idFoHiloFk);
+      const ent = (this.puertosBySplit().get(d.idRedDispositivoPasivoFk) ?? []).find((p) => p.tipoPuerto === 'ENTRADA' && p.idRedFoHiloFk != null);
+      if (ent?.idRedFoHiloFk != null) {
+        const h = this.hilos().find((x) => x.idRedFoHilo === ent.idRedFoHiloFk);
         if (h) {
           const ofFo = this.hilosByFo().get(h.idGeoElementoFoFk) ?? [];
           if (ofFo.length) return ofFo;
@@ -425,7 +425,7 @@ export class RedBetaFacade {
         this.repo.puertoEstado(ev.id, ev.estadoNuevo ?? '', ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;
       case 'asociar-hilo':
-        this.repo.puertoAsociarHilo(ev.id, ev.idFoHilo ?? null, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
+        this.repo.puertoAsociarHilo(ev.id, ev.idRedFoHilo ?? null, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
         break;
       case 'asociar-destino':
         this.repo.puertoAsociarDestino(ev.id, ev.idGeoElementoDestino ?? null, ev.observacion).subscribe({ next: (r) => done(r.mensaje), error: fail });
@@ -466,7 +466,7 @@ export class RedBetaFacade {
   // -------- procesos (cursores kxfp_)
   generar(
     kind: 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo',
-    params: { idRedNodo?: number; minConfianza?: number; radioM?: number; idDispositivoPasivo?: number; idGeoElementoFo?: number } = {}
+    params: { idRedNodo?: number; minConfianza?: number; radioM?: number; idRedDispositivoPasivo?: number; idGeoElementoFo?: number } = {}
   ) {
     this.error.set(null);
     const after = (res: { data: number; mensaje: string }) => {
@@ -487,7 +487,7 @@ export class RedBetaFacade {
         this.repo.generarSplittersContenidos(params.radioM ?? 10, params.minConfianza ?? 65).subscribe({ next: after, error: fail });
         break;
       case 'puertos':
-        this.repo.generarPuertosSplitters(params.idDispositivoPasivo).subscribe({ next: after, error: fail });
+        this.repo.generarPuertosSplitters(params.idRedDispositivoPasivo).subscribe({ next: after, error: fail });
         break;
       case 'hilos':
         this.repo.generarHilosFo(params.idGeoElementoFo).subscribe({ next: after, error: fail });
@@ -523,9 +523,9 @@ export class RedBetaFacade {
     let fresh: unknown = null;
     switch (sel.tipo) {
       case 'relacion': fresh = this.relaciones().find((x) => x.idRedElementoRelacion === d.idRedElementoRelacion); break;
-      case 'splitter': fresh = this.splitters().find((x) => x.idDispositivoPasivo === d.idDispositivoPasivo); break;
-      case 'hilo': fresh = this.hilos().find((x) => x.idFoHilo === d.idFoHilo); break;
-      case 'puerto': fresh = this.puertos().find((x) => x.idDispositivoPuerto === d.idDispositivoPuerto); break;
+      case 'splitter': fresh = this.splitters().find((x) => x.idRedDispositivoPasivo === d.idRedDispositivoPasivo); break;
+      case 'hilo': fresh = this.hilos().find((x) => x.idRedFoHilo === d.idRedFoHilo); break;
+      case 'puerto': fresh = this.puertos().find((x) => x.idRedDispositivoPuerto === d.idRedDispositivoPuerto); break;
       case 'ponfo': fresh = this.ponFo().find((x) => x.idRedPonElementoRelacion === d.idRedPonElementoRelacion); break;
     }
     if (fresh) this.seleccion.set({ tipo: sel.tipo, data: fresh });

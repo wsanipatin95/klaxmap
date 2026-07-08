@@ -54,7 +54,7 @@ export class RedBetaApi {
     });
   }
 
-  listarPuertos(params: { estado?: string; idDispositivoPasivo?: number; q?: string } = {}) {
+  listarPuertos(params: { estado?: string; idRedDispositivoPasivo?: number; q?: string } = {}) {
     return this.http.get<ApiEnvelope<RedDispositivoPuerto[]>>(`${this.base}/dispositivo-puerto/listar`, {
       params: this.toParams({ ...params, all: true }),
     });
@@ -127,8 +127,8 @@ export class RedBetaApi {
   puertoEstado(id: number, estado: string, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/estado`, { estado, observacion });
   }
-  puertoAsociarHilo(id: number, idFoHilo: number | null, observacion?: string) {
-    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/asociar-hilo`, { idFoHilo, observacion });
+  puertoAsociarHilo(id: number, idRedFoHilo: number | null, observacion?: string) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/asociar-hilo`, { idRedFoHilo, observacion });
   }
   puertoAsociarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
     return this.http.patch<ApiEnvelope<unknown>>(`${this.base}/dispositivo-puerto/${id}/asociar-destino`, { idGeoElementoDestino, observacion });
@@ -142,8 +142,8 @@ export class RedBetaApi {
   generarSplittersContenidos(radioM?: number, minConfianza?: number) {
     return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-splitters-contenidos`, { radioM, minConfianza });
   }
-  generarPuertosSplitters(idDispositivoPasivo?: number) {
-    return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-puertos-splitters`, { idDispositivoPasivo });
+  generarPuertosSplitters(idRedDispositivoPasivo?: number) {
+    return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-puertos-splitters`, { idRedDispositivoPasivo });
   }
   generarHilosFo(idGeoElementoFo?: number) {
     return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-hilos-fo`, { idGeoElementoFo });

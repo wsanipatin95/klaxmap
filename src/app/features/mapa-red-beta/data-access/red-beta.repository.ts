@@ -39,7 +39,7 @@ export class RedBetaRepository {
     return this.api.listarHilos(params).pipe(map((r) => unwrapOrThrow<RedFoHilo[]>(r)));
   }
 
-  listarPuertos(params: { estado?: string; idDispositivoPasivo?: number; q?: string } = {}) {
+  listarPuertos(params: { estado?: string; idRedDispositivoPasivo?: number; q?: string } = {}) {
     return this.api.listarPuertos(params).pipe(map((r) => unwrapOrThrow<RedDispositivoPuerto[]>(r)));
   }
 
@@ -92,8 +92,8 @@ export class RedBetaRepository {
   puertoEstado(id: number, estado: string, observacion?: string) {
     return this.api.puertoEstado(id, estado, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
-  puertoAsociarHilo(id: number, idFoHilo: number | null, observacion?: string) {
-    return this.api.puertoAsociarHilo(id, idFoHilo, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  puertoAsociarHilo(id: number, idRedFoHilo: number | null, observacion?: string) {
+    return this.api.puertoAsociarHilo(id, idRedFoHilo, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }
   puertoAsociarDestino(id: number, idGeoElementoDestino: number | null, observacion?: string) {
     return this.api.puertoAsociarDestino(id, idGeoElementoDestino, observacion).pipe(map((r) => unwrapWithMsg<unknown>(r)));
@@ -112,8 +112,8 @@ export class RedBetaRepository {
   generarSplittersContenidos(radioM?: number, minConfianza?: number) {
     return this.api.generarSplittersContenidos(radioM, minConfianza).pipe(map((r) => unwrapWithMsg<number>(r)));
   }
-  generarPuertosSplitters(idDispositivoPasivo?: number) {
-    return this.api.generarPuertosSplitters(idDispositivoPasivo).pipe(map((r) => unwrapWithMsg<number>(r)));
+  generarPuertosSplitters(idRedDispositivoPasivo?: number) {
+    return this.api.generarPuertosSplitters(idRedDispositivoPasivo).pipe(map((r) => unwrapWithMsg<number>(r)));
   }
   generarHilosFo(idGeoElementoFo?: number) {
     return this.api.generarHilosFo(idGeoElementoFo).pipe(map((r) => unwrapWithMsg<number>(r)));

@@ -16,15 +16,15 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
         <p class="text-sm text-slate-400">Sin puertos. Ejecuta "Puertos".</p>
       }
       <ul class="space-y-1 max-h-[calc(100vh-11rem)] overflow-auto pr-1">
-        @for (p of items; track p.idDispositivoPuerto) {
+        @for (p of items; track p.idRedDispositivoPuerto) {
           <li class="border rounded p-1.5 hover:bg-slate-50 cursor-pointer text-xs"
-              [class.border-slate-200]="!isSel(p.idDispositivoPuerto)"
-              [class.border-2]="isSel(p.idDispositivoPuerto)"
-              [class.border-blue-500]="isSel(p.idDispositivoPuerto)"
-              [class.bg-blue-50]="isSel(p.idDispositivoPuerto)"
-              [rbScrollSelected]="isSel(p.idDispositivoPuerto)"
+              [class.border-slate-200]="!isSel(p.idRedDispositivoPuerto)"
+              [class.border-2]="isSel(p.idRedDispositivoPuerto)"
+              [class.border-blue-500]="isSel(p.idRedDispositivoPuerto)"
+              [class.bg-blue-50]="isSel(p.idRedDispositivoPuerto)"
+              [rbScrollSelected]="isSel(p.idRedDispositivoPuerto)"
               (click)="seleccionar.emit({ tipo: 'puerto', data: p })">
-            @if (isSel(p.idDispositivoPuerto)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
+            @if (isSel(p.idRedDispositivoPuerto)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
             <div class="flex items-center justify-between gap-2">
               <span class="font-medium text-slate-700 truncate">{{ p.dispositivoNombre }} · {{ p.nombrePuerto }}</span>
               <span class="text-xs text-slate-500 shrink-0">{{ p.tipoPuerto }}</span>

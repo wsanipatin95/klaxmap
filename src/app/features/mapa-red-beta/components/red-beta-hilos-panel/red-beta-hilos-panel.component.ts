@@ -16,15 +16,15 @@ import type { RedSeleccion } from '../../application/red-beta.facade';
         <p class="text-sm text-slate-400">Sin hilos. Ejecuta "Hilos".</p>
       }
       <ul class="space-y-1 max-h-[calc(100vh-11rem)] overflow-auto pr-1">
-        @for (h of items; track h.idFoHilo) {
+        @for (h of items; track h.idRedFoHilo) {
           <li class="border rounded p-1.5 hover:bg-slate-50 cursor-pointer text-xs"
-              [class.border-slate-200]="!isSel(h.idFoHilo)"
-              [class.border-2]="isSel(h.idFoHilo)"
-              [class.border-blue-500]="isSel(h.idFoHilo)"
-              [class.bg-blue-50]="isSel(h.idFoHilo)"
-              [rbScrollSelected]="isSel(h.idFoHilo)"
+              [class.border-slate-200]="!isSel(h.idRedFoHilo)"
+              [class.border-2]="isSel(h.idRedFoHilo)"
+              [class.border-blue-500]="isSel(h.idRedFoHilo)"
+              [class.bg-blue-50]="isSel(h.idRedFoHilo)"
+              [rbScrollSelected]="isSel(h.idRedFoHilo)"
               (click)="seleccionar.emit({ tipo: 'hilo', data: h })">
-            @if (isSel(h.idFoHilo)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
+            @if (isSel(h.idRedFoHilo)) { <div class="text-[10px] font-bold text-blue-600 mb-1">● Seleccionado</div> }
             <div class="flex items-center justify-between gap-2">
               <span class="font-medium text-slate-700 truncate">{{ h.foNombre }}</span>
               <span class="text-xs text-slate-500 shrink-0">tubo {{ h.grupoTubo }} · hilo {{ h.numeroHilo }}</span>

@@ -242,16 +242,16 @@ export class MapaRedBetaHomeComponent implements OnInit {
     if (!sel) return;
     if (ev.action === 'puerto') {
       if (sel.tipo !== 'puerto') return;
-      const pu = sel.data as { idDispositivoPuerto: number; nombrePuerto?: string; numeroPuerto?: number };
-      this.conectar.set({ kind: ev.kind, action: 'puerto', id: pu.idDispositivoPuerto, label: pu.nombrePuerto || ('Puerto ' + (pu.numeroPuerto ?? '')) });
+      const pu = sel.data as { idRedDispositivoPuerto: number; nombrePuerto?: string; numeroPuerto?: number };
+      this.conectar.set({ kind: ev.kind, action: 'puerto', id: pu.idRedDispositivoPuerto, label: pu.nombrePuerto || ('Puerto ' + (pu.numeroPuerto ?? '')) });
     } else if (ev.action === 'relacion') {
       if (sel.tipo !== 'relacion') return;
       const r = sel.data as { idRedElementoRelacion: number; origenNombre?: string; destinoNombre?: string };
       this.conectar.set({ kind: ev.kind, action: 'relacion', id: r.idRedElementoRelacion, label: (r.origenNombre || '') + ' -> ' + (r.destinoNombre || '') });
     } else if (ev.action === 'hilo-splitter') {
       if (sel.tipo !== 'hilo') return;
-      const h = sel.data as { idFoHilo: number; foNombre?: string; numeroHilo?: number; colorHilo?: string };
-      this.conectar.set({ kind: 'splitter', action: 'hilo-splitter', id: h.idFoHilo, label: (h.foNombre || 'Hilo') + ' ' + (h.numeroHilo ?? '') + ' ' + (h.colorHilo ?? '') });
+      const h = sel.data as { idRedFoHilo: number; foNombre?: string; numeroHilo?: number; colorHilo?: string };
+      this.conectar.set({ kind: 'splitter', action: 'hilo-splitter', id: h.idRedFoHilo, label: (h.foNombre || 'Hilo') + ' ' + (h.numeroHilo ?? '') + ' ' + (h.colorHilo ?? '') });
     } else {
       if (sel.tipo !== 'base') return;
       const b = sel.data as { idGeoElemento: number; nombre?: string; etiqueta?: string };
@@ -267,10 +267,10 @@ export class MapaRedBetaHomeComponent implements OnInit {
       else if (c.action === 'crear') { this.onAccion({ kind: 'crear-relacion', id: c.id, idGeoElementoDestino: t.geoId }); }
       else { this.onAccion({ kind: 'asociar-destino', id: c.id, idGeoElementoDestino: t.geoId }); }
     } else if (c.kind === 'hilo' && t.hiloId != null) {
-      this.onAccion({ kind: 'asociar-hilo', id: c.id, idFoHilo: t.hiloId });
+      this.onAccion({ kind: 'asociar-hilo', id: c.id, idRedFoHilo: t.hiloId });
     } else if (c.kind === 'splitter' && t.splitterId != null) {
-      const entrada = this.facade.puertos().find((p) => p.idDispositivoPasivoFk === t.splitterId && p.tipoPuerto === 'ENTRADA');
-      if (entrada) { this.onAccion({ kind: 'asociar-hilo', id: entrada.idDispositivoPuerto, idFoHilo: c.id }); }
+      const entrada = this.facade.puertos().find((p) => p.idRedDispositivoPasivoFk === t.splitterId && p.tipoPuerto === 'ENTRADA');
+      if (entrada) { this.onAccion({ kind: 'asociar-hilo', id: entrada.idRedDispositivoPuerto, idRedFoHilo: c.id }); }
     }
     this.conectar.set(null);
   }

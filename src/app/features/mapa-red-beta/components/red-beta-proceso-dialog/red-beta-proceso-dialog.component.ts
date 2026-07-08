@@ -5,7 +5,7 @@ export interface RedProcesoParams {
   idRedNodo?: number;
   minConfianza?: number;
   radioM?: number;
-  idDispositivoPasivo?: number;
+  idRedDispositivoPasivo?: number;
   idGeoElementoFo?: number;
 }
 
@@ -47,7 +47,7 @@ export interface RedProcesoParams {
             @if (kind === 'puertos') {
               <div>
                 <label class="block text-xs text-slate-500 mb-1">Splitter (id) — vacio = todos sin puertos</label>
-                <input type="number" class="in" [value]="idDispositivoPasivo() ?? ''" (input)="idDispositivoPasivo.set(num($event))" placeholder="Todos" />
+                <input type="number" class="in" [value]="idRedDispositivoPasivo() ?? ''" (input)="idRedDispositivoPasivo.set(num($event))" placeholder="Todos" />
               </div>
             }
             @if (kind === 'hilos') {
@@ -90,7 +90,7 @@ export class RedBetaProcesoDialogComponent {
     this._kind = v;
     // valores por defecto por proceso
     this.idRedNodo.set(null);
-    this.idDispositivoPasivo.set(null);
+    this.idRedDispositivoPasivo.set(null);
     this.idGeoElementoFo.set(null);
     this.radioM.set(10);
     this.minConfianza.set(v === 'splitters' ? 65 : 70);
@@ -105,7 +105,7 @@ export class RedBetaProcesoDialogComponent {
   readonly idRedNodo = signal<number | null>(null);
   readonly minConfianza = signal<number>(70);
   readonly radioM = signal<number>(10);
-  readonly idDispositivoPasivo = signal<number | null>(null);
+  readonly idRedDispositivoPasivo = signal<number | null>(null);
   readonly idGeoElementoFo = signal<number | null>(null);
 
   num(ev: Event): number | null {
@@ -150,7 +150,7 @@ export class RedBetaProcesoDialogComponent {
         params.minConfianza = this.minConfianza();
         break;
       case 'puertos':
-        if (this.idDispositivoPasivo() != null) params.idDispositivoPasivo = this.idDispositivoPasivo()!;
+        if (this.idRedDispositivoPasivo() != null) params.idRedDispositivoPasivo = this.idRedDispositivoPasivo()!;
         break;
       case 'hilos':
         if (this.idGeoElementoFo() != null) params.idGeoElementoFo = this.idGeoElementoFo()!;
