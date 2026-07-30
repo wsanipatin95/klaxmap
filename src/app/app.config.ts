@@ -8,6 +8,7 @@ import { AppEnvironment } from './core/config/environment.token';
 import { httpErrorInterceptor } from './core/http/http-error.interceptor';
 import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { xTenantInterceptor } from './core/http/x-tenant.interceptor';
+import { authRefreshInterceptor } from './core/http/auth-refresh.interceptor';
 import { routes } from './app.routes';
 import MyPreset from '../mypreset';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -19,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([authTokenInterceptor, xTenantInterceptor, httpErrorInterceptor])
+      withInterceptors([authTokenInterceptor, xTenantInterceptor, httpErrorInterceptor, authRefreshInterceptor])
     ),
     {
       provide: ENVIRONMENT,

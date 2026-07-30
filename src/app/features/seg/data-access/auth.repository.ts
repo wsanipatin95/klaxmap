@@ -28,6 +28,7 @@ export class AuthRepository {
 
         this.sessionStore.setSession({
           token: res.token,
+          refreshToken: res.refreshToken,
           user: {
             id: res.usu,
             username: res.usuario,

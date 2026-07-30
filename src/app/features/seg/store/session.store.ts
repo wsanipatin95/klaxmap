@@ -44,6 +44,7 @@ export interface DynamicMenuItem {
 
 export interface Session {
   token: string;
+  refreshToken?: string;
   user: SessionUser;
   meta: SessionMeta;
 

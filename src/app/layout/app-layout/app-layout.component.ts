@@ -57,4 +57,21 @@ export class AppLayoutComponent {
       this.showMapaChrome();
     }
   }
+
+  /**
+   * En escritorio: si el sidebar está expandido y se hace click FUERA del menú
+   * (y fuera del botón hamburguesa), se colapsa solo. No bloquea el click: el
+   * contenido igual recibe su evento. En móvil ya lo maneja el overlay.
+   */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(ev: MouseEvent) {
+    if (this.sidebarService.isMobile() || this.isCollapsed()) return;
+    const target = ev.target as HTMLElement | null;
+    if (!target) return;
+    // Solo colapsa si el click cae DENTRO del contenido principal. Así nunca
+    // interfiere con el menú, sus submenús, la barra superior ni el hamburguesa.
+    if (target.closest('.layout-main-container')) {
+      this.sidebarService.setCollapsed(true);
+    }
+  }
 }

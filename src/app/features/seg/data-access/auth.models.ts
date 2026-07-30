@@ -12,6 +12,7 @@ export interface LoginResponse {
     usuario: string;       // "administrador"
     catalogo: string;      // "public"
     token: string;
+    refreshToken?: string;    // para renovar el access token
     organizacion: any;        // "eyJhbGciOiJIUzI1NiJ9..."
 }
 

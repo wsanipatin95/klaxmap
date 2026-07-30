@@ -1,0 +1,31 @@
+/* ============================================================================
+   KLAX core-ui · TOKENS DE TEMA  (fuente ÚNICA de la identidad visual)
+   ----------------------------------------------------------------------------
+   Toda la marca vive aquí como CSS custom properties. Componentes y features
+   embebidas (monitoreo, y a futuro whatsapp) deben usar var(--kx-*) en vez de
+   hardcodear el morado (#7b0061) o redefinir su propia paleta.
+   Versionar core-ui = cambiar SOLO este archivo y que todo el ecosistema herede.
+   ============================================================================ */
+:root {
+  /* Marca */
+  --kx-primary:       #7b0061;   /* morado KLAX */
+  --kx-primary-hover: #4b023b;
+  --kx-primary-soft:  #f8e9f3;
+  --kx-accent:        #a50081;   /* magenta cabeceras/tabs */
+  --kx-violeta:       #9942f5;
+
+  /* Acentos funcionales */
+  --kx-orange:        #ea580c;   /* "tomates": segmentos de rango */
+  --kx-orange-soft:   #fff1e9;
+  --kx-green:         #00ac4a;
+  --kx-red:           #ec1848;
+  --kx-amber:         #d99000;
+  --kx-blue:          #00b9eb;
+
+  /* Neutros / superficies */
+  --kx-bg:            #f0f1f6;
+  --kx-panel:         #ffffff;
+  --kx-border:        #e3e6ee;
+  --kx-text:          #092931;
+  --kx-muted:         #6b7280;
+}
