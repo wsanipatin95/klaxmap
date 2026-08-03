@@ -76,6 +76,7 @@ export class SidebarComponent {
           { label: 'Alerta temprana', icon: 'pi pi-bell', route: '/app/monitoreo/inicio' },
           { label: 'Mi dashboard', icon: 'pi pi-th-large', route: '/app/monitoreo/mi-dashboard' },
           { label: 'Equipos', icon: 'pi pi-server', route: '/app/monitoreo/equipos' },
+          { label: 'Topología de Red', icon: 'pi pi-sitemap', route: '/app/monitoreo/topologia' },
           { label: 'Clientes (ONU)', icon: 'pi pi-users', route: '/app/monitoreo/clientes' },
           { label: 'Salud GPON', icon: 'pi pi-chart-bar', route: '/app/monitoreo/salud-gpon' },
           { label: 'Alertas', icon: 'pi pi-exclamation-triangle', route: '/app/monitoreo/alertas' },

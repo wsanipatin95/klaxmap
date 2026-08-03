@@ -105,6 +105,17 @@ export class NocApi {
   createDevice(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices`, body).pipe(map(unwrap)); }
   updateDevice(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/devices/${id}`, body).pipe(map(unwrap)); }
   deleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/devices/${id}`).pipe(map(unwrap)); }
+
+  // ---- Topologia de Red ----
+  topologia(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia`).pipe(map(unwrap)); }
+  topoAddLink(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/links`, body).pipe(map(unwrap)); }
+  topoDelLink(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/links/${id}`).pipe(map(unwrap)); }
+  topoSavePos(id: number, x: number, y: number): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/pos`, { x, y }).pipe(map(unwrap)); }
+  topoSaveNet(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/net`, body).pipe(map(unwrap)); }
+  topoPorts(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/ports`).pipe(map(unwrap)); }
+  topoAddPort(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/ports`, body).pipe(map(unwrap)); }
+  topoEditPort(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`, body).pipe(map(unwrap)); }
+  topoDelPort(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`).pipe(map(unwrap)); }
   /** Sincroniza el catalogo de OLT/equipos del ERP hacia el NOC (llena erp_olt_id). */
   syncCheck(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/devices/sync-check`).pipe(map(unwrap)); }
   /** Catálogo multimarca: perfiles de OLT (Tipo de OLT) para el combo del formulario. */

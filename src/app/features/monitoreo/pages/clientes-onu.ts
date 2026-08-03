@@ -124,6 +124,22 @@ import { areaDs } from '../shared/charts';
         </div>
       </div>
     }
+    @if (snmpCfg()) {
+      <div class="overlay on" style="z-index:90" (click)="snmpCfg.set(false)"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="snmpCfg.set(false)">
+        <div class="panel" style="width:460px;text-align:center" (click)="$event.stopPropagation()">
+          <div class="pb" style="padding:28px 24px">
+            <div style="font-size:30px;margin-bottom:12px">🔧</div>
+            <div style="font-weight:600;font-size:14px;line-height:1.7">Falta configurar el SNMP de esta OLT</div>
+            <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">
+              La OLT <b>{{ curOlt()?.name }}</b> no tiene una comunidad SNMP real (usa el default <b>public</b>).
+              Configura la community y el puerto SNMP en <b>Equipos</b> antes de traer clientes.
+            </div>
+            <button class="btn" style="margin-top:16px" (click)="snmpCfg.set(false)">Entendido</button>
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- Modal centrado: elegir LPU-PON con botones -->
     @if (lpuModal()) {
@@ -324,6 +340,7 @@ export class ClientesOnu implements OnDestroy {
   loaded = signal(false);
   loadingOlt = signal(false);
   loadingErr = signal('');
+  snmpCfg = signal(false);
   loadingCount = signal(0);
   lpuModal = signal(false);
   loadingPhase = signal<'snmp' | 'enrich'>('snmp');
@@ -485,6 +502,7 @@ export class ClientesOnu implements OnDestroy {
    */
   autoCollect() {
     if (!this.oltId) return;
+    if (!this.snmpListo()) { this.snmpCfg.set(true); return; }
     clearInterval(this.enrichTimer);
     this.loadingOlt.set(true); this.loadingErr.set(''); this.loadingCount.set(0);
     this.loadingPhase.set('snmp'); this.loadingNamed.set(0); this.loadingTotal.set(0);
@@ -566,6 +584,11 @@ export class ClientesOnu implements OnDestroy {
   }
 
   curOlt() { return this.olts().find((x) => x.id === this.oltId); }
+  /** SNMP "configurado" = comunidad real (seteada y distinta de 'public', el default). */
+  snmpListo(): boolean {
+    const c = (this.curOlt()?.snmpCommunity || '').trim().toLowerCase();
+    return !!c && c !== 'public';
+  }
 
   /** Abre el gráfico en grande en una ventana emergente (usa los datos EN VIVO del modal). */
   openBig(kind: 'rx' | 'traf', title: string) { this.big.set({ kind, title }); }
@@ -628,6 +651,7 @@ export class ClientesOnu implements OnDestroy {
 
   collect(full: boolean) {
     if (!this.oltId || !this.port) return;
+    if (!this.snmpListo()) { this.snmpCfg.set(true); return; }
     this.busy.set(true);
     const call = full ? this.api.zteCollectFull(this.oltId, this.port) : this.api.zteCollect(this.oltId, this.port);
     call.subscribe({ next: () => { this.busy.set(false); this.loadOnus(); }, error: () => this.busy.set(false) });
@@ -636,6 +660,7 @@ export class ClientesOnu implements OnDestroy {
   /** Barrido SNMP masivo de toda la OLT (estado + potencia + alertas) en 2 walks. */
   collectSnmp() {
     if (!this.oltId) return;
+    if (!this.snmpListo()) { this.snmpCfg.set(true); return; }
     this.busy.set(true);
     this.api.zteCollectSnmp(this.oltId).subscribe({
       next: () => { this.busy.set(false); this.loadOnus(); },

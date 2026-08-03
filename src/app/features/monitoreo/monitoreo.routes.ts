@@ -19,6 +19,7 @@ export const MONITOREO_ROUTES: Routes = [
       { path: 'equipos', loadComponent: () => import('./pages/equipos').then((m) => m.Equipos) },
       { path: 'equipos/:id', loadComponent: () => import('./pages/equipo-detalle').then((m) => m.EquipoDetalle) },
       { path: 'clientes', loadComponent: () => import('./pages/clientes-onu').then((m) => m.ClientesOnu) },
+      { path: 'topologia', loadComponent: () => import('./pages/topologia').then((m) => m.Topologia) },
       { path: 'soporte', loadComponent: () => import('./pages/soporte').then((m) => m.Soporte) },
       { path: 'salud-gpon', loadComponent: () => import('./pages/panel-noc').then((m) => m.PanelNoc) },
       { path: 'panel-noc', pathMatch: 'full', redirectTo: 'salud-gpon' },
