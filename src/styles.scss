@@ -1,5 +1,6 @@
 /* Importar Tailwind CSS v4 */
 @use "tailwindcss";
+@use "styles/tokens.scss";   /* core-ui: tokens de marca KLAX (fuente única) */
 @use "styles/layout.scss";
 @plugin "tailwindcss-primeui";
 @import 'leaflet/dist/leaflet.css';

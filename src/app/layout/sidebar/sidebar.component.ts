@@ -68,6 +68,25 @@ export class SidebarComponent {
         icon: 'pi pi-sitemap',
         route: '/app/mapa-red-beta',
       });
+      items.push({
+        label: 'Monitoreo',
+        icon: 'pi pi-server',
+        expanded: false,
+        items: [
+          { label: 'Alerta temprana', icon: 'pi pi-bell', route: '/app/monitoreo/inicio' },
+          { label: 'Mi dashboard', icon: 'pi pi-th-large', route: '/app/monitoreo/mi-dashboard' },
+          { label: 'Equipos', icon: 'pi pi-server', route: '/app/monitoreo/equipos' },
+          { label: 'Topología de Red', icon: 'pi pi-sitemap', route: '/app/monitoreo/topologia' },
+          { label: 'Clientes (ONU)', icon: 'pi pi-users', route: '/app/monitoreo/clientes' },
+          { label: 'Salud GPON', icon: 'pi pi-chart-bar', route: '/app/monitoreo/salud-gpon' },
+          { label: 'Alertas', icon: 'pi pi-exclamation-triangle', route: '/app/monitoreo/alertas' },
+          { label: 'Tráfico por app', icon: 'pi pi-chart-line', route: '/app/monitoreo/trafico-apps' },
+          { label: 'Seguridad IP', icon: 'pi pi-shield', route: '/app/monitoreo/seguridad' },
+          { label: 'Soporte', icon: 'pi pi-wrench', route: '/app/monitoreo/soporte' },
+          { label: 'Configurar OLT', icon: 'pi pi-cog', route: '/app/monitoreo/configurar-olt' },
+          { label: 'Configuración', icon: 'pi pi-sliders-h', route: '/app/monitoreo/configuracion' },
+        ],
+      });
       if (this.auditoriaRed()) {
         items.push({
           label: 'Historial',
@@ -181,7 +200,18 @@ export class SidebarComponent {
   });
 
   toggleSubmenu(item: MenuItem) {
-    if (this.isCollapsed()) return;
+    // Si el sidebar está colapsado (solo iconos), primero lo expandimos para
+    // que el submenú sea visible, y abrimos este.
+    if (this.isCollapsed()) {
+      this.sidebarService.setCollapsed(false);
+      item.expanded = true;
+      this.menuItems().forEach(menuItem => {
+        if (menuItem !== item && menuItem.items) {
+          menuItem.expanded = false;
+        }
+      });
+      return;
+    }
 
     item.expanded = !item.expanded;
 
@@ -211,6 +241,9 @@ export class SidebarComponent {
       this.sidebarService.closeMobileSidebar();
       return;
     }
+
+    // Escritorio: al seleccionar un ítem (o submenú) colapsamos el menú.
+    this.sidebarService.setCollapsed(true);
   }
 
   collapseAllSubmenus() {

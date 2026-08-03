@@ -131,6 +131,13 @@ export const routes: Routes = [
             (m) => m.BKP_ROUTES
           ),
       },
+      {
+        path: 'monitoreo',
+        loadChildren: () =>
+          import('src/app/features/monitoreo/monitoreo.routes').then(
+            (m) => m.MONITOREO_ROUTES
+          ),
+      },
     ],
   },
 

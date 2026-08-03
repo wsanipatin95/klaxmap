@@ -26,6 +26,13 @@ export class AuthApi {
     });
   }
 
+  /** Renueva el access token con el refresh token. */
+  refresh(refreshToken: string) {
+    return this.http.post<{ token: string }>(`${this.baseUrl}/refresh`, { refreshToken }, {
+      context: PUBLIC,
+    });
+  }
+
   checkToken() {
     return this.http.get<LoginResponse>(`${this.baseUrl}/check-token`, {
       context: PUBLIC,
