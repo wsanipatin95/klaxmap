@@ -12,7 +12,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
   imports: [LineChart, FormsModule],
   styles: [`.lg{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px}`],
   template: `
-    @if (showBack()) { <a class="back" (click)="back()" style="cursor:pointer">← Atrás</a> }
+    <a class="back" (click)="back()" style="cursor:pointer">← Equipos</a>
     @if (dev(); as d) {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <h2 style="font-size:20px">{{ d.name }}</h2>
@@ -451,7 +451,7 @@ export class EquipoDetalle implements OnDestroy {
       },
     });
   }
-  back() { history.back(); }
+  back() { this.router.navigate(['/app/monitoreo/equipos']); }
   removeDevice() {
     if (!confirm('¿Eliminar este equipo y todos sus datos históricos?')) return;
     this.api.deleteDevice(this.id).subscribe(() => this.router.navigate(['/app/monitoreo/equipos']));

@@ -95,6 +95,8 @@ import { RouterOutlet } from '@angular/router';
     .mon-scope .b-crit { background:#fdeaea;color:var(--red) }
     .mon-scope .b-ack { background:var(--primary-soft);color:var(--primary) }
     .mon-scope .b-maint { background:#f3f4f6;color:var(--muted) }
+    .mon-scope .b-olt { background:#e6f0ff;color:#1c56d6 }
+    .mon-scope .b-borde { background:#eef2f7;color:#5b6472 }
     .mon-scope .ubar { height:7px;border-radius:4px;background:#eef1f6;overflow:hidden;width:90px;display:inline-block;vertical-align:middle;margin-right:8px }
     .mon-scope .ubar i { display:block;height:100%;border-radius:4px }
 

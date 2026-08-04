@@ -41,7 +41,7 @@ import { TableSort } from '../shared/table-sort';
               <td><b>{{ d.name }}</b></td>
               <td>{{ d.vendor }}</td>
               <td>{{ d.zone || '—' }}</td>
-              <td>@if (d.device_type==='core') { <span class="badge b-ack">CORE</span> } @else { {{ d.device_type }} }</td>
+              <td>@if (d.device_type==='core') { <span class="badge b-ack">CORE</span> } @else if (d.device_type==='olt') { <span class="badge b-olt">OLT</span> } @else if (d.device_type==='borde') { <span class="badge b-borde">BORDE</span> } @else { <span class="badge b-maint">{{ d.device_type }}</span> }</td>
               <td class="mono">{{ d.ip_address }}</td>
               <td [innerHTML]="badge(d.status)"></td>
               <td>@if (d.status==='up' && d.snmp_enabled && d.cpu_percent!=null) { <b [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent }}%</b> } @else { <span style="color:var(--muted)" title="Requiere SNMP habilitado para leer CPU real">—</span> }</td>
@@ -79,8 +79,8 @@ import { TableSort } from '../shared/table-sort';
                 </select>
               </div>
             } @else {
-              <div><label class="k">Vendor</label><input class="inp" style="width:100%" [(ngModel)]="f.vendor"></div>
-              <div><label class="k">Modelo</label><input class="inp" style="width:100%" [(ngModel)]="f.model"></div>
+              <div><label class="k">Vendor</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="openPicker('vendor')">{{ f.vendor || '— Elegir marca —' }}</button></div>
+              <div><label class="k">Modelo</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="openPicker('model')">{{ f.model || '— Elegir modelo —' }}</button></div>
             }
             <div><label class="k">Tipo</label>
               <select class="inp" style="width:100%" [(ngModel)]="f.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option></select></div>
@@ -102,6 +102,25 @@ import { TableSort } from '../shared/table-sort';
           <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end">
             <button class="btn ghost" (click)="showAdd.set(false)">Cancelar</button>
             <button class="btn" (click)="save()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (picker()) {
+      <div class="overlay on" style="z-index:70" (click)="picker.set(null)"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:71" (click)="picker.set(null)">
+        <div class="panel" style="width:340px;max-width:92vw" (click)="$event.stopPropagation()">
+          <div class="ph">{{ picker()==='vendor' ? 'Marca del equipo' : 'Modelo del equipo' }}</div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto">
+            @for (o of pickerOpts(); track o) {
+              <button type="button" class="btn ghost" style="justify-content:flex-start" (click)="choosePicker(o)">{{ o }}</button>
+            }
+            @if (pickerOpts().length === 0) { <div style="color:var(--muted);font-size:12px">Aún no hay valores registrados. Escribe uno nuevo abajo.</div> }
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <input class="inp" style="flex:1" placeholder="Otro / nuevo…" [(ngModel)]="pickerCustom">
+              <button class="btn" (click)="choosePicker(pickerCustom)">Usar</button>
+            </div>
           </div>
         </div>
       </div>
@@ -220,6 +239,15 @@ export class Equipos implements OnDestroy {
   esSupervisor = computed(() => this.acceso.esSupervisorEquipos());
   f: any = { device_type: 'borde', snmp_community: 'public', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
   marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
+
+  // Picker de Vendor/Modelo (foto 4): la lista sale de lo YA registrado en los equipos.
+  picker = signal<null | 'vendor' | 'model'>(null);
+  pickerCustom = '';
+  vendorOpts = computed(() => Array.from(new Set(this.devices().map((d) => d.vendor).filter((v) => !!v && String(v).trim() !== ''))).sort());
+  modelOpts = computed(() => Array.from(new Set(this.devices().map((d: any) => d.model).filter((v: any) => !!v && String(v).trim() !== ''))).sort());
+  pickerOpts = computed(() => (this.picker() === 'vendor' ? this.vendorOpts() : this.modelOpts()));
+  openPicker(which: 'vendor' | 'model') { this.pickerCustom = ''; this.picker.set(which); }
+  choosePicker(v: string) { if (!v || !String(v).trim()) return; if (this.picker() === 'vendor') this.f.vendor = v; else this.f.model = v; this.picker.set(null); }
 
   constructor() {
     this.load();
