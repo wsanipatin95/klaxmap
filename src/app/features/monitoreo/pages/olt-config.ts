@@ -17,6 +17,51 @@ import { NocApi } from '../services/noc-api';
       <span style="margin-left:auto;font-size:12px;color:var(--red)">⚠ Escribe en producción · siempre revisá la vista previa</span>
     </div>
 
+    <!-- SWITCH MAESTRO DE SEGURIDAD · olt_write_enabled (V54) -->
+    <div class="panel" [style.borderLeft]="writeEnabled() ? '4px solid #2a9d2a' : '4px solid #c0392b'">
+      <div class="pb" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin:0">
+          <input type="checkbox" [checked]="writeEnabled()" (change)="toggleWrite($event)">
+          Envío de comandos a la OLT
+        </label>
+        <span class="chip" [style.background]="writeEnabled() ? '#e7f6ec' : '#fdeaea'" [style.color]="writeEnabled() ? '#2a9d2a' : '#c0392b'">
+          {{ writeEnabled() ? 'HABILITADO' : 'DESHABILITADO' }}
+        </span>
+        <span style="font-size:12px;color:var(--muted);flex:1;min-width:240px">Interruptor maestro. En OFF no se envía ningún comando (ni los <code>show</code>). Los comandos destructivos quedan bloqueados aparte aunque esté en ON.</span>
+      </div>
+    </div>
+
+    <!-- CONFIG DE SEGURIDAD · allowlist + auto-apagado + retención -->
+    <div class="panel">
+      <div class="ph">🔒 Seguridad del módulo</div>
+      <div class="pb" style="display:flex;flex-direction:column;gap:12px;max-width:660px">
+        <div>
+          <label class="k">Operadores autorizados (emails, separados por coma) · vacío = sin restricción</label>
+          <div style="display:flex;gap:8px">
+            <input class="inp" style="flex:1" [(ngModel)]="adminEmails" placeholder="juan@empresa.ec, maria@empresa.ec">
+            <button class="btn" (click)="saveAdminEmails()">Guardar</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          <div>
+            <label class="k">Auto-apagar envío tras (min) · 0 = nunca</label>
+            <div style="display:flex;gap:8px">
+              <input type="number" class="inp" style="width:120px" [(ngModel)]="autoOffMin">
+              <button class="btn ghost" (click)="saveAutoOff()">Guardar</button>
+            </div>
+          </div>
+          <div>
+            <label class="k">Retención del log (días) · 0 = no borrar</label>
+            <div style="display:flex;gap:8px">
+              <input type="number" class="inp" style="width:120px" [(ngModel)]="logRetentionDays">
+              <button class="btn ghost" (click)="saveRetention()">Guardar</button>
+            </div>
+          </div>
+        </div>
+        @if (secMsg()) { <span style="font-size:12.5px;color:#2a9d2a;font-weight:600">{{ secMsg() }}</span> }
+      </div>
+    </div>
+
     <!-- PASO 1 · OLT -->
     <div class="panel">
       <div class="ph"><span class="stepn">1</span> Elegí la OLT</div>
@@ -221,6 +266,12 @@ import { NocApi } from '../services/noc-api';
 export class OltConfig {
   private api = inject(NocApi);
 
+  writeEnabled = signal(false);   // olt_write_enabled (kxt_setting)
+  adminEmails = '';
+  autoOffMin = 30;
+  logRetentionDays = 365;
+  secMsg = signal('');
+
   olts = signal<any[]>([]);
   templates = signal<any[]>([]);
   oltId: number | null = null;
@@ -254,6 +305,7 @@ export class OltConfig {
     this.api.zteOlts().subscribe({ next: (o) => this.olts.set(o || []), error: () => {} });
     this.api.oltcTemplates().subscribe({ next: (t) => this.templates.set(t || []), error: () => {} });
     this.loadLogs();
+    this.loadWriteEnabled();
   }
 
   onOltChange() {
@@ -343,6 +395,36 @@ export class OltConfig {
   }
 
   loadLogs() { this.api.oltcLogs(this.oltId || undefined).subscribe({ next: (l) => this.logs.set(l || []), error: () => {} }); }
+
+  private truthy(v: any): boolean {
+    const t = String(v ?? '').trim().toLowerCase();
+    return t === '1' || t === 'true' || t === 'on' || t === 'si' || t === 'sí';
+  }
+  loadWriteEnabled() {
+    const k = (x: any) => x.settingKey ?? x.setting_key ?? x.key;
+    const v = (x: any) => x.settingValue ?? x.setting_value ?? x.value;
+    this.api.settings().subscribe({
+      next: (list: any[]) => {
+        const find = (key: string) => { const r = (list || []).find((x: any) => k(x) === key); return r != null ? v(r) : undefined; };
+        this.writeEnabled.set(this.truthy(find('olt_write_enabled')));
+        const em = find('olt_admin_emails'); if (em != null) this.adminEmails = String(em);
+        const ao = find('olt_write_auto_off_minutes'); if (ao != null) this.autoOffMin = Number(ao);
+        const rd = find('olt_log_retention_days'); if (rd != null) this.logRetentionDays = Number(rd);
+      },
+      error: () => {},
+    });
+  }
+  toggleWrite(ev: any) {
+    const on = !!ev?.target?.checked;
+    this.api.updateSetting('olt_write_enabled', on ? '1' : '0').subscribe({
+      next: () => this.writeEnabled.set(on),
+      error: () => { this.writeEnabled.set(!on); alert('No se pudo cambiar el ajuste (olt_write_enabled).'); },
+    });
+  }
+  private flash(m: string) { this.secMsg.set(m); setTimeout(() => this.secMsg.set(''), 2500); }
+  saveAdminEmails() { this.api.updateSetting('olt_admin_emails', this.adminEmails ?? '').subscribe({ next: () => this.flash('Operadores autorizados guardados.'), error: () => this.flash('Error al guardar.') }); }
+  saveAutoOff() { this.api.updateSetting('olt_write_auto_off_minutes', String(this.autoOffMin ?? 0)).subscribe({ next: () => this.flash('Auto-apagado guardado.'), error: () => this.flash('Error al guardar.') }); }
+  saveRetention() { this.api.updateSetting('olt_log_retention_days', String(this.logRetentionDays ?? 0)).subscribe({ next: () => this.flash('Retención guardada.'), error: () => this.flash('Error al guardar.') }); }
 
   cmdText(cmds: string[]): string { return (cmds || []).join('\n'); }
   oltName(): string { const o = this.olts().find((x) => x.id === this.oltId); return o ? o.name : ''; }
