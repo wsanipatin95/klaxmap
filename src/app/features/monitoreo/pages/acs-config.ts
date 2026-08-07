@@ -1,0 +1,82 @@
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { NocApi } from '../services/noc-api';
+
+/** Configuración del ACS (TR-069): URL pública para el router, switch de escritura,
+ *  intervalos, y "empujar config" de gestión a un CPE. */
+@Component({
+  selector: 'app-acs-config',
+  standalone: true,
+  imports: [FormsModule],
+  template: `
+    <div class="tools"><span style="font-weight:700;font-size:16px">📶 Configurar ACS <span class="mini">TR-069</span></span></div>
+
+    <div class="panel"><div class="pb">
+      <div class="sec">URL del ACS — esto es lo que va en el router</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="inp" style="flex:1;min-width:240px" [(ngModel)]="cfg.acs_public_url" placeholder="http://tu-noc:8085">
+        <button class="btn sm" (click)="save()">Guardar URL</button>
+      </div>
+      <div class="mini" style="margin-top:8px">ACS URL para el CPE:
+        <b class="mono">{{ cfg.acs_url }}</b>
+        <button class="btn sm ghost" (click)="copiar(cfg.acs_url)">📋 Copiar</button></div>
+
+      <div class="sec" style="margin-top:16px">Parámetros</div>
+      <label style="display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer">
+        <input type="checkbox" [(ngModel)]="cfg.write_enabled"> Escritura habilitada (reboot / cambiar WiFi)
+      </label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div class="fld"><label>Intervalo de Inform (seg)</label>
+          <input class="inp" type="number" [(ngModel)]="cfg.inform_interval_seconds"></div>
+        <div class="fld"><label>Expiración de tareas (seg)</label>
+          <input class="inp" type="number" [(ngModel)]="cfg.task_ttl_seconds"></div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn" (click)="save()">💾 Guardar configuración</button>
+        @if (msg()) { <span style="margin-left:10px;color:#2563eb">{{ msg() }}</span> }
+      </div>
+    </div></div>
+
+    <div class="panel"><div class="pb">
+      <div class="sec">Empujar config de gestión a un router</div>
+      <div class="mini">Le manda al CPE su ACS URL + el intervalo por TR-069 (se aplica en el próximo contacto).
+        Sirve para estandarizar un router sin entrar a su interfaz. Requiere el contrato del cliente y la escritura habilitada.</div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+        <input class="inp" style="width:200px" [(ngModel)]="contrato" placeholder="Contrato del cliente">
+        <button class="btn sm" (click)="push()">Empujar config</button>
+        @if (pushMsg()) { <span style="color:#2563eb">{{ pushMsg() }}</span> }
+      </div>
+    </div></div>
+
+    <div class="panel"><div class="pb">
+      <div class="sec">Cómo apuntar un router al ACS</div>
+      <div class="mini" style="line-height:1.7">
+        En la página TR-069 / CWMP / “Gestión remota” del router:<br>
+        · <b>ACS URL</b>: la de arriba · <b>Periodic Inform</b>: ON, intervalo {{ cfg.inform_interval_seconds }} s<br>
+        · Usuario/clave del ACS: por ahora se pueden dejar vacíos (endpoint abierto en el MVP; se protege con TLS+auth luego).<br>
+        A escala se aprovisiona desde la OLT (perfil TR-069 de la ONU) o config por defecto del router.
+      </div>
+    </div></div>
+  `,
+})
+export class AcsConfig implements OnInit {
+  private api = inject(NocApi);
+  cfg: any = { acs_public_url: '', acs_url: '', write_enabled: false, inform_interval_seconds: 900, task_ttl_seconds: 86400 };
+  msg = signal(''); pushMsg = signal(''); contrato = '';
+
+  ngOnInit() { this.load(); }
+  load() { this.api.acsConfig().subscribe((c) => (this.cfg = c)); }
+  save() {
+    this.api.acsSaveConfig(this.cfg).subscribe((c) => {
+      this.cfg = c; this.msg.set('✅ Guardado'); setTimeout(() => this.msg.set(''), 2500);
+    });
+  }
+  push() {
+    if (!this.contrato.trim()) { this.pushMsg.set('Escribe el contrato del cliente.'); return; }
+    this.api.acsPushMgmt(this.contrato.trim(), {}).subscribe({
+      next: () => this.pushMsg.set('✅ Config encolada para el router'),
+      error: (e) => this.pushMsg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo encolar')),
+    });
+  }
+  copiar(v: string) { navigator.clipboard?.writeText(v || ''); this.msg.set('📋 Copiado'); setTimeout(() => this.msg.set(''), 1500); }
+}
