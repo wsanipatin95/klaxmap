@@ -27,6 +27,7 @@ export const MONITOREO_ROUTES: Routes = [
       { path: 'seguridad', loadComponent: () => import('./pages/seguridad').then((m) => m.Seguridad) },
       { path: 'trafico-apps', loadComponent: () => import('./pages/trafico-apps').then((m) => m.TraficoApps) },
       { path: 'configurar-olt', loadComponent: () => import('./pages/olt-config').then((m) => m.OltConfig) },
+      { path: 'configurar-acs', loadComponent: () => import('./pages/acs-config').then((m) => m.AcsConfig) },
       { path: 'configuracion', loadComponent: () => import('./pages/configuracion').then((m) => m.Configuracion) },
       { path: 'tiempos', pathMatch: 'full', redirectTo: 'configuracion' },
       { path: 'notificaciones', pathMatch: 'full', redirectTo: 'configuracion' },

@@ -118,18 +118,6 @@ export class NocApi {
   topoDelPort(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`).pipe(map(unwrap)); }
   /** Sincroniza el catalogo de OLT/equipos del ERP hacia el NOC (llena erp_olt_id). */
   syncCheck(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/devices/sync-check`).pipe(map(unwrap)); }
-
-  // ---- ACS (TR-069): router del cliente, por contrato ----
-  acsStatus(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}`).pipe(map(unwrap)); }
-  acsTareas(contrato: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/tareas`).pipe(map(unwrap)); }
-  acsReboot(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/reboot`, {}).pipe(map(unwrap)); }
-  acsWifiNombre(contrato: string, ssid: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/nombre`, { ssid }).pipe(map(unwrap)); }
-  acsWifiClave(contrato: string, password: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/clave`, { password }).pipe(map(unwrap)); }
-  acsRefresh(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/refresh`, {}).pipe(map(unwrap)); }
-  acsParametros(contrato: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/parametros`).pipe(map(unwrap)); }
-  acsConfig(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/config`).pipe(map(unwrap)); }
-  acsSaveConfig(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/acs/config`, body).pipe(map(unwrap)); }
-  acsPushMgmt(contrato: string, body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/push-mgmt`, body).pipe(map(unwrap)); }
   /** Catálogo multimarca: perfiles de OLT (Tipo de OLT) para el combo del formulario. */
   oltPerfiles(): Observable<OltPerfil[]> { return this.http.get<ApiEnvelope<OltPerfil[]>>(`${API}/devices/olt-perfiles`).pipe(map(unwrap)); }
   // ---- Catálogo de comandos (escritura dual ERP + NOC) ----

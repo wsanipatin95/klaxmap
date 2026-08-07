@@ -117,45 +117,6 @@ import { NocApi } from '../services/noc-api';
         </div>
       </div>
 
-      <!-- Router del cliente (ACS TR-069) -->
-      <div class="panel" style="margin-top:12px">
-        <div class="ph">📶 Router del cliente <span class="mini">ACS · TR-069</span></div>
-        <div class="pb">
-          @if (acs(); as a) {
-            <div class="meta" style="grid-template-columns:repeat(4,1fr)">
-              <div class="m"><div class="k">Equipo</div><div class="v">{{ a.manufacturer || '—' }} {{ a.modelName || '' }}</div></div>
-              <div class="m"><div class="k">Firmware</div><div class="v mono">{{ a.softwareVersion || '—' }}</div></div>
-              <div class="m"><div class="k">Estado</div><div class="v">{{ a.status || '—' }}</div></div>
-              <div class="m"><div class="k">Último Inform</div><div class="v" style="font-size:12px">{{ a.lastInformAt || '—' }}</div></div>
-            </div>
-            <div class="mini" style="margin-top:6px">WiFi actual: <b>{{ acsParam('.SSID') }}</b> · Uptime: <b>{{ acsParam('.UpTime') }}</b></div>
-            <div class="chips" style="margin-top:8px">
-              <button class="chip" (click)="acsRefresh()">🔄 Refrescar datos</button>
-              <button class="chip" (click)="acsReboot()">♻ Reiniciar router</button>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
-              <input class="inp" style="flex:1;min-width:150px" [(ngModel)]="wifiSsid" placeholder="Nuevo nombre WiFi (SSID)">
-              <button class="btn sm" (click)="acsSetWifiNombre()">Cambiar nombre</button>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
-              <input class="inp" style="flex:1;min-width:150px" type="password" [(ngModel)]="wifiPass" placeholder="Nueva clave WiFi (mín. 8)">
-              <button class="btn sm" (click)="acsSetWifiClave()">Cambiar clave</button>
-            </div>
-            <div class="mini" style="margin-top:6px;color:var(--muted)">Las órdenes se aplican en el próximo contacto del router (CGNAT: ~10–15 min).</div>
-            @if (acsTareas().length) {
-              <div class="sec">🕒 Tareas ACS</div>
-              <div class="log">
-                @for (k of acsTareas(); track k.id) {
-                  <div class="row"><span class="hora">{{ k.taskType }}</span><span class="txt"><b>{{ k.status }}</b>{{ k.errorMessage ? ' → ' + k.errorMessage : '' }}</span></div>
-                }
-              </div>
-            }
-          } @else {
-            <div style="color:var(--muted);padding:10px 0">{{ acsMsg() || 'Este cliente aún no tiene router registrado en el ACS.' }}</div>
-          }
-        </div>
-      </div>
-
       @if (showOrder()) {
         <div class="overlay on" (click)="showOrder.set(false)"></div>
         <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="showOrder.set(false)">
@@ -248,12 +209,6 @@ export class Soporte {
   orders = signal<any[]>([]);
   showOrder = signal(false);
   orderSel = signal<any | null>(null);
-  acs = signal<any | null>(null);
-  acsMsg = signal('');
-  acsTareas = signal<any[]>([]);
-  acsParams = signal<any[]>([]);
-  wifiSsid = '';
-  wifiPass = '';
   of: any = { prioridad: 'Alta', tipo_visita: 'Reparación', tecnico: '', fecha: '', observacion: '' };
 
   diagBtns = [
@@ -279,7 +234,7 @@ export class Soporte {
   }
 
   openTicket(id: number) {
-    this.api.supTicket(id).subscribe((t) => { this.ticket.set(t); this.diag = t.diagnostico || ''; this.lastResult.set(''); this.loadAcs(t.contrato); this.view.set('ticket'); });
+    this.api.supTicket(id).subscribe((t) => { this.ticket.set(t); this.diag = t.diagnostico || ''; this.lastResult.set(''); this.view.set('ticket'); });
   }
   private reload() { const t = this.ticket(); if (t) this.api.supTicket(t.id).subscribe((x) => this.ticket.set(x)); }
 
@@ -322,37 +277,6 @@ export class Soporte {
       `Prioridad: ${o.prioridad}   Tipo: ${o.tipo_visita}   Técnico: ${o.tecnico || 'sin asignar'}\n` +
       `Fecha tentativa: ${o.fecha || '—'}   Estado: ${o.estado}\n` +
       (o.observacion ? `\nObservación: ${o.observacion}` : '');
-  }
-
-  // ---- ACS (router del cliente por TR-069) ----
-  loadAcs(contrato: string | null) {
-    this.acs.set(null); this.acsTareas.set([]); this.acsParams.set([]); this.acsMsg.set('');
-    if (!contrato) { this.acsMsg.set('El ticket no tiene contrato para ubicar el router.'); return; }
-    this.api.acsStatus(contrato).subscribe({
-      next: (d) => { this.acs.set(d); this.api.acsTareas(contrato).subscribe((k) => this.acsTareas.set(k)); this.api.acsParametros(contrato).subscribe((ps) => this.acsParams.set(ps || [])); },
-      error: (e) => this.acsMsg.set(e?.error?.mensaje || 'Este cliente aún no tiene router registrado en el ACS.'),
-    });
-  }
-  private acsDo(obs: any, okMsg: string) {
-    const t = this.ticket(); if (!t) return;
-    this.acsMsg.set('Encolando…');
-    obs.subscribe({
-      next: () => { this.acsMsg.set('✅ ' + okMsg); this.loadAcs(t.contrato); },
-      error: (e: any) => this.acsMsg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo encolar la acción.')),
-    });
-  }
-  acsParam(suffix: string): string { const p = this.acsParams().find((x) => (x.parameterName || '').endsWith(suffix)); return (p && p.parameterValue) || '—'; }
-  acsRefresh() { const t = this.ticket(); if (t) this.acsDo(this.api.acsRefresh(t.contrato), 'Refresco de datos encolado.'); }
-  acsReboot() { const t = this.ticket(); if (!t) return; if (!confirm('¿Reiniciar el router del cliente?')) return; this.acsDo(this.api.acsReboot(t.contrato), 'Reinicio encolado.'); }
-  acsSetWifiNombre() {
-    const t = this.ticket(); if (!t) return;
-    if (!this.wifiSsid.trim()) { this.acsMsg.set('Escribe el nuevo nombre WiFi.'); return; }
-    this.acsDo(this.api.acsWifiNombre(t.contrato, this.wifiSsid.trim()), 'Cambio de nombre WiFi encolado.'); this.wifiSsid = '';
-  }
-  acsSetWifiClave() {
-    const t = this.ticket(); if (!t) return;
-    if (this.wifiPass.length < 8) { this.acsMsg.set('La clave WiFi debe tener al menos 8 caracteres.'); return; }
-    this.acsDo(this.api.acsWifiClave(t.contrato, this.wifiPass), 'Cambio de clave WiFi encolado.'); this.wifiPass = '';
   }
 
   // ---- presentación ----

@@ -87,6 +87,8 @@ import { TableSort } from '../shared/table-sort';
             <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="f.zone"></div>
             <div><label class="k">IP</label><input class="inp" style="width:100%" [(ngModel)]="f.ip_address"></div>
             <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
+            <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
+            <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="f.snmp_version"><option value="v2c">v2c</option><option value="v1">v1</option><option value="v3">v3</option></select></div>
             <div style="grid-column:1/3;display:flex;align-items:center;gap:8px">
               <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span></div>
 
@@ -94,7 +96,6 @@ import { TableSort } from '../shared/table-sort';
               <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.telnet_user"></div>
               <div><label class="k">Telnet clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="f.telnet_pass"></div>
               <div><label class="k">Telnet puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.telnet_port" placeholder="23"></div>
-              <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
               <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="f.snmp_poll_enabled"> <span>Barrido SNMP automático</span></div>
               <div><label class="k">Intervalo barrido (seg)</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_poll_seconds" placeholder="300"></div>
             }
@@ -237,7 +238,7 @@ export class Equipos implements OnDestroy {
    * seguridad, solo evita que un operador se equivoque.
    */
   esSupervisor = computed(() => this.acceso.esSupervisorEquipos());
-  f: any = { device_type: 'borde', snmp_community: 'public', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
+  f: any = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
   marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
 
   // Picker de Vendor/Modelo (foto 4): la lista sale de lo YA registrado en los equipos.
@@ -350,7 +351,7 @@ export class Equipos implements OnDestroy {
   }
 
   nuevo() {
-    this.f = { device_type: 'borde', snmp_community: 'public', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
+    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
     this.testErr.set(''); this.dupErr.set(false); this.saveErr.set('');
     this.showAdd.set(true);
   }
