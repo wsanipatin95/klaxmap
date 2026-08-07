@@ -95,6 +95,7 @@ export interface OnuRow {
   onuRxDbm: number | null; onuTxDbm: number | null; oltRxDbm: number | null; oltTxDbm: number | null;
   onuInRateBps: number | null; onuOutRateBps: number | null; onuInTotalBytes: number | null; onuOutTotalBytes: number | null;
   lastCause: string | null; offlineHistory: string | null; lastSeenAt: string | null; updatedAt: string | null;
+  serviceState: string | null; serviceStateSince: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -163,6 +164,7 @@ export class NocApi {
   zteVerificacion(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/verificacion`).pipe(map(unwrap)); }
   zteCollectFull(id: number, port: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/collect-full?port=${port}`, {}).pipe(map(unwrap)); }
   zteCollectSnmp(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/collect-snmp`, {}).pipe(map(unwrap)); }
+  zteSnmpStatus(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/snmp-status`).pipe(map(unwrap)); }
   zteEnrich(id: number, force = false): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/enrich?force=${force}`, {}).pipe(map(unwrap)); }
   zteEnrichStatus(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/enrich-status`).pipe(map(unwrap)); }
   zteTopConsumo(id: number, limit = 50): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/top-consumo?limit=${limit}`).pipe(map(unwrap)); }
@@ -170,6 +172,7 @@ export class NocApi {
   zteOltPorts(id: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/ports`).pipe(map(unwrap)); }
 
   testTelnet(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/diag/test-telnet`, body).pipe(map(unwrap)); }
+  testSnmp(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/diag/test-snmp`, body).pipe(map(unwrap)); }
 
   // ---- Configuración (módulo Tiempos) ----
   settings(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/settings`).pipe(map(unwrap)); }

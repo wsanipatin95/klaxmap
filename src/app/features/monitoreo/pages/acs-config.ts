@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 
 /** Configuración del ACS (TR-069): URL pública para el router, switch de escritura,
  *  intervalos, y "empujar config" de gestión a un CPE. */
@@ -61,14 +62,16 @@ import { NocApi } from '../services/noc-api';
 })
 export class AcsConfig implements OnInit {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
   cfg: any = { acs_public_url: '', acs_url: '', write_enabled: false, inform_interval_seconds: 900, task_ttl_seconds: 86400 };
   msg = signal(''); pushMsg = signal(''); contrato = '';
 
   ngOnInit() { this.load(); }
   load() { this.api.acsConfig().subscribe((c) => (this.cfg = c)); }
   save() {
-    this.api.acsSaveConfig(this.cfg).subscribe((c) => {
-      this.cfg = c; this.msg.set('✅ Guardado'); setTimeout(() => this.msg.set(''), 2500);
+    this.api.acsSaveConfig(this.cfg).subscribe({
+      next: (c) => { this.cfg = c; this.msg.set('✅ Guardado'); setTimeout(() => this.msg.set(''), 2500); this.notify.ok('Configuración del ACS guardada.'); },
+      error: (e: any) => this.notify.error(e?.message || 'No se pudo guardar la configuración del ACS.'),
     });
   }
   push() {

@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 
 /**
  * Configurar OLT (multimarca) por la interfaz web. Flujo guiado por pasos:
@@ -265,6 +266,7 @@ import { NocApi } from '../services/noc-api';
 })
 export class OltConfig {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
 
   writeEnabled = signal(false);   // olt_write_enabled (kxt_setting)
   adminEmails = '';
@@ -374,8 +376,8 @@ export class OltConfig {
     if (!confirm(`¿Enviar estos comandos a ${this.oltName()}?\n\nOperación: ${t.name}\nEsto ESCRIBE en la OLT de producción.`)) return;
     this.running.set(true);
     this.api.oltcExecute(this.tplCode, this.oltId, this.buildParams(), 'Wilson S.').subscribe({
-      next: (r) => { this.execResult.set(r); this.running.set(false); this.loadLogs(); },
-      error: (e) => { this.running.set(false); alert(e.message || 'No se pudo ejecutar'); },
+      next: (r) => { this.execResult.set(r); this.running.set(false); this.loadLogs(); this.notify.ok('Comando ejecutado en la OLT.'); },
+      error: (e) => { this.running.set(false); this.notify.error(e?.message || 'No se pudo ejecutar el comando en la OLT.'); },
     });
   }
 

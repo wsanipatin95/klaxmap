@@ -211,7 +211,7 @@ export class PanelNoc implements OnDestroy {
   full = signal(false);
   clock = signal('');
   rotate = signal(true);                    // rotación automática de pestañas (modo dashboard)
-  rotateLeft = signal(15);
+  rotateLeft = signal(20);
   evt = signal<OnuRow | null>(null);       // cliente cuyo log está abierto
   evtAlerts = signal<any[]>([]);
   private badges = signal<Record<number, number>>({});
@@ -242,7 +242,7 @@ export class PanelNoc implements OnDestroy {
   warnT = signal(-25);
   weakT = signal(-26.5);
   critT = signal(-28);
-  rotateSecs = signal(15);
+  rotateSecs = signal(20);
   refreshSecs = signal(20);
 
   senal = computed(() =>
@@ -278,7 +278,7 @@ export class PanelNoc implements OnDestroy {
     rx: (o) => o.onuRxDbm,
     estado: (o) => o.phaseState,
     motivo: (o) => (({ los: 0, off: 1, noresp: 2 } as any)[this.downKind(o)]),
-    desde: (o) => o.lastSeenAt,
+    desde: (o) => o.serviceStateSince || o.lastSeenAt,
     actualizado: (o) => o.updatedAt,
   }, 'onu');
 
@@ -293,7 +293,7 @@ export class PanelNoc implements OnDestroy {
       this.warnT.set(num('gpon_rx_warn', -25));
       this.weakT.set(num('gpon_rx_weak', -26.5));
       this.critT.set(num('gpon_rx_crit', -28));
-      this.rotateSecs.set(num('gpon_rotate_seconds', 15));
+      this.rotateSecs.set(num('gpon_rotate_seconds', 20));
       this.refreshSecs.set(num('gpon_refresh_seconds', 20));
       this.rotateLeft.set(this.rotateSecs());
       this.countdown.set(this.refreshSecs());
@@ -313,10 +313,17 @@ export class PanelNoc implements OnDestroy {
       this.clock.set(this.fullNow());
       const c = this.countdown() - 1;
       if (c <= 0) { this.loadOnus(); this.countdown.set(this.refreshSecs()); } else this.countdown.set(c);
-      // Rotación automática de OLTs (pausa si hay un log abierto o el usuario la fijó).
+      // Rotación tipo wallboard: la ventana de la OLT (rotateSecs, general) se REPARTE en 4
+      // tramos iguales y va pasando por OK → señal en riesgo → sin servicio → todos; al
+      // agotarse la ventana salta a la siguiente OLT. Pausa si hay un log abierto o el usuario fijó.
       if (this.rotate() && !this.evt() && this.olts().length > 1) {
         const r = this.rotateLeft() - 1;
-        if (r <= 0) { this.nextOlt(); this.rotateLeft.set(this.rotateSecs()); } else this.rotateLeft.set(r);
+        if (r <= 0) {
+          this.sel.set('ok'); this.nextOlt(); this.rotateLeft.set(this.rotateSecs());
+        } else {
+          this.rotateLeft.set(r);
+          this.applyRotateSlot();   // dentro de la ventana, elige la categoría según el tiempo transcurrido
+        }
       }
     }, 1000);
     this.badgeTimer = setInterval(() => this.refreshBadges(), 60000);
@@ -337,6 +344,21 @@ export class PanelNoc implements OnDestroy {
     this.oltId.set(next.id);
     this.countdown.set(this.refreshSecs());
     this.loadOnus();
+  }
+
+  /**
+   * Reparte la ventana de la OLT (rotateSecs) en 4 tramos iguales y elige la categoría
+   * según cuánto avanzó: OK → señal en riesgo → sin servicio → todos. Así las 4 vistas
+   * entran DENTRO del tiempo por OLT y, al terminar la ventana, el tick pasa a la otra OLT.
+   */
+  private applyRotateSlot() {
+    const order: Sel[] = ['ok', 'sig', 'down', 'all'];
+    const total = Math.max(order.length, this.rotateSecs());   // nunca menos de 1s por tramo
+    const elapsed = total - this.rotateLeft();
+    let slot = Math.floor(elapsed / (total / order.length));
+    if (slot < 0) slot = 0;
+    if (slot > order.length - 1) slot = order.length - 1;
+    if (this.sel() !== order[slot]) this.sel.set(order[slot]);
   }
 
   /** Abre el log de eventos/cambios de estado del cliente en ventana emergente. */
@@ -469,7 +491,9 @@ export class PanelNoc implements OnDestroy {
     return k === 'los' ? 'var(--red)' : k === 'off' ? '#64748b' : 'var(--amber)';
   }
   downSince(o: OnuRow): string {
-    const ts = o.lastSeenAt;
+    // "Desde": momento del ULTIMO cambio de estado (cuando se cayo), de la transicion detectada
+    // en la OLT (service_state_since). Respaldo: ultima lectura si aun no hay transicion registrada.
+    const ts = o.serviceStateSince || o.lastSeenAt;
     if (!ts) return '—';
     const d = new Date(ts);
     if (isNaN(d.getTime())) return '—';

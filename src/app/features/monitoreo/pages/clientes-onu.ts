@@ -329,6 +329,7 @@ export class ClientesOnu implements OnDestroy {
   private modalTimer: any;
   private tableTimer: any;
   private enrichTimer: any;
+  private snmpTimer: any;
   private elapsedTimer: any;
   private noteTimer: any;
   olts = signal<ZteOltRow[]>([]);
@@ -503,19 +504,16 @@ export class ClientesOnu implements OnDestroy {
   autoCollect() {
     if (!this.oltId) return;
     if (!this.snmpListo()) { this.snmpCfg.set(true); return; }
-    clearInterval(this.enrichTimer);
+    clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     this.loadingOlt.set(true); this.loadingErr.set(''); this.loadingCount.set(0);
     this.loadingPhase.set('snmp'); this.loadingNamed.set(0); this.loadingTotal.set(0);
     this.startElapsed();
-    // Avance REAL del paso 1: mientras el backend inserta ONUs, poll del conteo para verlo crecer.
-    const poll = setInterval(() => {
-      if (!this.oltId) return;
-      this.api.zteOnusOfOlt(this.oltId).subscribe((r) => this.loadingCount.set(r.length));
-    }, 1500);
+    // Dispara el barrido SNMP (asíncrono en el backend). Si el ARRANQUE falla (OLT sin IP,
+    // sin community real, o el probe SNMP no responde) el backend devuelve error -> alerta,
+    // NO se queda esperando. Si arranca OK, seguimos su avance REAL con pollSnmp().
     this.api.zteCollectSnmp(this.oltId).subscribe({
-      next: () => { clearInterval(poll); this.loadOnus(); this.startEnrichPhase(); },
+      next: () => this.pollSnmp(),
       error: (err) => {
-        clearInterval(poll);
         this.stopElapsed();
         this.loadingOlt.set(false);
         // Muestra la causa REAL que devuelve el backend (OLT sin IP / no responde SNMP);
@@ -523,6 +521,53 @@ export class ClientesOnu implements OnDestroy {
         this.loadingErr.set(err?.message || 'No se pudo obtener la información de la OLT. Revisá el SNMP: community, puerto y alcance de red hacia la OLT.');
       },
     });
+  }
+
+  /**
+   * Paso 1 (SNMP): sondea el AVANCE REAL del barrido masivo hasta que TERMINA.
+   * Antes se pasaba al paso 2 al instante (el backend responde apenas ARRANCA el barrido),
+   * dejando la tabla vacía y "pensando". Ahora:
+   *   · mientras corre, la tabla se va llenando con las potencias en vivo (loadOnus);
+   *   · cuando el barrido TERMINA y hay ONUs -> paso 1 CUMPLIDO -> recién ahí va el paso 2 (CLI);
+   *   · si termina sin ninguna ONU (SNMP no trajo nada) -> ALERTA, sin pasar al paso 2.
+   */
+  private pollSnmp() {
+    clearInterval(this.snmpTimer);
+    let idle = 0, ticks = 0;
+    this.snmpTimer = setInterval(() => {
+      if (!this.oltId) { clearInterval(this.snmpTimer); return; }
+      // Tope de seguridad: nunca colgarse indefinidamente esperando el barrido (~180s).
+      if (++ticks > 120) {
+        clearInterval(this.snmpTimer); this.stopElapsed(); this.loadingOlt.set(false);
+        if (this.loadingCount() > 0) { this.loadOnus(); this.startEnrichPhase(); }
+        else this.loadingErr.set('El barrido SNMP está tardando demasiado. Revisá la conexión con la OLT e intentá de nuevo.');
+        return;
+      }
+      this.api.zteSnmpStatus(this.oltId).subscribe({
+        next: (s: any) => {
+          const onus = s?.onus || 0;
+          this.loadingCount.set(onus);
+          if (onus > 0) this.loadOnus();           // potencias visibles ya mismo, detrás del popup
+          if (s?.running) { idle = 0; return; }    // sigue barriendo -> esperar
+          if (onus > 0) {                          // TAREA 1 CUMPLIDA: hay ONUs con estado/señal
+            clearInterval(this.snmpTimer);
+            this.loadOnus();
+            this.flash(`✅ Paso 1 listo en ${this.elapsedStr()}: ${onus} ONUs leídas por SNMP (estado y señal). Completando datos de cliente…`, 12000);
+            this.startEnrichPhase();               // recién ahora, TAREA 2 (CLI)
+            return;
+          }
+          // Barrido terminado SIN ONUs: breve gracia (arranque/tardanza) y si sigue en 0 -> alerta.
+          if (++idle >= 4) {
+            clearInterval(this.snmpTimer); this.stopElapsed(); this.loadingOlt.set(false);
+            this.loadingErr.set('El barrido SNMP terminó sin leer ninguna ONU. Revisá la community, el puerto SNMP y que la OLT sea alcanzable por red (UDP 161).');
+          }
+        },
+        error: () => {
+          clearInterval(this.snmpTimer); this.stopElapsed(); this.loadingOlt.set(false);
+          this.loadingErr.set('No se pudo consultar el estado del barrido SNMP de la OLT.');
+        },
+      });
+    }, 1500);
   }
 
   /** Paso 2: dispara el enriquecimiento CLI y sondea su avance hasta terminar. */
@@ -727,6 +772,7 @@ export class ClientesOnu implements OnDestroy {
     clearInterval(this.modalTimer);
     clearInterval(this.tableTimer);
     clearInterval(this.enrichTimer);
+    clearInterval(this.snmpTimer);
     clearInterval(this.elapsedTimer);
     clearTimeout(this.noteTimer);
   }

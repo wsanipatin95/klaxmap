@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 
 /**
  * Umbrales de MONITOREO Y ALERTAS, con 3 niveles por métrica en la MISMA fila.
@@ -75,6 +76,7 @@ import { NocApi } from '../services/noc-api';
 })
 export class SaludGponConfig {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
   map: Record<string, any> = {};
   loaded = signal(false);
   msg = signal('');
@@ -118,8 +120,8 @@ export class SaludGponConfig {
       const s = this.map[k];
       if (!s) { done++; return; }
       this.api.updateSetting(k, String(s.settingValue)).subscribe({
-        next: () => { if (++done === keys.length) this.flash('✓ Umbrales guardados.'); },
-        error: () => this.flash('No se pudo guardar.'),
+        next: () => { if (++done === keys.length) { this.flash('✓ Umbrales guardados.'); this.notify.ok('Configuración de Salud GPON guardada.'); } },
+        error: () => { this.flash('No se pudo guardar.'); this.notify.error('No se pudo guardar la configuración de Salud GPON.'); },
       });
     });
   }
