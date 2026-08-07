@@ -1,5 +1,6 @@
 import { Component, ViewEncapsulation } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { NocNotifyHost } from './shared/noc-notify-host';
 
 /**
  * Shell del módulo Monitoreo. Envuelve todas las páginas en `.mon-scope` y trae
@@ -10,9 +11,9 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   selector: 'app-monitoreo-shell',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, NocNotifyHost],
   encapsulation: ViewEncapsulation.None,
-  template: `<div class="mon-scope"><router-outlet></router-outlet></div>`,
+  template: `<div class="mon-scope"><router-outlet></router-outlet><app-noc-notify></app-noc-notify></div>`,
   styles: [`
     .mon-scope {
       /* Identidad KLAX / Inno Fiber — heredada de los tokens core-ui (_tokens.scss)
@@ -36,7 +37,7 @@ import { RouterOutlet } from '@angular/router';
     .mon-scope a { color:inherit; text-decoration:none; }
 
     /* panels */
-    .mon-scope .panel { background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);margin-bottom:14px }
+    .mon-scope .panel { background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px }
     .mon-scope .ph { font-size:14px;font-weight:600;padding:9px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px }
     .mon-scope .ph .mini { font-size:11.5px;color:var(--muted);font-weight:500 }
     .mon-scope .pb { padding:12px 14px }
@@ -70,11 +71,15 @@ import { RouterOutlet } from '@angular/router';
 
     /* controles */
     .mon-scope .tools { display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap }
-    .mon-scope .inp { padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--panel) }
-    .mon-scope .chip { padding:4px 10px;border:1px solid var(--border);border-radius:7px;background:var(--panel);cursor:pointer;font-size:11.5px;color:var(--muted) }
+    .mon-scope .inp { padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--panel) }
+    .mon-scope .chip { padding:4px 10px;border:1px solid var(--border);border-radius:9px;background:var(--panel);cursor:pointer;font-size:11.5px;color:var(--muted) }
     .mon-scope .chip.on { background:var(--primary);color:#fff;border-color:var(--primary) }
-    .mon-scope .btn { padding:5px 11px;border:none;border-radius:7px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;font-size:11.5px;line-height:1.5 }
+    .mon-scope .btn { padding:5px 11px;border:none;border-radius:9px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;font-size:11.5px;line-height:1.5;transition:filter .12s,transform .05s }
     .mon-scope .btn.ghost { background:var(--panel);color:var(--text);border:1px solid var(--border) }
+    /* Botón de OPCIÓN dentro de un modal: borde siempre; se PINTA cuando está seleccionado. */
+    .mon-scope .btn.ghost.on { background:var(--primary);color:#fff;border-color:var(--primary) }
+    .mon-scope .btn:hover { filter:brightness(1.06) }
+    .mon-scope .btn:active { transform:translateY(.5px) }
     .mon-scope .btn.sm { padding:3px 8px;font-size:10.5px }
     .mon-scope .seg { display:flex;border:1px solid var(--border);border-radius:9px;overflow:hidden }
     .mon-scope .seg button { border:none;background:var(--panel);padding:7px 13px;cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600;border-left:1px solid var(--border) }
@@ -109,7 +114,7 @@ import { RouterOutlet } from '@angular/router';
     /* ===== Modales ===== */
     /* Suben por encima del navbar/sidebar de klaxmap. El z-index inline del NOC
        (60/70/90) se queda corto ante el navbar, por eso van con !important. */
-    .mon-scope .overlay { position:fixed;inset:0;background:rgba(15,23,42,.45);opacity:0;visibility:hidden;transition:.2s;z-index:100000 !important }
+    .mon-scope .overlay { position:fixed;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.2s;z-index:100000 !important }
     .mon-scope .overlay.on { opacity:1;visibility:visible }
     .mon-scope [style*="position:fixed"],
     .mon-scope [style*="position: fixed"] { z-index:100001 !important }
@@ -120,7 +125,29 @@ import { RouterOutlet } from '@angular/router';
       max-height: 90vh;
       overflow: auto;
       margin: 0;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 60px -14px rgba(15,23,42,.38), 0 4px 14px -6px rgba(15,23,42,.20);
+      animation: monPop .16s ease-out;
     }
+    @keyframes monPop { from { opacity:0; transform:translateY(8px) scale(.985) } to { opacity:1; transform:none } }
+    /* Cabecera/pie del modal: acompaña el redondeo del panel */
+    .mon-scope [style*="position:fixed"] > .panel > .ph:first-child,
+    .mon-scope [style*="position: fixed"] > .panel > .ph:first-child { border-top-left-radius:18px;border-top-right-radius:18px }
+
+    /* ===== Scrollbar delgado (todo el módulo NOC) ===== */
+    .mon-scope * { scrollbar-width:thin; scrollbar-color:#c7cad6 transparent }
+    .mon-scope *::-webkit-scrollbar { width:7px; height:7px }
+    .mon-scope *::-webkit-scrollbar-track { background:transparent }
+    .mon-scope *::-webkit-scrollbar-thumb { background:#c7cad6; border-radius:8px; border:2px solid transparent; background-clip:padding-box }
+    .mon-scope *::-webkit-scrollbar-thumb:hover { background:#a7abbb; background-clip:padding-box }
+
+    /* ===== Notificador global (modal OK/error) ===== */
+    .mon-scope .noc-note-ov { position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:100060 }
+    .mon-scope .noc-note-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:100061; padding:16px }
+    .mon-scope .noc-note { background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow:0 24px 60px -14px rgba(15,23,42,.42); width:380px; max-width:92vw; text-align:center; animation:monPop .16s ease-out }
+    .mon-scope .noc-note-t { font-weight:700; font-size:16px }
+    .mon-scope .noc-note-x { font-size:13px; color:var(--text); line-height:1.6; margin-top:8px; white-space:pre-line }
 
     @media (max-width:1200px) {
       .mon-scope .kpis, .mon-scope .meta, .mon-scope .row3, .mon-scope .row4 { grid-template-columns:repeat(2,1fr) }

@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AccesoService } from '../../../core/services/acceso.service';
 import { NocApi, Device, OltMarca } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 import { cpuColor } from '../shared/charts';
 import { TableSort } from '../shared/table-sort';
 
@@ -89,8 +90,9 @@ import { TableSort } from '../shared/table-sort';
             <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
             <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
             <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="f.snmp_version"><option value="v2c">v2c</option><option value="v1">v1</option><option value="v3">v3</option></select></div>
-            <div style="grid-column:1/3;display:flex;align-items:center;gap:8px">
-              <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span></div>
+            <div style="grid-column:1/3;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span>
+              <button type="button" class="btn ghost sm" style="margin-left:auto" (click)="probarSnmp()" [disabled]="probandoSnmp()">{{ probandoSnmp() ? 'Probando…' : '🔌 Probar SNMP' }}</button></div>
 
             @if (f.device_type === 'olt') {
               <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.telnet_user"></div>
@@ -115,7 +117,7 @@ import { TableSort } from '../shared/table-sort';
           <div class="ph">{{ picker()==='vendor' ? 'Marca del equipo' : 'Modelo del equipo' }}</div>
           <div class="pb" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto">
             @for (o of pickerOpts(); track o) {
-              <button type="button" class="btn ghost" style="justify-content:flex-start" (click)="choosePicker(o)">{{ o }}</button>
+              <button type="button" class="btn ghost" [class.on]="o === (picker()==='vendor' ? f.vendor : f.model)" style="justify-content:flex-start" (click)="choosePicker(o)">{{ o }}</button>
             }
             @if (pickerOpts().length === 0) { <div style="color:var(--muted);font-size:12px">Aún no hay valores registrados. Escribe uno nuevo abajo.</div> }
             <div style="display:flex;gap:6px;margin-top:6px">
@@ -209,6 +211,21 @@ import { TableSort } from '../shared/table-sort';
 })
 export class Equipos implements OnDestroy {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
+  probandoSnmp = signal(false);
+  /** Prueba SNMP en vivo del equipo con la community/puerto/version del formulario. */
+  probarSnmp() {
+    if (!this.f.ip_address) { this.notify.error('Escribe la IP del equipo antes de probar SNMP.'); return; }
+    this.probandoSnmp.set(true);
+    this.api.testSnmp({ host: this.f.ip_address, port: this.f.snmp_port || 161, community: this.f.snmp_community || 'public', version: this.f.snmp_version || 'v2c' }).subscribe({
+      next: (r: any) => {
+        this.probandoSnmp.set(false);
+        if (r?.ok) this.notify.ok((r.sysName ? r.sysName + '\n' : '') + 'El equipo responde por SNMP. Marca “Habilitar SNMP” y guarda para que empiece a recolectar CPU/memoria/uptime.', 'SNMP OK');
+        else this.notify.error(r?.error || 'El equipo no respondió por SNMP.', 'SNMP sin respuesta');
+      },
+      error: (e: any) => { this.probandoSnmp.set(false); this.notify.error(e?.message || 'No se pudo ejecutar la prueba SNMP.'); },
+    });
+  }
   private acceso = inject(AccesoService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -238,7 +255,7 @@ export class Equipos implements OnDestroy {
    * seguridad, solo evita que un operador se equivoque.
    */
   esSupervisor = computed(() => this.acceso.esSupervisorEquipos());
-  f: any = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
+  f: any = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
   marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
 
   // Picker de Vendor/Modelo (foto 4): la lista sale de lo YA registrado en los equipos.
@@ -278,8 +295,8 @@ export class Equipos implements OnDestroy {
     if (this.sincronizando()) return;
     this.sincronizando.set(true);
     this.api.syncCheck().subscribe({
-      next: () => { this.sincronizando.set(false); this.load(); },
-      error: (e) => { this.sincronizando.set(false); this.saveErr.set('No se pudo sincronizar con el ERP: ' + (e?.message || 'error')); },
+      next: () => { this.sincronizando.set(false); this.load(); this.notify.ok('Sincronización con el ERP completada.'); },
+      error: (e) => { this.sincronizando.set(false); this.notify.error('No se pudo sincronizar con el ERP: ' + (e?.message || 'error')); },
     });
   }
 
@@ -345,13 +362,13 @@ export class Equipos implements OnDestroy {
     const d = this.borrar();
     if (!d) return;
     this.api.deleteDevice(d.id).subscribe({
-      next: () => { this.borrar.set(null); this.load(); },
-      error: (e: any) => { this.borrar.set(null); this.saveErr.set(e?.message || 'No se pudo eliminar el equipo.'); },
+      next: () => { this.borrar.set(null); this.load(); this.notify.ok('Equipo eliminado.'); },
+      error: (e: any) => { this.borrar.set(null); this.notify.error(e?.message || 'No se pudo eliminar el equipo.'); },
     });
   }
 
   nuevo() {
-    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: false, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
+    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
     this.testErr.set(''); this.dupErr.set(false); this.saveErr.set('');
     this.showAdd.set(true);
   }
@@ -392,11 +409,11 @@ export class Equipos implements OnDestroy {
       ? this.api.updateDevice(this.f.id, this.f)
       : this.api.createDevice(this.f);
     req.subscribe({
-      next: () => { this.showAdd.set(false); this.testErr.set(''); this.load(); },
+      next: () => { this.showAdd.set(false); this.testErr.set(''); this.load(); this.notify.ok(this.f.id ? 'Equipo actualizado.' : 'Equipo creado.'); },
       // El backend valida lo mismo (IP + puerto). Si dos usuarios cargan a la vez, acá cae.
       error: (e: any) => {
         if (String(e?.message || '').includes('Ya Agregado')) { this.testErr.set(''); this.dupErr.set(true); }
-        else { this.testErr.set(''); this.saveErr.set(e?.message || 'No se pudo guardar el equipo.'); }
+        else { this.testErr.set(''); this.notify.error(e?.message || 'No se pudo guardar el equipo.'); }
       },
     });
   }

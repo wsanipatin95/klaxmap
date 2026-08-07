@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 
 /**
  * Módulo Soporte (Fase 1). Busca cliente, abre ticket con datos de red en vivo,
@@ -235,6 +236,7 @@ import { NocApi } from '../services/noc-api';
 })
 export class Soporte {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
   private readonly usuario = 'Wilson S.';
 
   view = signal<'search' | 'ticket' | 'tickets' | 'orders'>('search');
@@ -302,10 +304,14 @@ export class Soporte {
 
   createOrder() {
     const t = this.ticket(); if (!t) return;
-    this.api.supCreateOrder(t.id, { ...this.of, usuario: this.usuario }).subscribe((r) => {
-      this.showOrder.set(false);
-      this.lastResult.set('✅ Orden técnica ' + r.numero + ' creada.');
-      this.reload();
+    this.api.supCreateOrder(t.id, { ...this.of, usuario: this.usuario }).subscribe({
+      next: (r: any) => {
+        this.showOrder.set(false);
+        this.lastResult.set('✅ Orden técnica ' + r.numero + ' creada.');
+        this.reload();
+        this.notify.ok('Orden técnica ' + r.numero + ' creada.');
+      },
+      error: (e: any) => this.notify.error(e?.message || 'No se pudo crear la orden técnica.'),
     });
   }
 
@@ -337,8 +343,8 @@ export class Soporte {
     const t = this.ticket(); if (!t) return;
     this.acsMsg.set('Encolando…');
     obs.subscribe({
-      next: () => { this.acsMsg.set('✅ ' + okMsg); this.loadAcs(t.contrato); },
-      error: (e: any) => this.acsMsg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo encolar la acción.')),
+      next: () => { this.acsMsg.set('✅ ' + okMsg); this.loadAcs(t.contrato); this.notify.ok(okMsg); },
+      error: (e: any) => { const m = e?.error?.mensaje || 'No se pudo encolar la acción.'; this.acsMsg.set('⚠ ' + m); this.notify.error(m); },
     });
   }
   acsParam(suffix: string): string { const p = this.acsParams().find((x) => (x.parameterName || '').endsWith(suffix)); return (p && p.parameterValue) || '—'; }
