@@ -260,6 +260,8 @@ export class EquipoDetalle implements OnDestroy {
 
   constructor() {
     this.id = +this.route.snapshot.paramMap.get('id')!;
+    // Toma SNMP INMEDIATA al entrar (no esperamos al primer salto del contador).
+    this.api.devicePoll(this.id).subscribe({ next: () => this.refrescarVivo(), error: () => {} });
     this.api.devices().subscribe((ds) => {
       this.dev.set(ds.find((d) => d.id === this.id) || null);
       this.api.interfaces().subscribe((all) => {
@@ -279,10 +281,10 @@ export class EquipoDetalle implements OnDestroy {
     this.timer = setInterval(() => {
       const c = this.countdown() - 1;
       if (c <= 0) {
-        this.loadCharts();
-        this.api.devices().subscribe((ds) => this.dev.set(ds.find((d) => d.id === this.id) || null));
-        this.api.interfaces().subscribe((all) => this.ifaces.set(all));
         this.countdown.set(60);
+        // El contador FUERZA una toma SNMP real del equipo y recién ahí re-lee, así actualiza datos
+        // de verdad (no solo re-muestra lo cacheado). Si el sondeo falla, re-lee igual.
+        this.api.devicePoll(this.id).subscribe({ next: () => this.refrescarVivo(), error: () => this.refrescarVivo() });
       } else this.countdown.set(c);
     }, 1000);
   }
@@ -306,6 +308,13 @@ export class EquipoDetalle implements OnDestroy {
   ifaceRows(): Iface[] { return this.ifSort.apply(this.myIfaces()); }
 
   setRange(min: number) { this.range.set(min); this.loadCharts(); }
+
+  /** Re-lectura tras el sondeo forzado: detalle + interfaces + gráficos. */
+  private refrescarVivo() {
+    this.loadCharts();
+    this.api.devices().subscribe((ds) => this.dev.set(ds.find((d) => d.id === this.id) || null));
+    this.api.interfaces().subscribe((all) => this.ifaces.set(all));
+  }
 
   private loadCharts() {
     const id = this.id, r = this.range();
