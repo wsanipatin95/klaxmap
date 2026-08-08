@@ -105,6 +105,7 @@ export class NocApi {
   devices(): Observable<Device[]> { return this.http.get<ApiEnvelope<Device[]>>(`${API}/devices`).pipe(map(unwrap)); }
   createDevice(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices`, body).pipe(map(unwrap)); }
   updateDevice(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/devices/${id}`, body).pipe(map(unwrap)); }
+  devicePoll(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices/${id}/poll`, {}).pipe(map(unwrap)); }
   deleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/devices/${id}`).pipe(map(unwrap)); }
 
   // ---- Topologia de Red ----

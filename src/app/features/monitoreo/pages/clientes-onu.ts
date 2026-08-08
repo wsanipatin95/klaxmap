@@ -12,9 +12,8 @@ import { areaDs } from '../shared/charts';
     <div class="tools">
       <span style="font-weight:600;font-size:15px">📡 Clientes / ONUs</span>
       @if (olts().length) {
-        <select class="inp" [(ngModel)]="oltId" (ngModelChange)="onOltChange()" title="Elegí la OLT a ver">
-          @for (o of olts(); track o.id) { <option [ngValue]="o.id">{{ o.name }} ({{ o.host }})</option> }
-        </select>
+        <button class="btn" (click)="oltModal.set(true)" title="Elegir OLT">🖧 {{ curOlt()?.name || 'Elegí una OLT' }}<span style="font-weight:400;opacity:.75">{{ curOlt() ? ' · ' + curOlt()?.host : '' }}</span></button>
+        @if (oltId) {
         @if (ports().length) {
           <button class="btn" (click)="lpuModal.set(true)" title="Elegir LPU-PON (tarjeta/puerto)">🔌 LPU-PON · {{ port || 'Todos' }}</button>
         } @else {
@@ -31,6 +30,7 @@ import { areaDs } from '../shared/charts';
         <input class="inp" style="min-width:200px" [(ngModel)]="q"
                placeholder="🔍 Buscar cliente, IP, serial, ONU..."
                title="Filtra la tabla por nombre de cliente, IP, serial o índice de ONU.">
+        }
       } @else {
         <span style="color:var(--muted);font-size:12.5px">No hay OLTs registradas. Registrá un equipo tipo OLT en el módulo Equipos.</span>
       }
@@ -85,6 +85,8 @@ import { areaDs } from '../shared/charts';
               <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">
                 @if (loadingCount() > 0) { Leyendo la OLT… <b style="color:#7b0061">{{ loadingCount() }}</b> ONUs } @else { Consultando la OLT por SNMP… }
               </div>
+              <button class="btn ghost sm" style="margin-top:14px" (click)="dismissLoading()"
+                      title="Ocultar y seguir en segundo plano; la tabla se irá llenando sola">Continuar en segundo plano</button>
             } @else {
               <div style="font-weight:600;font-size:15px;line-height:1.6">Completando datos de clientes<br><span style="font-weight:400;font-size:12px;color:var(--muted)">Nombre · Contrato · IP · Serial · Distancia</span></div>
               <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paso 2 de 2 · Leyendo la configuración de la OLT (un solo comando)</div>
@@ -141,6 +143,28 @@ import { areaDs } from '../shared/charts';
       </div>
     }
 
+    <!-- Modal centrado: elegir OLT (botonera) -->
+    @if (oltModal()) {
+      <div class="overlay on" style="z-index:80" (click)="oltModal.set(false)"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:81" (click)="oltModal.set(false)">
+        <div class="panel" style="width:min(640px,94vw);max-height:82vh;overflow:auto" (click)="$event.stopPropagation()">
+          <div class="ph">🖧 Elegí la OLT <span class="mini">clic para abrir y recolectar sus clientes</span>
+            <button class="btn sm ghost" style="margin-left:auto" (click)="oltModal.set(false)">✕</button>
+          </div>
+          <div class="pb">
+            <div class="olt-grid">
+              @for (o of olts(); track o.id) {
+                <button class="olt-b" [class.on]="o.id === oltId" (click)="pickOlt(o.id)">
+                  <div class="nm">{{ o.name }}</div>
+                  <div class="ip">{{ o.host }}</div>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Modal centrado: elegir LPU-PON con botones -->
     @if (lpuModal()) {
       <div class="overlay on" style="z-index:80" (click)="lpuModal.set(false)"></div>
@@ -187,7 +211,7 @@ import { areaDs } from '../shared/charts';
             </tr>
           } @empty {
             <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">
-              {{ loaded() ? 'Sin ONUs todavía. Se traen solas por SNMP; esperá el barrido o revisá la config SNMP de la OLT.' : 'Cargando…' }}
+              {{ !oltId ? 'Elegí una OLT arriba para ver y recolectar sus clientes.' : (loaded() ? 'Sin ONUs todavía. Se traen solas por SNMP; esperá el barrido o revisá la config SNMP de la OLT.' : 'Cargando…') }}
             </td></tr>
           }
         </tbody>
@@ -320,6 +344,14 @@ import { areaDs } from '../shared/charts';
              font-weight:600; cursor:pointer; font-family:'Consolas',monospace; transition:.12s; }
     .lpu-b:hover { border-color:var(--primary); background:var(--primary-soft); }
     .lpu-b.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .olt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; }
+    .olt-b { padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#fff; cursor:pointer; text-align:left; transition:.12s; }
+    .olt-b:hover { border-color:var(--primary); background:var(--primary-soft); }
+    .olt-b.on { background:var(--primary); border-color:var(--primary); }
+    .olt-b .nm { font-weight:600; font-size:13px; color:var(--text); }
+    .olt-b.on .nm { color:#fff; }
+    .olt-b .ip { font-size:11.5px; color:var(--muted); font-family:'Consolas',monospace; margin-top:2px; }
+    .olt-b.on .ip { color:#f2dcec; }
     .prog-bar { height: 100%; width: 42%; border-radius: 99px; background: #7b0061; animation: progslide 1.1s ease-in-out infinite; }
     @keyframes progslide { 0% { margin-left: -45%; } 100% { margin-left: 100%; } }
   `],
@@ -344,6 +376,7 @@ export class ClientesOnu implements OnDestroy {
   snmpCfg = signal(false);
   loadingCount = signal(0);
   lpuModal = signal(false);
+  oltModal = signal(false);
   loadingPhase = signal<'snmp' | 'enrich'>('snmp');
   loadingNamed = signal(0);
   loadingTotal = signal(0);
@@ -428,6 +461,21 @@ export class ClientesOnu implements OnDestroy {
     this.autoLoad();
   }
 
+  /** Elige la OLT desde la botonera: cierra el modal y carga (fría → trae con progreso; con datos → 2º plano). */
+  pickOlt(id: number) {
+    this.oltModal.set(false);
+    this.oltId = id;
+    this.onOltChange();                 // recarga, muestra, y enriquece en 2º plano si falta
+    // Refresco al elegir (incluida la MISMA OLT): fuerza un barrido SNMP en 2º plano para
+    // actualizar estado/señal y refresca la tabla al terminar.
+    if (this.snmpListo()) {
+      this.api.zteCollectSnmp(this.oltId).subscribe({
+        next: () => setTimeout(() => this.loadOnus(), 4000),
+        error: () => {},
+      });
+    }
+  }
+
   /** Todos los puertos PON físicos de la OLT (de kxt_olt_port, vía ifName). Incluye los sin ONUs. */
   oltPorts = signal<string[]>([]);
   loadOltPorts() {
@@ -447,7 +495,7 @@ export class ClientesOnu implements OnDestroy {
    */
   autoLoad() {
     if (!this.oltId) return;
-    clearInterval(this.enrichTimer);
+    clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     this.api.zteOnusOfOlt(this.oltId).subscribe({
       next: (r) => {
         this.onus.set(r); this.loaded.set(true);
@@ -463,12 +511,16 @@ export class ClientesOnu implements OnDestroy {
         // se muestra tal cual (instantáneo, sin Telnet): el scheduler de fondo la mantiene
         // y el botón "Verificar datos" fuerza un refresco manual cuando el operador quiera.
         if (named === 0) {
+          // OLT fría de datos de cliente: enriquecemos CON ventana de progreso.
           this.loadingErr.set(''); this.loadingNamed.set(named); this.loadingTotal.set(r.length);
           this.loadingOlt.set(true);
           this.startElapsed();
           this.startEnrichPhase();
+        } else if (faltan > 0) {
+          // Ya hay data cacheada (se muestra al instante). Al SELECCIONAR la OLT arrancamos
+          // solos la recolección de la info de clientes que falta, EN SEGUNDO PLANO (sin popup).
+          this.autoEnrichSilencioso();
         }
-        void faltan;
       },
       error: () => this.loaded.set(true),
     });
@@ -570,6 +622,40 @@ export class ClientesOnu implements OnDestroy {
     }, 1500);
   }
 
+  /**
+   * Al SELECCIONAR una OLT que ya tiene data cacheada pero le faltan clientes por completar,
+   * arranca la recolección de la info de clientes EN SEGUNDO PLANO (sin ventana): dispara el
+   * enriquecimiento CLI y va refrescando la tabla, que se llena sola. El barrido SNMP
+   * (estado/señal) lo dispara el backend al consultar la OLT.
+   */
+  private autoEnrichSilencioso() {
+    clearInterval(this.enrichTimer);
+    this.api.zteEnrich(this.oltId, false).subscribe({
+      next: () => this.pollEnrichSilencioso(),
+      error: () => {},
+    });
+  }
+
+  /** Sondea el avance del enriquecimiento en 2º plano y refresca la tabla; cierra al terminar. */
+  private pollEnrichSilencioso() {
+    clearInterval(this.enrichTimer);
+    let started = false, idle = 0;
+    this.enrichTimer = setInterval(() => {
+      if (!this.oltId) { clearInterval(this.enrichTimer); return; }
+      this.api.zteEnrichStatus(this.oltId).subscribe({
+        next: (s: any) => {
+          this.loadOnus();                       // la tabla se va llenando sola
+          if (s.running) started = true;
+          if (s.namesReady || (started && !s.running) || (!s.running && ++idle >= 5)) {
+            clearInterval(this.enrichTimer);
+            this.loadOnus();
+          }
+        },
+        error: () => clearInterval(this.enrichTimer),
+      });
+    }, 3000);
+  }
+
   /** Paso 2: dispara el enriquecimiento CLI y sondea su avance hasta terminar. */
   private startEnrichPhase() {
     this.loadingPhase.set('enrich');
@@ -614,11 +700,12 @@ export class ClientesOnu implements OnDestroy {
 
   /** Oculta el popup pero deja el enriquecimiento corriendo en segundo plano. */
   dismissLoading() {
-    clearInterval(this.enrichTimer);
+    clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     this.stopElapsed();
     this.loadingOlt.set(false);
-    this.flash('👤 Completando datos de clientes en segundo plano. La tabla se irá llenando sola.');
+    this.flash('👤 Completando datos en segundo plano. La tabla se irá llenando sola.');
     this.loadOnus();
+    this.autoEnrichSilencioso();   // asegura que el paso 2 (datos de cliente) siga en 2º plano
   }
 
   /** Elige un LPU-PON desde el modal: fija el filtro, cierra y refresca la tabla. */
@@ -677,8 +764,9 @@ export class ClientesOnu implements OnDestroy {
   constructor() {
     this.api.zteOlts().subscribe((o) => {
       this.olts.set(o);
-      if (o.length) { this.oltId = o[0].id; this.port = ''; this.loadOltPorts(); this.autoLoad(); }
-      else this.loaded.set(true);
+      this.loaded.set(true);
+      // Al ENTRAR no se recolecta nada: se abre la botonera de OLTs y la acción arranca al elegir.
+      if (o.length) this.oltModal.set(true);
     });
     // La tabla se refresca sola cada 30s (salvo mientras hay algo en curso).
     this.tableTimer = setInterval(() => {
