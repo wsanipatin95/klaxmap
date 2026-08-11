@@ -27,62 +27,41 @@ import { Bandeja } from './bandeja';
     @if (view()==='ticket' && ticket(); as t) {
       <a class="back" (click)="view.set('bandeja')">← Volver a la bandeja</a>
 
-      @if (t.idTic) {
-        <div class="ribbon">
-          <span class="tk">Ticket #{{ t.idTic }}</span>
-          @if (t.estado) { <span class="rm">{{ t.estado }}</span> }
-          @if (cf('estado','estado_contrato','con_estado')) { <span class="cpill">{{ cf('estado','estado_contrato','con_estado') }}</span> }
-        </div>
-      }
-
       <div class="fgrid2">
 
-        <!-- IZQUIERDA -->
+        <!-- COLUMNA 1 · UN SOLO CUERPO (cliente + atencion + historial desplegable) -->
         <div class="fcard">
           <div class="fhd">
             <div class="fav">{{ (cf('nombre','cliente','representante') || t.cliente || '?').slice(0,2).toUpperCase() }}</div>
             <div class="fwho">
               <div class="nm">{{ cf('nombre','cliente','representante') || t.cliente }}</div>
-              <div class="cn">{{ t.contrato || '—' }}@if (cf('numero_megas','megas','plan')) { · {{ cf('numero_megas','megas','plan') }} Mbps }</div>
+              <div class="cn">CI/RUC {{ cf('ruc','cedula','dni','documento') || '—' }} · contrato {{ t.contrato || '—' }}@if (t.idTic) { · ticket #{{ t.idTic }} }</div>
             </div>
-            <div class="fst" style="display:flex;gap:8px">
-              <button class="btn2 wa" [disabled]="!(cf('movil','telefono','celular') || t.movil)" (click)="waCliente()">💬 WhatsApp</button>
-              <a class="btn2" [href]="'tel:'+(cf('movil','telefono','celular') || t.movil || '')" style="text-decoration:none">📞 Llamar</a>
+            <div class="fst">
+              @if (cf('estado','estado_contrato','con_estado')) { <span class="cpill">{{ cf('estado','estado_contrato','con_estado') }}</span> }
             </div>
           </div>
 
-          <div class="info">
-            <div><span>Teléfono</span><b>{{ cf('movil','telefono','celular') || t.movil || '—' }}</b></div>
+          <div class="cinfo">
+            <div><span>Teléfono</span><b class="mono">{{ cf('movil','telefono','celular') || t.movil || '—' }}</b></div>
+            <div><span>Plan</span><b>{{ cf('numero_megas','megas','plan') ? cf('numero_megas','megas','plan') + ' Mbps' : '—' }}</b></div>
             <div><span>Dirección</span><b>{{ cf('direccion','direccion_domicilio','dir') || '—' }}</b></div>
             <div><span>Nodo · VLAN</span><b>{{ cf('nodo','vlan','vlan_red') || '—' }}</b></div>
-            <div><span>OLT</span><b>{{ t.olt_name || '—' }}</b></div>
-            <div><span>IP</span><b class="mono">{{ t.client_ip || '—' }}</b></div>
-            <div><span>Estado</span><b>{{ cf('estado','estado_contrato','con_estado') || '—' }}</b></div>
           </div>
 
-          <div class="sect">
-            <div class="sh">Diagnóstico guiado</div>
-            <div class="chips">
-              @for (d of diagBtns; track d.l) { <button class="chip" (click)="addDiag(d.t)">{{ d.l }}</button> }
-            </div>
-            <textarea class="isel ta" rows="2" [(ngModel)]="diag" placeholder="Diagnóstico…"></textarea>
-          </div>
-
-          <div class="sect">
-            <div class="sh">Acciones remotas</div>
-            <div class="actg">
-              <button class="act" (click)="runAction('estado')"><span class="ai">📶</span>Estado ONU</button>
-              <button class="act" (click)="runAction('potencia')"><span class="ai">📉</span>Potencia</button>
-              <button class="act" (click)="runAction('ping')"><span class="ai">📡</span>Ping</button>
-              <button class="act" (click)="runAction('consumo')"><span class="ai">📊</span>Tráfico</button>
-              <button class="act" (click)="runAction('caidas')"><span class="ai">⏱</span>Caídas</button>
-              <button class="act" (click)="copyIp()"><span class="ai">📋</span>Copiar IP</button>
-            </div>
-            @if (lastResult()) { <div class="res">{{ lastResult() }}</div> }
+          <div class="cbar">
+            <button class="btn2 wa" [disabled]="!(cf('movil','telefono','celular') || t.movil)" (click)="waCliente()">💬 WhatsApp</button>
+            <a class="btn2" [href]="'tel:'+(cf('movil','telefono','celular') || t.movil || '')" style="text-decoration:none">📞 Llamar</a>
+            <div style="flex:1"></div>
+            @if (t.idTic) {
+              <button class="btn2 primary" (click)="tomarTicket(t)">🙋 Tomar</button>
+              <select class="isel" [(ngModel)]="nuevoEstado"><option [ngValue]="null">Estado…</option>@for (e of estadosCat(); track e.id) { <option [ngValue]="e.id">{{ e.nombre }}</option> }</select>
+              <button class="btn2" [disabled]="nuevoEstado==null" (click)="cambiarEstado(t)">Aplicar</button>
+            }
           </div>
 
           <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('hist')" (click)="toggleSec('hist')">Historial de acciones<span class="ic">▶</span></div>
+            <div class="acc-h" [class.open]="secOpen('hist')" (click)="toggleSec('hist')">🕒 Historial del ticket @if (ticSaltos().length) { <span class="tag">{{ ticSaltos().length }}</span> }<span class="ic">▶</span></div>
             @if (secOpen('hist')) {
               <div class="acc-b">
                 @if (t.idTic) {
@@ -96,42 +75,68 @@ import { Bandeja } from './bandeja';
               </div>
             }
           </div>
-
-          <div class="foot">
-            @if (t.idTic) { <button class="btn2 primary" (click)="tomarTicket(t)">🙋 Tomar</button> }
-            <button class="btn2 ok" [disabled]="!t.idTic" (click)="marcarSolucionado(t)">✅ Solucionado</button>
-            <button class="btn2 esc" [disabled]="!t.idTic" (click)="escalar(t)">↗ Escalar a NOC</button>
-            <button class="btn2 primary" (click)="showOrder.set(true)">🔧 Orden</button>
-            @if (t.idTic) {
-              <div style="flex:1"></div>
-              <select class="isel" [(ngModel)]="nuevoEstado"><option [ngValue]="null">Otro estado…</option>@for (e of estadosCat(); track e.id) { <option [ngValue]="e.id">{{ e.nombre }}</option> }</select>
-              <button class="btn2" [disabled]="nuevoEstado==null" (click)="cambiarEstado(t)">Aplicar</button>
-            }
-          </div>
         </div>
 
-        <!-- DERECHA -->
+        <!-- COLUMNA 2 · UN SOLO CUERPO (KPIs de red + secciones desplegables) -->
         <div class="fcard">
-          <div class="sum">
-            <div class="sh">Resumen NOC / ONU</div>
-            <div class="semaforo">
-              @for (lp of lamps(); track lp.k) {
-                <div class="lamp">
-                  <span class="dot" [class.g]="lp.c==='g'" [class.a]="lp.c==='a'" [class.r]="lp.c==='r'"></span>
-                  <div><div class="lk">{{ lp.k }}</div><div class="lv" [class.ok]="lp.c==='g'" [class.warn]="lp.c==='a'" [class.bad]="lp.c==='r'">{{ lp.l }}</div></div>
-                </div>
-              }
-            </div>
-            <div class="kpis">
-              <div class="kpi"><div class="k">OLT</div><div class="v s">{{ t.olt_name || '—' }}</div></div>
-              <div class="kpi"><div class="k">PON · ONU</div><div class="v s mono">{{ t.pon }} · {{ t.onu_num ?? '—' }}</div></div>
-              <div class="kpi"><div class="k">Distancia</div><div class="v s">{{ t.distance_m!=null ? t.distance_m+' m' : '—' }}</div></div>
-              <div class="kpi"><div class="k">Consumo ↓/↑</div><div class="v s">{{ rate(t.out_rate_bps) }} / {{ rate(t.in_rate_bps) }}</div></div>
-            </div>
+          <div class="kpis">
+            <div class="kpi"><div class="k">Estado ONU</div><div class="v" [innerHTML]="stBadge(t.phase_state)"></div></div>
+            <div class="kpi"><div class="k">Potencia RX</div><div class="v" [style.color]="rxColor(t.rx_dbm)">{{ t.rx_dbm!=null ? (t.rx_dbm | number:'1.2-2')+' dBm' : '—' }}</div></div>
+            <div class="kpi"><div class="k">OLT</div><div class="v s">{{ t.olt_name || '—' }}</div></div>
+            <div class="kpi"><div class="k">IP cliente</div><div class="v s mono">{{ t.client_ip || '—' }}</div></div>
+            <div class="kpi"><div class="k">PON · ONU</div><div class="v s mono">{{ t.pon }} · {{ t.onu_num ?? '—' }}</div></div>
+            <div class="kpi"><div class="k">Distancia</div><div class="v s">{{ t.distance_m!=null ? t.distance_m+' m' : '—' }}</div></div>
+            <div class="kpi"><div class="k">Consumo ↓/↑</div><div class="v s">{{ rate(t.out_rate_bps) }} / {{ rate(t.in_rate_bps) }}</div></div>
+            <div class="kpi"><div class="k">Contrato</div><div class="v s mono">{{ t.contrato || '—' }}</div></div>
           </div>
 
-          <div class="sect">
-            <div class="sh">Router · TR-069</div>
+          <div class="acc">
+            <div class="acc-h" [class.open]="secOpen('diag')" (click)="toggleSec('diag')">🛰️ Diagnóstico y acciones (OLT)<span class="ic">▶</span></div>
+            @if (secOpen('diag')) {
+              <div class="acc-b">
+                <div class="chips">
+                  <button class="chip" (click)="runAction('ping')">Ping</button>
+                  <button class="chip" (click)="runAction('caidas')">Ver caídas</button>
+                  <button class="chip" (click)="copyIp()">Copiar IP</button>
+                </div>
+                @if (lastResult()) { <div class="res">{{ lastResult() }}</div> }
+                <div class="sub">Diagnóstico</div>
+                <div class="chips">
+                  @for (d of diagBtns; track d.l) { <button class="chip" (click)="addDiag(d.t)">{{ d.l }}</button> }
+                </div>
+                <textarea class="isel ta" rows="3" [(ngModel)]="diag" placeholder="Diagnóstico…"></textarea>
+                <div class="rowbtns">
+                  <button class="btn2 xs" (click)="saveDiag()">💾 Guardar</button>
+                  <button class="btn2 xs" (click)="copyDiag()">📋 Copiar</button>
+                  <button class="btn2 xs ok" (click)="setEstado('Solucionado','Solucionado remoto')">✅ Solucionado</button>
+                  <button class="btn2 xs" (click)="showOrder.set(true)">🔧 Orden</button>
+                </div>
+                <div class="sub">Log de acciones</div>
+                <div class="tl">
+                  @for (e of t.log; track $index) { <div class="it"><span class="tm">{{ e.hora }}</span><span class="tx"><b>{{ e.usuario }}</b> {{ e.accion }}{{ e.resultado ? ' → ' + e.resultado : '' }}</span></div> }
+                  @empty { <div class="note">Sin acciones todavía.</div> }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="acc">
+            <div class="acc-h" [class.open]="secOpen('alertas')" (click)="toggleSec('alertas')">🚨 Historial de alertas (ONU) @if (onuAlertas().length) { <span class="tag">{{ onuAlertas().length }}</span> }<span class="ic">▶</span></div>
+            @if (secOpen('alertas')) {
+              <div class="acc-b">
+                @if (onuAlertas().length) {
+                  <div class="tl">
+                    @for (a of onuAlertas(); track $index) { <div class="it"><span class="tm">{{ a.cuando }}</span><span class="tx" [innerHTML]="alertaTxt(a)"></span></div> }
+                  </div>
+                } @else { <div class="note">Sin alertas registradas para esta ONU.</div> }
+              </div>
+            }
+          </div>
+
+          <div class="acc">
+            <div class="acc-h" [class.open]="secOpen('router')" (click)="toggleSec('router')">📶 Router · TR-069 (ACS)<span class="ic">▶</span></div>
+            @if (secOpen('router')) {
+              <div class="acc-b">
           @if (acs(); as a) {
             @if (acsWrite() === false) {
               <div style="display:flex;gap:8px;align-items:center;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:12.5px;color:#9a3412">
@@ -162,19 +167,6 @@ import { Bandeja } from './bandeja';
           } @else {
             <div class="note">{{ acsMsg() || 'Este cliente aún no tiene router registrado en el ACS.' }}</div>
           }
-          </div>
-
-          <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('alertas')" (click)="toggleSec('alertas')">Alertas y sugerencias<span class="ic">▶</span></div>
-            @if (secOpen('alertas')) {
-              <div class="acc-b">
-                @for (sg of sugerencias(); track $index) {
-                  <div class="al" [class.r]="sg.cls==='r'" [class.a]="sg.cls==='a'"><span class="ab">{{ sg.ic }}</span><div><div class="att">{{ sg.att }}</div><div class="as">{{ sg.as }}</div></div></div>
-                }
-                @for (a of onuAlertas(); track $index) {
-                  <div class="al" [class.r]="a.to_state==='sin_servicio'" [class.a]="a.to_state==='riesgo'"><span class="ab">{{ a.to_state==='sin_servicio' ? '🔴' : a.to_state==='riesgo' ? '⚠️' : '🟢' }}</span><div><div class="att" [innerHTML]="alertaTxt(a)"></div><div class="as">{{ a.cuando }}</div></div></div>
-                }
-                @if (!onuAlertas().length && !sugerencias().length) { <div class="note">Sin alertas para esta ONU.</div> }
               </div>
             }
           </div>
@@ -244,7 +236,7 @@ import { Bandeja } from './bandeja';
     .cinfo b { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .cpill { font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f7f0f6; color:#7c0061; }
     .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
-    .fgrid2 { display:grid; grid-template-columns:1fr 1.06fr; gap:16px; align-items:start; }
+    .fgrid2 { display:grid; grid-template-columns:1fr 1.15fr; gap:16px; align-items:start; }
     @media(max-width:900px){ .fgrid2{ grid-template-columns:1fr } }
     .fcol { display:flex; flex-direction:column; gap:14px; }
     @media(max-width:900px){ .fgrid{ grid-template-columns:1fr } }
@@ -272,41 +264,6 @@ import { Bandeja } from './bandeja';
     .acc-b { padding:0 16px 16px; }
     .tag { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:#f3eef7; color:#7c0061; }
     .al-sin { color:#dc2626; } .al-warn { color:#d97706; } .al-ok { color:#16a34a; } .al-mut { color:#8a8296; }
-    /* v2 layout */
-    .ribbon { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#fff; border:1px solid #ece8f1; border-radius:14px; padding:10px 16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(26,21,38,.04); }
-    .ribbon .tk { font-weight:800; }
-    .ribbon .rm { color:var(--muted); font-size:12.5px; }
-    .cn .mono, .mono { font-family:'Consolas',monospace; }
-    .info { display:grid; grid-template-columns:repeat(3,1fr); gap:9px 14px; padding:2px 16px 14px; }
-    @media(max-width:640px){ .info{ grid-template-columns:repeat(2,1fr) } }
-    .info > div { display:flex; flex-direction:column; }
-    .info span { font-size:10.5px; color:var(--muted); font-weight:600; }
-    .info b { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sect { padding:13px 16px; border-top:1px solid #ece8f1; }
-    .sh { font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin:0 0 9px; display:flex; align-items:center; gap:7px; }
-    .sum { padding:14px 16px; }
-    .actg { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-    @media(max-width:520px){ .actg{ grid-template-columns:repeat(2,1fr) } }
-    .act { border:1px solid #ece8f1; border-radius:10px; padding:11px 8px; font-size:12px; cursor:pointer; background:#fff; display:flex; flex-direction:column; align-items:center; gap:4px; font-weight:600; }
-    .act:hover { background:#faf8fc; }
-    .act .ai { font-size:16px; }
-    .foot { display:flex; gap:9px; flex-wrap:wrap; align-items:center; padding:13px 16px; border-top:1px solid #ece8f1; background:#faf9fc; }
-    .btn2.esc { background:#fff; color:#d97706; border-color:#f5cf94; }
-    .semaforo { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:12px 0; }
-    .lamp { border:1px solid #ece8f1; border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:9px; }
-    .dot { width:11px; height:11px; border-radius:50%; background:var(--muted); }
-    .dot.g { background:#16a34a; box-shadow:0 0 0 4px rgba(22,163,74,.16); }
-    .dot.a { background:#d97706; box-shadow:0 0 0 4px rgba(217,119,6,.16); }
-    .dot.r { background:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,.16); }
-    .lamp .lk { font-size:10.5px; color:var(--muted); font-weight:700; text-transform:uppercase; }
-    .lamp .lv { font-size:12.5px; font-weight:700; }
-    .lv.ok { color:#16a34a; } .lv.warn { color:#d97706; } .lv.bad { color:#dc2626; }
-    .al { display:flex; gap:10px; padding:9px 11px; border:1px solid #ece8f1; border-radius:10px; margin-bottom:7px; align-items:flex-start; }
-    .al .ab { font-size:15px; line-height:1.2; }
-    .al .att { font-weight:700; font-size:12.5px; }
-    .al .as { color:var(--muted); font-size:11.5px; }
-    .al.r { border-color:#f6cccc; background:#fef5f5; }
-    .al.a { border-color:#f5e2bf; background:#fffbf2; }
   `],
 })
 export class Soporte {
@@ -318,7 +275,7 @@ export class Soporte {
   ticSaltos = signal<any[]>([]);
   cli = signal<any>({});
   onuAlertas = signal<any[]>([]);
-  openSec = signal<Set<string>>(new Set(['hist', 'alertas']));
+  openSec = signal<Set<string>>(new Set(['diag']));
   ticAcc = signal<any[]>([]);
   estadosCat = signal<{ id: any; nombre: string }[]>([]);
   nuevoEstado: number | null = null;
@@ -401,69 +358,6 @@ export class Soporte {
     const cls = (x: string) => x === 'sin_servicio' ? 'al-sin' : x === 'riesgo' ? 'al-warn' : x === 'ok' ? 'al-ok' : 'al-mut';
     const to = a?.to_state, from = a?.from_state;
     return `<b class="${cls(to)}">${lbl(to)}</b> <span class="al-mut">(desde ${lbl(from)})</span>`;
-  }
-
-  /** Semaforo: estado de cada indicador de la ONU a partir del snapshot en el ticket. */
-  sem(kind: 'enlace' | 'rx' | 'trafico'): { c: string; l: string } {
-    const t: any = this.ticket() || {};
-    if (kind === 'enlace') {
-      const ph = String(t.phase_state || '').toLowerCase();
-      if (ph === 'working') return { c: 'g', l: 'OK' };
-      if (ph === 'los') return { c: 'r', l: 'LOS' };
-      return { c: 'a', l: ph ? ph.toUpperCase() : '—' };
-    }
-    if (kind === 'rx') {
-      const v = t.rx_dbm;
-      if (v == null) return { c: 'a', l: '—' };
-      const c = v <= -28 ? 'r' : v <= -25 ? 'a' : 'g';
-      return { c, l: Number(v).toFixed(2) + ' dBm' };
-    }
-    const on = (t.out_rate_bps || 0) > 0 || (t.in_rate_bps || 0) > 0;
-    return on ? { c: 'g', l: 'Activo' } : { c: 'a', l: 'Sin flujo' };
-  }
-  lamps(): { k: string; c: string; l: string }[] {
-    return [
-      { k: 'Enlace', ...this.sem('enlace') },
-      { k: 'Potencia RX', ...this.sem('rx') },
-      { k: 'Tráfico', ...this.sem('trafico') },
-    ];
-  }
-
-  /** Sugerencias derivadas (front) a partir de RX y del historial de alertas de la ONU. */
-  sugerencias(): { ic: string; att: string; as: string; cls: string }[] {
-    const t: any = this.ticket() || {};
-    const out: { ic: string; att: string; as: string; cls: string }[] = [];
-    const rx = t.rx_dbm;
-    if (rx != null && rx <= -25) out.push({ ic: '⚠️', att: 'Potencia RX baja', as: 'RX ' + Number(rx).toFixed(2) + ' dBm — revisar fibra/conector.', cls: 'a' });
-    const al = this.onuAlertas();
-    const sin = al.filter((a: any) => a.to_state === 'sin_servicio').length;
-    if (sin >= 2) out.push({ ic: '🔴', att: sin + ' caídas de servicio', as: 'Intermitencia reciente — considerar orden preventiva.', cls: 'r' });
-    const riesgo = al.some((a: any) => a.to_state === 'riesgo');
-    if (riesgo && (rx == null || rx > -25)) out.push({ ic: '💡', att: 'Historial de riesgo', as: 'RX estable pero con transiciones a riesgo — revisión preventiva.', cls: '' });
-    return out;
-  }
-
-  private estadoIdPorNombre(re: RegExp): number | null {
-    const e = this.estadosCat().find((x) => re.test(x.nombre));
-    return e ? Number(e.id) : null;
-  }
-  marcarSolucionado(t: any) {
-    if (!t?.idTic) return;
-    const id = this.estadoIdPorNombre(/termin|solucion|cerrad|resuel/i);
-    if (id == null) { this.notify.error('No encontré el estado de cierre en el catálogo.'); return; }
-    this.api.supEstado(t.idTic, id, this.notaTxt.trim() || 'Solucionado').subscribe({
-      next: () => { this.notify.ok('Ticket solucionado.'); this.notaTxt = ''; this.recargarSaltos(t.idTic); },
-      error: (e: any) => this.notify.error(e?.error?.mensaje || 'No se pudo marcar solucionado.'),
-    });
-  }
-  escalar(t: any) {
-    if (!t?.idTic) return;
-    const id = this.estadoIdPorNombre(/escal/i);
-    if (id == null) { this.notify.error('No encontré el estado ESCALADO en el catálogo.'); return; }
-    this.api.supEstado(t.idTic, id, this.notaTxt.trim() || 'Escalado a NOC').subscribe({
-      next: () => { this.notify.ok('Ticket escalado a NOC.'); this.notaTxt = ''; this.recargarSaltos(t.idTic); },
-      error: (e: any) => this.notify.error(e?.error?.mensaje || 'No se pudo escalar.'),
-    });
   }
 
   accionTic(l: any): string {

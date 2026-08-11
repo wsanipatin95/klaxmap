@@ -50,6 +50,46 @@ import { NocNotify } from '../services/noc-notify';
     </div></div>
 
     <div class="panel"><div class="pb">
+      <div class="sec" style="display:flex;align-items:center;gap:8px">📶 Routers registrados en el ACS
+        <span class="mini">{{ devices().length }} equipo(s)</span>
+        <button class="btn sm ghost" style="margin-left:auto" (click)="loadDevices()">🔄 Actualizar</button></div>
+      @if (devices().length) {
+        <div style="overflow:auto;margin-top:6px">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr style="text-align:left;color:var(--muted)">
+              <th style="padding:6px 8px">Estado</th><th style="padding:6px 8px">Equipo</th>
+              <th style="padding:6px 8px">Serie</th><th style="padding:6px 8px">Contrato</th>
+              <th style="padding:6px 8px">IP KLAX</th><th style="padding:6px 8px">Firmware</th><th style="padding:6px 8px">Modelo datos</th>
+              <th style="padding:6px 8px">Último Inform</th><th style="padding:6px 8px">ConnReq</th></tr></thead>
+            <tbody>
+              @for (d of devices(); track d.id) {
+                <tr style="border-top:1px solid var(--border)">
+                  <td style="padding:6px 8px"><span [style.display]="'inline-block'" [style.width.px]="8" [style.height.px]="8" [style.borderRadius.%]="50" [style.marginRight.px]="6" [style.background]="dOnline(d) ? '#16a34a' : '#9ca3af'"></span>{{ d.status || '—' }}</td>
+                  <td style="padding:6px 8px"><b>{{ d.manufacturer || '—' }}</b> {{ d.modelName || '' }}</td>
+                  <td style="padding:6px 8px" class="mono">{{ d.serialNumber || '—' }}</td>
+                  <td style="padding:6px 8px" class="mono">
+                    @if (d.contrato) { {{ d.contrato }} }
+                    @else {
+                      <input [(ngModel)]="asignar[d.id]" placeholder="contrato" style="width:88px;padding:2px 6px;font-size:12px;border:1px solid var(--border);border-radius:6px">
+                      <button class="btn sm" style="padding:2px 8px;margin-left:4px" (click)="asignarContrato(d)">✔</button>
+                    }
+                  </td>
+                  <td style="padding:6px 8px" class="mono">{{ d.ipKlax || '—' }}</td>
+                  <td style="padding:6px 8px" class="mono">{{ d.softwareVersion || '—' }}</td>
+                  <td style="padding:6px 8px">{{ d.dataModel || '—' }}</td>
+                  <td style="padding:6px 8px;font-size:11.5px">{{ d.lastInformAt || '—' }}</td>
+                  <td style="padding:6px 8px">{{ d.hasConnReq ? '✔' : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="mini" style="margin-top:8px;color:var(--muted)">Todavía ningún router hizo Inform. Apunta un CPE al ACS URL de arriba y aparecerá aquí en el próximo contacto.</div>
+      }
+    </div></div>
+
+    <div class="panel"><div class="pb">
       <div class="sec">Cómo apuntar un router al ACS</div>
       <div class="mini" style="line-height:1.7">
         En la página TR-069 / CWMP / “Gestión remota” del router:<br>
@@ -65,8 +105,10 @@ export class AcsConfig implements OnInit {
   private notify = inject(NocNotify);
   cfg: any = { acs_public_url: '', acs_url: '', write_enabled: false, inform_interval_seconds: 900, task_ttl_seconds: 86400 };
   msg = signal(''); pushMsg = signal(''); contrato = '';
+  devices = signal<any[]>([]);
+  asignar: any = {};
 
-  ngOnInit() { this.load(); }
+  ngOnInit() { this.load(); this.loadDevices(); }
   load() { this.api.acsConfig().subscribe((c) => (this.cfg = c)); }
   save() {
     this.api.acsSaveConfig(this.cfg).subscribe({
@@ -81,5 +123,15 @@ export class AcsConfig implements OnInit {
       error: (e) => this.pushMsg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo encolar')),
     });
   }
+  loadDevices() { this.api.acsDevices().subscribe((d) => this.devices.set(d || [])); }
+  asignarContrato(d: any) {
+    const c = (this.asignar[d.id] || '').trim();
+    if (!c) return;
+    this.api.acsAsignarContrato(d.id, c).subscribe({
+      next: () => { this.msg.set('✅ Contrato asignado'); setTimeout(() => this.msg.set(''), 2000); this.asignar[d.id] = ''; this.loadDevices(); },
+      error: (e: any) => this.msg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo asignar el contrato')),
+    });
+  }
+  dOnline(d: any): boolean { return String(d?.status || '').toLowerCase() === 'online'; }
   copiar(v: string) { navigator.clipboard?.writeText(v || ''); this.msg.set('📋 Copiado'); setTimeout(() => this.msg.set(''), 1500); }
 }

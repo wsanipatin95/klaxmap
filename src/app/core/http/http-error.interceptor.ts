@@ -30,8 +30,16 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         if (enEmbed) {
           return throwError(() => error);
         }
-        notify.error('Sesión expirada', backendError);
-        lockStore.lock(backendError);
+        // 401 = token expirado/inválido -> sesión caída (bloquea y pide re-login).
+        // 403 = autenticado pero SIN permiso o acción no permitida por regla de negocio
+        //       (p.ej. escritura ACS/OLT deshabilitada). NO es sesión caída: se muestra el
+        //       mensaje del backend y NO se bloquea la pantalla.
+        if (error.status === 401) {
+          notify.error('Sesión expirada', backendError);
+          lockStore.lock(backendError);
+        } else {
+          notify.error('No autorizado', backendError);
+        }
         return throwError(() => error);
       }
 

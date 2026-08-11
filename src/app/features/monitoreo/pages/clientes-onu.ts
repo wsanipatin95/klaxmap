@@ -267,6 +267,14 @@ import { areaDs } from '../shared/charts';
             </div>
 
             <div style="margin-top:14px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">Tráfico del puerto PON <span style="font-weight:400;color:var(--muted)">gpon_{{ o.shelf }}/{{ o.slot }}/{{ o.port }}</span></div>
+              <div style="height:130px">
+                @if (ponLab().length > 1) { <app-line-chart [labels]="ponLab()" [datasets]="ponDs()"></app-line-chart> }
+                @else { <div style="color:var(--muted);font-size:12px;padding:20px 0">Aún no hay histórico del puerto PON. Se llena cada ~5 min con el barrido de puertos.</div> }
+              </div>
+            </div>
+
+            <div style="margin-top:14px">
               <div style="font-size:13px;font-weight:600;margin-bottom:6px">Causas de caída (historial)</div>
               @if (causes(o).length) {
                 <div style="border:1px solid var(--border);border-radius:9px;overflow:hidden">
@@ -387,6 +395,8 @@ export class ClientesOnu implements OnDestroy {
   histDs = signal<any[]>([]);
   trafLab = signal<string[]>([]);
   trafDs = signal<any[]>([]);
+  ponLab = signal<string[]>([]);
+  ponDs = signal<any[]>([]);
   onuAlerts = signal<any[]>([]);
   big = signal<{ kind: 'rx' | 'traf'; title: string } | null>(null);
   modalCountdown = signal(30);
@@ -874,6 +884,15 @@ export class ClientesOnu implements OnDestroy {
     this.api.zteOnuHistory(o.id, 'onu_out_rate_bps').subscribe((p) => {
       this.trafLab.set(p.map((x) => x.t));
       this.trafDs.set([areaDs('Descarga (Mbps)', '#7b0061', p.map((x) => (+x.v! || 0) * 8 / 1e6))]);
+    });
+    // Tráfico HISTÓRICO del PUERTO PON del cliente (opción 1).
+    this.ponLab.set([]); this.ponDs.set([]);
+    this.api.ztePortHistory(this.oltId, `gpon_${o.shelf}/${o.slot}/${o.port}`).subscribe((p: any[]) => {
+      this.ponLab.set(p.map((x) => x.t));
+      this.ponDs.set([
+        areaDs('Descarga (Mbps)', '#7b0061', p.map((x) => (+x.tx_bps || 0) / 1e6)),
+        areaDs('Subida (Mbps)', '#16a34a', p.map((x) => (+x.rx_bps || 0) / 1e6)),
+      ]);
     });
   }
 
