@@ -154,7 +154,8 @@ interface LinkFrom { deviceId: number; deviceName: string; portId: number; portL
               <button class="btn sm" (click)="addPort()">＋ Agregar puerto</button>
             </div>
           </div>
-          <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;text-align:right">
+          <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;display:flex;justify-content:space-between;align-items:center">
+            <button class="btn ghost" style="color:#dc2626;border-color:#f0b4b4" (click)="borrarEquipo(d)">🗑 Borrar equipo</button>
             <button class="btn ghost" (click)="panel.set(null)">Cerrar</button>
           </div>
         </div>
@@ -340,6 +341,14 @@ export class Topologia implements OnInit, OnDestroy {
     });
   }
   cancelLink() { this.linkFrom.set(null); this.note.set(''); }
+  borrarEquipo(d: any) {
+    if (!d) return;
+    if (!confirm('¿Borrar el equipo "' + d.name + '" del NOC de forma permanente?')) return;
+    this.api.deleteDevice(d.id).subscribe({
+      next: () => { this.panel.set(null); this.note.set('Equipo "' + d.name + '" borrado.'); this.load(); },
+      error: (e: any) => this.note.set(e?.error?.mensaje || e?.message || 'No se pudo borrar el equipo.'),
+    });
+  }
   delLink(l: TopoLink) { if (this.connectMode()) return; if (!confirm('¿Borrar este enlace?')) return; this.api.topoDelLink(l.id).subscribe(() => this.load()); }
 
   crearEquipo() {
