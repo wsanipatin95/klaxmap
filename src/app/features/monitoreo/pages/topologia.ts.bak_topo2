@@ -1,4 +1,4 @@
-import { Component, signal, inject, effect, HostListener, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
 
@@ -30,12 +30,11 @@ interface LinkFrom { deviceId: number; deviceName: string; portId: number; portL
     .chip.ok { background:#e6f7ec; color:#137a3b; } .chip.bad { background:#fdecec; color:#b91c1c; }
     .chip.lnk { background:#e8f0fe; color:#1a56c4; }
     .canvas-outer { position:relative; }
-    .hud { position:absolute; top:12px; left:12px; z-index:6; display:flex; gap:8px; flex-wrap:wrap; align-items:center; pointer-events:none; }
+    .hud { position:absolute; top:12px; left:12px; z-index:6; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .hud .chip { box-shadow:0 1px 6px rgba(11,34,57,.12); }
     .hud-note { position:absolute; top:52px; left:12px; z-index:6; background:#fff; border:1px solid var(--border); border-radius:10px;
       padding:6px 12px; font-size:12.5px; color:#334; box-shadow:0 3px 12px rgba(11,34,57,.14); display:inline-flex; align-items:center; gap:10px; max-width:74%; }
     .hud-note.lnk { border-color:#93c5fd; background:#eff6ff; color:#1a56c4; }
-    .hud-note { pointer-events:none; } .hud-note button { pointer-events:auto; }
     .canvas-wrap { border:1px solid var(--border); border-radius:12px; overflow:auto; height:calc(100vh - 132px);
       background:
         linear-gradient(90deg, #eef2f6 1px, transparent 1px) 0 0 / 26px 26px,
@@ -46,18 +45,17 @@ interface LinkFrom { deviceId: number; deviceName: string; portId: number; portL
     svg text { user-select:none; pointer-events:none; }
     .btn.on { background:#2563eb; color:#fff; border-color:#2563eb; }
     .toolbar .btn { height:28px; padding:0 12px; border-radius:16px; display:inline-flex; align-items:center; gap:5px; font-size:12.5px; }
-    .ham { border:none; background:none; cursor:pointer; width:38px; height:38px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; color:#334; font-size:18px; }
-    .ham:hover { background:#eef1f4; }
     .autochip { height:28px; display:inline-flex; align-items:center; gap:5px; padding:0 12px; border-radius:16px; background:#e6f7ec; color:#16794a; font-size:12px; font-weight:600; white-space:nowrap; }
   `],
   template: `
     <div class="wrap" [class.full]="fullscreen()">
     <div class="top">
-      <button class="ham" (click)="toggleFull()" title="Menú (Esc para salir)"><i class="pi pi-bars"></i></button>
       <h2>🖧 Topología de Red</h2>
       <span class="toolbar" style="margin-left:auto">
+        <button class="btn" [class.on]="connectMode()" (click)="toggleConnect()">🔗 {{ connectMode() ? 'Conectando…' : 'Modo Conectar' }}</button>
         <button class="btn ghost" (click)="importar()" title="Traer/actualizar equipos del ERP">⬇ Importar</button>
         <span class="autochip" title="Monitoreo de caídas automático">🟢 Auto {{ autoSecs }}s</span>
+        <button class="btn ghost" (click)="toggleFull()" [title]="fullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'">{{ fullscreen() ? '✕ Salir' : '⛶' }}</button>
       </span>
     </div>
 
@@ -190,18 +188,9 @@ export class Topologia implements OnInit, OnDestroy {
   private offX = 0; private offY = 0; private moved = false; private startX = 0; private startY = 0;
   private timer: any = null;
 
-  constructor() {
-    // La nota (ej. "Enlace creado.") se auto-oculta para no quedarse encima del tablero.
-    effect(() => { const n = this.note(); if (n) { setTimeout(() => { if (this.note() === n) this.note.set(''); }, 3500); } });
-  }
-  @HostListener('document:keydown.escape')
-  onEsc() { if (this.fullscreen()) this.fullscreen.set(false); }
-
   ngOnInit() {
-    // Solo lee y refresca el estado (ping/caídas) cada autoSecs. La sincronización con el ERP la hace
-    // el scheduler de fondo (cada ~5 min) y el botón Importar — NO en cada entrada, para no arrastrar
-    // ni empujar equipos (evita duplicados).
-    this.load();
+    // Trae/sincroniza equipos del ERP automáticamente al entrar; luego refresca estado cada autoSecs.
+    this.api.syncCheck().subscribe({ next: () => this.load(), error: () => this.load() });
     this.timer = setInterval(() => this.load(), this.autoSecs * 1000);
   }
   ngOnDestroy() { if (this.timer) clearInterval(this.timer); }
@@ -225,7 +214,7 @@ export class Topologia implements OnInit, OnDestroy {
       (auto[n.device_type || 'otro'] ||= []).push(n);
     }
     const types = [...order.filter((t) => auto[t]), ...Object.keys(auto).filter((t) => !order.includes(t))];
-    let y = 96;
+    let y = 20;
     for (const t of types) {
       const arr = auto[t];
       arr.forEach((n, i) => { n.x = 40 + (i % perRow) * (this.NW + 30); n.y = y + Math.floor(i / perRow) * rowH; });

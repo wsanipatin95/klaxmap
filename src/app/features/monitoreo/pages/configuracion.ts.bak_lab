@@ -4,7 +4,6 @@ import { Notificaciones } from './notificaciones';
 import { SaludGponConfig } from './salud-gpon-config';
 import { OltConfig } from './olt-config';
 import { CatalogoComandos } from './catalogo-comandos';
-import { LabSnmp } from './lab-snmp';
 
 /**
  * Página única de Configuración con pestañas. Agrupa los módulos configurables
@@ -13,7 +12,7 @@ import { LabSnmp } from './lab-snmp';
 @Component({
   selector: 'app-configuracion',
   standalone: true,
-  imports: [TiemposConfig, Notificaciones, SaludGponConfig, OltConfig, CatalogoComandos, LabSnmp],
+  imports: [TiemposConfig, Notificaciones, SaludGponConfig, OltConfig, CatalogoComandos],
   template: `
     <div class="tools">
       <span style="font-weight:700;font-size:16px">⚙️ Configuración</span>
@@ -25,14 +24,12 @@ import { LabSnmp } from './lab-snmp';
       <button [class.on]="tab()==='notif'" (click)="tab.set('notif')">🔔 Notificaciones</button>
       <button [class.on]="tab()==='olt'" (click)="tab.set('olt')">🛠️ Configurar OLT</button>
       <button [class.on]="tab()==='catalogo'" (click)="tab.set('catalogo')">📜 Catálogo de comandos</button>
-      <button [class.on]="tab()==='lab'" (click)="tab.set('lab')">🔬 Lab SNMP</button>
     </div>
 
     @if (tab() === 'tiempos') { <app-tiempos /> }
     @else if (tab() === 'gpon') { <app-salud-gpon-config /> }
     @else if (tab() === 'olt') { <app-olt-config /> }
     @else if (tab() === 'catalogo') { <app-catalogo-comandos /> }
-    @else if (tab() === 'lab') { <app-lab-snmp /> }
     @else { <app-notificaciones /> }
   `,
   styles: [`
@@ -43,5 +40,5 @@ import { LabSnmp } from './lab-snmp';
   `],
 })
 export class Configuracion {
-  tab = signal<'tiempos' | 'gpon' | 'notif' | 'olt' | 'catalogo' | 'lab'>('tiempos');
+  tab = signal<'tiempos' | 'gpon' | 'notif' | 'olt' | 'catalogo'>('tiempos');
 }

@@ -234,17 +234,6 @@ export class NocApi {
   }
   supContrato(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/contrato/${id}`).pipe(map(unwrap)); }
   supOnuAlertas(onuId: number, limit = 30): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/onu-alertas/${onuId}?limit=${limit}`).pipe(map(unwrap)); }
-
-  // --- Diagnóstico SNMP (laboratorio). Requiere noc.diag.enabled=true en el NOC. Devuelven texto crudo. ---
-  diagSnmpGet(ip: string, community: string, oid: string, port = 161): Observable<string> {
-    return this.http.get(`${API}/diag/snmpget?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&oid=${encodeURIComponent(oid)}&port=${port}`, { responseType: 'text' });
-  }
-  diagSnmpWalk(ip: string, community: string, oid: string, port = 161, limit = 40): Observable<string> {
-    return this.http.get(`${API}/diag/snmpwalk?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&oid=${encodeURIComponent(oid)}&port=${port}&limit=${limit}`, { responseType: 'text' });
-  }
-  diagScanColumns(ip: string, community: string, base: string, from = 1, to = 30, samples = 3, port = 161, pauseMs = 250): Observable<string> {
-    return this.http.get(`${API}/diag/scan-columns?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&base=${encodeURIComponent(base)}&from=${from}&to=${to}&samples=${samples}&port=${port}&pauseMs=${pauseMs}`, { responseType: 'text' });
-  }
   supTomar(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/tomar`, {}).pipe(map(unwrap)); }
   supEstado(id: number, estado: number, nota?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/estado`, { estado, nota }).pipe(map(unwrap)); }
   supNota(id: number, nota: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/nota`, { nota }).pipe(map(unwrap)); }
