@@ -33,6 +33,7 @@ import { NocNotify } from '../services/noc-notify';
             <span>Routers registrados <span class="cnt">{{ filtered().length }}</span></span>
             <input class="search" [(ngModel)]="q" placeholder="Buscar serie, contrato, marca, IP, MAC…">
             <span class="live" title="La lista se actualiza sola cada 8 s">● En vivo</span>
+            <button class="btn ghost xs" (click)="loadDevices()" title="Refrescar ahora">↻</button>
           </div>
 
           @if (filtered().length) {
@@ -156,42 +157,19 @@ import { NocNotify } from '../services/noc-notify';
                 <button class="btn" (click)="refresh(d)">🔄 Refrescar</button>
                 <button class="btn" (click)="reboot(d)">♻ Reiniciar</button>
                 <button class="btn" (click)="connreq(d)">📡 Connection Request</button>
-                <button class="btn" (click)="wifiEdit.set('nombre')">✏️ Cambiar nombre WiFi</button>
-                <button class="btn" (click)="wifiEdit.set('clave')">🔑 Cambiar clave WiFi</button>
               </div>
               <div class="msec">WiFi</div>
               <div class="wifinow">
                 <div><span>Nombre (SSID)</span><b>{{ d.ssid || '—' }}</b></div>
                 <div><span>Clave</span><b class="mono">{{ d.wifiPassword || '—' }}</b></div>
-                <div><span>Canal</span><b>{{ d.wifiChannel || '—' }}</b></div>
-                <div><span>Dispositivos conectados</span><b class="link" (click)="toggleHosts(d)">{{ d.connectedHosts == null ? '—' : d.connectedHosts }} <span class="mut">{{ hostsOpen() ? '▲' : '▼' }}</span></b></div>
+                <div><span>Dispositivos conectados</span><b>{{ d.connectedHosts == null ? '—' : d.connectedHosts }}</b></div>
               </div>
-              @if (hostsOpen()) {
-                <div class="hostbox">
-                  <div class="hosthd">
-                    <span>Conectados{{ hosts().length ? ' (' + hosts().length + ')' : '' }}</span>
-                    <span class="live" title="Se actualiza solo">● En vivo</span>
-                  </div>
-                  @if (hosts().length) {
-                    <div class="htw"><table class="htab">
-                      <thead><tr><th>Nombre</th><th>IP</th><th>MAC</th><th>Interfaz</th><th></th></tr></thead>
-                      <tbody>
-                        @for (h of hosts(); track h.mac) {
-                          <tr>
-                            <td>{{ h.name || '—' }}</td>
-                            <td class="mono">{{ h.ip || '—' }}</td>
-                            <td class="mono">{{ h.mac || '—' }}</td>
-                            <td>{{ h.iface || '—' }}</td>
-                            <td>{{ (h.active === 'true' || h.active === '1') ? '🟢' : '⚪' }}</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table></div>
-                  } @else {
-                    <div class="tkempty">Leyendo del router… la lista aparece en su próximo contacto (unos segundos).</div>
-                  }
-                </div>
-              }
+              <div class="wifi">
+                <div class="inline"><input class="inp" [(ngModel)]="wifiNombre" placeholder="Nuevo nombre WiFi">
+                  <button class="btn" (click)="wifiNom(d)">Cambiar</button></div>
+                <div class="inline"><input class="inp" [(ngModel)]="wifiClave" placeholder="Nueva clave (mín. 8)">
+                  <button class="btn" (click)="wifiPass(d)">Cambiar</button></div>
+              </div>
               <div class="msec">Tareas recientes</div>
               @if (tareas().length) {
                 <div class="tks">
@@ -217,27 +195,6 @@ import { NocNotify } from '../services/noc-notify';
           </div>
         </div>
       </div>
-      @if (wifiEdit()) {
-        <div class="acsov2" (click)="wifiEdit.set(null)">
-          <div class="acsmd2" (click)="$event.stopPropagation()">
-            <div class="mh">
-              <div class="mhx"><div class="mt">{{ wifiEdit() === 'nombre' ? 'Cambiar nombre WiFi' : 'Cambiar clave WiFi' }}</div></div>
-              <button class="x" (click)="wifiEdit.set(null)">✕</button>
-            </div>
-            <div class="mb">
-              @if (wifiEdit() === 'nombre') {
-                <label class="lbl">Nuevo nombre (SSID)</label>
-                <input class="inp full" [(ngModel)]="wifiNombre" placeholder="Ej. Bryan 007">
-                <div class="mbtns"><button class="btn pri" (click)="wifiNom(d)">Guardar</button></div>
-              } @else {
-                <label class="lbl">Nueva clave (mín. 8)</label>
-                <input class="inp full" [(ngModel)]="wifiClave" placeholder="Nueva clave WiFi">
-                <div class="mbtns"><button class="btn pri" (click)="wifiPass(d)">Guardar</button></div>
-              }
-            </div>
-          </div>
-        </div>
-      }
     }
   `,
   styles: [`
@@ -337,19 +294,6 @@ import { NocNotify } from '../services/noc-notify';
     .wifinow span { font-size:10.5px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
     .wifinow b { font-size:13px; margin-top:2px; }
     .wifi { display:flex; flex-direction:column; gap:9px; }
-    .link { color:var(--pri); cursor:pointer; }
-    .wifibtns { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
-    .hostbox { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:6px; }
-    .hosthd { display:flex; align-items:center; gap:10px; margin-bottom:8px; font-weight:700; font-size:12.5px; }
-    .hosthd span:first-child { margin-right:auto; }
-    .htw { overflow:auto; }
-    .htab { width:100%; border-collapse:collapse; font-size:12px; }
-    .htab th { text-align:left; color:var(--mut); font-weight:700; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; padding:5px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
-    .htab td { padding:5px 8px; border-bottom:1px solid #f4f1f7; }
-    .acsov2 { position:fixed; inset:0; background:rgba(26,21,38,.35); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:100060; padding:20px; }
-    .acsmd2 { background:#fff; border-radius:16px; width:100%; max-width:420px; box-shadow:0 24px 70px rgba(26,21,38,.3); z-index:100061; }
-    .inp.full { width:100%; flex:none; }
-    .mbtns { margin-top:14px; }
     .tks { display:flex; flex-direction:column; gap:6px; }
     .tk { display:flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-size:12.5px; flex-wrap:wrap; }
     .tst { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:.3px; }
@@ -376,18 +320,12 @@ export class AcsConfig implements OnInit, OnDestroy {
   sel = signal<number | null>(null);
   wifiNombre = ''; wifiClave = '';
   tareas = signal<any[]>([]);
-  hosts = signal<any[]>([]);
-  hostsOpen = signal(false);
-  wifiEdit = signal<'nombre' | 'clave' | null>(null);
   private openSet = new Set<number>();
   private timer: any = null;
 
   ngOnInit() { this.load(); this.loadDevices(); this.timer = setInterval(() => this.tick(), 8000); }
-  private tick() { this.loadDevices(); const d = this.selDevice(); if (d && d.contrato) { this.loadTareas(d.contrato); if (this.hostsOpen()) this.loadHosts(d.contrato); } }
+  private tick() { this.loadDevices(); const d = this.selDevice(); if (d && d.contrato) this.loadTareas(d.contrato); }
   loadTareas(contrato: string) { this.api.acsTareas(contrato).subscribe({ next: (t) => this.tareas.set(t || []), error: () => {} }); }
-  toggleHosts(d: any) { const o = !this.hostsOpen(); this.hostsOpen.set(o); if (o && d.contrato) { this.loadHosts(d.contrato); this.leerHosts(d); } }
-  loadHosts(contrato: string) { this.api.acsHosts(contrato).subscribe({ next: (r) => { try { this.hosts.set(r && r.hostsJson ? JSON.parse(r.hostsJson) : []); } catch { this.hosts.set([]); } }, error: () => this.hosts.set([]) }); }
-  leerHosts(d: any) { this.api.acsLeerHosts(d.contrato).subscribe({ next: () => { if (d.contrato) this.loadTareas(d.contrato); }, error: () => {} }); }
   ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
 
   @HostListener('document:keydown.escape') onEsc() { if (this.sel() !== null) this.closeModal(); }
@@ -424,11 +362,11 @@ export class AcsConfig implements OnInit, OnDestroy {
   taskName(t: any): string { const m: any = { REBOOT:'Reiniciar', GET_PARAMETERS:'Refrescar', SET_WIFI_NAME:'Cambiar nombre WiFi', SET_WIFI_PASSWORD:'Cambiar clave WiFi', PUSH_MGMT:'Empujar config', OPTIMIZE_WIFI:'Optimizar WiFi' }; return m[t?.taskType] || t?.taskType || '—'; }
   taskLabel(s: any): string { const m: any = { PENDING:'pendiente', SENT:'enviado', DONE:'hecho', ERROR:'error', EXPIRED:'expirado' }; return m[String(s||'').toUpperCase()] || String(s||'—').toLowerCase(); }
   taskCls(s: any): string { const v = String(s||'').toUpperCase(); const k = v==='DONE'?'ok':v==='ERROR'?'err':v==='SENT'?'snt':v==='EXPIRED'?'exp':'pend'; return 'tst ' + k; }
-  wifiNom(d: any) { const v = this.wifiNombre.trim(); if (!v) return; this.api.acsWifiNombre(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de nombre WiFi encolado.'); this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
-  wifiPass(d: any) { const v = this.wifiClave.trim(); if (v.length < 8) { this.notify.error('La clave WiFi debe tener al menos 8 caracteres.'); return; } this.api.acsWifiClave(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de clave WiFi encolado.'); this.wifiClave = ''; this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
+  wifiNom(d: any) { const v = this.wifiNombre.trim(); if (!v) return; this.api.acsWifiNombre(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de nombre WiFi encolado.'); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
+  wifiPass(d: any) { const v = this.wifiClave.trim(); if (v.length < 8) { this.notify.error('La clave WiFi debe tener al menos 8 caracteres.'); return; } this.api.acsWifiClave(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de clave WiFi encolado.'); this.wifiClave = ''; this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
 
   // --- modal ---
-  openModal(d: any) { this.sel.set(d.id); this.wifiNombre = d.ssid || ''; this.wifiClave = ''; this.tareas.set([]); this.hosts.set([]); this.hostsOpen.set(false); this.wifiEdit.set(null); if (d.contrato) this.loadTareas(d.contrato); }
+  openModal(d: any) { this.sel.set(d.id); this.wifiNombre = d.ssid || ''; this.wifiClave = ''; this.tareas.set([]); if (d.contrato) this.loadTareas(d.contrato); }
   closeModal() { this.sel.set(null); }
   selDevice(): any { const id = this.sel(); if (id == null) return null; return this.devices().find((d) => d.id === id) || null; }
 

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
 
@@ -16,36 +16,6 @@ import { NocApi } from '../services/noc-api';
       <div class="hd">
         <span class="ttl">🔬 Laboratorio SNMP</span>
         <span class="sub">Cazar el OID de tráfico por ONU sin saturar la OLT</span>
-      </div>
-
-      <!-- Prueba de conexión NetFlow (Traffic Flow del MikroTik) -->
-      <div class="card nf">
-        <div class="nfhd">
-          <span class="nftl">🛰️ Prueba de conexión NetFlow</span>
-          <label class="nfauto"><input type="checkbox" [(ngModel)]="nfAuto" (ngModelChange)="nfToggle()"> Auto (3s)</label>
-          <button class="b pri" [disabled]="nfBusy()" (click)="nfProbe()">Probar ahora</button>
-        </div>
-        @if (nf(); as s) {
-          <div class="verdict" [class.ok]="nfState()==='ok'" [class.wait]="nfState()==='wait'" [class.bad]="nfState()==='bad'">
-            <div class="vico">{{ nfIcon() }}</div>
-            <div class="vtx">
-              <div class="vt1">{{ nfTitle() }}</div>
-              <div class="vt2">{{ nfSub() }}</div>
-            </div>
-          </div>
-          <div class="nfgrid">
-            <div><span>Colector</span><b>{{ s.listening ? 'escuchando' : 'apagado' }}</b></div>
-            <div><span>Puerto</span><b>{{ s.port || '—' }}</b></div>
-            <div><span>Paquetes recibidos</span><b>{{ s.packetsTotal || 0 }}</b></div>
-            <div><span>Flujos parseados</span><b>{{ s.flowsTotal || 0 }}</b></div>
-            <div><span>Último exportador</span><b>{{ s.lastExporter || '—' }}</b></div>
-            <div><span>Último paquete</span><b>{{ s.secsSincePacket==null ? 'nunca' : 'hace ' + s.secsSincePacket + 's' }}</b></div>
-          </div>
-          @if (s.lastError) { <div class="nferr">⚠ {{ s.lastError }}</div> }
-        } @else {
-          <div class="nfempty">Tocá "Probar ahora" para preguntarle al colector del NOC si le está llegando algo.</div>
-        }
-        <div class="hint">💡 Apuntá el MikroTik con <code>/ip traffic-flow target</code> a la IP del NOC, puerto {{ nf()?.port || 2055 }}, versión 9. Si "Paquetes recibidos" sube, ¡ya conecta!</div>
       </div>
 
       <div class="card">
@@ -108,27 +78,9 @@ import { NocApi } from '../services/noc-api';
     .out .ohd span { margin-right:auto; }
     textarea { width:100%; height:340px; resize:vertical; background:#0c1024; color:#c9d3ff; border-color:#2c3355; white-space:pre; font-size:12px; }
     .hint { font-size:12px; color:var(--muted,#8a8296); margin-top:8px; }
-    .nf .nfhd { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    .nf .nftl { font-weight:800; font-size:15px; margin-right:auto; }
-    .nf .nfauto { font-size:12px; color:var(--muted,#8a8296); display:flex; align-items:center; gap:5px; cursor:pointer; }
-    .verdict { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:12px; border:1px solid #ece8f1; background:#faf8fc; margin-bottom:12px; }
-    .verdict.ok { background:#eafaf0; border-color:#bfead0; }
-    .verdict.wait { background:#fff7ea; border-color:#f0dcb8; }
-    .verdict.bad { background:#fdecec; border-color:#f2c9c9; }
-    .verdict .vico { font-size:30px; line-height:1; }
-    .verdict .vt1 { font-weight:800; font-size:15px; }
-    .verdict .vt2 { font-size:12.5px; color:#5b5566; margin-top:2px; }
-    .nfgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px 16px; }
-    @media(max-width:640px){ .nfgrid { grid-template-columns:repeat(2,1fr); } }
-    .nfgrid > div { display:flex; flex-direction:column; }
-    .nfgrid span { font-size:11px; color:var(--muted,#8a8296); font-weight:600; }
-    .nfgrid b { font-size:13.5px; font-family:'Consolas',monospace; }
-    .nferr { margin-top:10px; font-size:12.5px; color:#b42318; }
-    .nfempty { font-size:13px; color:var(--muted,#8a8296); padding:8px 0; }
-    .nf code { background:#f3eef7; padding:1px 5px; border-radius:5px; font-size:12px; }
   `],
 })
-export class LabSnmp implements OnDestroy {
+export class LabSnmp {
   private api = inject(NocApi);
 
   olts = signal<any[]>([]);
@@ -136,47 +88,6 @@ export class LabSnmp implements OnDestroy {
   salida = signal('');
   busy = signal(false);
   oidManual = '';
-
-  // ---- Prueba de conexión NetFlow (semáforo en vivo) ----
-  nf = signal<any | null>(null);
-  nfBusy = signal(false);
-  nfAuto = false;
-  private nfTimer: any = null;
-
-  ngOnDestroy() { if (this.nfTimer) { clearInterval(this.nfTimer); this.nfTimer = null; } }
-
-  nfProbe() {
-    this.nfBusy.set(true);
-    this.api.flowStatus().subscribe({
-      next: (st) => { this.nf.set(st); this.nfBusy.set(false); },
-      error: () => { this.nfBusy.set(false); },
-    });
-  }
-  nfToggle() {
-    if (this.nfTimer) { clearInterval(this.nfTimer); this.nfTimer = null; }
-    if (this.nfAuto) { this.nfProbe(); this.nfTimer = setInterval(() => this.nfProbe(), 3000); }
-  }
-  nfState(): 'ok' | 'wait' | 'bad' {
-    const s = this.nf(); if (!s) return 'wait';
-    if (!s.listening) return 'bad';
-    if ((s.packetsTotal || 0) > 0 && s.receiving) return 'ok';
-    return 'wait';
-  }
-  nfIcon(): string { const st = this.nfState(); return st === 'ok' ? '✅' : st === 'bad' ? '❌' : '⏳'; }
-  nfTitle(): string {
-    const s = this.nf(); if (!s) return '';
-    if (!s.listening) return 'Colector apagado';
-    if ((s.packetsTotal || 0) > 0 && s.receiving) return '¡Conecta! Están llegando flujos';
-    if ((s.packetsTotal || 0) > 0 && !s.receiving) return 'Recibió antes, pero ahora no llega nada';
-    return 'Escuchando, sin paquetes todavía';
-  }
-  nfSub(): string {
-    const s = this.nf(); if (!s) return '';
-    if (!s.listening) return s.lastError || 'El colector NetFlow no está activo en el NOC.';
-    if ((s.packetsTotal || 0) > 0 && s.receiving) return 'Exportador ' + (s.lastExporter || '?') + ' · ' + (s.flowsTotal || 0) + ' flujos parseados.';
-    if ((s.packetsTotal || 0) > 0 && !s.receiving) return 'Último de ' + (s.lastExporter || '?') + ' hace ' + s.secsSincePacket + 's. Revisá que el MikroTik siga exportando.';
-    return 'Escucha en el puerto ' + s.port + ' pero el MikroTik aún no exporta a esta IP.';
-  }
 
   // Subárboles candidatos donde suele vivir el tráfico/performance por ONU en ZTE (enterprise 3902).
   private basesTrafico = [

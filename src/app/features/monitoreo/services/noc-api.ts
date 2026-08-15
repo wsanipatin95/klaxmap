@@ -127,6 +127,9 @@ export class NocApi {
   acsReboot(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/reboot`, {}).pipe(map(unwrap)); }
   acsWifiNombre(contrato: string, ssid: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/nombre`, { ssid }).pipe(map(unwrap)); }
   acsWifiClave(contrato: string, password: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/clave`, { password }).pipe(map(unwrap)); }
+  acsWifiOptimizar(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/optimizar`, {}).pipe(map(unwrap)); }
+  acsLeerHosts(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts/leer`, {}).pipe(map(unwrap)); }
+  acsHosts(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts`).pipe(map(unwrap)); }
   acsRefresh(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/refresh`, {}).pipe(map(unwrap)); }
   acsParametros(contrato: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/parametros`).pipe(map(unwrap)); }
   acsConfig(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/config`).pipe(map(unwrap)); }
@@ -204,6 +207,7 @@ export class NocApi {
 
   // ---- Tráfico por app (NetFlow) ----
   flowOverview(hours = 6, dir = 'd'): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/overview?hours=${hours}&dir=${dir}`).pipe(map(unwrap)); }
+  flowStatus(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/status`).pipe(map(unwrap)); }
   flowTopClients(hours = 6, limit = 50): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/flow/top-clients?hours=${hours}&limit=${limit}`).pipe(map(unwrap)); }
   flowApps(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/flow/apps`).pipe(map(unwrap)); }
 
@@ -234,6 +238,7 @@ export class NocApi {
   }
   supContrato(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/contrato/${id}`).pipe(map(unwrap)); }
   supOnuAlertas(onuId: number, limit = 30): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/onu-alertas/${onuId}?limit=${limit}`).pipe(map(unwrap)); }
+  flowClientDaily(ip: string, hours = 24): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/client-daily?ip=${encodeURIComponent(ip)}&hours=${hours}`).pipe(map(unwrap)); }
 
   // --- Diagnóstico SNMP (laboratorio). Requiere noc.diag.enabled=true en el NOC. Devuelven texto crudo. ---
   diagSnmpGet(ip: string, community: string, oid: string, port = 161): Observable<string> {

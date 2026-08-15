@@ -33,6 +33,7 @@ import { NocNotify } from '../services/noc-notify';
             <span>Routers registrados <span class="cnt">{{ filtered().length }}</span></span>
             <input class="search" [(ngModel)]="q" placeholder="Buscar serie, contrato, marca, IP, MAC…">
             <span class="live" title="La lista se actualiza sola cada 8 s">● En vivo</span>
+            <button class="btn ghost xs" (click)="loadDevices()" title="Refrescar ahora">↻</button>
           </div>
 
           @if (filtered().length) {
@@ -156,8 +157,6 @@ import { NocNotify } from '../services/noc-notify';
                 <button class="btn" (click)="refresh(d)">🔄 Refrescar</button>
                 <button class="btn" (click)="reboot(d)">♻ Reiniciar</button>
                 <button class="btn" (click)="connreq(d)">📡 Connection Request</button>
-                <button class="btn" (click)="wifiEdit.set('nombre')">✏️ Cambiar nombre WiFi</button>
-                <button class="btn" (click)="wifiEdit.set('clave')">🔑 Cambiar clave WiFi</button>
               </div>
               <div class="msec">WiFi</div>
               <div class="wifinow">
@@ -166,11 +165,15 @@ import { NocNotify } from '../services/noc-notify';
                 <div><span>Canal</span><b>{{ d.wifiChannel || '—' }}</b></div>
                 <div><span>Dispositivos conectados</span><b class="link" (click)="toggleHosts(d)">{{ d.connectedHosts == null ? '—' : d.connectedHosts }} <span class="mut">{{ hostsOpen() ? '▲' : '▼' }}</span></b></div>
               </div>
+              <div class="wifibtns">
+                <button class="btn xs" (click)="wifiEdit.set('nombre')">✏️ Cambiar nombre</button>
+                <button class="btn xs" (click)="wifiEdit.set('clave')">🔑 Cambiar clave</button>
+              </div>
               @if (hostsOpen()) {
                 <div class="hostbox">
                   <div class="hosthd">
                     <span>Conectados{{ hosts().length ? ' (' + hosts().length + ')' : '' }}</span>
-                    <span class="live" title="Se actualiza solo">● En vivo</span>
+                    <button class="btn xs ghost" (click)="leerHosts(d)">🔄 Leer del router</button>
                   </div>
                   @if (hosts().length) {
                     <div class="htw"><table class="htab">
@@ -188,7 +191,7 @@ import { NocNotify } from '../services/noc-notify';
                       </tbody>
                     </table></div>
                   } @else {
-                    <div class="tkempty">Leyendo del router… la lista aparece en su próximo contacto (unos segundos).</div>
+                    <div class="tkempty">Sin lista aún. Tocá "Leer del router" y esperá su próximo contacto.</div>
                   }
                 </div>
               }
@@ -385,9 +388,9 @@ export class AcsConfig implements OnInit, OnDestroy {
   ngOnInit() { this.load(); this.loadDevices(); this.timer = setInterval(() => this.tick(), 8000); }
   private tick() { this.loadDevices(); const d = this.selDevice(); if (d && d.contrato) { this.loadTareas(d.contrato); if (this.hostsOpen()) this.loadHosts(d.contrato); } }
   loadTareas(contrato: string) { this.api.acsTareas(contrato).subscribe({ next: (t) => this.tareas.set(t || []), error: () => {} }); }
-  toggleHosts(d: any) { const o = !this.hostsOpen(); this.hostsOpen.set(o); if (o && d.contrato) { this.loadHosts(d.contrato); this.leerHosts(d); } }
+  toggleHosts(d: any) { const o = !this.hostsOpen(); this.hostsOpen.set(o); if (o && d.contrato) this.loadHosts(d.contrato); }
   loadHosts(contrato: string) { this.api.acsHosts(contrato).subscribe({ next: (r) => { try { this.hosts.set(r && r.hostsJson ? JSON.parse(r.hostsJson) : []); } catch { this.hosts.set([]); } }, error: () => this.hosts.set([]) }); }
-  leerHosts(d: any) { this.api.acsLeerHosts(d.contrato).subscribe({ next: () => { if (d.contrato) this.loadTareas(d.contrato); }, error: () => {} }); }
+  leerHosts(d: any) { this.api.acsLeerHosts(d.contrato).subscribe({ next: () => { this.notify.ok('Lectura de conectados encolada.'); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
   ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
 
   @HostListener('document:keydown.escape') onEsc() { if (this.sel() !== null) this.closeModal(); }
