@@ -27,111 +27,104 @@ import { Bandeja } from './bandeja';
     @if (view()==='ticket' && ticket(); as t) {
       <a class="back" (click)="view.set('bandeja')">← Volver a la bandeja</a>
 
-      @if (t.idTic) {
-        <div class="ribbon">
-          <span class="tk">Ticket #{{ t.idTic }}</span>
-          @if (t.estado) { <span class="rm">{{ t.estado }}</span> }
-          @if (cf('estado','estado_contrato','con_estado')) { <span class="cpill">{{ cf('estado','estado_contrato','con_estado') }}</span> }
-        </div>
-      }
-
       <div class="fgrid2">
 
-        <!-- IZQUIERDA -->
-        <div class="fcard">
-          <div class="fhd">
-            <div class="fav">{{ (cf('nombre','cliente','representante') || t.cliente || '?').slice(0,2).toUpperCase() }}</div>
-            <div class="fwho">
-              <div class="nm">{{ cf('nombre','cliente','representante') || t.cliente }}</div>
-              <div class="cn">{{ t.contrato || '—' }}@if (cf('numero_megas','megas','plan')) { · {{ cf('numero_megas','megas','plan') }} Mbps }</div>
+        <!-- COLUMNA 1 - Cliente, contrato y atencion -->
+        <div class="fcol">
+          <div class="fcard">
+            <div class="fhd">
+              <div class="fav">{{ (cf('nombre','cliente','representante') || t.cliente || '?').slice(0,2).toUpperCase() }}</div>
+              <div class="fwho">
+                <div class="nm">{{ cf('nombre','cliente','representante') || t.cliente }}</div>
+                <div class="cn">CI/RUC {{ cf('ruc','cedula','dni','documento') || '—' }} · contrato {{ t.contrato || '—' }}@if (t.idTic) { · ticket #{{ t.idTic }} }</div>
+              </div>
+              <div class="fst">
+                @if (cf('estado','estado_contrato','con_estado')) { <span class="cpill">{{ cf('estado','estado_contrato','con_estado') }}</span> }
+              </div>
             </div>
-            <div class="fst" style="display:flex;gap:8px">
+
+            <div class="cinfo">
+              <div><span>Teléfono</span><b class="mono">{{ cf('movil','telefono','celular') || t.movil || '—' }}</b></div>
+              <div><span>Plan</span><b>{{ cf('numero_megas','megas','plan') ? cf('numero_megas','megas','plan') + ' Mbps' : '—' }}</b></div>
+              <div><span>Dirección</span><b>{{ cf('direccion','direccion_domicilio','dir') || '—' }}</b></div>
+              <div><span>Nodo · VLAN</span><b>{{ cf('nodo','vlan','vlan_red') || '—' }}</b></div>
+            </div>
+
+            <div class="cbar">
               <button class="btn2 wa" [disabled]="!(cf('movil','telefono','celular') || t.movil)" (click)="waCliente()">💬 WhatsApp</button>
               <a class="btn2" [href]="'tel:'+(cf('movil','telefono','celular') || t.movil || '')" style="text-decoration:none">📞 Llamar</a>
-            </div>
-          </div>
-
-          <div class="info">
-            <div><span>Teléfono</span><b>{{ cf('movil','telefono','celular') || t.movil || '—' }}</b></div>
-            <div><span>Dirección</span><b>{{ cf('direccion','direccion_domicilio','dir') || '—' }}</b></div>
-            <div><span>Nodo · VLAN</span><b>{{ cf('nodo','vlan','vlan_red') || '—' }}</b></div>
-            <div><span>OLT</span><b>{{ t.olt_name || '—' }}</b></div>
-            <div><span>IP</span><b class="mono">{{ t.client_ip || '—' }}</b></div>
-            <div><span>Estado</span><b>{{ cf('estado','estado_contrato','con_estado') || '—' }}</b></div>
-          </div>
-
-          <div class="sect">
-            <div class="sh">Diagnóstico guiado</div>
-            <div class="chips">
-              @for (d of diagBtns; track d.l) { <button class="chip" (click)="addDiag(d.t)">{{ d.l }}</button> }
-            </div>
-            <textarea class="isel ta" rows="2" [(ngModel)]="diag" placeholder="Diagnóstico…"></textarea>
-          </div>
-
-          <div class="sect">
-            <div class="sh">Acciones remotas</div>
-            <div class="actg">
-              <button class="act" (click)="runAction('estado')"><span class="ai">📶</span>Estado ONU</button>
-              <button class="act" (click)="runAction('potencia')"><span class="ai">📉</span>Potencia</button>
-              <button class="act" (click)="runAction('ping')"><span class="ai">📡</span>Ping</button>
-              <button class="act" (click)="runAction('consumo')"><span class="ai">📊</span>Tráfico</button>
-              <button class="act" (click)="runAction('caidas')"><span class="ai">⏱</span>Caídas</button>
-              <button class="act" (click)="copyIp()"><span class="ai">📋</span>Copiar IP</button>
-            </div>
-            @if (lastResult()) { <div class="res">{{ lastResult() }}</div> }
-          </div>
-
-          <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('hist')" (click)="toggleSec('hist')">Historial de acciones<span class="ic">▶</span></div>
-            @if (secOpen('hist')) {
-              <div class="acc-b">
-                @if (t.idTic) {
-                  <div class="ir"><input class="isel" style="flex:1" [(ngModel)]="notaTxt" placeholder="Nota / observación…"><button class="btn2 xs" [disabled]="!notaTxt.trim()" (click)="agregarNota(t)">Agregar</button></div>
-                }
-                @if (ticSaltos().length) {
-                  <div class="tl">
-                    @for (l of ticSaltos(); track $index) { <div class="it"><span class="tm">{{ l.fecha }}</span><span class="tx"><b>{{ accionTic(l) }}</b> · {{ l.usu }}{{ l.observacion ? ' — ' + l.observacion : '' }}</span></div> }
-                  </div>
-                } @else { <div class="note">Sin movimientos en el ticket.</div> }
-              </div>
-            }
-          </div>
-
-          <div class="foot">
-            @if (t.idTic) { <button class="btn2 primary" (click)="tomarTicket(t)">🙋 Tomar</button> }
-            <button class="btn2 ok" [disabled]="!t.idTic" (click)="marcarSolucionado(t)">✅ Solucionado</button>
-            <button class="btn2 esc" [disabled]="!t.idTic" (click)="escalar(t)">↗ Escalar a NOC</button>
-            <button class="btn2 primary" (click)="showOrder.set(true)">🔧 Orden</button>
-            @if (t.idTic) {
+              <span class="note" style="margin:0 6px">envío por Omni: en integración</span>
               <div style="flex:1"></div>
-              <select class="isel" [(ngModel)]="nuevoEstado"><option [ngValue]="null">Otro estado…</option>@for (e of estadosCat(); track e.id) { <option [ngValue]="e.id">{{ e.nombre }}</option> }</select>
-              <button class="btn2" [disabled]="nuevoEstado==null" (click)="cambiarEstado(t)">Aplicar</button>
-            }
+              @if (t.idTic) {
+                <button class="btn2 primary" (click)="tomarTicket(t)">🙋 Tomar</button>
+                <select class="isel" [(ngModel)]="nuevoEstado"><option [ngValue]="null">Estado…</option>@for (e of estadosCat(); track e.id) { <option [ngValue]="e.id">{{ e.nombre }}</option> }</select>
+                <button class="btn2" [disabled]="nuevoEstado==null" (click)="cambiarEstado(t)">Aplicar</button>
+              }
+            </div>
+          </div>
+
+          <div class="fcard">
+            <div class="ft">🕒 Historial del ticket</div>
+            <div class="fb">
+              @if (t.idTic) {
+                <div class="ir"><input class="isel" style="flex:1" [(ngModel)]="notaTxt" placeholder="Nota / observación…"><button class="btn2 xs" [disabled]="!notaTxt.trim()" (click)="agregarNota(t)">Agregar</button></div>
+              }
+              @if (ticSaltos().length) {
+                <div class="tl">
+                  @for (l of ticSaltos(); track $index) { <div class="it"><span class="tm">{{ l.fecha }}</span><span class="tx"><b>{{ accionTic(l) }}</b> · {{ l.usu }}{{ l.observacion ? ' — ' + l.observacion : '' }}</span></div> }
+                </div>
+              } @else { <div class="note">Sin movimientos en el ticket.</div> }
+            </div>
           </div>
         </div>
 
-        <!-- DERECHA -->
-        <div class="fcard">
-          <div class="sum">
-            <div class="sh">Resumen NOC / ONU</div>
-            <div class="semaforo">
-              @for (lp of lamps(); track lp.k) {
-                <div class="lamp">
-                  <span class="dot" [class.g]="lp.c==='g'" [class.a]="lp.c==='a'" [class.r]="lp.c==='r'"></span>
-                  <div><div class="lk">{{ lp.k }}</div><div class="lv" [class.ok]="lp.c==='g'" [class.warn]="lp.c==='a'" [class.bad]="lp.c==='r'">{{ lp.l }}</div></div>
-                </div>
-              }
-            </div>
-            <div class="kpis">
-              <div class="kpi"><div class="k">OLT</div><div class="v s">{{ t.olt_name || '—' }}</div></div>
-              <div class="kpi"><div class="k">PON · ONU</div><div class="v s mono">{{ t.pon }} · {{ t.onu_num ?? '—' }}</div></div>
-              <div class="kpi"><div class="k">Distancia</div><div class="v s">{{ t.distance_m!=null ? t.distance_m+' m' : '—' }}</div></div>
-              <div class="kpi"><div class="k">Consumo ↓/↑</div><div class="v s">{{ rate(t.out_rate_bps) }} / {{ rate(t.in_rate_bps) }}</div></div>
+        <!-- COLUMNA 2 - Red: OLT/ONU + Router (ACS) -->
+        <div class="fcol">
+          <div class="fcard">
+            <div class="ft">🛰️ Servicio y acciones · OLT / ONU</div>
+            <div class="fb">
+              <div class="kpis">
+                <div class="kpi"><div class="k">Estado ONU</div><div class="v" [innerHTML]="stBadge(t.phase_state)"></div></div>
+                <div class="kpi"><div class="k">Potencia RX</div><div class="v" [style.color]="rxColor(t.rx_dbm)">{{ t.rx_dbm!=null ? (t.rx_dbm | number:'1.2-2')+' dBm' : '—' }}</div></div>
+                <div class="kpi"><div class="k">OLT</div><div class="v s">{{ t.olt_name || '—' }}</div></div>
+                <div class="kpi"><div class="k">IP cliente</div><div class="v s mono">{{ t.client_ip || '—' }}</div></div>
+                <div class="kpi"><div class="k">PON · ONU</div><div class="v s mono">{{ t.pon }} · {{ t.onu_num ?? '—' }}</div></div>
+                <div class="kpi"><div class="k">Distancia</div><div class="v s">{{ t.distance_m!=null ? t.distance_m+' m' : '—' }}</div></div>
+                <div class="kpi"><div class="k">Consumo ↓/↑</div><div class="v s">{{ rate(t.out_rate_bps) }} / {{ rate(t.in_rate_bps) }}</div></div>
+                <div class="kpi"><div class="k">Contrato</div><div class="v s mono">{{ t.contrato || '—' }}</div></div>
+              </div>
+
+              <div class="chips" style="margin-top:12px">
+                <button class="chip" (click)="runAction('estado')">Estado</button>
+                <button class="chip" (click)="runAction('potencia')">Potencia</button>
+                <button class="chip" (click)="runAction('caidas')">Caídas</button>
+                <button class="chip" (click)="runAction('consumo')">Consumo</button>
+                <button class="chip" (click)="runAction('ping')">Ping</button>
+                <button class="chip" (click)="copyIp()">Copiar IP</button>
+              </div>
+              @if (lastResult()) { <div class="res">{{ lastResult() }}</div> }
+              <div class="sub">Diagnóstico</div>
+              <div class="chips">
+                @for (d of diagBtns; track d.l) { <button class="chip" (click)="addDiag(d.t)">{{ d.l }}</button> }
+              </div>
+              <textarea class="isel ta" rows="3" [(ngModel)]="diag" placeholder="Diagnóstico…"></textarea>
+              <div class="rowbtns">
+                <button class="btn2 xs" (click)="saveDiag()">💾 Guardar</button>
+                <button class="btn2 xs" (click)="copyDiag()">📋 Copiar</button>
+                <button class="btn2 xs ok" (click)="setEstado('Solucionado','Solucionado remoto')">✅ Solucionado</button>
+                <button class="btn2 xs" (click)="showOrder.set(true)">🔧 Orden</button>
+              </div>
+              <div class="sub">Log de acciones</div>
+              <div class="tl">
+                @for (e of t.log; track $index) { <div class="it"><span class="tm">{{ e.hora }}</span><span class="tx"><b>{{ e.usuario }}</b> {{ e.accion }}{{ e.resultado ? ' → ' + e.resultado : '' }}</span></div> }
+                @empty { <div class="note">Sin acciones todavía.</div> }
+              </div>
             </div>
           </div>
 
-          <div class="sect">
-            <div class="sh">Router · TR-069</div>
+          <div class="fcard">
+            <div class="ft">📶 Router · TR-069 (ACS)</div>
+            <div class="fb">
           @if (acs(); as a) {
             @if (acsWrite() === false) {
               <div style="display:flex;gap:8px;align-items:center;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:12.5px;color:#9a3412">
@@ -162,44 +155,7 @@ import { Bandeja } from './bandeja';
           } @else {
             <div class="note">{{ acsMsg() || 'Este cliente aún no tiene router registrado en el ACS.' }}</div>
           }
-          </div>
-
-          <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('alertas')" (click)="toggleSec('alertas')">Alertas y sugerencias<span class="ic">▶</span></div>
-            @if (secOpen('alertas')) {
-              <div class="acc-b">
-                @for (sg of sugerencias(); track $index) {
-                  <div class="al" [class.r]="sg.cls==='r'" [class.a]="sg.cls==='a'"><span class="ab">{{ sg.ic }}</span><div><div class="att">{{ sg.att }}</div><div class="as">{{ sg.as }}</div></div></div>
-                }
-                @for (a of onuAlertas(); track $index) {
-                  <div class="al" [class.r]="a.to_state==='sin_servicio'" [class.a]="a.to_state==='riesgo'"><span class="ab">{{ a.to_state==='sin_servicio' ? '🔴' : a.to_state==='riesgo' ? '⚠️' : '🟢' }}</span><div><div class="att" [innerHTML]="alertaTxt(a)"></div><div class="as">{{ a.cuando }}</div></div></div>
-                }
-                @if (!onuAlertas().length && !sugerencias().length) { <div class="note">Sin alertas para esta ONU.</div> }
-              </div>
-            }
-          </div>
-
-          <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('consumo')" (click)="toggleSec('consumo')">📈 Consumo del día (NetFlow)<span class="ic">▶</span></div>
-            @if (secOpen('consumo')) {
-              <div class="acc-b">
-                @if (consumo(); as cn) {
-                  <div class="cons-tot">
-                    <div><span>Bajada ↓</span><b>{{ fmtGB(cn.total_down) }}</b></div>
-                    <div><span>Subida ↑</span><b>{{ fmtGB(cn.total_up) }}</b></div>
-                    <div><span>Ventana</span><b>{{ cn.hours }} h</b></div>
-                  </div>
-                  @if (cn.serie?.length) {
-                    <svg class="cons-svg" viewBox="0 0 300 90" preserveAspectRatio="none">
-                      @for (b of consBars(); track $index) { <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.w" [attr.height]="b.h" fill="#2563eb" rx="1"></rect> }
-                    </svg>
-                    <div class="cons-leg"><span><i style="background:#2563eb"></i> Bajada por hora</span><span style="margin-left:auto">↓ {{ fmtGB(cn.total_down) }} · ↑ {{ fmtGB(cn.total_up) }}</span></div>
-                  } @else {
-                    <div class="note">Sin datos de tráfico para {{ cn.ip }} todavía. Requiere NetFlow activo (Traffic Flow del borde) apuntando al NOC.</div>
-                  }
-                } @else { <div class="note">Sin IP de cliente para consultar el consumo.</div> }
-              </div>
-            }
+            </div>
           </div>
         </div>
 
@@ -238,14 +194,14 @@ import { Bandeja } from './bandeja';
     .acs-dot { display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:middle; }
     .acs-dot.on { background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.22); }
     .acs-now { border:1px solid #d97706 !important; color:#b45309; font-weight:600; }
-    .fbox,.fcard { background:#fff; border:1px solid #ece8f1; border-radius:16px; box-shadow:0 1px 2px rgba(26,21,38,.04),0 6px 24px rgba(26,21,38,.05); overflow:hidden; }
+    .fbox,.fcard { background:#fff; border:1px solid #ece8f1; border-radius:16px; box-shadow:0 1px 2px rgba(26,21,38,.04),0 6px 24px rgba(26,21,38,.05); }
     .fbox { margin-bottom:14px; }
     .fhd { display:flex; align-items:center; gap:12px; padding:16px; }
     .fav { width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7c0061,#a4008a);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px; }
     .fwho .nm { font-weight:800; font-size:16px; }
     .fwho .cn { color:var(--muted); font-size:12.5px; }
     .fst { margin-left:auto; }
-    .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 16px; }
+    .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:0; }
     @media(max-width:1200px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
     .kpi { background:#faf9fc; border:1px solid #ece8f1; border-radius:12px; padding:10px 12px; }
     .kpi .k { font-size:11px; color:var(--muted); font-weight:600; }
@@ -267,7 +223,7 @@ import { Bandeja } from './bandeja';
     .cinfo b { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .cpill { font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f7f0f6; color:#7c0061; }
     .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
-    .fgrid2 { display:grid; grid-template-columns:1fr 1.06fr; gap:16px; align-items:start; }
+    .fgrid2 { display:grid; grid-template-columns:1fr 1.2fr; gap:14px; align-items:start; }
     @media(max-width:900px){ .fgrid2{ grid-template-columns:1fr } }
     .fcol { display:flex; flex-direction:column; gap:14px; }
     @media(max-width:900px){ .fgrid{ grid-template-columns:1fr } }
@@ -287,56 +243,6 @@ import { Bandeja } from './bandeja';
     .tl .it:last-child { border-bottom:none; }
     .tl .tm { color:var(--muted); font-family:'Consolas',monospace; white-space:nowrap; font-size:11.5px; }
     .tl .tx { flex:1; }
-    .acc { border-top:1px solid #ece8f1; }
-    .acc-h { display:flex; align-items:center; gap:8px; padding:13px 16px; cursor:pointer; font-weight:700; font-size:13.5px; user-select:none; }
-    .acc-h:hover { background:#faf9fc; }
-    .acc-h .ic { margin-left:auto; transition:transform .15s; color:var(--muted); font-size:11px; }
-    .acc-h.open .ic { transform:rotate(90deg); }
-    .acc-b { padding:0 16px 16px; }
-    .tag { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:#f3eef7; color:#7c0061; }
-    .al-sin { color:#dc2626; } .al-warn { color:#d97706; } .al-ok { color:#16a34a; } .al-mut { color:#8a8296; }
-    /* v2 layout */
-    .ribbon { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#fff; border:1px solid #ece8f1; border-radius:14px; padding:10px 16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(26,21,38,.04); }
-    .ribbon .tk { font-weight:800; }
-    .ribbon .rm { color:var(--muted); font-size:12.5px; }
-    .cn .mono, .mono { font-family:'Consolas',monospace; }
-    .info { display:grid; grid-template-columns:repeat(3,1fr); gap:9px 14px; padding:2px 16px 14px; }
-    @media(max-width:640px){ .info{ grid-template-columns:repeat(2,1fr) } }
-    .info > div { display:flex; flex-direction:column; }
-    .info span { font-size:10.5px; color:var(--muted); font-weight:600; }
-    .info b { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sect { padding:13px 16px; border-top:1px solid #ece8f1; }
-    .sh { font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin:0 0 9px; display:flex; align-items:center; gap:7px; }
-    .sum { padding:14px 16px; }
-    .actg { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-    @media(max-width:520px){ .actg{ grid-template-columns:repeat(2,1fr) } }
-    .act { border:1px solid #ece8f1; border-radius:10px; padding:11px 8px; font-size:12px; cursor:pointer; background:#fff; display:flex; flex-direction:column; align-items:center; gap:4px; font-weight:600; }
-    .act:hover { background:#faf8fc; }
-    .act .ai { font-size:16px; }
-    .foot { display:flex; gap:9px; flex-wrap:wrap; align-items:center; padding:13px 16px; border-top:1px solid #ece8f1; background:#faf9fc; }
-    .btn2.esc { background:#fff; color:#d97706; border-color:#f5cf94; }
-    .semaforo { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:12px 0; }
-    .lamp { border:1px solid #ece8f1; border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:9px; }
-    .dot { width:11px; height:11px; border-radius:50%; background:var(--muted); }
-    .dot.g { background:#16a34a; box-shadow:0 0 0 4px rgba(22,163,74,.16); }
-    .dot.a { background:#d97706; box-shadow:0 0 0 4px rgba(217,119,6,.16); }
-    .dot.r { background:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,.16); }
-    .lamp .lk { font-size:10.5px; color:var(--muted); font-weight:700; text-transform:uppercase; }
-    .lamp .lv { font-size:12.5px; font-weight:700; }
-    .lv.ok { color:#16a34a; } .lv.warn { color:#d97706; } .lv.bad { color:#dc2626; }
-    .al { display:flex; gap:10px; padding:9px 11px; border:1px solid #ece8f1; border-radius:10px; margin-bottom:7px; align-items:flex-start; }
-    .al .ab { font-size:15px; line-height:1.2; }
-    .al .att { font-weight:700; font-size:12.5px; }
-    .al .as { color:var(--muted); font-size:11.5px; }
-    .al.r { border-color:#f6cccc; background:#fef5f5; }
-    .al.a { border-color:#f5e2bf; background:#fffbf2; }
-    .cons-tot { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
-    .cons-tot > div { background:#faf9fc; border:1px solid #ece8f1; border-radius:10px; padding:8px 10px; }
-    .cons-tot span { font-size:11px; color:var(--muted); font-weight:600; display:block; }
-    .cons-tot b { font-size:14px; }
-    .cons-svg { width:100%; height:90px; background:#faf9fc; border:1px solid #ece8f1; border-radius:10px; }
-    .cons-leg { display:flex; gap:14px; align-items:center; margin-top:6px; font-size:11px; color:var(--muted); }
-    .cons-leg i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
   `],
 })
 export class Soporte {
@@ -347,9 +253,6 @@ export class Soporte {
   view = signal<'bandeja' | 'ticket'>('bandeja');
   ticSaltos = signal<any[]>([]);
   cli = signal<any>({});
-  onuAlertas = signal<any[]>([]);
-  consumo = signal<any | null>(null);
-  openSec = signal<Set<string>>(new Set(['hist', 'alertas', 'consumo']));
   ticAcc = signal<any[]>([]);
   estadosCat = signal<{ id: any; nombre: string }[]>([]);
   nuevoEstado: number | null = null;
@@ -386,7 +289,7 @@ export class Soporte {
     const c = String(r?.con ?? '').trim();
     if (!c) return;
     const idTic = r?.id_tic_ticket ?? null;
-    this.ticSaltos.set([]); this.ticAcc.set([]); this.nuevoEstado = null; this.notaTxt = ''; this.cli.set({}); this.onuAlertas.set([]); this.consumo.set(null);
+    this.ticSaltos.set([]); this.ticAcc.set([]); this.nuevoEstado = null; this.notaTxt = ''; this.cli.set({});
     const idc = Number(c); if (!isNaN(idc)) this.api.supContrato(idc).subscribe({ next: (d: any) => this.cli.set(d || {}), error: () => {} });
     if (!this.estadosCat().length) this.api.supInboxCatalogos().subscribe({ next: (cc: any) => this.estadosCat.set(this.mapEstados(cc?.estados)), error: () => {} });
     if (idTic != null) this.api.supInboxTimeline(idTic).subscribe({
@@ -401,11 +304,9 @@ export class Soporte {
         client_ip: o?.client_ip, olt_name: o?.olt_name,
         pon: o ? ((o.slot ?? '') + '/' + (o.port ?? '')) : '—', onu_num: o?.onu_id,
         phase_state: o?.phase_state, rx_dbm: o?.onu_rx_dbm, distance_m: o?.distance_m,
-        out_rate_bps: o?.onu_out_rate_bps, in_rate_bps: o?.onu_in_rate_bps, onu_pk: o?.id ?? null,
+        out_rate_bps: o?.onu_out_rate_bps, in_rate_bps: o?.onu_in_rate_bps,
       };
-      if (t.onu_pk != null) this.api.supOnuAlertas(t.onu_pk).subscribe({ next: (al: any[]) => this.onuAlertas.set(al || []), error: () => {} });
       this.ticket.set(t); this.diag = ''; this.lastResult.set(''); this.loadAcs(c); this.view.set('ticket');
-      if (t.client_ip) this.api.flowClientDaily(t.client_ip, 24).subscribe({ next: (d: any) => this.consumo.set(d), error: () => this.consumo.set(null) });
     });
   }
 
@@ -422,80 +323,6 @@ export class Soporte {
     const c = this.cli() || {};
     for (const k of keys) { const v = c[k]; if (v != null && String(v).trim() !== '') return String(v); }
     return '';
-  }
-
-  secOpen(k: string): boolean { return this.openSec().has(k); }
-  toggleSec(k: string) { const set = new Set(this.openSec()); set.has(k) ? set.delete(k) : set.add(k); this.openSec.set(set); }
-
-  /** Formatea una transicion de estado de servicio de la ONU como alerta con color. */
-  alertaTxt(a: any): string {
-    const lbl = (x: string) => x === 'sin_servicio' ? 'SIN SERVICIO' : x === 'riesgo' ? 'RIESGO' : x === 'ok' ? 'RECUPERADO' : String(x || '—').toUpperCase();
-    const cls = (x: string) => x === 'sin_servicio' ? 'al-sin' : x === 'riesgo' ? 'al-warn' : x === 'ok' ? 'al-ok' : 'al-mut';
-    const to = a?.to_state, from = a?.from_state;
-    return `<b class="${cls(to)}">${lbl(to)}</b> <span class="al-mut">(desde ${lbl(from)})</span>`;
-  }
-
-  /** Semaforo: estado de cada indicador de la ONU a partir del snapshot en el ticket. */
-  sem(kind: 'enlace' | 'rx' | 'trafico'): { c: string; l: string } {
-    const t: any = this.ticket() || {};
-    if (kind === 'enlace') {
-      const ph = String(t.phase_state || '').toLowerCase();
-      if (ph === 'working') return { c: 'g', l: 'OK' };
-      if (ph === 'los') return { c: 'r', l: 'LOS' };
-      return { c: 'a', l: ph ? ph.toUpperCase() : '—' };
-    }
-    if (kind === 'rx') {
-      const v = t.rx_dbm;
-      if (v == null) return { c: 'a', l: '—' };
-      const c = v <= -28 ? 'r' : v <= -25 ? 'a' : 'g';
-      return { c, l: Number(v).toFixed(2) + ' dBm' };
-    }
-    const on = (t.out_rate_bps || 0) > 0 || (t.in_rate_bps || 0) > 0;
-    return on ? { c: 'g', l: 'Activo' } : { c: 'a', l: 'Sin flujo' };
-  }
-  lamps(): { k: string; c: string; l: string }[] {
-    return [
-      { k: 'Enlace', ...this.sem('enlace') },
-      { k: 'Potencia RX', ...this.sem('rx') },
-      { k: 'Tráfico', ...this.sem('trafico') },
-    ];
-  }
-
-  /** Sugerencias derivadas (front) a partir de RX y del historial de alertas de la ONU. */
-  sugerencias(): { ic: string; att: string; as: string; cls: string }[] {
-    const t: any = this.ticket() || {};
-    const out: { ic: string; att: string; as: string; cls: string }[] = [];
-    const rx = t.rx_dbm;
-    if (rx != null && rx <= -25) out.push({ ic: '⚠️', att: 'Potencia RX baja', as: 'RX ' + Number(rx).toFixed(2) + ' dBm — revisar fibra/conector.', cls: 'a' });
-    const al = this.onuAlertas();
-    const sin = al.filter((a: any) => a.to_state === 'sin_servicio').length;
-    if (sin >= 2) out.push({ ic: '🔴', att: sin + ' caídas de servicio', as: 'Intermitencia reciente — considerar orden preventiva.', cls: 'r' });
-    const riesgo = al.some((a: any) => a.to_state === 'riesgo');
-    if (riesgo && (rx == null || rx > -25)) out.push({ ic: '💡', att: 'Historial de riesgo', as: 'RX estable pero con transiciones a riesgo — revisión preventiva.', cls: '' });
-    return out;
-  }
-
-  private estadoIdPorNombre(re: RegExp): number | null {
-    const e = this.estadosCat().find((x) => re.test(x.nombre));
-    return e ? Number(e.id) : null;
-  }
-  marcarSolucionado(t: any) {
-    if (!t?.idTic) return;
-    const id = this.estadoIdPorNombre(/termin|solucion|cerrad|resuel/i);
-    if (id == null) { this.notify.error('No encontré el estado de cierre en el catálogo.'); return; }
-    this.api.supEstado(t.idTic, id, this.notaTxt.trim() || 'Solucionado').subscribe({
-      next: () => { this.notify.ok('Ticket solucionado.'); this.notaTxt = ''; this.recargarSaltos(t.idTic); },
-      error: (e: any) => this.notify.error(e?.error?.mensaje || 'No se pudo marcar solucionado.'),
-    });
-  }
-  escalar(t: any) {
-    if (!t?.idTic) return;
-    const id = this.estadoIdPorNombre(/escal/i);
-    if (id == null) { this.notify.error('No encontré el estado ESCALADO en el catálogo.'); return; }
-    this.api.supEstado(t.idTic, id, this.notaTxt.trim() || 'Escalado a NOC').subscribe({
-      next: () => { this.notify.ok('Ticket escalado a NOC.'); this.notaTxt = ''; this.recargarSaltos(t.idTic); },
-      error: (e: any) => this.notify.error(e?.error?.mensaje || 'No se pudo escalar.'),
-    });
   }
 
   accionTic(l: any): string {
@@ -639,20 +466,6 @@ export class Soporte {
   rxColor(v: number | null): string {
     if (v == null) return 'var(--muted)';
     if (v <= -28) return 'var(--red)'; if (v <= -25) return 'var(--amber)'; return 'var(--green)';
-  }
-  fmtGB(b: any): string {
-    const n = Number(b) || 0;
-    if (n >= 1e9) return (n / 1e9).toFixed(2) + ' GB';
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + ' MB';
-    if (n >= 1e3) return (n / 1e3).toFixed(0) + ' KB';
-    return n + ' B';
-  }
-  consBars(): { x: number; y: number; w: number; h: number }[] {
-    const serie = this.consumo()?.serie || [];
-    if (!serie.length) return [];
-    const max = Math.max(...serie.map((s: any) => Number(s.down) || 0), 1);
-    const n = serie.length; const step = 300 / n; const w = Math.max(2, step - 2);
-    return serie.map((s: any, i: number) => { const h = ((Number(s.down) || 0) / max) * 80; return { x: i * step, y: 88 - h, w, h }; });
   }
   rate(bps: number | null): string {
     if (bps == null) return '—';
