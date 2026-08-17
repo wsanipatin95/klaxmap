@@ -139,6 +139,7 @@ export class NocApi {
   acsConnReq(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/connreq`, {}).pipe(map(unwrap)); }
   acsDescubrir(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/descubrir`, {}).pipe(map(unwrap)); }
   acsArbol(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/arbol`).pipe(map(unwrap)); }
+  acsDeleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/acs/devices/${id}`).pipe(map(unwrap)); }
   acsDevices(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/devices`).pipe(map(unwrap)); }
   acsAsignarContrato(id: number, contrato: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/acs/devices/${id}/contrato`, { contrato }).pipe(map(unwrap)); }
   /** Catálogo multimarca: perfiles de OLT (Tipo de OLT) para el combo del formulario. */

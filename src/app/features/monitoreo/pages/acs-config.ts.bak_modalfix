@@ -226,6 +226,7 @@ import { NocNotify } from '../services/noc-notify';
           </div>
         </div>
       </div>
+      @if (wifiEdit()) {
         @if (arbolOpen()) {
           <div class="acsov2" (click)="arbolOpen.set(false)">
             <div class="acsmd" (click)="$event.stopPropagation()" style="max-width:760px">
@@ -277,7 +278,6 @@ import { NocNotify } from '../services/noc-notify';
           </div>
         }
 
-      @if (wifiEdit()) {
         <div class="acsov2" (click)="wifiEdit.set(null)">
           <div class="acsmd2" (click)="$event.stopPropagation()">
             <div class="mh">
