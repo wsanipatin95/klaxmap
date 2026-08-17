@@ -1,0 +1,318 @@
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { NocApi } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
+
+/** Respaldos de configuración de equipos (OLT ZTE por Telnet + MikroTik por SSH /export).
+ *  Pestañas: Respaldos (lista auto-refrescada + backup manual) / Configuración. */
+@Component({
+  selector: 'app-backup',
+  standalone: true,
+  imports: [FormsModule],
+  template: `
+    <div class="bkp">
+      <div class="hd">
+        <div class="ttl">💾 Respaldos de equipos</div>
+        <div class="sub">Configuración de OLT (ZTE) y MikroTik core/borde — guardada periódicamente</div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab" [class.act]="tab() === 'panel'" (click)="tab.set('panel')">Respaldos</button>
+        <button class="tab" [class.act]="tab() === 'config'" (click)="tab.set('config')">Configuración</button>
+      </div>
+
+      @if (tab() === 'panel') {
+        <div class="kpis">
+          <div class="kpi"><div class="kn">{{ backups().length }}</div><div class="kl">Copias</div></div>
+          <div class="kpi ok"><div class="kn">{{ nOk() }}</div><div class="kl">OK</div></div>
+          <div class="kpi err"><div class="kn">{{ nErr() }}</div><div class="kl">Con error</div></div>
+          <div class="kpi"><div class="kn">{{ ultimoTxt() }}</div><div class="kl">Último respaldo</div></div>
+        </div>
+
+        <div class="card">
+          <div class="ch bar">
+            <span>Respaldos recientes <span class="cnt">{{ filtered().length }}</span></span>
+            <input class="search" [(ngModel)]="q" placeholder="Buscar equipo, host, tipo…">
+            <button class="btn go" [disabled]="corriendo()" (click)="backupAhora()">
+              {{ corriendo() ? 'Respaldando…' : '⟳ Backup ahora' }}
+            </button>
+            <span class="live" title="La lista se actualiza sola cada 10 s">● En vivo</span>
+          </div>
+
+          @if (filtered().length) {
+            <div class="tw">
+              <table>
+                <thead><tr>
+                  <th>Estado</th><th>Equipo</th><th>Tipo</th><th>Host</th>
+                  <th>Fecha</th><th>Tamaño</th><th>Líneas</th><th>Por</th><th></th>
+                </tr></thead>
+                <tbody>
+                  @for (b of filtered(); track b.id) {
+                    <tr>
+                      <td>
+                        @if (b.status === 'ok') { <span class="tag ok">OK</span> }
+                        @else { <span class="tag err" [title]="b.error">error</span> }
+                      </td>
+                      <td><b>{{ b.deviceRef }}</b></td>
+                      <td><span class="kind" [class.mk]="b.deviceKind === 'mikrotik'">{{ b.deviceKind === 'mikrotik' ? 'MikroTik' : 'OLT' }}</span></td>
+                      <td class="mono">{{ b.host || '—' }}</td>
+                      <td>{{ rel(b.createdAt) }} <span class="mut">· {{ abs(b.createdAt) }}</span></td>
+                      <td>{{ b.status === 'ok' ? fmtBytes(b.bytes) : '—' }}</td>
+                      <td>{{ b.status === 'ok' ? b.lines : '—' }}</td>
+                      <td class="mut">{{ b.createdBy }}</td>
+                      <td class="act">
+                        @if (b.status === 'ok') {
+                          <button class="mini" (click)="ver(b)">Ver</button>
+                          <button class="mini" (click)="descargar(b)">Descargar</button>
+                        } @else {
+                          <span class="mut" [title]="b.error">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="empty">Todavía no hay respaldos. Tocá “Backup ahora” o esperá el próximo ciclo automático.</div>
+          }
+        </div>
+      }
+
+      @if (tab() === 'config') {
+        <div class="card cfg">
+          <div class="ch">Configuración del respaldo</div>
+          <div class="grid">
+            <label class="fld chk">
+              <input type="checkbox" [(ngModel)]="cfg.cfgbkp_enabled"> Respaldo automático activo
+            </label>
+            <label class="fld">
+              <span>Frecuencia (cron Spring)</span>
+              <input [(ngModel)]="cfg.cfgbkp_cron" placeholder="0 0 */12 * * *">
+              <small>Por defecto cada 12 h. Formato: seg min hora díaMes mes díaSem.</small>
+            </label>
+            <label class="fld">
+              <span>Copias a conservar por equipo</span>
+              <input type="number" min="1" [(ngModel)]="cfg.cfgbkp_keep">
+            </label>
+            <label class="fld">
+              <span>Carpeta destino (en el servidor)</span>
+              <input [(ngModel)]="cfg.cfgbkp_dir" placeholder="backups/config">
+            </label>
+            <div class="sep">MikroTik (SSH /export)</div>
+            <label class="fld">
+              <span>Usuario SSH</span>
+              <input [(ngModel)]="cfg.cfgbkp_mk_user" placeholder="backup">
+            </label>
+            <label class="fld">
+              <span>Clave SSH</span>
+              <input type="password" [(ngModel)]="mkPass" [placeholder]="cfg.cfgbkp_mk_pass_set ? '•••••• (guardada — dejar vacío para no cambiar)' : 'sin configurar'">
+            </label>
+            <label class="fld">
+              <span>Puerto SSH</span>
+              <input type="number" min="1" [(ngModel)]="cfg.cfgbkp_mk_port">
+            </label>
+            <label class="fld">
+              <span>Comando de export</span>
+              <input [(ngModel)]="cfg.cfgbkp_mk_cmd" placeholder="/export">
+            </label>
+            <div class="sep">OLT ZTE (Telnet)</div>
+            <label class="fld">
+              <span>Comando de config</span>
+              <input [(ngModel)]="cfg.cfgbkp_olt_cmd" placeholder="show running-config">
+            </label>
+          </div>
+          <div class="cfgbtns">
+            <button class="btn go" [disabled]="guardando()" (click)="guardar()">{{ guardando() ? 'Guardando…' : 'Guardar' }}</button>
+            <span class="hint">La OLT usa las credenciales Telnet ya cargadas en cada OLT. El MikroTik usa este usuario/clave global.</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (verOpen()) {
+      <div class="bkov" (click)="verOpen.set(false)">
+        <div class="bkmd" (click)="$event.stopPropagation()">
+          <div class="mh">
+            <b>{{ verRef() }}</b> <span class="mut">{{ verName() }}</span>
+            <button class="x" (click)="verOpen.set(false)">✕</button>
+          </div>
+          <pre class="cfgtxt">{{ verTxt() }}</pre>
+        </div>
+      </div>
+    }
+  `,
+  styles: [`
+    .bkp { padding: 4px 2px; }
+    .hd { margin-bottom: 10px; }
+    .ttl { font-size: 20px; font-weight: 700; }
+    .sub { color: var(--muted, #8a93a6); font-size: 13px; }
+    .tabs { display: flex; gap: 6px; margin: 10px 0; }
+    .tab { padding: 7px 14px; border: 1px solid var(--bd, #2a3348); background: transparent; color: var(--muted, #8a93a6); border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .tab.act { background: var(--acc, #2b6cff); color: #fff; border-color: transparent; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .kpi { background: var(--card, #131a2b); border: 1px solid var(--bd, #2a3348); border-radius: 10px; padding: 12px 14px; }
+    .kpi .kn { font-size: 22px; font-weight: 700; }
+    .kpi .kl { color: var(--muted, #8a93a6); font-size: 12px; margin-top: 2px; }
+    .kpi.ok .kn { color: #22c55e; } .kpi.err .kn { color: #ef4444; }
+    .card { background: var(--card, #131a2b); border: 1px solid var(--bd, #2a3348); border-radius: 12px; overflow: hidden; }
+    .ch { padding: 10px 14px; font-weight: 700; border-bottom: 1px solid var(--bd, #2a3348); }
+    .ch.bar { display: flex; align-items: center; gap: 10px; }
+    .cnt { color: var(--muted, #8a93a6); font-weight: 500; }
+    .search { margin-left: auto; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--bd, #2a3348); background: var(--bg, #0c1220); color: inherit; min-width: 200px; }
+    .live { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--bd, #2a3348); background: transparent; color: inherit; cursor: pointer; font-weight: 600; }
+    .btn.go { background: var(--acc, #2b6cff); color: #fff; border-color: transparent; }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .tw { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bd, #2a3348); white-space: nowrap; }
+    th { color: var(--muted, #8a93a6); font-weight: 600; font-size: 12px; }
+    .mono { font-family: ui-monospace, monospace; }
+    .mut { color: var(--muted, #8a93a6); }
+    .tag { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .tag.ok { background: rgba(34,197,94,.15); color: #22c55e; }
+    .tag.err { background: rgba(239,68,68,.15); color: #ef4444; cursor: help; }
+    .kind { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: rgba(148,163,184,.15); }
+    .kind.mk { background: rgba(43,108,255,.15); color: #6ea0ff; }
+    .act { display: flex; gap: 6px; }
+    .mini { padding: 3px 9px; border-radius: 6px; border: 1px solid var(--bd, #2a3348); background: transparent; color: inherit; cursor: pointer; font-size: 12px; }
+    .mini:hover { background: rgba(148,163,184,.12); }
+    .empty { padding: 26px; text-align: center; color: var(--muted, #8a93a6); }
+    .cfg .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 16px; padding: 14px; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+    .fld > span { color: var(--muted, #8a93a6); font-size: 12px; }
+    .fld input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--bd, #2a3348); background: var(--bg, #0c1220); color: inherit; }
+    .fld small { color: var(--muted, #8a93a6); font-size: 11px; }
+    .fld.chk { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; }
+    .sep { grid-column: 1 / -1; font-weight: 700; color: var(--muted, #8a93a6); border-top: 1px dashed var(--bd, #2a3348); padding-top: 10px; }
+    .cfgbtns { display: flex; align-items: center; gap: 12px; padding: 0 14px 14px; }
+    .hint { color: var(--muted, #8a93a6); font-size: 12px; }
+    .bkov { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 100050; }
+    .bkmd { background: var(--card, #131a2b); border: 1px solid var(--bd, #2a3348); border-radius: 12px; width: min(880px, 94vw); max-height: 86vh; display: flex; flex-direction: column; z-index: 100051; }
+    .mh { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--bd, #2a3348); }
+    .mh .x { margin-left: auto; background: transparent; border: none; color: inherit; font-size: 16px; cursor: pointer; }
+    .cfgtxt { margin: 0; padding: 14px; overflow: auto; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.5; white-space: pre; }
+  `],
+})
+export class Backup implements OnInit, OnDestroy {
+  private api = inject(NocApi);
+  private notify = inject(NocNotify);
+
+  tab = signal<'panel' | 'config'>('panel');
+  backups = signal<any[]>([]);
+  cfg: any = { cfgbkp_enabled: true, cfgbkp_cron: '0 0 */12 * * *', cfgbkp_keep: 60, cfgbkp_dir: 'backups/config', cfgbkp_mk_user: 'backup', cfgbkp_mk_pass_set: false, cfgbkp_mk_port: 22, cfgbkp_mk_cmd: '/export', cfgbkp_olt_cmd: 'show running-config' };
+  mkPass = '';
+  q = '';
+  corriendo = signal(false);
+  guardando = signal(false);
+  private timer: any = null;
+
+  // modal ver
+  verOpen = signal(false);
+  verTxt = signal('');
+  verRef = signal('');
+  verName = signal('');
+
+  ngOnInit() { this.load(); this.timer = setInterval(() => this.reloadList(), 10000); }
+  ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+
+  private load() {
+    this.api.backupState().subscribe({
+      next: (r: any) => { this.backups.set(r?.backups || []); if (r?.cfg) this.cfg = { ...this.cfg, ...r.cfg }; },
+      error: () => {},
+    });
+  }
+  private reloadList() {
+    this.api.backupState().subscribe({ next: (r: any) => this.backups.set(r?.backups || []), error: () => {} });
+  }
+
+  nOk = computed(() => this.backups().filter((b) => b.status === 'ok').length);
+  nErr = computed(() => this.backups().filter((b) => b.status === 'error').length);
+  ultimoTxt = computed(() => {
+    const b = this.backups()[0];
+    return b ? this.rel(b.createdAt) : '—';
+  });
+
+  filtered() {
+    const q = this.q.trim().toLowerCase();
+    const arr = this.backups();
+    if (!q) return arr;
+    return arr.filter((b) =>
+      (b.deviceRef || '').toLowerCase().includes(q) ||
+      (b.host || '').toLowerCase().includes(q) ||
+      (b.deviceKind || '').toLowerCase().includes(q));
+  }
+
+  backupAhora() {
+    this.corriendo.set(true);
+    this.api.backupRun().subscribe({
+      next: (r: any) => {
+        this.corriendo.set(false);
+        this.notify.ok('Respaldo: ' + (r?.ok ?? 0) + ' OK, ' + (r?.error ?? 0) + ' con error');
+        this.reloadList();
+      },
+      error: (e) => { this.corriendo.set(false); this.notify.error(e?.message || 'No se pudo respaldar'); },
+    });
+  }
+
+  guardar() {
+    this.guardando.set(true);
+    const body: any = {
+      cfgbkp_enabled: this.cfg.cfgbkp_enabled,
+      cfgbkp_cron: this.cfg.cfgbkp_cron,
+      cfgbkp_keep: this.cfg.cfgbkp_keep,
+      cfgbkp_dir: this.cfg.cfgbkp_dir,
+      cfgbkp_mk_user: this.cfg.cfgbkp_mk_user,
+      cfgbkp_mk_port: this.cfg.cfgbkp_mk_port,
+      cfgbkp_mk_cmd: this.cfg.cfgbkp_mk_cmd,
+      cfgbkp_olt_cmd: this.cfg.cfgbkp_olt_cmd,
+    };
+    if (this.mkPass && this.mkPass.trim()) body.cfgbkp_mk_pass = this.mkPass.trim();
+    this.api.backupSaveCfg(body).subscribe({
+      next: (r: any) => { this.guardando.set(false); this.mkPass = ''; if (r) this.cfg = { ...this.cfg, ...r }; this.notify.ok('Configuración guardada'); },
+      error: (e) => { this.guardando.set(false); this.notify.error(e?.message || 'No se pudo guardar'); },
+    });
+  }
+
+  ver(b: any) {
+    this.api.backupVer(b.id).subscribe({
+      next: (r: any) => { this.verRef.set(r?.ref || b.deviceRef); this.verName.set(r?.filename || ''); this.verTxt.set(r?.content || ''); this.verOpen.set(true); },
+      error: (e) => this.notify.error(e?.message || 'No se pudo abrir'),
+    });
+  }
+
+  descargar(b: any) {
+    this.api.backupDownload(b.id).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = b.filename || ('backup-' + b.id + '.txt');
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      },
+      error: (e) => this.notify.error(e?.message || 'No se pudo descargar'),
+    });
+  }
+
+  fmtBytes(n: number) {
+    if (n == null) return '—';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  }
+  rel(iso: string) {
+    if (!iso) return '—';
+    const t = new Date(iso).getTime(); if (isNaN(t)) return '—';
+    const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (s < 60) return 'hace ' + s + 's';
+    if (s < 3600) return 'hace ' + Math.floor(s / 60) + 'm';
+    if (s < 86400) return 'hace ' + Math.floor(s / 3600) + 'h';
+    return 'hace ' + Math.floor(s / 86400) + 'd';
+  }
+  abs(iso: string) {
+    if (!iso) return '';
+    const d = new Date(iso); if (isNaN(d.getTime())) return '';
+    return d.toLocaleString();
+  }
+}

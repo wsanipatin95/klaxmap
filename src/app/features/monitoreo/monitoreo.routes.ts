@@ -29,6 +29,7 @@ export const MONITOREO_ROUTES: Routes = [
       { path: 'configurar-olt', loadComponent: () => import('./pages/olt-config').then((m) => m.OltConfig) },
       { path: 'configurar-acs', loadComponent: () => import('./pages/acs-config').then((m) => m.AcsConfig) },
       { path: 'lab-snmp', loadComponent: () => import('./pages/lab-snmp').then((m) => m.LabSnmp) },
+      { path: 'backup', loadComponent: () => import('./pages/backup').then((m) => m.Backup) },
       { path: 'configuracion', loadComponent: () => import('./pages/configuracion').then((m) => m.Configuracion) },
       { path: 'tiempos', pathMatch: 'full', redirectTo: 'configuracion' },
       { path: 'notificaciones', pathMatch: 'full', redirectTo: 'configuracion' },

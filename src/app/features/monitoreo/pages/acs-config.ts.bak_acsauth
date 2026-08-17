@@ -86,12 +86,6 @@ import { NocNotify } from '../services/noc-notify';
               </div>
               <div class="url"><span class="mono">{{ cfg.acs_url }}</span>
                 <button class="btn ghost xs" (click)="copiar(cfg.acs_url)">Copiar</button></div>
-              <div class="grid2" style="margin-top:12px">
-                <div><label class="lbl">Usuario ACS (va en el router)</label>
-                  <input class="inp" [(ngModel)]="cfg.auth_username" placeholder="ej. inno-acs (vacío = abierto)"></div>
-                <div><label class="lbl">Clave ACS (va en el router)</label>
-                  <input class="inp" [(ngModel)]="cfg.auth_password" placeholder="clave para los routers"></div>
-              </div>
               <div class="grid2">
                 <div><label class="lbl">Intervalo Inform (s)</label>
                   <input class="inp" type="number" [(ngModel)]="cfg.inform_interval_seconds"></div>
@@ -162,7 +156,6 @@ import { NocNotify } from '../services/noc-notify';
                 <button class="btn" (click)="refresh(d)">🔄 Refrescar</button>
                 <button class="btn" (click)="reboot(d)">♻ Reiniciar</button>
                 <button class="btn" (click)="connreq(d)">📡 Connection Request</button>
-                <button class="btn" (click)="abrirArbol(d)">🔍 Explorar parámetros</button>
                 <button class="btn" (click)="wifiEdit.set('nombre')">✏️ Cambiar nombre WiFi</button>
                 <button class="btn" (click)="wifiEdit.set('clave')">🔑 Cambiar clave WiFi</button>
               </div>
@@ -225,38 +218,6 @@ import { NocNotify } from '../services/noc-notify';
         </div>
       </div>
       @if (wifiEdit()) {
-        @if (arbolOpen()) {
-          <div class="acsov2" (click)="arbolOpen.set(false)">
-            <div class="acsmd" (click)="$event.stopPropagation()" style="max-width:760px">
-              <div class="mh">
-                <div class="mhx"><div class="mt">🔍 Explorador de parámetros</div><div class="ms">{{ arbolModeloTxt() }}</div></div>
-                <button class="x" (click)="arbolOpen.set(false)">✕</button>
-              </div>
-              <div class="mb">
-                <div class="dacts" style="margin-bottom:10px">
-                  <button class="btn pri" (click)="explorarActual()">🔍 Explorar ahora</button>
-                  <button class="btn" (click)="recargarArbol()">↻ Recargar</button>
-                  <input class="search" style="width:auto;flex:1;min-width:160px" [(ngModel)]="arbolQ" placeholder="Filtrar ruta…">
-                </div>
-                @if (arbolMapaTxt()) {
-                  <div class="msec">Mapeo detectado (alias → ruta real)</div>
-                  <pre class="cfgtxt2">{{ arbolMapaTxt() }}</pre>
-                }
-                <div class="msec">Rutas del router ({{ arbolFiltradas().length }})</div>
-                @if (arbolFiltradas().length) {
-                  <div class="htw" style="max-height:340px">
-                    <table class="htab"><tbody>
-                      @for (n of arbolFiltradas(); track n) { <tr><td class="mono">{{ n }}</td></tr> }
-                    </tbody></table>
-                  </div>
-                } @else {
-                  <div class="tkempty">Sin parámetros aún. Tocá “Explorar ahora”, esperá unos segundos y luego “Recargar”.</div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
         <div class="acsov2" (click)="wifiEdit.set(null)">
           <div class="acsmd2" (click)="$event.stopPropagation()">
             <div class="mh">
@@ -401,7 +362,6 @@ import { NocNotify } from '../services/noc-notify';
     .tkt { color:var(--mut); font-size:11.5px; margin-left:auto; }
     .tke { width:100%; color:#b42318; font-size:11.5px; }
     .tkempty { font-size:12.5px; color:var(--mut); }
-    .cfgtxt2 { background:#faf9fc; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-family:'Consolas','SFMono-Regular',monospace; font-size:11px; white-space:pre-wrap; word-break:break-all; margin:0 0 10px; }
   `],
 })
 export class AcsConfig implements OnInit, OnDestroy {
@@ -460,44 +420,8 @@ export class AcsConfig implements OnInit, OnDestroy {
   refresh(d: any) { this.api.acsRefresh(d.contrato).subscribe({ next: () => this.notify.ok('Refrescar encolado.'), error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
   reboot(d: any) { this.api.acsReboot(d.contrato).subscribe({ next: () => this.notify.ok('Reinicio encolado.'), error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
   connreq(d: any) { this.api.acsConnReq(d.contrato).subscribe({ next: () => this.notify.ok('Connection Request enviado.'), error: (e: any) => this.notify.error(e?.message || 'No se pudo enviar.') }); }
-
-  // --- Explorador de parámetros (auto-descubrimiento multimarca) ---
-  arbolOpen = signal(false);
-  arbolNames = signal<string[]>([]);
-  arbolMapaTxt = signal('');
-  arbolModeloTxt = signal('');
-  arbolContrato = signal('');
-  arbolQ = '';
-  abrirArbol(d: any) { this.arbolContrato.set(d.contrato); this.arbolOpen.set(true); this.arbolQ = ''; this.recargarArbol(); }
-  recargarArbol() {
-    const c = this.arbolContrato(); if (!c) return;
-    this.api.acsArbol(c).subscribe({
-      next: (r: any) => {
-        this.arbolModeloTxt.set(r?.modelo || '');
-        let names: string[] = [];
-        try { names = r?.namesJson ? JSON.parse(r.namesJson) : []; } catch { names = []; }
-        this.arbolNames.set(names);
-        let mapa = '';
-        try { mapa = r?.mapa ? JSON.stringify(JSON.parse(r.mapa), null, 2) : ''; } catch { mapa = r?.mapa || ''; }
-        this.arbolMapaTxt.set(mapa);
-      },
-      error: () => {},
-    });
-  }
-  explorarActual() {
-    const c = this.arbolContrato(); if (!c) return;
-    this.api.acsDescubrir(c).subscribe({
-      next: () => this.notify.ok('Explorando el router… esperá unos segundos y tocá Recargar.'),
-      error: (e: any) => this.notify.error(e?.message || 'No se pudo explorar.'),
-    });
-  }
-  arbolFiltradas(): string[] {
-    const q = this.arbolQ.trim().toLowerCase();
-    const arr = this.arbolNames();
-    return q ? arr.filter((n) => n.toLowerCase().includes(q)) : arr;
-  }
   optimizar(d: any) { this.api.acsWifiOptimizar(d.contrato).subscribe({ next: () => { this.notify.ok('Optimización WiFi encolada: canal automático + potencia máxima.'); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
-  taskName(t: any): string { const m: any = { REBOOT:'Reiniciar', GET_PARAMETERS:'Refrescar', SET_WIFI_NAME:'Cambiar nombre WiFi', SET_WIFI_PASSWORD:'Cambiar clave WiFi', PUSH_MGMT:'Empujar config', OPTIMIZE_WIFI:'Optimizar WiFi', GET_HOSTS:'Leer conectados', DISCOVER:'Explorar parámetros' }; return m[t?.taskType] || t?.taskType || '—'; }
+  taskName(t: any): string { const m: any = { REBOOT:'Reiniciar', GET_PARAMETERS:'Refrescar', SET_WIFI_NAME:'Cambiar nombre WiFi', SET_WIFI_PASSWORD:'Cambiar clave WiFi', PUSH_MGMT:'Empujar config', OPTIMIZE_WIFI:'Optimizar WiFi' }; return m[t?.taskType] || t?.taskType || '—'; }
   taskLabel(s: any): string { const m: any = { PENDING:'pendiente', SENT:'enviado', DONE:'hecho', ERROR:'error', EXPIRED:'expirado' }; return m[String(s||'').toUpperCase()] || String(s||'—').toLowerCase(); }
   taskCls(s: any): string { const v = String(s||'').toUpperCase(); const k = v==='DONE'?'ok':v==='ERROR'?'err':v==='SENT'?'snt':v==='EXPIRED'?'exp':'pend'; return 'tst ' + k; }
   wifiNom(d: any) { const v = this.wifiNombre.trim(); if (!v) return; this.api.acsWifiNombre(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de nombre WiFi encolado.'); this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
