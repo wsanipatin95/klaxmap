@@ -87,6 +87,7 @@ export class SidebarComponent {
           { label: 'Configurar ACS', icon: 'pi pi-wifi', route: '/app/monitoreo/configurar-acs' },
           { label: 'Configuración', icon: 'pi pi-sliders-h', route: '/app/monitoreo/configuracion' },
           { label: 'Lab SNMP', icon: 'pi pi-search', route: '/app/monitoreo/lab-snmp' },
+          { label: 'Respaldos de equipos', icon: 'pi pi-save', route: '/app/monitoreo/backup' },
         ],
       });
       if (this.auditoriaRed()) {

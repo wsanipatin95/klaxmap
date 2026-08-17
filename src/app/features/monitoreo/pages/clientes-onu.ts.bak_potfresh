@@ -39,7 +39,6 @@ import { areaDs } from '../shared/charts';
         <span style="color:var(--green)">Online: <b>{{ online() }}</b></span>
         <span style="color:var(--muted)">Offline: <b>{{ offline() }}</b></span>
         <span style="color:var(--red)">LOS: <b>{{ los() }}</b></span>
-        <span [style.color]="potStale() ? '#d97706' : 'var(--muted)'" title="Última lectura de potencias por SNMP. Si queda vieja, activá el barrido periódico de esta OLT en Equipos.">Potencias: <b>{{ potFreshTxt() }}</b> {{ potStale() ? '⚠' : '🟢' }}</span>
       </span>
     </div>
 
@@ -912,21 +911,6 @@ export class ClientesOnu implements OnDestroy {
   }
 
   /** Bps (bytes/s) -> bits legibles. */
-  potFreshMs(): number {
-    let m = 0;
-    for (const o of this.onus()) { const t = o.updatedAt ? new Date(o.updatedAt).getTime() : 0; if (t > m) m = t; }
-    return isNaN(m) ? 0 : m;
-  }
-  potFreshTxt(): string {
-    const t = this.potFreshMs(); if (!t) return 'sin datos';
-    const s = Math.floor((Date.now() - t) / 1000);
-    if (s < 60) return 'hace ' + s + 's';
-    const mn = Math.floor(s / 60); if (mn < 60) return 'hace ' + mn + 'm';
-    const h = Math.floor(mn / 60); if (h < 24) return 'hace ' + h + 'h';
-    return 'hace ' + Math.floor(h / 24) + 'd';
-  }
-  potStale(): boolean { const t = this.potFreshMs(); return !t || (Date.now() - t) > 600000; }
-
   fmtTs(ts: string | null): string {
     if (!ts) return '—';
     const d = new Date(ts);

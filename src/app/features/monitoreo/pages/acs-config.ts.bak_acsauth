@@ -86,12 +86,6 @@ import { NocNotify } from '../services/noc-notify';
               </div>
               <div class="url"><span class="mono">{{ cfg.acs_url }}</span>
                 <button class="btn ghost xs" (click)="copiar(cfg.acs_url)">Copiar</button></div>
-              <div class="grid2" style="margin-top:12px">
-                <div><label class="lbl">Usuario ACS (va en el router)</label>
-                  <input class="inp" [(ngModel)]="cfg.auth_username" placeholder="ej. inno-acs (vacío = abierto)"></div>
-                <div><label class="lbl">Clave ACS (va en el router)</label>
-                  <input class="inp" [(ngModel)]="cfg.auth_password" placeholder="clave para los routers"></div>
-              </div>
               <div class="grid2">
                 <div><label class="lbl">Intervalo Inform (s)</label>
                   <input class="inp" type="number" [(ngModel)]="cfg.inform_interval_seconds"></div>

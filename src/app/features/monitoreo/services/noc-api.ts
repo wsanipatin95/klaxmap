@@ -105,6 +105,7 @@ export class NocApi {
   devices(): Observable<Device[]> { return this.http.get<ApiEnvelope<Device[]>>(`${API}/devices`).pipe(map(unwrap)); }
   createDevice(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices`, body).pipe(map(unwrap)); }
   updateDevice(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/devices/${id}`, body).pipe(map(unwrap)); }
+  deviceSsh(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/devices/${id}/ssh`).pipe(map(unwrap)); }
   devicePoll(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices/${id}/poll`, {}).pipe(map(unwrap)); }
   deleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/devices/${id}`).pipe(map(unwrap)); }
 
@@ -260,4 +261,11 @@ export class NocApi {
   supInboxTimeline(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/${id}/timeline`).pipe(map(unwrap)); }
   supInboxCatalogos(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/catalogos`).pipe(map(unwrap)); }
   supInboxDiag(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/diag`).pipe(map(unwrap)); }
+
+  // --- Respaldos de configuración de equipos (OLT ZTE + MikroTik core/borde) ---
+  backupState(limit = 200): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config?limit=${limit}`).pipe(map(unwrap)); }
+  backupRun(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/run`, {}).pipe(map(unwrap)); }
+  backupSaveCfg(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/backup/config/settings`, body).pipe(map(unwrap)); }
+  backupVer(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/${id}/ver`).pipe(map(unwrap)); }
+  backupDownload(id: number): Observable<Blob> { return this.http.get(`${API}/backup/config/${id}/download`, { responseType: 'blob' }); }
 }

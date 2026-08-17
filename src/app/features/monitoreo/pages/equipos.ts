@@ -101,6 +101,13 @@ import { TableSort } from '../shared/table-sort';
               <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="f.snmp_poll_enabled"> <span>Barrido SNMP automático</span></div>
               <div><label class="k">Intervalo barrido (seg)</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_poll_seconds" placeholder="300"></div>
             }
+
+            @if (f.device_type !== 'olt') {
+              <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH (para respaldo de configuración)</div>
+              <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.ssh_user"></div>
+              <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="f.ssh_pass" [placeholder]="f.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
+              <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.ssh_port" placeholder="22"></div>
+            }
           </div>
           <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end">
             <button class="btn ghost" (click)="showAdd.set(false)">Cancelar</button>
@@ -352,6 +359,13 @@ export class Equipos implements OnDestroy {
           this.f.id_red_olt_marca = o.idRedOltMarca ?? undefined;
           if (o.softwareVersion) this.f.software_version = o.softwareVersion;
         }
+      });
+    } else {
+      // MikroTik/core/borde: prefila las credenciales SSH (para el módulo Backup).
+      this.api.deviceSsh(d.id).subscribe((r: any) => {
+        this.f.ssh_user = r?.ssh_user || '';
+        this.f.ssh_port = r?.ssh_port || 22;
+        this.f.ssh_pass_set = !!r?.ssh_pass_set;
       });
     }
   }
