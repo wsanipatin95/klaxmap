@@ -202,7 +202,7 @@ import { areaDs } from '../shared/charts';
           @for (o of filtered(); track o.id) {
             <tr style="cursor:pointer" (click)="openOnu(o)">
               <td class="mono">{{ o.rawIndex }}</td>
-              <td class="mono">{{ contrato(o.clientName) || '—' }}</td>
+              <td class="mono">{{ contrato(o.clientName) || '—' }}@if (o.contratoEstado) { <span class="cst" [class.bad]="estadoMalo(o.contratoEstado)">{{ o.contratoEstado }}</span> }</td>
               <td><b>{{ clientOnly(o.clientName) }}</b></td>
               <td class="mono">{{ o.clientIp || '—' }}</td>
               <td class="mono" style="font-size:11.5px">{{ o.serial || '—' }}</td>
@@ -236,7 +236,7 @@ import { areaDs } from '../shared/charts';
               <div class="m"><div class="k">Distancia</div><div class="v">{{ o.distanceM!=null ? o.distanceM+' m' : '—' }}</div></div>
               <div class="m"><div class="k">IP</div><div class="v mono">{{ o.clientIp || '—' }}</div></div>
               <div class="m"><div class="k">Descripción</div><div class="v">{{ o.description || '—' }}</div></div>
-              <div class="m"><div class="k">Contrato</div><div class="v mono">{{ contrato(o.clientName) || '—' }}</div></div>
+              <div class="m"><div class="k">Contrato</div><div class="v mono">{{ contrato(o.clientName) || '—' }}@if (o.contratoEstado) { <span class="cst" [class.bad]="estadoMalo(o.contratoEstado)">{{ o.contratoEstado }}</span> }</div></div>
               <div class="m"><div class="k">Admin</div><div class="v">{{ o.adminState || '—' }}</div></div>
               <div class="m"><div class="k">Serial</div><div class="v mono">{{ o.serial || '—' }}</div></div>
               <div class="m"><div class="k">Última causa</div><div class="v">{{ o.lastCause || '—' }}</div></div>
@@ -363,6 +363,9 @@ import { areaDs } from '../shared/charts';
     .olt-b.on .ip { color:#f2dcec; }
     .prog-bar { height: 100%; width: 42%; border-radius: 99px; background: #7b0061; animation: progslide 1.1s ease-in-out infinite; }
     @keyframes progslide { 0% { margin-left: -45%; } 100% { margin-left: 100%; } }
+  
+    .cst { display:inline-block; margin-left:6px; font-size:10px; font-weight:700; padding:1px 6px; border-radius:6px; background:#eafaf0; color:#16794a; vertical-align:middle; }
+    .cst.bad { background:#fdecec; color:#b42318; }
   `],
 })
 export class ClientesOnu implements OnDestroy {
@@ -975,6 +978,11 @@ export class ClientesOnu implements OnDestroy {
     return '<span class="badge b-maint">OFFLINE</span>';
   }
 
+  /** true si el estado del contrato NO es activo (suspendido/retirado/baja/cortado) -> badge rojo. */
+  estadoMalo(e: string | null | undefined): boolean {
+    const x = (e || '').toLowerCase();
+    return /suspend|retir|baja|corte|cortad|moroso|anulad|inactiv/.test(x);
+  }
   /** Potencia RX solo si la ONU esta ONLINE (working). Offline/LOS = sin senal -> null (no mostrar potencia vieja). */
   onuRx(o: any): number | null {
     if (o == null || o.onuRxDbm == null) return null;
