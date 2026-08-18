@@ -38,33 +38,6 @@ import { NocNotify } from '../services/noc-notify';
             </button>
             <span class="live" title="La lista se actualiza sola cada 10 s">● En vivo</span>
           </div>
-          <div class="fbar">
-            <div class="fgrp">
-              <span class="flbl">Rango</span>
-              <button class="chip" [class.on]="rango()==='hoy'" (click)="setRango('hoy')">Hoy</button>
-              <button class="chip" [class.on]="rango()==='24h'" (click)="setRango('24h')">24 h</button>
-              <button class="chip" [class.on]="rango()==='7d'" (click)="setRango('7d')">7 días</button>
-              <button class="chip" [class.on]="rango()==='30d'" (click)="setRango('30d')">30 días</button>
-              <button class="chip" [class.on]="rango()==='todo'" (click)="setRango('todo')">Todo</button>
-            </div>
-            <div class="fgrp">
-              <span class="flbl">Día</span>
-              <input type="date" class="fdate" [(ngModel)]="diaF">
-              @if (diaF) { <button class="chip" (click)="diaF=''" title="Quitar filtro de día">✕</button> }
-            </div>
-            <div class="fgrp">
-              <span class="flbl">Estado</span>
-              <button class="chip" [class.on]="estadoF()==='todos'" (click)="estadoF.set('todos')">Todos</button>
-              <button class="chip" [class.on]="estadoF()==='ok'" (click)="estadoF.set('ok')">OK</button>
-              <button class="chip" [class.on]="estadoF()==='error'" (click)="estadoF.set('error')">Error</button>
-            </div>
-            <div class="fgrp">
-              <span class="flbl">Tipo</span>
-              <button class="chip" [class.on]="tipoF()==='todos'" (click)="tipoF.set('todos')">Todos</button>
-              <button class="chip" [class.on]="tipoF()==='olt'" (click)="tipoF.set('olt')">OLT</button>
-              <button class="chip" [class.on]="tipoF()==='mikrotik'" (click)="tipoF.set('mikrotik')">MikroTik</button>
-            </div>
-          </div>
 
           @if (filtered().length) {
             <div class="tw">
@@ -220,13 +193,6 @@ import { NocNotify } from '../services/noc-notify';
     .search { height:32px; border:1px solid var(--line); border-radius:9px; padding:0 11px; font-size:12.5px; width:240px; max-width:42vw; outline:none; font-family:inherit; }
     .search:focus { border-color:var(--pri); }
     .live { font-size:11.5px; font-weight:700; color:#16a34a; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
-    .fbar { display:flex; flex-wrap:wrap; gap:14px 22px; padding:10px 16px; border-bottom:1px solid var(--line); background:#fbfafc; }
-    .fgrp { display:flex; align-items:center; gap:6px; }
-    .flbl { font-size:11px; font-weight:700; color:var(--mut); text-transform:uppercase; letter-spacing:.3px; margin-right:2px; }
-    .chip { height:26px; padding:0 10px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; font-size:12px; font-weight:600; cursor:pointer; }
-    .chip:hover { border-color:var(--pri); color:var(--pri); }
-    .chip.on { background:var(--pri); color:#fff; border-color:var(--pri); }
-    .fdate { height:26px; border:1px solid var(--line); border-radius:8px; padding:0 8px; font-size:12px; font-family:inherit; color:var(--ink); background:#fff; }
     .btn { height:34px; border:1px solid var(--line); background:#fff; border-radius:9px; padding:0 14px; font-weight:600; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; color:var(--ink); white-space:nowrap; }
     .btn:hover { background:#faf8fc; }
     .btn.go { background:var(--pri); color:#fff; border-color:var(--pri); }
@@ -291,11 +257,6 @@ export class Backup implements OnInit, OnDestroy {
   r1Pass = '';
   r2Pass = '';
   q = '';
-  rango = signal<'hoy'|'24h'|'7d'|'30d'|'todo'>('7d');
-  diaF = '';
-  estadoF = signal<'todos'|'ok'|'error'>('todos');
-  tipoF = signal<'todos'|'olt'|'mikrotik'>('todos');
-  setRango(r: any) { this.rango.set(r); this.diaF = ''; }
   corriendo = signal(false);
   guardando = signal(false);
   private timer: any = null;
@@ -328,13 +289,13 @@ export class Backup implements OnInit, OnDestroy {
   ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
 
   private load() {
-    this.api.backupState(1000).subscribe({
+    this.api.backupState().subscribe({
       next: (r: any) => { this.backups.set(r?.backups || []); if (r?.cfg) this.cfg = { ...this.cfg, ...r.cfg }; },
       error: () => {},
     });
   }
   private reloadList() {
-    this.api.backupState(1000).subscribe({ next: (r: any) => this.backups.set(r?.backups || []), error: () => {} });
+    this.api.backupState().subscribe({ next: (r: any) => this.backups.set(r?.backups || []), error: () => {} });
   }
 
   nOk = computed(() => this.backups().filter((b) => b.status === 'ok').length);
@@ -344,32 +305,14 @@ export class Backup implements OnInit, OnDestroy {
     return b ? this.rel(b.createdAt) : '—';
   });
 
-  private ymd(d: Date): string {
-    const p = (n: number) => (n < 10 ? '0' + n : '' + n);
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-  }
   filtered() {
     const q = this.q.trim().toLowerCase();
-    const rango = this.rango();
-    const dia = this.diaF;
-    const est = this.estadoF();
-    const tipo = this.tipoF();
-    const now = Date.now();
-    const ventanas: any = { '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
-    return this.backups().filter((b) => {
-      const t = new Date(b.createdAt).getTime();
-      if (dia) {
-        if (isNaN(t) || this.ymd(new Date(b.createdAt)) !== dia) return false;
-      } else if (rango === 'hoy') {
-        if (isNaN(t) || this.ymd(new Date(b.createdAt)) !== this.ymd(new Date())) return false;
-      } else if (ventanas[rango]) {
-        if (isNaN(t) || now - t > ventanas[rango]) return false;
-      }
-      if (est !== 'todos' && b.status !== est) return false;
-      if (tipo !== 'todos' && b.deviceKind !== tipo) return false;
-      if (q && !((b.deviceRef || '').toLowerCase().includes(q) || (b.host || '').toLowerCase().includes(q) || (b.deviceKind || '').toLowerCase().includes(q))) return false;
-      return true;
-    });
+    const arr = this.backups();
+    if (!q) return arr;
+    return arr.filter((b) =>
+      (b.deviceRef || '').toLowerCase().includes(q) ||
+      (b.host || '').toLowerCase().includes(q) ||
+      (b.deviceKind || '').toLowerCase().includes(q));
   }
 
   backupAhora() {
