@@ -92,6 +92,7 @@ export interface OnuRow {
   id: number; oltId: number; shelf: number; slot: number; port: number; onuId: number;
   rawIndex: string; serial: string | null; clientName: string | null; clientIp: string | null;
   description: string | null; distanceM: number | null; phaseState: string; adminState: string | null;
+  contratoEstado?: string | null; contratoEstadoId?: number | null;
   onuRxDbm: number | null; onuTxDbm: number | null; oltRxDbm: number | null; oltTxDbm: number | null;
   onuInRateBps: number | null; onuOutRateBps: number | null; onuInTotalBytes: number | null; onuOutTotalBytes: number | null;
   lastCause: string | null; offlineHistory: string | null; lastSeenAt: string | null; updatedAt: string | null;
