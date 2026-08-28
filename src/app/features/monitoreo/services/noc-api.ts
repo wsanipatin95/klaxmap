@@ -197,8 +197,10 @@ export class NocApi {
   notifyDeviceAlerts(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/notify/device-alerts`).pipe(map(unwrap)); }
   notifyUpdateDeviceAlert(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/notify/device-alerts/${id}`, body).pipe(map(unwrap)); }
   zteRefresh(id: number, onuId: number, port: string): Observable<OnuRow> { return this.http.post<ApiEnvelope<OnuRow>>(`${API}/zte/olts/${id}/onus/${onuId}/refresh?port=${port}`, {}).pipe(map(unwrap)); }
-  zteOnuHistory(id: number, metric = 'onu_rx_optical_power_dbm', hours = 168): Observable<Point[]> {
-    return this.http.get<ApiEnvelope<Point[]>>(`${API}/zte/onus/${id}/history?metric=${metric}&hours=${hours}`).pipe(map(unwrap));
+  /** Refresco SNMP DIRIGIDO a UNA ONU (potencia + consumo), sin telnet. */
+  zteOnuSnmpRefresh(id: number): Observable<OnuRow> { return this.http.post<ApiEnvelope<OnuRow>>(`${API}/zte/onus/${id}/snmp-refresh`, {}).pipe(map(unwrap)); }
+  zteOnuHistory(id: number, metric = 'onu_rx_optical_power_dbm', mins = 10080, pad = false, buckets = 120): Observable<Point[]> {
+    return this.http.get<ApiEnvelope<Point[]>>(`${API}/zte/onus/${id}/history?metric=${metric}&mins=${mins}&pad=${pad}&buckets=${buckets}`).pipe(map(unwrap));
   }
 
   // ---- Alerta temprana (inicio) ----

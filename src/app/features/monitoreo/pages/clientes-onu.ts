@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi, ZteOltRow, OnuRow } from '../services/noc-api';
 import { LineChart } from '../shared/line-chart';
-import { areaDs } from '../shared/charts';
+import { areaDs, stats, Stat } from '../shared/charts';
 
 @Component({
   selector: 'app-clientes-onu',
@@ -251,10 +251,22 @@ import { areaDs } from '../shared/charts';
                 <div class="m"><div class="k">Total descargado</div><div class="v">{{ bytes(o.onuOutTotalBytes) }}</div></div>
                 <div class="m"><div class="k">Total subido</div><div class="v">{{ bytes(o.onuInTotalBytes) }}</div></div>
               </div>
+                            <div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;flex-wrap:wrap">
+                <span style="font-size:11.5px;color:var(--muted)">Período:</span>
+                @for (r of trafRangos; track r.m) {
+                  <button type="button" (click)="setTrafRange(r.m)"
+                          [style.background]="trafMins()===r.m ? 'var(--primary)' : 'transparent'"
+                          [style.color]="trafMins()===r.m ? '#fff' : 'var(--muted)'"
+                          [style.borderColor]="trafMins()===r.m ? 'var(--primary)' : 'var(--border, #3a3a46)'"
+                          style="font-size:11.5px;padding:2px 10px;border:1px solid var(--border,#3a3a46);border-radius:999px;cursor:pointer">
+                    {{ r.lbl }}
+                  </button>
+                }
+              </div>
               <div style="height:130px;margin-top:8px;cursor:pointer" title="Clic para ampliar"
-                   (click)="openBig('traf', 'Consumo · Descarga (Mbps)')">
-                @if (trafLab().length > 1) { <app-line-chart [labels]="trafLab()" [datasets]="trafDs()"></app-line-chart> }
-                @else { <div style="color:var(--muted);font-size:12px;padding:16px 0">El histórico de consumo se llena con cada refresco/sondeo.</div> }
+                   (click)="openBig('traf', 'Consumo · Descarga y Subida')">
+                @if (trafLab().length > 1) { <app-line-chart [labels]="trafLab()" [datasets]="trafDs()" [fmt]="'gbps'"></app-line-chart> }
+                @else { <div style="color:var(--muted);font-size:12px;padding:16px 0">Aún no hay puntos de consumo para graficar (se llenan con el barrido SNMP).</div> }
               </div>
             </div>
 
@@ -324,15 +336,52 @@ import { areaDs } from '../shared/charts';
             </span>
           </div>
           <div class="pb">
-            <div style="height:62vh">
+            <div style="height:54vh">
               @if (b.kind === 'rx') {
                 @if (histLab().length > 1) { <app-line-chart [labels]="histLab()" [datasets]="histDs()"></app-line-chart> }
                 @else { <div style="color:var(--muted);padding:20px 0">Sin datos suficientes para graficar.</div> }
               } @else {
-                @if (trafLab().length > 1) { <app-line-chart [labels]="trafLab()" [datasets]="trafDs()"></app-line-chart> }
+                @if (trafLab().length > 1) { <app-line-chart [labels]="trafLab()" [datasets]="trafDs()" [fmt]="'gbps'"></app-line-chart> }
                 @else { <div style="color:var(--muted);padding:20px 0">Sin datos suficientes para graficar.</div> }
               }
             </div>
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12.5px">
+              <thead>
+                <tr style="color:var(--muted)">
+                  <th style="text-align:left;padding:4px 6px">Serie</th>
+                  <th style="text-align:right;padding:4px 6px">Último</th>
+                  <th style="text-align:right;padding:4px 6px">Mín</th>
+                  <th style="text-align:right;padding:4px 6px">Prom</th>
+                  <th style="text-align:right;padding:4px 6px">Máx</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (b.kind === 'traf') {
+                  <tr>
+                    <td style="text-align:left;padding:4px 6px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7b0061;margin-right:6px"></span>Descarga (Mbps)</td>
+                    <td style="text-align:right;padding:4px 6px"><b>{{ mb(dscStat().last) }}</b></td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(dscStat().min) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(dscStat().avg) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(dscStat().max) }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align:left;padding:4px 6px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#16a34a;margin-right:6px"></span>Subida (Mbps)</td>
+                    <td style="text-align:right;padding:4px 6px"><b>{{ mb(subStat().last) }}</b></td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(subStat().min) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(subStat().avg) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ mb(subStat().max) }}</td>
+                  </tr>
+                } @else {
+                  <tr>
+                    <td style="text-align:left;padding:4px 6px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#16a34a;margin-right:6px"></span>Señal RX (dBm)</td>
+                    <td style="text-align:right;padding:4px 6px"><b>{{ db(rxStat().last) }}</b></td>
+                    <td style="text-align:right;padding:4px 6px">{{ db(rxStat().min) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ db(rxStat().avg) }}</td>
+                    <td style="text-align:right;padding:4px 6px">{{ db(rxStat().max) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -403,6 +452,10 @@ export class ClientesOnu implements OnDestroy {
   ponDs = signal<any[]>([]);
   onuAlerts = signal<any[]>([]);
   big = signal<{ kind: 'rx' | 'traf'; title: string } | null>(null);
+  // Estadísticas (último/mín/prom/máx) del rango cargado, para el modal grande (estilo Equipos).
+  dscStat = signal<Stat>(stats([]));
+  subStat = signal<Stat>(stats([]));
+  rxStat = signal<Stat>(stats([]));
   modalCountdown = signal(30);
 
   q = '';
@@ -738,6 +791,9 @@ export class ClientesOnu implements OnDestroy {
 
   /** Abre el gráfico en grande en una ventana emergente (usa los datos EN VIVO del modal). */
   openBig(kind: 'rx' | 'traf', title: string) { this.big.set({ kind, title }); }
+  // Adaptativo, igual que las tarjetas 'ahora' (rate): Kbps si <1 Mbps, Mbps si supera.
+  mb(v: number): string { return LineChart.gbps(+v || 0); }   // v en Gbps -> Kbps/Mbps/Gbps auto
+  db(v: number): string { return (+v || 0).toFixed(2) + ' dBm'; }
 
   tempBg(t: number): string {
     if (t >= 55) return 'var(--red)';
@@ -839,12 +895,14 @@ export class ClientesOnu implements OnDestroy {
   openOnu(o: OnuRow) {
     clearInterval(this.modalTimer);
     this.sel.set(o);
-    this.refreshSel(o, true);
+    // TODO-SNMP: al abrir NO se telnetea. Se lee el dato del barrido SNMP (estado/RX/TX/OLT-RX/consumo)
+    // desde la DB. El refresco en vivo hace lo mismo. Cero CLI en la ficha.
+    this.refreshSelLight(o);
     // EN VIVO: contador de 1s; al llegar a 0 refresca y reinicia.
     this.modalCountdown.set(30);
     this.modalTimer = setInterval(() => {
       const c = this.modalCountdown() - 1;
-      if (c <= 0) { const cur = this.sel(); if (cur) this.refreshSel(cur, false); this.modalCountdown.set(30); }
+      if (c <= 0) { const cur = this.sel(); if (cur) this.refreshSelLight(cur); this.modalCountdown.set(30); }
       else this.modalCountdown.set(c);
     }, 1000);
   }
@@ -865,6 +923,19 @@ export class ClientesOnu implements OnDestroy {
     });
   }
 
+  /** Refresco EN VIVO liviano: NO telnetea la OLT. Relee la tabla desde la DB (dato del barrido
+   *  SNMP: estado + RX/TX) y re-selecciona esta ONU. El consumo queda con el valor traido al ABRIR
+   *  la ficha. Asi una ficha abierta no martilla la OLT cada 30s. */
+  private refreshSelLight(o: OnuRow) {
+    this.loadHistory(o);
+    this.api.zteOnuAlerts(o.rawIndex).subscribe((a) => this.onuAlerts.set(a));
+    // Refresco SNMP DIRIGIDO a esta ONU (estado + potencias + consumo). NO telnetea la OLT.
+    this.api.zteOnuSnmpRefresh(o.id).subscribe({
+      next: (u) => { if (u && this.sel()?.id === o.id) this.sel.set(u); },
+      error: () => {},
+    });
+  }
+
   closeModal() {
     clearInterval(this.modalTimer);
     this.sel.set(null);
@@ -881,13 +952,30 @@ export class ClientesOnu implements OnDestroy {
 
   private loadHistory(o: OnuRow) {
     this.histLab.set([]); this.histDs.set([]); this.trafLab.set([]); this.trafDs.set([]);
-    this.api.zteOnuHistory(o.id, 'onu_rx_optical_power_dbm').subscribe((p) => {
+    // Igual que Equipos: un solo rango (minutos) para señal y consumo; 'En vivo' (15) crudo, el resto relleno.
+    const mins = this.trafMins(); const pad = mins !== 15;
+    const nv = (x: any) => (x.v == null ? null : +x.v);
+    // Consumo en Gbps: el gráfico (fmt='gbps') auto-escala eje/tooltip a Kbps/Mbps/Gbps segun el dato.
+    const toGbps = (x: any) => (x.v == null ? null : (+x.v) * 8 / 1e9);
+    const real = (a: (number | null)[]) => a.filter((v): v is number => v != null);
+    this.api.zteOnuHistory(o.id, 'onu_rx_optical_power_dbm', mins, pad).subscribe((p) => {
+      const rv = p.map(nv);
       this.histLab.set(p.map((x) => x.t));
-      this.histDs.set([areaDs('RX (dBm)', '#16a34a', p.map((x) => +x.v! || 0))]);
+      this.histDs.set([areaDs('RX (dBm)', '#16a34a', rv)]);
+      this.rxStat.set(stats(real(rv)));
     });
-    this.api.zteOnuHistory(o.id, 'onu_out_rate_bps').subscribe((p) => {
-      this.trafLab.set(p.map((x) => x.t));
-      this.trafDs.set([areaDs('Descarga (Mbps)', '#7b0061', p.map((x) => (+x.v! || 0) * 8 / 1e6))]);
+    this.api.zteOnuHistory(o.id, 'onu_out_rate_bps', mins, pad).subscribe((pOut) => {
+      const ov = pOut.map(toGbps);
+      this.trafLab.set(pOut.map((x) => x.t));
+      const dsc = areaDs('Descarga', '#7b0061', ov);
+      this.trafDs.set([dsc]);
+      this.dscStat.set(stats(real(ov)));
+      // Subida (SNMP): mismo barrido, mismos timestamps -> se agrega como 2da serie.
+      this.api.zteOnuHistory(o.id, 'onu_in_rate_bps', mins, pad).subscribe((pIn) => {
+        const iv = pIn.map(toGbps);
+        this.trafDs.set([dsc, areaDs('Subida', '#16a34a', iv)]);
+        this.subStat.set(stats(real(iv)));
+      });
     });
     // Tráfico HISTÓRICO del PUERTO PON del cliente (opción 1).
     this.ponLab.set([]); this.ponDs.set([]);
@@ -938,9 +1026,18 @@ export class ClientesOnu implements OnDestroy {
     return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   }
 
+  // Mismo modelo que Equipos: rangos en MINUTOS; 'En vivo' (15) crudo, el resto relleno (pad).
+  trafRangos = [{ m: 15, lbl: 'En vivo' }, { m: 1440, lbl: '24h' }, { m: 2880, lbl: '2d' }, { m: 10080, lbl: '7d' }, { m: 43200, lbl: '30d' }];
+  trafMins = signal(15);
+  /** Cambia el rango del histórico (consumo + señal) y recarga, igual que Equipos. */
+  setTrafRange(m: number) { this.trafMins.set(m); const o = this.sel(); if (o) this.loadHistory(o); }
+
+  // Consumo SIEMPRE en Mbps (el valor viene en bytes/s -> *8 = bits/s -> /1e6 = Mbps).
+  // Adaptativo: bps -> Kbps -> Mbps segun magnitud (bps aqui viene en bytes/s -> *8 = bits/s).
   rate(bps: number | null): string {
     if (bps == null) return '—';
     const bits = bps * 8;
+    if (bits >= 1e9) return (bits / 1e9).toFixed(2) + ' Gbps';
     if (bits >= 1e6) return (bits / 1e6).toFixed(2) + ' Mbps';
     if (bits >= 1e3) return (bits / 1e3).toFixed(0) + ' Kbps';
     return bits + ' bps';
