@@ -244,9 +244,9 @@ export class PanelCard implements OnChanges, OnDestroy {
   cpuStat = signal<{ min: number; avg: number; max: number } | null>(null);
   topRows = signal<any[]>([]);
   portRows = signal<any[]>([]);
-  histRanges = [{ label: '1h', h: 1 }, { label: '6h', h: 6 }, { label: '24h', h: 24 }, { label: '7d', h: 168 }];
+  histRanges = [{ label: '1h', h: 60 }, { label: '6h', h: 360 }, { label: '24h', h: 1440 }, { label: '7d', h: 10080 }];
   histSel = signal<any | null>(null);
-  histHours = signal(6);
+  histHours = signal(360);
   histCountdown = signal(20);
   histLab = signal<string[]>([]);
   histDs = signal<any[]>([]);
@@ -305,7 +305,7 @@ export class PanelCard implements OnChanges, OnDestroy {
   openHistory(o: any) {
     clearInterval(this.histTimer);
     this.histSel.set(o);
-    this.loadHist(o, 6);
+    this.loadHist(o, 360);
     // Al abrir, jala el dato FRESCO de esta ONU ya mismo (no el guardado de hace minutos).
     this.resolveOlt((id) => { this.oltIdResolved = id; this.liveHist(o); });
     // EN VIVO: contador de 1s; al llegar a 0 refresca ESTA ONU y reinicia.
