@@ -15,6 +15,7 @@ export class MapaContextMenuComponent {
   @Input() x = 0;
   @Input() y = 0;
   @Input() elemento: MapaElemento | null = null;
+  @Input() esNap = false;
 
   @Output() closeRequested = new EventEmitter<void>();
   @Output() editDataRequested = new EventEmitter<MapaElemento>();
@@ -22,6 +23,7 @@ export class MapaContextMenuComponent {
   @Output() editGeometryRequested = new EventEmitter<MapaElemento>();
   @Output() deleteRequested = new EventEmitter<MapaElemento>();
   @Output() centerRequested = new EventEmitter<MapaElemento>();
+  @Output() napClientesRequested = new EventEmitter<MapaElemento>();
 
   private sessionStore = inject(SessionStore);
 
@@ -50,6 +52,11 @@ export class MapaContextMenuComponent {
 
   onCenter(item: MapaElemento) {
     this.centerRequested.emit(item);
+    this.close();
+  }
+
+  onNapClientes(item: MapaElemento) {
+    this.napClientesRequested.emit(item);
     this.close();
   }
 

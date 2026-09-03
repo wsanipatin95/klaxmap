@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, ViewChild, inject, signal } from '@angular/core';
+import { Component, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { MapaUiStore } from '../../store/mapa-ui.store';
@@ -16,6 +16,7 @@ import type {
   MapaNodoSaveRequest,
   MapaPatchRequest,
   MapaGeomTipo,
+  MapaNapClientes,
 } from '../../data-access/mapa.models';
 
 import { MapaLayoutComponent } from '../../components/mapa-layout/mapa-layout.component';
@@ -33,6 +34,9 @@ import { MapaCreateElementDialogComponent } from '../../components/mapa-create-e
 import { MapaContextMenuComponent } from '../../components/mapa-context-menu/mapa-context-menu.component';
 import { MapaNodeDialogComponent } from '../../components/mapa-node-dialog/mapa-node-dialog.component';
 import { MapaConfirmDialogComponent } from '../../components/mapa-confirm-dialog/mapa-confirm-dialog.component';
+import { MapaNapClientesComponent } from '../../components/mapa-nap-clientes/mapa-nap-clientes.component';
+import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
+import { SessionStore } from '../../../seg/store/session.store';
 
 import { MapaCrudFacade } from '../../application/mapa-crud.facade';
 import { MapaInteractionFacade } from '../../application/mapa-interaction.facade';
@@ -71,6 +75,7 @@ type PropertiesRequestedTab = 'edicion' | 'historial';
     MapaContextMenuComponent,
     MapaNodeDialogComponent,
     MapaConfirmDialogComponent,
+    MapaNapClientesComponent,
   ],
   templateUrl: './mapa-home.component.html',
   styleUrl: './mapa-home.component.scss',
@@ -104,6 +109,20 @@ export class MapaHomeComponent {
   readonly contextX = this.interaction.contextX;
   readonly contextY = this.interaction.contextY;
   readonly contextElemento = this.interaction.contextElemento;
+
+  // ── Modal de clientes de una NAP ──
+  private readonly elementosRepo = inject(MapaElementosRepository);
+  private readonly sessionStore = inject(SessionStore);
+
+  readonly napOpen = signal(false);
+  readonly napLoading = signal(false);
+  readonly napSaving = signal(false);
+  readonly napError = signal<string | null>(null);
+  readonly napData = signal<MapaNapClientes | null>(null);
+  readonly napElemento = signal<MapaElemento | null>(null);
+  readonly napTitulo = computed(() => this.napElemento()?.nombre?.trim() || 'NAP');
+  readonly puedeEditarNap = computed(() => this.sessionStore.hasCompanyPrivilege('eem_red_red'));
+  readonly contextEsNap = computed(() => this.esNapElemento(this.contextElemento()));
 
   readonly hiddenNodeIds = this.visibility.hiddenNodeIds;
   readonly hiddenElementoIds = this.visibility.hiddenElementoIds;
@@ -679,6 +698,67 @@ export class MapaHomeComponent {
     this.runGuarded(() => {
       this.openElementoPanel(item, 'historial');
       this.interaction.closeContextMenu();
+    });
+  }
+
+  /** ¿El elemento es una NAP/splitter (tiene clientes asignables)? */
+  esNapElemento(item: MapaElemento | null): boolean {
+    if (!item) return false;
+    let code = String(item.tipoCodigo ?? '').toUpperCase();
+    if (!code) {
+      const tipo = this.tipos().find((t) => t.idGeoTipoElemento === item.idGeoTipoElementoFk);
+      code = String(tipo?.codigo ?? '').toUpperCase();
+    }
+    return code.includes('NAP') || code === 'SPLITTER';
+  }
+
+  napClientesContextElemento(item: MapaElemento) {
+    this.interaction.closeContextMenu();
+    this.abrirNapClientes(item);
+  }
+
+  abrirNapClientes(item: MapaElemento) {
+    this.napElemento.set(item);
+    this.napData.set(null);
+    this.napError.set(null);
+    this.napOpen.set(true);
+    this.cargarNapClientes(item.idGeoElemento);
+  }
+
+  cerrarNapClientes() {
+    this.napOpen.set(false);
+  }
+
+  private cargarNapClientes(id: number) {
+    this.napLoading.set(true);
+    this.napError.set(null);
+    this.elementosRepo.clientesNap(id).subscribe({
+      next: (data) => {
+        this.napData.set(data);
+        this.napLoading.set(false);
+      },
+      error: (err) => {
+        this.napLoading.set(false);
+        this.napError.set(err?.message || 'No se pudieron cargar los clientes de la NAP');
+      },
+    });
+  }
+
+  cambiarSplitterNap(valor: string) {
+    const el = this.napElemento();
+    if (!el || this.napSaving()) return;
+    const atributos = { ...(el.atributos ?? {}), splitter: valor };
+    this.napSaving.set(true);
+    this.elementosRepo.editar({ id: el.idGeoElemento, cambios: { atributos } }).subscribe({
+      next: (resp) => {
+        this.napElemento.set(resp.data ?? { ...el, atributos });
+        this.napSaving.set(false);
+        this.cargarNapClientes(el.idGeoElemento);
+      },
+      error: (err) => {
+        this.napSaving.set(false);
+        this.napError.set(err?.message || 'No se pudo cambiar el splitter de la NAP');
+      },
     });
   }
 

@@ -68,10 +68,22 @@
   (restored)="onNodeRestored($event)"></app-mapa-node-dialog>
 
 <app-mapa-context-menu [visible]="contextVisible()" [x]="contextX()" [y]="contextY()" [elemento]="contextElemento()"
+  [esNap]="contextEsNap()" (napClientesRequested)="napClientesContextElemento($event)"
   (closeRequested)="closeContextMenu()" (centerRequested)="centerContextElemento($event)"
   (editDataRequested)="editDataContextElemento($event)" (auditRequested)="auditContextElemento($event)"
   (editGeometryRequested)="editGeometryContextElemento($event)"
   (deleteRequested)="deleteContextElemento($event)"></app-mapa-context-menu>
+
+<app-mapa-nap-clientes
+  [open]="napOpen()"
+  [titulo]="napTitulo()"
+  [data]="napData()"
+  [loading]="napLoading()"
+  [saving]="napSaving()"
+  [error]="napError()"
+  [puedeEditar]="puedeEditarNap()"
+  (closeRequested)="cerrarNapClientes()"
+  (splitterChange)="cambiarSplitterNap($event)"></app-mapa-nap-clientes>
 
 <app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>
 

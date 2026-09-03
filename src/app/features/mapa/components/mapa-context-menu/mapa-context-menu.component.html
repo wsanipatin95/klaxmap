@@ -14,6 +14,10 @@
     </div>
 
     <div class="context-actions">
+      <button *ngIf="esNap" type="button" class="menu-btn menu-btn--nap" (click)="onNapClientes(e)">
+        Clientes NAP
+      </button>
+
       <button *ngIf="editarElemento()" type="button" class="menu-btn menu-btn--primary" (click)="onEditData(e)">
         Editar datos
       </button>

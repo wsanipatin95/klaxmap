@@ -1,0 +1,70 @@
+<div class="nap-overlay" *ngIf="open" (click)="onOverlayClick()">
+  <div class="nap-dialog" (click)="onDialogClick($event)">
+
+    <!-- Cabecera -->
+    <div class="nap-header">
+      <div class="nap-header-top">
+        <div class="nap-title" [title]="titulo">
+          <span class="nap-title-eyebrow">Clientes de la NAP</span>
+          <span class="nap-title-name">{{ titulo }}</span>
+        </div>
+        <button type="button" class="nap-close" (click)="close()" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="nap-header-meta" *ngIf="data as d">
+        <!-- Splitter -->
+        <div class="nap-splitter">
+          <span class="nap-splitter-label">Splitter</span>
+          <div class="nap-splitter-seg" [class.is-locked]="!puedeEditar || saving">
+            <button type="button" class="nap-seg-btn" [class.active]="d.splitter === '1/8'"
+              [disabled]="!puedeEditar || saving || loading" (click)="seleccionarSplitter('1/8')">1/8</button>
+            <button type="button" class="nap-seg-btn" [class.active]="d.splitter === '1/16'"
+              [disabled]="!puedeEditar || saving || loading" (click)="seleccionarSplitter('1/16')">1/16</button>
+          </div>
+          <span class="nap-saving" *ngIf="saving">Guardando…</span>
+        </div>
+
+        <!-- Contador de puertos -->
+        <div class="nap-counter">
+          <div class="nap-counter-main">
+            <span class="nap-counter-oc">{{ d.ocupados }}</span>
+            <span class="nap-counter-sep">/</span>
+            <span class="nap-counter-total">{{ d.total }}</span>
+            <span class="nap-counter-cap">puertos</span>
+          </div>
+          <div class="nap-counter-disp" [class.is-full]="d.disponibles === 0">
+            {{ d.disponibles }} {{ d.disponibles === 1 ? 'disponible' : 'disponibles' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cuerpo -->
+    <div class="nap-body">
+      <div class="nap-state" *ngIf="loading">Cargando clientes…</div>
+
+      <div class="nap-state nap-state--error" *ngIf="!loading && error">{{ error }}</div>
+
+      <ng-container *ngIf="!loading && !error && data as d">
+        <div class="nap-state" *ngIf="d.idRedEquipo == null">
+          Esta NAP todavía no tiene un equipo de red asignado, por eso no registra clientes.
+        </div>
+
+        <div class="nap-state" *ngIf="d.idRedEquipo != null && d.clientes.length === 0">
+          La NAP no tiene clientes asignados.
+        </div>
+
+        <ul class="nap-list" *ngIf="d.clientes.length > 0">
+          <li class="nap-row" *ngFor="let c of d.clientes">
+            <span class="nap-port" [title]="'Puerto ' + (c.puerto ?? '—')">{{ c.puerto ?? '—' }}</span>
+            <span class="nap-cliente" [title]="c.cliente || ''">{{ c.cliente || 'Sin nombre' }}</span>
+            <span class="nap-doc">{{ c.documento || '' }}</span>
+            <span class="nap-contrato" *ngIf="c.idContrato != null">#{{ c.idContrato }}</span>
+            <span class="nap-estado" [ngClass]="estadoClase(c.estado)">{{ estadoLabel(c.estado) }}</span>
+          </li>
+        </ul>
+      </ng-container>
+    </div>
+
+  </div>
+</div>

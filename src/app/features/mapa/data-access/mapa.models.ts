@@ -274,3 +274,22 @@ export interface MapaLegendItem {
   geometriaPermitida: 'point' | 'linestring' | 'polygon' | 'mixed';
   visible: boolean;
 }
+
+// ── Clientes asignados a una NAP (modal de KlaxMap al clickear la caja/splitter) ──
+export interface MapaNapCliente {
+  puerto?: number | null;
+  idContrato?: number | null;
+  cliente?: string | null;
+  documento?: string | null;
+  estado?: string | null;
+}
+
+export interface MapaNapClientes {
+  idGeoElemento: number;
+  idRedEquipo?: number | null;
+  splitter: string; // "1/8" | "1/16"
+  total: number;
+  ocupados: number;
+  disponibles: number;
+  clientes: MapaNapCliente[];
+}
