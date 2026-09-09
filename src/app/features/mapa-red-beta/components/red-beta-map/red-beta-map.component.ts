@@ -8,6 +8,7 @@ import 'leaflet-rotate';
 import type {
   RedBaseElemento, RedCapaKey, RedDispositivoPasivo, RedDispositivoPuerto,
   RedElementoRelacion, RedFoHilo, RedPonElementoRelacion,
+  RedCoberturaNap, RedCoberturaCliente,
 } from '../../data-access/red-beta.models';
 import type { RedSeleccion } from '../../application/red-beta.facade';
 import { estadoVisual, esConflicto, esPendienteCampo, esValidado, parseLatLon } from '../../util/red-beta-estado.util';
@@ -23,6 +24,9 @@ const VIEWPORT_PAD = 0.1;
 const FANOUT_CAP = 80;
 const PUERTO_RADIO = 0.00012;
 const DIM = 0.12;
+const COBERTURA_NAP_CAP = 1500;
+const COBERTURA_CLI_CAP = 4000;
+const COBERTURA_CIRCLE_MIN_ZOOM = 13;
 
 /**
  * Mapa Leaflet de la beta. Capa base + capas operativas. Al seleccionar: halo grueso en lo
@@ -59,6 +63,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() ponFo: RedPonElementoRelacion[] = [];
   @Input() hilos: RedFoHilo[] = [];
   @Input() puertos: RedDispositivoPuerto[] = [];
+  @Input() coberturaNaps: RedCoberturaNap[] = [];
+  @Input() coberturaClientes: RedCoberturaCliente[] = [];
   @Input() hiddenCapas: Set<RedCapaKey> = new Set();
   @Input() etiquetas = true;
   @Input() seleccion: RedSeleccion | null = null;
@@ -117,7 +123,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.viewInit) return;
     if (changes['baseElementos'] || changes['relaciones'] || changes['splitters'] || changes['ponFo'] ||
-        changes['hilos'] || changes['puertos'] || changes['hiddenCapas'] || changes['etiquetas'] ||
+        changes['hilos'] || changes['puertos'] || changes['coberturaNaps'] || changes['coberturaClientes'] ||
+        changes['hiddenCapas'] || changes['etiquetas'] ||
         changes['seleccion'] || changes['relatedGeoIds'] || changes['soloAnillo'] || changes['conectar']) {
       this.renderAll();
       if (changes['relaciones'] || changes['splitters']) this.fitOnce();
@@ -268,6 +275,8 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (!this.map) return;
     this.overlayGroup.clearLayers();
     const view = this.map.getBounds().pad(VIEWPORT_PAD);
+    // Cobertura primero, para que quede por debajo de relaciones/splitters.
+    this.renderCobertura(view);
     let drawn = 0;
     for (const r of this.relaciones) {
       if (drawn >= OVERLAY_CAP) break;
@@ -318,6 +327,61 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
     this.renderHilos(view);
     this.renderPuertos(view);
+  }
+
+  // ---- capa cobertura (cliente -> NAP por radio)
+  private renderCobertura(view: L.LatLngBounds): void {
+    if (!this.map || !this.visible('cobertura')) return;
+    const zoom = this.map.getZoom();
+
+    // 1) Circulos de cobertura + nodo por cada NAP con clientes
+    if (zoom >= COBERTURA_CIRCLE_MIN_ZOOM) {
+      let n = 0;
+      for (const nap of this.coberturaNaps) {
+        if (n >= COBERTURA_NAP_CAP) break;
+        if (nap.lat == null || nap.lng == null) continue;
+        const ll: L.LatLngTuple = [nap.lat, nap.lng];
+        if (!view.contains(ll)) continue;
+        n++;
+        const color = nap.nivelNap === 1 ? '#2563eb' : '#0891b2';
+        const radio = nap.radioM ?? 500;
+        L.circle(ll, { radius: radio, color, weight: 1.4, fillColor: color, fillOpacity: 0.05, opacity: 0.5, interactive: false }).addTo(this.overlayGroup);
+        const node = L.circleMarker(ll, { radius: 6, color: '#ffffff', weight: 2, fillColor: color, fillOpacity: 1 });
+        node.bindTooltip(
+          (nap.napCodigo || nap.napNombre || ('NAP ' + nap.idGeoElemento)) +
+          '<br>Nivel: ' + (nap.nivelNap ?? '?') +
+          '<br>Clientes: ' + nap.totalClientes +
+          '<br>Radio: ' + radio + ' m'
+        );
+        node.on('click', () => this.onSelect({ tipo: 'base', data: { idGeoElemento: nap.idGeoElemento, nombre: nap.napNombre || nap.napCodigo, etiqueta: nap.napCodigo, latLon: nap.lat + ',' + nap.lng } }));
+        node.addTo(this.overlayGroup);
+      }
+    }
+
+    // 2) Clientes: huecos siempre (son pocos), atachados solo con zoom (son miles)
+    let c = 0;
+    const showDentro = zoom >= POINTS_MIN_ZOOM;
+    for (const cl of this.coberturaClientes) {
+      if (c >= COBERTURA_CLI_CAP) break;
+      if (cl.lat == null || cl.lng == null) continue;
+      const ll: L.LatLngTuple = [cl.lat, cl.lng];
+      if (!view.contains(ll)) continue;
+      if (cl.dentroRadio) {
+        if (!showDentro) continue;
+        c++;
+        if (cl.napLat != null && cl.napLng != null) {
+          L.polyline([ll, [cl.napLat, cl.napLng]], { color: '#22c55e', weight: 1, opacity: 0.3, interactive: false }).addTo(this.overlayGroup);
+        }
+        const m = L.circleMarker(ll, { radius: 3, color: '#16a34a', weight: 1, fillColor: '#22c55e', fillOpacity: 0.9 });
+        m.bindTooltip('Cliente ' + (cl.dni || cl.idConContratoFk) + '<br>NAP: ' + (cl.napCodigo || '') + '<br>Distancia: ' + (cl.distanciaM ?? '?') + ' m');
+        m.addTo(this.overlayGroup);
+      } else {
+        c++;
+        const m = L.circleMarker(ll, { radius: 4, color: '#b91c1c', weight: 1.5, fillColor: '#ef4444', fillOpacity: 0.9 });
+        m.bindTooltip('HUECO — Cliente ' + (cl.dni || cl.idConContratoFk) + '<br>Sin NAP a ' + cl.radioM + ' m');
+        m.addTo(this.overlayGroup);
+      }
+    }
   }
 
   private renderHilos(view: L.LatLngBounds): void {

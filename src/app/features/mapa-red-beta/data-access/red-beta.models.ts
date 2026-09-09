@@ -166,6 +166,36 @@ export interface RedBaseElemento {
   contratos?: number | null;
 }
 
+/** kxvp_red_cobertura_nap — 1 fila por caja NAP (1er/2do nivel) con su conteo de clientes. */
+export interface RedCoberturaNap {
+  idGeoElemento: number;
+  napCodigo?: string | null;
+  napNombre?: string | null;
+  nivelNap?: number | null; // 1 | 2
+  radioM: number;
+  lat?: number | null;
+  lng?: number | null;
+  totalClientes: number;
+}
+
+/** kxvp_red_cobertura_cliente — cada contrato con GPS y la NAP a la que quedo atachado. */
+export interface RedCoberturaCliente {
+  idRedCoberturaCliente: number;
+  idConContratoFk: number;
+  dni?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  idGeoElementoFk?: number | null; // null = hueco
+  napCodigo?: string | null;
+  napNombre?: string | null;
+  napLat?: number | null;
+  napLng?: number | null;
+  nivelNap?: number | null;
+  distanciaM?: number | null;
+  radioM: number;
+  dentroRadio: boolean;
+}
+
 /** Acciones humanas que la beta puede ejecutar sobre una sugerencia. */
 export type RedAccionKind =
   | 'validar-oficina'
@@ -234,4 +264,5 @@ export type RedCapaKey =
   | 'puertos'
   | 'ponFo'
   | 'conflictos'
-  | 'pendienteCampo';
+  | 'pendienteCampo'
+  | 'cobertura';

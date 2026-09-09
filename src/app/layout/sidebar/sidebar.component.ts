@@ -69,6 +69,11 @@ export class SidebarComponent {
         route: '/app/mapa-red-beta',
       });
       items.push({
+        label: 'Mapa de cobertura',
+        icon: 'pi pi-map-marker',
+        route: '/app/cobertura/home',
+      });
+      items.push({
         label: 'Monitoreo',
         icon: 'pi pi-server',
         expanded: false,

@@ -62,6 +62,13 @@ export interface RedProcesoParams {
                 <input type="number" class="in" [value]="minConfianza()" (input)="minConfianza.set(num($event) ?? 70)" />
               </div>
             }
+            @if (kind === 'cobertura') {
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Radio de cobertura (metros)</label>
+                <input type="number" class="in" [value]="radioM()" (input)="radioM.set(num($event) ?? 500)" />
+                <p class="mt-1 text-[11px] text-slate-400">Atacha cada cliente con GPS a la NAP (1er/2do nivel) mas cercana dentro de este radio. Recomendado: 500.</p>
+              </div>
+            }
           </div>
 
           <div class="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
@@ -92,7 +99,7 @@ export class RedBetaProcesoDialogComponent {
     this.idRedNodo.set(null);
     this.idRedDispositivoPasivo.set(null);
     this.idGeoElementoFo.set(null);
-    this.radioM.set(10);
+    this.radioM.set(v === 'cobertura' ? 500 : 10);
     this.minConfianza.set(v === 'splitters' ? 65 : 70);
   }
   get kind(): RedProcesoKind | null {
@@ -122,6 +129,7 @@ export class RedBetaProcesoDialogComponent {
       case 'puertos': return 'Generar puertos de splitters';
       case 'hilos': return 'Generar hilos de FO';
       case 'ponfo': return 'Generar relacion PON/VLAN -> FO';
+      case 'cobertura': return 'Generar cobertura de clientes por radio';
       default: return '';
     }
   }
@@ -133,6 +141,7 @@ export class RedBetaProcesoDialogComponent {
       case 'puertos': return 'Genera entrada(s) y salidas segun ratio de cada splitter.';
       case 'hilos': return 'Genera hilos supuestos por tipo de FO.';
       case 'ponfo': return 'Sugiere PON/VLAN -> FO si existen tablas logicas.';
+      case 'cobertura': return 'Relaciona cada contrato con GPS a la caja NAP mas cercana dentro del radio. Los que no caen quedan como hueco.';
       default: return '';
     }
   }
@@ -157,6 +166,9 @@ export class RedBetaProcesoDialogComponent {
         break;
       case 'ponfo':
         params.minConfianza = this.minConfianza();
+        break;
+      case 'cobertura':
+        params.radioM = this.radioM();
         break;
     }
     this.confirmar.emit({ kind: this._kind, params });

@@ -8,6 +8,7 @@ import type {
   MapaPatchRequest,
   MapaElementoGeometriaRequest,
   PagedResponse,
+  MapaNapClientes,
 } from '../mapa.models';
 
 @Injectable({ providedIn: 'root' })
@@ -50,5 +51,9 @@ export class MapaElementosRepository {
 
   restaurar(id: number) {
     return this.api.restaurar(id).pipe(map((r) => unwrapWithMsg<MapaElemento>(r)));
+  }
+
+  clientesNap(id: number) {
+    return this.api.clientesNap(id).pipe(map((r) => unwrapOrThrow<MapaNapClientes>(r)));
   }
 }

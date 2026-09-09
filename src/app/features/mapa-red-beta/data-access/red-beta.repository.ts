@@ -10,6 +10,8 @@ import type {
   RedFoHilo,
   RedDispositivoPuerto,
   RedBaseElemento,
+  RedCoberturaNap,
+  RedCoberturaCliente,
 } from './red-beta.models';
 
 /**
@@ -45,6 +47,14 @@ export class RedBetaRepository {
 
   listarBaseElementos(params: { idRedNodo?: number; idGeoTipoElemento?: number; q?: string; bbox?: string; limit?: number } = {}) {
     return this.api.listarBaseElementos(params).pipe(map((r) => unwrapOrThrow<RedBaseElemento[]>(r)));
+  }
+
+  // Cobertura
+  listarCoberturaNaps(radioM?: number) {
+    return this.api.listarCoberturaNaps(radioM).pipe(map((r) => unwrapOrThrow<RedCoberturaNap[]>(r)));
+  }
+  listarCoberturaClientes(radioM?: number, soloHuecos?: boolean) {
+    return this.api.listarCoberturaClientes(radioM, soloHuecos).pipe(map((r) => unwrapOrThrow<RedCoberturaCliente[]>(r)));
   }
 
   // Acciones
@@ -120,5 +130,8 @@ export class RedBetaRepository {
   }
   generarPonFoSugerido(minConfianza?: number) {
     return this.api.generarPonFoSugerido(minConfianza).pipe(map((r) => unwrapWithMsg<number>(r)));
+  }
+  generarCoberturaClientes(radioM?: number) {
+    return this.api.generarCoberturaClientes(radioM).pipe(map((r) => unwrapWithMsg<number>(r)));
   }
 }

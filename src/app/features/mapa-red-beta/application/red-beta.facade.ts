@@ -14,6 +14,8 @@ import type {
   RedAnillo,
   RedAnilloLinea,
   RedAnilloNav,
+  RedCoberturaNap,
+  RedCoberturaCliente,
 } from '../data-access/red-beta.models';
 
 export type RedSeleccionTipo = 'base' | 'relacion' | 'splitter' | 'ponfo' | 'hilo' | 'puerto';
@@ -41,6 +43,11 @@ export class RedBetaFacade {
   readonly ponFo = signal<RedPonElementoRelacion[]>([]);
   readonly baseElementos = signal<RedBaseElemento[]>([]);
 
+  // -------- cobertura cliente -> NAP (capa comercial/operativa por radio)
+  readonly coberturaNaps = signal<RedCoberturaNap[]>([]);
+  readonly coberturaClientes = signal<RedCoberturaCliente[]>([]);
+  readonly radioCobertura = signal<number>(500);
+
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly mensaje = signal<string | null>(null);
@@ -54,6 +61,9 @@ export class RedBetaFacade {
     const hil = this.hilos().filter((h) => h.estadoHilo === 'Conflicto');
     return { rel, spl, pue, hil, total: rel.length + spl.length + pue.length + hil.length };
   });
+
+  /** Total de huecos de cobertura (clientes con GPS sin NAP en radio). */
+  readonly coberturaHuecos = computed(() => this.coberturaClientes().filter((c) => !c.dentroRadio).length);
 
   /** Id del elemento geografico de la seleccion actual (para resaltar sus conexiones). */
   readonly selectedGeoId = computed<number | null>(() => {
@@ -375,6 +385,27 @@ export class RedBetaFacade {
         this.loading.set(false);
       },
     });
+    // La cobertura se carga aparte para que un fallo suyo no tumbe el mapa principal.
+    this.cargarCobertura();
+  }
+
+  /** Carga la capa de cobertura (NAP + clientes) del radio actual, aislada del resto. */
+  cargarCobertura() {
+    const r = this.radioCobertura();
+    forkJoin({
+      naps: this.repo.listarCoberturaNaps(r),
+      clientes: this.repo.listarCoberturaClientes(r),
+    }).subscribe({
+      next: (res) => {
+        this.coberturaNaps.set(res.naps ?? []);
+        this.coberturaClientes.set(res.clientes ?? []);
+      },
+      error: () => {
+        // Silencioso: si aun no se ha generado o el backend no responde, se deja vacia.
+        this.coberturaNaps.set([]);
+        this.coberturaClientes.set([]);
+      },
+    });
   }
 
   seleccionar(sel: RedSeleccion | null) {
@@ -385,7 +416,7 @@ export class RedBetaFacade {
   ejecutarAccion(ev: RedAccionEvento) {
     const done = (msg: string) => {
       this.error.set(null);
-      this.mensaje.set('\u2713 Guardado. ' + msg + ' (asi quedo el elemento)');
+      this.mensaje.set('✓ Guardado. ' + msg + ' (asi quedo el elemento)');
       this.recargarListas();
     };
     const fail = (e: unknown) => {
@@ -465,7 +496,7 @@ export class RedBetaFacade {
 
   // -------- procesos (cursores kxfp_)
   generar(
-    kind: 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo',
+    kind: 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo' | 'cobertura',
     params: { idRedNodo?: number; minConfianza?: number; radioM?: number; idRedDispositivoPasivo?: number; idGeoElementoFo?: number } = {}
   ) {
     this.error.set(null);
@@ -495,6 +526,19 @@ export class RedBetaFacade {
       case 'ponfo':
         this.repo.generarPonFoSugerido(params.minConfianza ?? 70).subscribe({ next: after, error: fail });
         break;
+      case 'cobertura': {
+        const r = params.radioM ?? 500;
+        this.radioCobertura.set(r);
+        this.repo.generarCoberturaClientes(r).subscribe({
+          next: (res) => {
+            const n = res?.data ?? 0;
+            this.mensaje.set(`Cobertura generada (radio ${r} m). Clientes dentro de radio: ${n}. Activa la capa "Cobertura clientes" para verla.`);
+            this.cargarCobertura();
+          },
+          error: fail,
+        });
+        break;
+      }
     }
   }
 
