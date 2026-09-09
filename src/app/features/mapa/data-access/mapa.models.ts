@@ -288,6 +288,7 @@ export interface MapaNapClientes {
   idGeoElemento: number;
   idRedEquipo?: number | null;
   splitter: string; // "1/8" | "1/16"
+  bloqueado: boolean; // true si el splitter ya fue elegido (set-once); requiere desbloqueo con privilegio para cambiarlo
   total: number;
   ocupados: number;
   disponibles: number;

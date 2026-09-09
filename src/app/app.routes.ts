@@ -111,6 +111,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'cobertura',
+        loadChildren: () =>
+          import('src/app/features/cobertura/cobertura.routes').then(
+            (m) => m.COBERTURA_ROUTES
+          ),
+      },
+      {
         path: 'importacion',
         loadChildren: () =>
           import('src/app/features/importacion/importacion.routes').then(

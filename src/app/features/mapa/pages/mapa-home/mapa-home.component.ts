@@ -122,6 +122,9 @@ export class MapaHomeComponent {
   readonly napElemento = signal<MapaElemento | null>(null);
   readonly napTitulo = computed(() => this.napElemento()?.nombre?.trim() || 'NAP');
   readonly puedeEditarNap = computed(() => this.sessionStore.hasCompanyPrivilege('eem_red_red'));
+  // Privilegio para DESBLOQUEAR una NAP ya bloqueada (cambiar el splitter si se eligio la NAP equivocada).
+  // Se reutiliza el permiso de edicion de red; si luego crean un privilegio dedicado, se cambia solo aqui.
+  readonly puedeDesbloquearNap = computed(() => this.sessionStore.hasCompanyPrivilege('eem_red_red'));
   readonly contextEsNap = computed(() => this.esNapElemento(this.contextElemento()));
 
   readonly hiddenNodeIds = this.visibility.hiddenNodeIds;
@@ -341,6 +344,12 @@ export class MapaHomeComponent {
       nodos: this.nodos(),
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
+      afterSelect: () => {
+        // Click directo sobre una NAP/splitter (ej: "C52.8") abre el modal de clientes.
+        if (item && this.esNapElemento(item)) {
+          this.abrirNapClientes(item);
+        }
+      },
     });
   }
 

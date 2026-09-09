@@ -14,14 +14,22 @@
       <div class="nap-header-meta" *ngIf="data as d">
         <!-- Splitter -->
         <div class="nap-splitter">
-          <span class="nap-splitter-label">Splitter</span>
-          <div class="nap-splitter-seg" [class.is-locked]="!puedeEditar || saving">
+          <span class="nap-splitter-label">
+            Splitter
+            <span class="nap-lock" *ngIf="bloqueado && !desbloqueado" title="El splitter ya fue fijado">🔒</span>
+          </span>
+          <div class="nap-splitter-seg" [class.is-locked]="!editable">
             <button type="button" class="nap-seg-btn" [class.active]="d.splitter === '1/8'"
-              [disabled]="!puedeEditar || saving || loading" (click)="seleccionarSplitter('1/8')">1/8</button>
+              [disabled]="!editable" (click)="seleccionarSplitter('1/8')">1/8</button>
             <button type="button" class="nap-seg-btn" [class.active]="d.splitter === '1/16'"
-              [disabled]="!puedeEditar || saving || loading" (click)="seleccionarSplitter('1/16')">1/16</button>
+              [disabled]="!editable" (click)="seleccionarSplitter('1/16')">1/16</button>
           </div>
+
+          <button type="button" class="nap-unlock" *ngIf="puedeMostrarDesbloqueo" (click)="desbloquear()">
+            Desbloquear
+          </button>
           <span class="nap-saving" *ngIf="saving">Guardando…</span>
+          <span class="nap-unlocked" *ngIf="bloqueado && desbloqueado && !saving">Desbloqueado — elige el splitter correcto</span>
         </div>
 
         <!-- Contador de puertos -->
@@ -36,6 +44,11 @@
             {{ d.disponibles }} {{ d.disponibles === 1 ? 'disponible' : 'disponibles' }}
           </div>
         </div>
+      </div>
+
+      <!-- Aviso cuando está bloqueado y el usuario no puede desbloquear -->
+      <div class="nap-lock-hint" *ngIf="bloqueado && !desbloqueado && !puedeDesbloquear && data">
+        El splitter ya está fijado. Solo alguien con privilegio puede desbloquearlo para cambiarlo.
       </div>
     </div>
 

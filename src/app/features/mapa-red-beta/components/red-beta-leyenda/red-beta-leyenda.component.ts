@@ -80,6 +80,34 @@ import { RED_ESTADOS_LEYENDA, estadoVisual } from '../../util/red-beta-estado.ut
         </ul>
       }
     </div>
+
+    <div class="text-sm mt-2">
+      <button class="rb-sec-hdr" (click)="openC.set(!openC())" [attr.aria-expanded]="openC()">
+        <span class="rb-exp">{{ openC() ? '▾' : '▸' }}</span>
+        <span>Leyenda de cobertura</span>
+      </button>
+      @if (openC()) {
+        <ul class="space-y-1.5 mt-1.5">
+          <li class="flex items-center gap-2">
+            <span class="inline-block w-4 h-4 rounded-full" style="background:rgba(37,99,235,.15);border:1.5px solid #2563eb"></span>
+            <span class="text-slate-600">Radio NAP 1er nivel</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="inline-block w-4 h-4 rounded-full" style="background:rgba(8,145,178,.15);border:1.5px solid #0891b2"></span>
+            <span class="text-slate-600">Radio NAP 2do nivel</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#22c55e;border:1px solid #16a34a"></span>
+            <span class="text-slate-600">Cliente con cobertura (línea a su NAP)</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#ef4444;border:1.5px solid #b91c1c"></span>
+            <span class="text-slate-600">Hueco: cliente sin NAP en el radio</span>
+          </li>
+          <li class="text-[11px] text-slate-400 pt-0.5">Los clientes atachados aparecen al acercar el zoom.</li>
+        </ul>
+      }
+    </div>
   `,
   styles: [
     `.rb-sec-hdr{display:flex;align-items:center;gap:.4rem;width:100%;font-weight:600;color:#334155;cursor:pointer;background:none;border:none;padding:.15rem 0;}
@@ -92,5 +120,6 @@ export class RedBetaLeyendaComponent {
   readonly open = signal(false);
   readonly openL = signal(false);
   readonly openE = signal(false);
+  readonly openC = signal(false);
   vis(e: string) { return estadoVisual(e); }
 }

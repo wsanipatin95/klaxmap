@@ -82,6 +82,8 @@
   [saving]="napSaving()"
   [error]="napError()"
   [puedeEditar]="puedeEditarNap()"
+  [bloqueado]="!!napData()?.bloqueado"
+  [puedeDesbloquear]="puedeDesbloquearNap()"
   (closeRequested)="cerrarNapClientes()"
   (splitterChange)="cambiarSplitterNap($event)"></app-mapa-nap-clientes>
 

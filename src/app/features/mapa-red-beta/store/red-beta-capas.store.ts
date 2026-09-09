@@ -6,7 +6,7 @@ export interface RedCapaDef {
   label: string;
 }
 
-/** Definicion ordenada de las 9 capas requeridas por la beta. */
+/** Definicion ordenada de las capas de la beta. */
 export const RED_CAPAS: RedCapaDef[] = [
   { key: 'base', label: 'Mapa fisico base' },
   { key: 'relSugeridas', label: 'Relaciones fisicas sugeridas' },
@@ -17,14 +17,16 @@ export const RED_CAPAS: RedCapaDef[] = [
   { key: 'ponFo', label: 'PON/VLAN -> FO' },
   { key: 'conflictos', label: 'Conflictos' },
   { key: 'pendienteCampo', label: 'Pendiente campo' },
+  { key: 'cobertura', label: 'Cobertura clientes' },
 ];
 
 /**
- * Estado de visibilidad de capas de la beta. Por defecto todas visibles.
+ * Estado de visibilidad de capas de la beta. La capa de cobertura arranca OCULTA
+ * (es una vista comercial/operativa aparte); el resto visibles por defecto.
  */
 @Injectable()
 export class RedBetaCapasStore {
-  private readonly _ocultas = signal<Set<RedCapaKey>>(new Set());
+  private readonly _ocultas = signal<Set<RedCapaKey>>(new Set<RedCapaKey>(['cobertura']));
 
   readonly ocultas = computed(() => this._ocultas());
 
@@ -43,6 +45,6 @@ export class RedBetaCapasStore {
   }
 
   reset() {
-    this._ocultas.set(new Set());
+    this._ocultas.set(new Set<RedCapaKey>(['cobertura']));
   }
 }

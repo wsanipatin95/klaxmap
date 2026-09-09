@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-export type RedProcesoKind = 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo';
+export type RedProcesoKind = 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo' | 'cobertura';
 
 /** Acciones como botones-icono con tooltip (recarga y procesos kxfp_). Sin titulo: va en la barra del mapa. */
 @Component({
@@ -19,6 +19,7 @@ export type RedProcesoKind = 'nap' | 'splitters' | 'puertos' | 'hilos' | 'ponfo'
       <button class="ic" (click)="proceso.emit('puertos')" title="Proceso: generar Puertos" aria-label="Puertos">&#9638;</button>
       <button class="ic" (click)="proceso.emit('hilos')" title="Proceso: generar Hilos" aria-label="Hilos">&#12316;</button>
       <button class="ic" (click)="proceso.emit('ponfo')" title="Proceso: generar PON&#8594;FO" aria-label="PON a FO">&#9673;</button>
+      <button class="ic" (click)="proceso.emit('cobertura')" title="Proceso: generar Cobertura clientes (por radio)" aria-label="Cobertura">&#9678;</button>
     </div>
   `,
   styles: [

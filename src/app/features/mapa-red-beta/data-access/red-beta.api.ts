@@ -10,6 +10,8 @@ import type {
   RedFoHilo,
   RedDispositivoPuerto,
   RedBaseElemento,
+  RedCoberturaNap,
+  RedCoberturaCliente,
 } from './red-beta.models';
 
 /**
@@ -64,6 +66,22 @@ export class RedBetaApi {
   listarBaseElementos(params: { idRedNodo?: number; idGeoTipoElemento?: number; q?: string; bbox?: string; limit?: number } = {}) {
     return this.http.get<ApiEnvelope<RedBaseElemento[]>>(`${this.base}/base-elemento/listar`, {
       params: this.toParams({ ...params }),
+    });
+  }
+
+  // ---------------------------------------------------------------- Cobertura cliente -> NAP
+
+  /** Cajas NAP con conteo de clientes (para los circulos de cobertura). */
+  listarCoberturaNaps(radioM?: number) {
+    return this.http.get<ApiEnvelope<RedCoberturaNap[]>>(`${this.base}/cobertura/naps`, {
+      params: this.toParams({ radioM }),
+    });
+  }
+
+  /** Puntos de cliente atachados; soloHuecos=true devuelve solo los clientes sin NAP en radio. */
+  listarCoberturaClientes(radioM?: number, soloHuecos?: boolean) {
+    return this.http.get<ApiEnvelope<RedCoberturaCliente[]>>(`${this.base}/cobertura/clientes`, {
+      params: this.toParams({ radioM, soloHuecos }),
     });
   }
 
@@ -150,6 +168,9 @@ export class RedBetaApi {
   }
   generarPonFoSugerido(minConfianza?: number) {
     return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-pon-fo-sugerido`, { minConfianza });
+  }
+  generarCoberturaClientes(radioM?: number) {
+    return this.http.post<ApiEnvelope<number>>(`${this.base}/proceso/generar-cobertura-clientes`, { radioM });
   }
 
   // ---------------------------------------------------------------- helpers

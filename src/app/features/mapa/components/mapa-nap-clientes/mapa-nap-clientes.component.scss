@@ -299,3 +299,45 @@
   background: #e2e8f0;
   color: #475569;
 }
+
+/* ── Bloqueo / desbloqueo del splitter (set-once) ── */
+.nap-lock {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.nap-unlock {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #7b0061;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  color: #7b0061;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.nap-unlock:hover {
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.nap-unlocked {
+  font-size: 0.72rem;
+  color: #b0538f;
+  font-weight: 700;
+}
+
+.nap-lock-hint {
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.55rem;
+  background: #fbf3f8;
+  border: 1px solid #f0dbe8;
+  color: #7b0061;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
