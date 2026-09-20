@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AccesoService } from '../../../core/services/acceso.service';
-import { NocApi, Device, OltMarca } from '../services/noc-api';
+import { NocApi, Device, OltMarca, OltPerfil } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
 import { cpuColor } from '../shared/charts';
 import { TableSort } from '../shared/table-sort';
@@ -13,13 +13,14 @@ import { TableSort } from '../shared/table-sort';
   imports: [FormsModule],
   template: `
     <div class="tools">
-      @if (showBack()) { <button class="btn ghost sm" (click)="back()" title="Volver">← Atrás</button> }
-      <input class="inp" style="min-width:240px" placeholder="🔍 Buscar equipo, IP, zona..." [(ngModel)]="q" />
+      @if (showBack()) { <button class="btn ghost sm" (click)="back()" title="Volver"><i class="pi pi-chevron-left"></i> Atrás</button> }
+      <span class="buscador"><i class="pi pi-search"></i><input class="inp" style="min-width:240px" placeholder="Buscar equipo, IP, zona…" [(ngModel)]="q" /></span>
       <span class="chip" [class.on]="filter()==='all'" (click)="filter.set('all')">Todos</span>
       <span class="chip" [class.on]="filter()==='core'" (click)="filter.set('core')">Core</span>
       <span class="chip" [class.on]="filter()==='borde'" (click)="filter.set('borde')">Borde</span>
+      <span class="chip" [class.on]="filter()==='olt'" (click)="filter.set('olt')">OLT</span>
       <span class="chip" [class.on]="filter()==='down'" (click)="filter.set('down')">Down</span>
-      <button class="btn ghost" style="margin-left:auto" (click)="sincronizar()" [disabled]="sincronizando()" title="Traer las OLT/equipos del ERP y enlazarlos en el NOC (erp_olt_id)">{{ sincronizando() ? '⏳ Sincronizando…' : '↻ Sincronizar ERP' }}</button>
+      <button class="btn ghost" style="margin-left:auto" (click)="sincronizar()" [disabled]="sincronizando()" title="Traer las OLT/equipos del ERP y enlazarlos en el NOC (erp_olt_id)"><i class="pi pi-sync" [class.gira]="sincronizando()"></i> {{ sincronizando() ? 'Sincronizando…' : 'Sincronizar ERP' }}</button>
       <button class="btn" (click)="nuevo()">+ Nuevo equipo</button>
     </div>
 
@@ -40,17 +41,17 @@ import { TableSort } from '../shared/table-sort';
           @for (d of rows(); track d.id) {
             <tr class="clk" (click)="open(d)">
               <td><b>{{ d.name }}</b></td>
-              <td>{{ d.vendor }}</td>
+              <td>{{ d.vendor }}@if (d.device_type==='olt' && d.software_version) { <span class="fw" title="Firmware de la OLT. Es lo que decide que arbol de OIDs usa el NOC para leer sus ONUs.">{{ d.software_version }}</span> }</td>
               <td>{{ d.zone || '—' }}</td>
               <td>@if (d.device_type==='core') { <span class="badge b-ack">CORE</span> } @else if (d.device_type==='olt') { <span class="badge b-olt">OLT</span> } @else if (d.device_type==='borde') { <span class="badge b-borde">BORDE</span> } @else { <span class="badge b-maint">{{ d.device_type }}</span> }</td>
-              <td class="mono">{{ d.ip_address }}</td>
+              <td class="mono">{{ d.ip_address }}@if (d.device_type==='olt' && d.snmp_port && d.snmp_port !== 161) { <span class="puerto" title="Puerto SNMP publicado por NAT. Varias OLT comparten la IP publica del sitio y se distinguen por este puerto.">:{{ d.snmp_port }}</span> }</td>
               <td [innerHTML]="badge(d.status)"></td>
               <td>@if (d.status==='up' && d.snmp_enabled && d.cpu_percent!=null) { <b [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent }}%</b> } @else { <span style="color:var(--muted)" title="Requiere SNMP habilitado para leer CPU real">—</span> }</td>
-              <td>@if (d.ping_ms!=null) { {{ d.ping_ms }} ms } @else { <span style="color:var(--red)">timeout</span> }</td>
+              <td>@if (d.device_type==='olt') { <span class="no-aplica" title="La OLT esta detras de NAT: al ping responde el router de borde del sitio, no la OLT. Su estado se decide solo por SNMP al puerto real.">no aplica</span> } @else if (d.ping_ms!=null) { {{ d.ping_ms }} ms } @else { <span style="color:var(--red)">timeout</span> }</td>
               @if (esSupervisor()) {
                 <td style="text-align:right;white-space:nowrap" (click)="$event.stopPropagation()">
-                  <button class="btn ghost sm" title="Editar equipo" (click)="editar(d)">✎</button>
-                  <button class="btn ghost sm" style="margin-left:4px;color:var(--red)" title="Eliminar equipo" (click)="pedirBorrar(d)">🗑</button>
+                  <button class="btn ghost sm" title="Editar equipo" (click)="editar(d)"><i class="pi pi-pencil"></i></button>
+                  <button class="btn ghost sm" style="margin-left:4px;color:var(--red)" title="Eliminar equipo" (click)="pedirBorrar(d)"><i class="pi pi-trash"></i></button>
                 </td>
               }
             </tr>
@@ -79,6 +80,26 @@ import { TableSort } from '../shared/table-sort';
                   }
                 </select>
               </div>
+              <div style="grid-column:1/3"><label class="k">Perfil (modelo y firmware)</label>
+                <select class="inp" style="width:100%" [(ngModel)]="f.id_olt_perfil" (ngModelChange)="applyPerfil($event)">
+                  <option [ngValue]="undefined">— Sin perfil (se usa lo que haya en vendor/modelo) —</option>
+                  @for (pf of perfiles(); track pf.id) {
+                    <option [ngValue]="pf.id">{{ pf.nombre }}{{ pf.estado === 'por_validar' ? ' · por validar' : '' }}</option>
+                  }
+                </select>
+              </div>
+              <div class="ayuda">
+                El <b>firmware</b> del perfil es lo que decide qué árbol de OIDs usa el NOC para leer las ONUs de esta OLT.
+                Si queda mal, la OLT aparece registrada pero trae <b>0 ONUs y sin señal</b>.
+                @if (perfilResuelto(); as r) {
+                  <div class="resuelto">
+                    <span>Vendor: <b>{{ r.vendor }}</b></span>
+                    <span>Modelo: <b>{{ r.modelo || '—' }}</b></span>
+                    <span>Firmware: <b>{{ r.firmware || '—' }}</b></span>
+                    <span>Árbol SNMP: <b>{{ arbolDe(r.firmware, r.vendor) }}</b></span>
+                  </div>
+                }
+              </div>
             } @else {
               <div><label class="k">Vendor</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="openPicker('vendor')">{{ f.vendor || '— Elegir marca —' }}</button></div>
               <div><label class="k">Modelo</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="openPicker('model')">{{ f.model || '— Elegir modelo —' }}</button></div>
@@ -88,11 +109,11 @@ import { TableSort } from '../shared/table-sort';
             <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="f.zone"></div>
             <div><label class="k">IP</label><input class="inp" style="width:100%" [(ngModel)]="f.ip_address"></div>
             <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
-            <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
+            <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161" [title]="f.device_type === 'olt' ? 'Si la OLT está detrás de NAT, es el puerto publicado en el router de borde (ej. 10027), no el 161.' : ''"></div>
             <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="f.snmp_version"><option value="v2c">v2c</option><option value="v1">v1</option><option value="v3">v3</option></select></div>
             <div style="grid-column:1/3;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span>
-              <button type="button" class="btn ghost sm" style="margin-left:auto" (click)="probarSnmp()" [disabled]="probandoSnmp()">{{ probandoSnmp() ? 'Probando…' : '🔌 Probar SNMP' }}</button></div>
+              <button type="button" class="btn ghost sm" style="margin-left:auto" (click)="probarSnmp()" [disabled]="probandoSnmp()"><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button></div>
 
             @if (f.device_type === 'olt') {
               <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.telnet_user"></div>
@@ -141,7 +162,7 @@ import { TableSort } from '../shared/table-sort';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91">
         <div class="panel" style="width:380px;text-align:center">
           <div class="pb" style="padding:32px 24px">
-            <div style="font-size:32px;margin-bottom:14px">⏳</div>
+            <div class="dlg-ic load"><i class="pi pi-spinner"></i></div>
             <div style="font-weight:600;font-size:15px;line-height:1.7">Probando conexión Telnet<br>Espere Por Favor</div>
           </div>
         </div>
@@ -152,7 +173,7 @@ import { TableSort } from '../shared/table-sort';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:97" (click)="saveErr.set('')">
         <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">No se pudo completar la operación</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ saveErr() }}</div>
             <div style="display:flex;justify-content:center;margin-top:16px">
@@ -167,7 +188,7 @@ import { TableSort } from '../shared/table-sort';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:95" (click)="borrar.set(null)">
         <div class="panel" style="width:420px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">🗑</div>
+            <div class="dlg-ic danger"><i class="pi pi-trash"></i></div>
             <div style="font-weight:600;font-size:15px;line-height:1.7">Eliminar equipo</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">
               Se eliminará <b>{{ borrar()?.name }}</b> ({{ borrar()?.ip_address }}) del <b>ERP y del NOC</b>.
@@ -186,7 +207,7 @@ import { TableSort } from '../shared/table-sort';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:93" (click)="dupErr.set(false)">
         <div class="panel" style="width:400px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:15px;line-height:1.7">Equipo Ya Agregado</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">
               Ya existe un equipo registrado con la IP <b>{{ f.ip_address }}</b> y el puerto <b>{{ f.snmp_port || 161 }}</b>.
@@ -203,7 +224,7 @@ import { TableSort } from '../shared/table-sort';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="testErr.set('')">
         <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">Sin conexión Telnet a la OLT</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ testErr() }}</div>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:16px">
@@ -215,6 +236,18 @@ import { TableSort } from '../shared/table-sort';
       </div>
     }
   `,
+  styles: [`
+    /* Puerto SNMP publicado por NAT: con DST-NAT varias OLT comparten la IP publica del sitio
+       y SOLO se distinguen por el puerto. Si no se ve, la lista muestra dos filas identicas. */
+    .puerto { color:var(--primary); font-weight:700; }
+    .fw { margin-left:6px; font-size:10.5px; color:var(--muted); background:#f1f5f9; border-radius:5px; padding:1px 6px; font-weight:600; }
+    .no-aplica { color:var(--muted); }
+    .ayuda { grid-column:1/3; font-size:11.5px; color:var(--muted); line-height:1.55; background:#f8fafc;
+      border:1px solid var(--border); border-left:3px solid var(--primary); border-radius:8px; padding:8px 11px; }
+    .ayuda b { color:var(--text); }
+    .resuelto { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .resuelto span { font-size:11px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:1px 7px; }
+  `],
 })
 export class Equipos implements OnDestroy {
   private api = inject(NocApi);
@@ -244,7 +277,7 @@ export class Equipos implements OnDestroy {
   devices = signal<Device[]>([]);
   loaded = signal(false);
   q = '';
-  filter = signal<'all' | 'core' | 'borde' | 'down'>('all');
+  filter = signal<'all' | 'core' | 'borde' | 'olt' | 'down'>('all');
   showAdd = signal(false);
   testing = signal(false);
   testErr = signal('');
@@ -264,6 +297,7 @@ export class Equipos implements OnDestroy {
   esSupervisor = computed(() => this.acceso.esSupervisorEquipos());
   f: any = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
   marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
+  perfiles = signal<OltPerfil[]>([]);   // catalogo multimarca (kxt_olt_perfil): modelo + FIRMWARE
 
   // Picker de Vendor/Modelo (foto 4): la lista sale de lo YA registrado en los equipos.
   picker = signal<null | 'vendor' | 'model'>(null);
@@ -277,8 +311,41 @@ export class Equipos implements OnDestroy {
   constructor() {
     this.load();
     this.api.catalogoMarcas().subscribe((m) => this.marcas.set(m || []));
+    this.api.oltPerfiles().subscribe((p) => this.perfiles.set(p || []));
     // Auto-refresco cada 15s (la pantalla se mantiene viva).
     this.timer = setInterval(() => this.load(), 15000);
+  }
+
+  /**
+   * Perfil elegido en el formulario. El backend lo toma como FUENTE DE VERDAD de
+   * vendor/modelo/firmware (KxDeviceService.syncOltFromDevice), asi que lo que se muestra
+   * aca es exactamente lo que va a quedar guardado en kxt_olt.
+   */
+  perfilResuelto(): OltPerfil | null {
+    const id = (this.f as any).id_olt_perfil;
+    return id ? (this.perfiles().find((p) => p.id === id) || null) : null;
+  }
+
+  /**
+   * Arbol de OIDs que va a usar el colector con ese firmware/vendor. Es una traduccion de la
+   * regla del backend (OnuSnmpBulkCollector.profile): el vendor manda y el firmware desempata.
+   * Sirve para que el operador VEA la consecuencia de lo que eligio antes de guardar.
+   */
+  arbolDe(firmware: string | null, vendor: string | null): string {
+    const fw = (firmware || '').trim().toUpperCase();
+    const v = (vendor || '').trim().toUpperCase();
+    if (fw.startsWith('V2') || v.includes('V2')) return '.1082 (C300 V2)';
+    if (fw.startsWith('V1') || v.includes('V1')) return '.1012 (C300 V1)';
+    return 'se resolvera por marca';
+  }
+
+  /** Al elegir el perfil, refleja marca/modelo/firmware en el formulario (lo que guardara el backend). */
+  applyPerfil(id: any) {
+    const pf = this.perfiles().find((x) => x.id === id);
+    if (!pf) return;
+    this.f.vendor = pf.vendor;
+    (this.f as any).model = pf.modelo || this.f.model;
+    (this.f as any).software_version = pf.firmware || undefined;
   }
 
   /** Al elegir la marca del ERP, guarda su id y refleja el nombre en vendor (llave del motor). */
@@ -323,6 +390,7 @@ export class Equipos implements OnDestroy {
     return this.devices().filter((d) => {
       if (this.filter() === 'core' && d.device_type !== 'core') return false;
       if (this.filter() === 'borde' && d.device_type !== 'borde') return false;
+      if (this.filter() === 'olt' && d.device_type !== 'olt') return false;
       if (this.filter() === 'down' && d.status === 'up') return false;
       if (q && !(`${d.name} ${d.ip_address} ${d.zone}`.toLowerCase().includes(q))) return false;
       return true;
@@ -357,6 +425,7 @@ export class Equipos implements OnDestroy {
           this.f.snmp_poll_seconds = o.snmpPollSeconds;
           if (o.snmpCommunity) this.f.snmp_community = o.snmpCommunity;
           this.f.id_red_olt_marca = o.idRedOltMarca ?? undefined;
+          this.f.id_olt_perfil = o.idOltPerfil ?? undefined;
           if (o.softwareVersion) this.f.software_version = o.softwareVersion;
         }
       });

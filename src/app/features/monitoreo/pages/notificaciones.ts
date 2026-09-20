@@ -12,8 +12,8 @@ import { NocApi } from '../services/noc-api';
   imports: [FormsModule],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">🔔 Notificaciones</span>
-      <button class="btn" style="margin-left:auto" (click)="saveAll()">💾 Guardar cambios</button>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-bell"></i> Notificaciones</span>
+      <button class="btn" style="margin-left:auto" (click)="saveAll()"><i class="pi pi-save"></i> Guardar cambios</button>
     </div>
 
     @if (msg()) { <div class="panel" style="margin-bottom:12px"><div class="pb" style="color:var(--green);font-weight:600;padding:10px 14px">{{ msg() }}</div></div> }
@@ -21,7 +21,7 @@ import { NocApi } from '../services/noc-api';
     <div class="cards">
     <!-- General -->
     <div class="panel">
-      <div class="ph gen">⚙️ General</div>
+      <div class="ph gen"><span class="t"><i class="pi pi-cog"></i> General</span></div>
       <div class="pb grid compact">
         <label class="chk">
           <input type="checkbox" [checked]="cfg['notify_enabled']==='1'" (change)="set('notify_enabled', $any($event.target).checked?'1':'0')">
@@ -110,10 +110,10 @@ import { NocApi } from '../services/noc-api';
 
     <!-- Mensaje configurable -->
     <div class="panel" style="grid-column:1 / -1">
-      <div class="ph msg">📝 Mensaje a enviar</div>
+      <div class="ph msg"><span class="t"><i class="pi pi-pencil"></i> Mensaje a enviar</span></div>
       <div class="pb">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-          <span style="font-weight:600">🧪 Probar</span>
+          <span class="aviso" style="font-weight:600"><i class="pi pi-play"></i> Probar</span>
           <select class="inp" [(ngModel)]="testType" (ngModelChange)="onTypeChange()">
             <option value="generic">Prueba genérica</option>
             <option value="cpu">CPU crítica (equipo)</option>
@@ -126,7 +126,7 @@ import { NocApi } from '../services/noc-api';
             <option value="offline">ONU caída (OLT)</option>
             <option value="pon">Puerto PON saturado (OLT)</option>
             <option value="pon_down">Puerto PON caído (OLT)</option>
-            <option value="recovery">✅ Recuperación</option>
+            <option value="recovery">Recuperación</option>
           </select>
           <span style="color:var(--muted)">por</span>
           <select class="inp" [(ngModel)]="testChannel">
@@ -140,13 +140,13 @@ import { NocApi } from '../services/noc-api';
 
         <div class="msg2col">
           <div>
-            <div class="lbl">✏️ Lo que va <span class="mut">editá todo el mensaje acá</span></div>
+            <div class="lbl aviso"><i class="pi pi-pencil"></i> Lo que va <span class="mut">editá todo el mensaje acá</span></div>
             <textarea class="inp" rows="8" [(ngModel)]="cfg['notify_body']" (ngModelChange)="onTypeChange()"
                       style="resize:vertical;font-family:inherit;width:100%"></textarea>
             <div class="vars">Variables (las rellena el sistema): {{ '{' }}severidad{{ '}' }} · {{ '{' }}descripcion{{ '}' }} · {{ '{' }}equipo{{ '}' }} · {{ '{' }}onu{{ '}' }} · {{ '{' }}hora{{ '}' }}</div>
           </div>
           <div>
-            <div class="lbl">📤 Cómo se envía <span class="mut">así llega el aviso</span></div>
+            <div class="lbl aviso"><i class="pi pi-send"></i> Cómo se envía <span class="mut">así llega el aviso</span></div>
             <div class="bubble" [class.crit]="sevOf()==='crit'" [class.warn]="sevOf()!=='crit'">{{ testBody }}</div>
           </div>
         </div>
@@ -156,7 +156,7 @@ import { NocApi } from '../services/noc-api';
 
     <!-- Equipos Core/Borde/MikroTik: qué alertar de cada uno -->
     <div class="panel" style="margin-top:12px">
-      <div class="ph gen">🖧 Equipos · Core / Borde / MikroTik</div>
+      <div class="ph gen"><span class="t"><i class="pi pi-sitemap"></i> Equipos · Core / Borde / MikroTik</span></div>
       <div class="pb" style="padding:0;overflow:auto">
         <table>
           <thead><tr><th>Equipo</th><th>Tipo</th><th>Estado</th>
@@ -178,7 +178,7 @@ import { NocApi } from '../services/noc-api';
 
     <!-- OLTs: qué alertar -->
     <div class="panel" style="margin-top:12px">
-      <div class="ph gen">📡 OLTs</div>
+      <div class="ph gen"><span class="t"><i class="pi pi-wifi"></i> OLTs</span></div>
       <div class="pb" style="padding:0;overflow:auto">
         <table>
           <thead><tr><th>OLT</th><th>Estado</th>
@@ -200,13 +200,13 @@ import { NocApi } from '../services/noc-api';
 
     @if (testResults().length) {
       <div class="panel" style="margin-top:12px">
-        <div class="ph">🧪 Resultado de la prueba</div>
+        <div class="ph"><span class="t"><i class="pi pi-play"></i> Resultado de la prueba</span></div>
         <div class="pb">
           @for (r of testResults(); track r.channel) {
             <div style="display:flex;gap:10px;align-items:center;padding:6px 0;font-size:13px">
               <span style="width:90px;font-weight:600">{{ r.channel }}</span>
-              @if (r.ok) { <span style="color:var(--green);font-weight:600">✓ Enviado</span> }
-              @else { <span style="color:var(--red);font-weight:600">✕ Falló</span> <span style="color:var(--muted)">{{ r.error }}</span> }
+              @if (r.ok) { <span style="color:var(--green);font-weight:600">Enviado</span> }
+              @else { <span style="color:var(--red);font-weight:600">Falló</span> <span style="color:var(--muted)">{{ r.error }}</span> }
             </div>
           }
         </div>
@@ -367,7 +367,7 @@ export class Notificaciones {
     const keys = Object.keys(this.cfg);
     let done = 0;
     keys.forEach((k) => this.api.updateSetting(k, this.cfg[k]).subscribe({
-      next: () => { if (++done === keys.length) this.flash('✓ Configuración guardada.'); },
+      next: () => { if (++done === keys.length) this.flash('Configuración guardada.'); },
       error: () => this.flash('No se pudo guardar todo.'),
     }));
   }

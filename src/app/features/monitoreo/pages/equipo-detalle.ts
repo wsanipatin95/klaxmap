@@ -12,14 +12,14 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
   imports: [LineChart, FormsModule],
   styles: [`.lg{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px}`],
   template: `
-    <a class="back" (click)="back()" style="cursor:pointer">← Equipos</a>
+    <a class="back" (click)="back()" style="cursor:pointer"><i class="pi pi-chevron-left"></i> Equipos</a>
     @if (dev(); as d) {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <h2 style="font-size:20px">{{ d.name }}</h2>
         <span class="badge" [class.b-up]="d.status==='up'" [class.b-down]="d.status==='down'" [class.b-maint]="d.status!=='up'&&d.status!=='down'">{{ d.status.toUpperCase() }}</span>
         @if (d.snmp_enabled) { <span class="badge b-maint">SNMP</span> }
-        <span style="margin-left:auto;color:var(--red);font-size:12px;font-weight:600">● en vivo · {{ countdown() }} s</span>
-        <button class="btn ghost" (click)="openEdit(d)">✎ Editar equipo</button>
+        <span class="en-vivo" style="margin-left:auto;font-size:12px"><span class="st"></span> En vivo · {{ countdown() }} s</span>
+        <button class="btn ghost" (click)="openEdit(d)"><i class="pi pi-pencil"></i> Editar equipo</button>
       </div>
 
       <div class="meta">
@@ -32,7 +32,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)">🕒 Histórico:</span>
+        <span class="aviso" style="font-size:12px;color:var(--muted)"><i class="pi pi-clock"></i> Histórico:</span>
         <span class="segT">
           @for (r of ranges; track r.min) {
             <button [class.on]="range()===r.min" (click)="setRange(r.min)">{{ r.label }}</button>
@@ -147,7 +147,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
               }
             </div>
             <div class="ph" style="border-top:1px solid var(--border);border-bottom:none">
-              <button class="btn ghost" style="color:var(--red)" (click)="removeDevice()">🗑 Eliminar equipo</button>
+              <button class="btn ghost" style="color:var(--red)" (click)="removeDevice()"><i class="pi pi-trash"></i> Eliminar equipo</button>
               <span style="margin-left:auto;display:flex;gap:10px">
                 <button class="btn ghost" (click)="showEdit.set(false)">Cancelar</button>
                 <button class="btn" (click)="saveEdit()">Guardar cambios</button>
@@ -178,7 +178,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
         </div>
       }
     } @else {
-      <div class="empty"><span class="ic">⏳</span>Cargando equipo…</div>
+      <div class="empty"><span class="dlg-ic load"><i class="pi pi-spinner"></i></span><div>Cargando equipo…</div></div>
     }
 
     @if (testing()) {
@@ -186,7 +186,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91">
         <div class="panel" style="width:380px;text-align:center">
           <div class="pb" style="padding:32px 24px">
-            <div style="font-size:32px;margin-bottom:14px">⏳</div>
+            <div class="dlg-ic load"><i class="pi pi-spinner"></i></div>
             <div style="font-weight:600;font-size:15px;line-height:1.7">Probando conexión Telnet<br>Espere Por Favor</div>
           </div>
         </div>
@@ -197,7 +197,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:97" (click)="saveErr.set('')">
         <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">No se pudieron guardar los cambios</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ saveErr() }}</div>
             <div style="display:flex;justify-content:center;margin-top:16px">
@@ -212,7 +212,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="testErr.set('')">
         <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">Sin conexión Telnet a la OLT</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ testErr() }}</div>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:16px">

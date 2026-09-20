@@ -14,9 +14,26 @@ import { NocNotify } from '../services/noc-notify';
   imports: [FormsModule],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">🛠️ Configurar OLT</span>
-      <span style="margin-left:auto;font-size:12px;color:var(--red)">⚠ Escribe en producción · siempre revisá la vista previa</span>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-wrench"></i> Configurar OLT</span>
+      <span class="aviso" style="margin-left:auto;font-size:12px;color:var(--red)"><i class="pi pi-exclamation-triangle"></i> Escribe en producción · revisá siempre la vista previa</span>
     </div>
+
+    <!-- AVISO: el CLI global manda sobre todo lo demas. Si esta apagado, ningun comando sale,
+         asi que se avisa ANTES de que el operador arme la operacion (antes se enteraba al final). -->
+    @if (estado(); as st) {
+      @if (!st.cliEnabled) {
+        <div class="panel cli-off">
+          <div class="pb">
+            <div class="cli-off-t"><i class="pi pi-ban"></i> El envío por CLI está apagado en todo el NOC</div>
+            <div class="cli-off-x">
+              {{ st.motivo }}
+              Podés seguir usando la <b>vista previa</b> para revisar los comandos, pero el botón de envío queda bloqueado.
+              Se enciende con <code>NOC_ZTE_CLI_ENABLED=true</code> en el entorno del backend.
+            </div>
+          </div>
+        </div>
+      }
+    }
 
     <!-- SWITCH MAESTRO DE SEGURIDAD · olt_write_enabled (V54) -->
     <div class="panel" [style.borderLeft]="writeEnabled() ? '4px solid #2a9d2a' : '4px solid #c0392b'">
@@ -34,7 +51,7 @@ import { NocNotify } from '../services/noc-notify';
 
     <!-- CONFIG DE SEGURIDAD · allowlist + auto-apagado + retención -->
     <div class="panel">
-      <div class="ph">🔒 Seguridad del módulo</div>
+      <div class="ph"><span class="t"><i class="pi pi-lock"></i> Seguridad del módulo</span></div>
       <div class="pb" style="display:flex;flex-direction:column;gap:12px;max-width:660px">
         <div>
           <label class="k">Operadores autorizados (emails, separados por coma) · vacío = sin restricción</label>
@@ -73,8 +90,8 @@ import { NocNotify } from '../services/noc-notify';
             @for (o of olts(); track o.id) { <option [ngValue]="o.id">{{ o.name }} · {{ o.host }}</option> }
           </select>
           @if (oltId) {
-            <span class="chip">🏷️ {{ oltVendor() }}</span>
-            <span class="chip">🌐 {{ oltHost() }}</span>
+            <span class="chip aviso"><i class="pi pi-tag"></i> {{ oltVendor() }}</span>
+            <span class="chip aviso"><i class="pi pi-globe"></i> {{ oltHost() }}</span>
           }
         </div>
       </div>
@@ -82,7 +99,7 @@ import { NocNotify } from '../services/noc-notify';
 
     @if (!oltId) {
       <div class="panel"><div class="pb" style="text-align:center;color:var(--muted);padding:26px">
-        👆 Elegí una OLT para ver las operaciones disponibles.
+        <span class="aviso" style="justify-content:center"><i class="pi pi-info-circle"></i> Elegí una OLT para ver las operaciones disponibles.</span>
       </div></div>
     }
 
@@ -119,11 +136,11 @@ import { NocNotify } from '../services/noc-notify';
               <div class="flabel">ONU objetivo <span style="color:var(--red)">*</span></div>
               @if (selectedOnu(); as o) {
                 <div class="onusel">
-                  ✅ <b>{{ o.clientName || 'ONU' }}</b> · índice <b class="mono">{{ o.rawIndex }}</b>
+                  <i class="pi pi-check-circle" style="color:var(--green)"></i> <b>{{ o.clientName || 'ONU' }}</b> · índice <b class="mono">{{ o.rawIndex }}</b>
                   <button class="btn sm ghost" (click)="selectedOnu.set(null)">cambiar</button>
                 </div>
               } @else {
-                <input class="inp" style="max-width:360px" placeholder="🔍 buscar por cliente, serial o índice (1/1/1:5)…" [(ngModel)]="onuFilter">
+                <span class="buscador"><i class="pi pi-search"></i><input class="inp" style="max-width:360px" placeholder="Buscar por cliente, serial o índice (1/1/1:5)…" [(ngModel)]="onuFilter"></span>
                 @if (filteredOnus().length) {
                   <div class="onulist">
                     @for (o of filteredOnus(); track o.id) {
@@ -162,7 +179,7 @@ import { NocNotify } from '../services/noc-notify';
           }
 
           <div style="margin-top:14px">
-            <button class="btn" (click)="doPreview()">🔍 Ver vista previa</button>
+            <button class="btn" (click)="doPreview()"><i class="pi pi-eye"></i> Ver vista previa</button>
           </div>
         </div>
       </div>
@@ -173,13 +190,17 @@ import { NocNotify } from '../services/noc-notify';
           <div class="ph"><span class="stepn">4</span> Vista previa</div>
           <div class="pb">
             @if (pv.missing?.length) {
-              <div class="warnbox">⚠ Faltan datos: <b>{{ pv.missing.join(', ') }}</b></div>
+              <div class="warnbox aviso"><i class="pi pi-exclamation-triangle"></i> Faltan datos: <b>{{ pv.missing.join(', ') }}</b></div>
             } @else {
               <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Estos comandos exactos se enviarán por Telnet a <b>{{ oltName() }}</b>:</div>
               <pre class="cmdbox">{{ cmdText(pv.commands) }}</pre>
-              <button class="btn big" [style.background]="dangerColor(t.danger)" (click)="doExecute()" [disabled]="running()">
-                {{ running() ? '⏳ Enviando…' : '⚡ Confirmar y enviar a la OLT' }}
+              <button class="btn big" [style.background]="puedeEnviar() ? dangerColor(t.danger) : '#94a3b8'"
+                      (click)="doExecute()" [disabled]="running() || !puedeEnviar()" [title]="motivoBloqueo() || ''">
+                <i class="pi" [class.pi-spinner]="running()" [class.gira]="running()"
+                   [class.pi-ban]="!running() && !puedeEnviar()" [class.pi-bolt]="!running() && puedeEnviar()"></i>
+                {{ running() ? 'Enviando…' : (puedeEnviar() ? 'Confirmar y enviar a la OLT' : 'Envío bloqueado') }}
               </button>
+              @if (motivoBloqueo(); as m) { <div class="bloqueo">{{ m }}</div> }
             }
           </div>
         </div>
@@ -190,16 +211,16 @@ import { NocNotify } from '../services/noc-notify';
         <div class="panel">
           <div class="ph">
             <span class="badge" [style.background]="ex.status==='ok' ? '#e8f5e9' : '#fdecea'" [style.color]="ex.status==='ok' ? 'var(--green)' : 'var(--red)'">
-              {{ ex.status==='ok' ? '✓ Ejecutado correctamente' : '⚠ Ejecutado con errores' }}
+              {{ ex.status==='ok' ? 'Ejecutado correctamente' : (ex.ok===false ? 'No enviado' : 'Ejecutado con errores') }}
             </span>
           </div>
-          <div class="pb"><pre class="outbox">{{ ex.output }}</pre></div>
+          <div class="pb"><pre class="outbox">{{ ex.output || ex.error }}</pre></div>
         </div>
       }
 
       <!-- Editar comandos (avanzado) -->
       <div class="panel">
-        <div class="ph">⚙️ Comandos del template (avanzado)
+        <div class="ph"><span class="t"><i class="pi pi-cog"></i> Comandos del template (avanzado)</span>
           <button class="btn sm ghost" style="margin-left:auto" (click)="toggleEdit()">{{ editing() ? 'Ocultar' : 'Editar' }}</button>
         </div>
         @if (editing()) {
@@ -216,7 +237,7 @@ import { NocNotify } from '../services/noc-notify';
 
     <!-- Historial -->
     <div class="panel">
-      <div class="ph">🧾 Historial</div>
+      <div class="ph"><span class="t"><i class="pi pi-file"></i> Historial</span></div>
       <div class="pb">
         @if (logs().length) {
           <table>
@@ -240,6 +261,13 @@ import { NocNotify } from '../services/noc-notify';
     </div>
   `,
   styles: [`
+    .cli-off { border-left:4px solid #b45309; background:#fffbeb; margin-bottom:12px; }
+    .cli-off-t { display:flex; align-items:center; gap:8px; font-weight:700; color:#92400e; font-size:13.5px; }
+    .cli-off-t i.pi { font-size:14px; }
+    .cli-off-x { margin-top:6px; font-size:12.5px; color:#78350f; line-height:1.6; }
+    .cli-off-x code { background:#fef3c7; border-radius:4px; padding:1px 5px; }
+    .bloqueo { margin-top:8px; font-size:12px; color:#b45309; line-height:1.5; max-width:560px; }
+
     .stepn { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
              background:var(--primary,#4b3bff);color:#fff;font-size:12px;font-weight:700;margin-right:6px }
     .chip { background:#eef;color:#334;border-radius:14px;padding:3px 10px;font-size:12px;font-weight:600 }
@@ -269,6 +297,7 @@ export class OltConfig {
   private notify = inject(NocNotify);
 
   writeEnabled = signal(false);   // olt_write_enabled (kxt_setting)
+  estado = signal<any>(null);     // GET /olt-config/estado: CLI global + escritura + motivo
   adminEmails = '';
   autoOffMin = 30;
   logRetentionDays = 365;
@@ -306,6 +335,7 @@ export class OltConfig {
   constructor() {
     this.api.zteOlts().subscribe({ next: (o) => this.olts.set(o || []), error: () => {} });
     this.api.oltcTemplates().subscribe({ next: (t) => this.templates.set(t || []), error: () => {} });
+    this.api.oltcEstado().subscribe({ next: (e) => this.estado.set(e), error: () => {} });
     this.loadLogs();
     this.loadWriteEnabled();
   }
@@ -375,7 +405,7 @@ export class OltConfig {
     const t = this.tpl();
     if (!confirm(`¿Enviar estos comandos a ${this.oltName()}?\n\nOperación: ${t.name}\nEsto ESCRIBE en la OLT de producción.`)) return;
     this.running.set(true);
-    this.api.oltcExecute(this.tplCode, this.oltId, this.buildParams(), 'Wilson S.').subscribe({
+    this.api.oltcExecute(this.tplCode, this.oltId, this.buildParams()).subscribe({
       next: (r) => { this.execResult.set(r); this.running.set(false); this.loadLogs(); this.notify.ok('Comando ejecutado en la OLT.'); },
       error: (e) => { this.running.set(false); this.notify.error(e?.message || 'No se pudo ejecutar el comando en la OLT.'); },
     });
@@ -394,6 +424,24 @@ export class OltConfig {
       },
       error: (e) => alert(e.message || 'No se pudo guardar'),
     });
+  }
+
+  /** ¿Puede salir un comando ahora mismo? Manda el CLI global; despues el switch del modulo. */
+  puedeEnviar(): boolean {
+    const st = this.estado();
+    if (st && st.cliEnabled === false) return false;
+    return this.writeEnabled();
+  }
+
+  /** Texto que explica por que el boton esta bloqueado (o null si se puede enviar). */
+  motivoBloqueo(): string | null {
+    const st = this.estado();
+    if (st && st.cliEnabled === false)
+      return 'El CLI/Telnet está deshabilitado globalmente en el NOC: ningún comando sale hacia la OLT. '
+           + 'La vista previa sí funciona.';
+    if (!this.writeEnabled())
+      return 'El interruptor "Envío de comandos a la OLT" está en OFF. Actívalo arriba para poder enviar.';
+    return null;
   }
 
   loadLogs() { this.api.oltcLogs(this.oltId || undefined).subscribe({ next: (l) => this.logs.set(l || []), error: () => {} }); }

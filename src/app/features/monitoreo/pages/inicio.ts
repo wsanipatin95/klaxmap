@@ -13,25 +13,25 @@ import { NocApi } from '../services/noc-api';
   imports: [RouterLink],
   template: `
     <div class="tools">
-      <span style="font-weight:800;font-size:18px">🚨 Alerta temprana</span>
+      <span class="pg-title"><i class="pi pi-bell"></i> Alerta temprana</span>
       <span class="badge" [class.b-down]="(c().crit||0)>0" [class.b-up]="(c().crit||0)===0" style="margin-left:6px">
         {{ (c().crit||0)>0 ? 'ATENCIÓN' : 'TODO EN ORDEN' }}
       </span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:14px">
         <span style="font-family:'Consolas',monospace;font-size:15px;font-weight:700">{{ clock() }}</span>
-        <span style="color:var(--red);font-size:11px;font-weight:600">● en vivo · {{ countdown() }}s</span>
-        <button class="btn ghost sm" (click)="full()">⛶ Pantalla completa</button>
+        <span class="en-vivo"><span class="st"></span> En vivo · {{ countdown() }}s</span>
+        <button class="btn ghost sm" (click)="full()"><i class="pi pi-window-maximize"></i> Pantalla completa</button>
       </span>
     </div>
 
     @if (err()) {
-      <div class="panel" style="border-color:#f3b4b4;background:#fdeaea;margin-bottom:12px"><div class="pb" style="color:var(--red);font-weight:600">⚠ {{ err() }}</div></div>
+      <div class="panel" style="border-color:#f3b4b4;background:#fdeaea;margin-bottom:12px"><div class="pb"><span class="aviso" style="color:var(--red);font-weight:600"><i class="pi pi-exclamation-triangle"></i> {{ err() }}</span></div></div>
     }
 
     <!-- Semáforo global: cada tarjeta FILTRA la lista de alertas de abajo (sin salir) -->
     <div class="sem">
-      <div class="tile" [class.hot]="(c().crit||0)>0" [class.sel]="filter()==='crit'" (click)="toggle('crit')" title="Filtrar críticas"><div class="n">{{ c().crit||0 }}</div><div class="l">🔴 Críticas</div></div>
-      <div class="tile" [class.warm]="(c().warn||0)>0" [class.sel]="filter()==='warn'" (click)="toggle('warn')" title="Filtrar advertencias"><div class="n">{{ c().warn||0 }}</div><div class="l">🟠 Advertencias</div></div>
+      <div class="tile" [class.hot]="(c().crit||0)>0" [class.sel]="filter()==='crit'" (click)="toggle('crit')" title="Filtrar críticas"><div class="n">{{ c().crit||0 }}</div><div class="l">Críticas</div></div>
+      <div class="tile" [class.warm]="(c().warn||0)>0" [class.sel]="filter()==='warn'" (click)="toggle('warn')" title="Filtrar advertencias"><div class="n">{{ c().warn||0 }}</div><div class="l">Advertencias</div></div>
       <div class="tile" [class.warm]="(oltsProblem()||0)>0" [class.sel]="filter()==='oltprob'" (click)="toggle('oltprob')" title="Filtrar alertas de OLT/GPON"><div class="n">{{ oltsProblem()||0 }}</div><div class="l">OLTs con problema</div></div>
       <div class="tile" [class.hot]="(c().ponDown||0)>0" [class.sel]="filter()==='pon'" (click)="toggle('pon')" title="Filtrar puertos PON"><div class="n">{{ c().ponDown||0 }}</div><div class="l">Puertos PON caídos</div></div>
       <div class="tile" [class.hot]="(c().onusLos||0)>0" [class.sel]="filter()==='los'" (click)="toggle('los')" title="Filtrar cortes de fibra (LOS)"><div class="n">{{ c().onusLos||0 }}</div><div class="l">ONUs en LOS (fibra)</div></div>
@@ -42,7 +42,7 @@ import { NocApi } from '../services/noc-api';
 
     <!-- Cambios de estado (transiciones) en la ventana elegida -->
     <div class="panel">
-      <div class="ph">🔀 Cambios de estado
+      <div class="ph"><span class="t"><i class="pi pi-sync"></i> Cambios de estado</span>
         <span class="mini">clientes que pasaron de OK a otro estado, por OLT · equipos también</span>
         <span class="segT" style="margin-left:auto">
           @for (w of transWins; track w.m) { <button [class.on]="transWin()===w.m" (click)="setTransWin(w.m)">{{ w.label }}</button> }
@@ -50,14 +50,14 @@ import { NocApi } from '../services/noc-api';
       </div>
       <div class="pb">
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px;font-size:12.5px">
-          <span><b style="color:var(--red)">{{ transTot('a_sin') }}</b> → sin servicio</span>
-          <span><b style="color:var(--amber)">{{ transTot('a_riesgo') }}</b> → señal en riesgo</span>
+          <span><b style="color:var(--red)">{{ transTot('a_sin') }}</b> pasaron a sin servicio</span>
+          <span><b style="color:var(--amber)">{{ transTot('a_riesgo') }}</b> pasaron a señal en riesgo</span>
           <span><b style="color:var(--green)">{{ transTot('recuperados') }}</b> recuperados</span>
           <span style="margin-left:auto"><b>{{ trans()?.equipos?.caidos || 0 }}</b> equipos caídos · <b style="color:var(--green)">{{ trans()?.equipos?.recuperados || 0 }}</b> recuperados</span>
         </div>
         @if (transOlts().length) {
           <table>
-            <thead><tr><th>OLT</th><th>→ sin servicio</th><th>→ riesgo</th><th>OK→riesgo</th><th>OK→sin serv.</th><th>recuperados</th></tr></thead>
+            <thead><tr><th>OLT</th><th>A sin servicio</th><th>A riesgo</th><th>De OK a riesgo</th><th>De OK a sin servicio</th><th>Recuperados</th></tr></thead>
             <tbody>
               @for (o of transOlts(); track o.olt_id) {
                 <tr>
@@ -80,10 +80,10 @@ import { NocApi } from '../services/noc-api';
     <div class="split">
       <!-- Alertas activas priorizadas -->
       <div class="panel">
-        <div class="ph">⚠ Alertas activas
+        <div class="ph"><span class="t"><i class="pi pi-exclamation-triangle"></i> Alertas activas</span>
           @if (filter()) {
             <span class="badge b-ack" style="margin-left:8px">{{ filterLabel() }} · {{ shown().length }}</span>
-            <button class="btn ghost sm" style="margin-left:6px" (click)="filter.set('')">✕ Todas</button>
+            <button class="btn ghost sm" style="margin-left:6px" (click)="filter.set('')"><i class="pi pi-times"></i> Ver todas</button>
           } @else {
             <span class="mini">{{ alerts().length }} abiertas · críticas primero</span>
           }
@@ -102,15 +102,15 @@ import { NocApi } from '../services/noc-api';
             @if (filter()) {
               <div style="padding:24px;text-align:center;color:var(--muted)">Sin alertas de "{{ filterLabel() }}" en la lista activa.</div>
             } @else {
-              <div style="padding:24px;text-align:center;color:var(--green);font-weight:600">✅ Sin alertas activas. Todo operando normal.</div>
+              <div style="padding:24px;text-align:center;color:var(--green);font-weight:600"><span class="aviso" style="justify-content:center"><i class="pi pi-check-circle"></i> Sin alertas activas. Todo operando normal.</span></div>
             }
           }
         </div>
         @if (shown().length > pageSize) {
           <div class="pager">
-            <button class="btn ghost sm" [disabled]="page()===0" (click)="prevPage()">← Anterior</button>
+            <button class="btn ghost sm" [disabled]="page()===0" (click)="prevPage()"><i class="pi pi-chevron-left"></i> Anterior</button>
             <span style="font-size:12px;color:var(--muted)">Página {{ page()+1 }} de {{ totalPages() }} · {{ shown().length }} alertas</span>
-            <button class="btn ghost sm" [disabled]="page()>=totalPages()-1" (click)="nextPage()">Siguiente →</button>
+            <button class="btn ghost sm" [disabled]="page()>=totalPages()-1" (click)="nextPage()">Siguiente <i class="pi pi-chevron-right"></i></button>
           </div>
         }
       </div>
@@ -118,7 +118,7 @@ import { NocApi } from '../services/noc-api';
       <div style="display:flex;flex-direction:column;gap:12px">
         <!-- Mapa de calor de OLTs -->
         <div class="panel">
-          <div class="ph">🩺 OLTs <span class="mini">estado GPON</span></div>
+          <div class="ph"><span class="t"><i class="pi pi-heart"></i> OLTs</span> <span class="mini">estado GPON</span></div>
           <div class="pb">
             <div class="heat">
               @for (o of olts(); track o.id) {
@@ -138,7 +138,7 @@ import { NocApi } from '../services/noc-api';
 
         <!-- Equipos (toda la flota: core / borde / MikroTik) -->
         <div class="panel">
-          <div class="ph">🖧 Equipos <span class="mini">core / borde / MikroTik · {{ equipos().length }}</span></div>
+          <div class="ph"><span class="t"><i class="pi pi-sitemap"></i> Equipos</span> <span class="mini">core / borde / MikroTik · {{ equipos().length }}</span></div>
           <div class="pb">
             <div class="heat">
               @for (e of equipos(); track e.id) {

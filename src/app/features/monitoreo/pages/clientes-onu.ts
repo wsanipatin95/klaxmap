@@ -10,25 +10,25 @@ import { areaDs, stats, Stat } from '../shared/charts';
   imports: [FormsModule, LineChart],
   template: `
     <div class="tools">
-      <span style="font-weight:600;font-size:15px">📡 Clientes / ONUs</span>
+      <span class="pg-title" style="font-size:15px"><i class="pi pi-wifi"></i> Clientes / ONUs</span>
       @if (olts().length) {
-        <button class="btn" (click)="oltModal.set(true)" title="Elegir OLT">🖧 {{ curOlt()?.name || 'Elegí una OLT' }}<span style="font-weight:400;opacity:.75">{{ curOlt() ? ' · ' + curOlt()?.host : '' }}</span></button>
+        <button class="btn" (click)="oltModal.set(true)" title="Elegir OLT"><i class="pi pi-sitemap"></i> {{ curOlt()?.name || 'Elegí una OLT' }}<span style="font-weight:400;opacity:.75">{{ curOlt() ? ' · ' + curOlt()?.host : '' }}</span></button>
         @if (oltId) {
         @if (ports().length) {
-          <button class="btn" (click)="lpuModal.set(true)" title="Elegir LPU-PON (tarjeta/puerto)">🔌 LPU-PON · {{ port || 'Todos' }}</button>
+          <button class="btn" (click)="lpuModal.set(true)" title="Elegir LPU-PON (tarjeta/puerto)"><i class="pi pi-bolt"></i> LPU-PON · {{ port || 'Todos' }}</button>
         } @else {
           <input class="inp" style="min-width:110px" [(ngModel)]="port" placeholder="ej: 1/12/1" title="Filtra las ONUs por LPU-PON">
         }
         <button class="btn ghost" (click)="oltSystem()" [disabled]="busy()"
-                title="Leer la temperatura por tarjeta de la OLT.">🌡 Estado OLT</button>
+                title="Leer la temperatura por tarjeta de la OLT."><i class="pi pi-chart-line"></i> Estado OLT</button>
         <button class="btn ghost" (click)="verificar()"
-                title="Confirma que los datos mostrados se recolectaron de verdad: cuántas ONU, con señal, y cuántas cruzaron con contratos del ERP.">✓ Verificar datos</button>
+                title="Confirma que los datos mostrados se recolectaron de verdad: cuántas ONU, con señal, y cuántas cruzaron con contratos del ERP."><i class="pi pi-check"></i> Verificar datos</button>
         @if (curOlt()?.tempMaxC != null) {
           <span class="badge" [style.background]="tempBg(curOlt()!.tempMaxC!)" [style.color]="'#fff'"
                 title="Temperatura máxima de la OLT y el slot más caliente">OLT {{ curOlt()!.tempMaxC }}°C (slot {{ curOlt()!.tempHotSlot }})</span>
         }
         <input class="inp" style="min-width:200px" [(ngModel)]="q"
-               placeholder="🔍 Buscar cliente, IP, serial, ONU..."
+               placeholder="Buscar cliente, IP, serial, ONU…"
                title="Filtra la tabla por nombre de cliente, IP, serial o índice de ONU.">
         }
       } @else {
@@ -39,7 +39,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
         <span style="color:var(--green)">Online: <b>{{ online() }}</b></span>
         <span style="color:var(--muted)">Offline: <b>{{ offline() }}</b></span>
         <span style="color:var(--red)">LOS: <b>{{ los() }}</b></span>
-        <span [style.color]="potStale() ? '#d97706' : 'var(--muted)'" title="Última lectura de potencias por SNMP. Si queda vieja, activá el barrido periódico de esta OLT en Equipos.">Potencias: <b>{{ potFreshTxt() }}</b> {{ potStale() ? '⚠' : '🟢' }}</span>
+        <span [style.color]="potStale() ? '#d97706' : 'var(--muted)'" title="Última lectura de potencias por SNMP. Si queda vieja, activá el barrido periódico de esta OLT en Equipos.">Potencias: <b>{{ potFreshTxt() }}</b> <span class="st" [class.warn]="potStale()" [class.up]="!potStale()"></span></span>
       </span>
     </div>
 
@@ -47,7 +47,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div class="panel" style="margin-bottom:12px">
         <div class="pb" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:12.5px">
           <b [style.color]="v.recoleccion_ok ? 'var(--green)' : 'var(--red)'">
-            {{ v.recoleccion_ok ? '✓ Recolección OK' : '✕ Sin datos recolectados' }}
+            {{ v.recoleccion_ok ? 'Recolección OK' : 'Sin datos recolectados' }}
           </b>
           <span>ONUs leídas: <b>{{ v.onus }}</b></span>
           <span>con señal: <b>{{ v.con_senal }}</b></span>
@@ -57,16 +57,16 @@ import { areaDs, stats, Stat } from '../shared/charts';
             <span style="color:var(--amber)">sin contrato en ERP: <b>{{ v.sin_cliente_erp }}</b></span>
           }
           <span style="color:var(--muted)">último dato: {{ v.ultimo_dato || '—' }}</span>
-          <button class="btn sm ghost" style="margin-left:auto" (click)="verif.set(null)" title="Cerrar">✕</button>
+          <button class="btn sm ghost" style="margin-left:auto" (click)="verif.set(null)" title="Cerrar"><i class="pi pi-times"></i></button>
         </div>
       </div>
     }
-    @if (busy()) { <div class="panel" style="margin-bottom:12px"><div class="pb" style="color:var(--muted)">⏳ Consultando la OLT…</div></div> }
+    @if (busy()) { <div class="panel" style="margin-bottom:12px"><div class="pb"><span class="aviso" style="color:var(--muted)"><i class="pi pi-spinner" style="animation:monSpin 1.1s linear infinite"></i> Consultando la OLT…</span></div></div> }
     @if (note()) {
       <div class="panel" style="margin-bottom:12px">
         <div class="pb" style="color:#2563eb;display:flex;align-items:center;gap:12px">
           <span style="flex:1">{{ note() }}</span>
-          <button class="btn sm ghost" (click)="note.set('')" title="Cerrar aviso">✕</button>
+          <button class="btn sm ghost" (click)="note.set('')" title="Cerrar aviso"><i class="pi pi-times"></i></button>
         </div>
       </div>
     }
@@ -76,7 +76,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91">
         <div class="panel" style="width:420px;text-align:center">
           <div class="pb" style="padding:30px 24px">
-            <div style="font-size:32px;margin-bottom:12px">⏳</div>
+            <div class="dlg-ic load"><i class="pi pi-spinner"></i></div>
             @if (loadingPhase() === 'snmp') {
               <div style="font-weight:600;font-size:15px;line-height:1.7">Obteniendo Información de OLT<br>Espere Por Favor</div>
               <div style="margin-top:16px;font-size:12px;color:var(--muted)">Paso 1 de 2 · Estado y señal (SNMP)</div>
@@ -110,7 +110,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
               <button class="btn ghost sm" style="margin-top:14px" (click)="dismissLoading()"
                       title="Ocultar y seguir llenando la tabla en segundo plano">Continuar en segundo plano</button>
             }
-            <div style="margin-top:14px;font-size:12px;color:var(--muted)">⏱ Tiempo: <b style="color:#333">{{ elapsedStr() }}</b></div>
+            <div style="margin-top:14px;font-size:12px;color:var(--muted)"><i class="pi pi-clock"></i> Tiempo: <b style="color:#333">{{ elapsedStr() }}</b></div>
           </div>
         </div>
       </div>
@@ -120,7 +120,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="loadingErr.set('')">
         <div class="panel" style="width:420px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">⚠️</div>
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7">{{ loadingErr() }}</div>
             <button class="btn" style="margin-top:16px" (click)="loadingErr.set('')">Cerrar</button>
           </div>
@@ -132,7 +132,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="snmpCfg.set(false)">
         <div class="panel" style="width:460px;text-align:center" (click)="$event.stopPropagation()">
           <div class="pb" style="padding:28px 24px">
-            <div style="font-size:30px;margin-bottom:12px">🔧</div>
+            <div class="dlg-ic "><i class="pi pi-wrench"></i></div>
             <div style="font-weight:600;font-size:14px;line-height:1.7">Falta configurar el SNMP de esta OLT</div>
             <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">
               La OLT <b>{{ curOlt()?.name }}</b> no tiene una comunidad SNMP real (usa el default <b>public</b>).
@@ -149,8 +149,8 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div class="overlay on" style="z-index:80" (click)="oltModal.set(false)"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:81" (click)="oltModal.set(false)">
         <div class="panel" style="width:min(640px,94vw);max-height:82vh;overflow:auto" (click)="$event.stopPropagation()">
-          <div class="ph">🖧 Elegí la OLT <span class="mini">clic para abrir y recolectar sus clientes</span>
-            <button class="btn sm ghost" style="margin-left:auto" (click)="oltModal.set(false)">✕</button>
+          <div class="ph"><span class="t"><i class="pi pi-sitemap"></i> Elegí la OLT</span> <span class="mini">clic para abrir y recolectar sus clientes</span>
+            <button class="btn sm ghost" style="margin-left:auto" (click)="oltModal.set(false)" title="Cerrar"><i class="pi pi-times"></i></button>
           </div>
           <div class="pb">
             <div class="olt-grid">
@@ -171,8 +171,8 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div class="overlay on" style="z-index:80" (click)="lpuModal.set(false)"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:81" (click)="lpuModal.set(false)">
         <div class="panel" style="width:min(560px,92vw);max-height:80vh;overflow:auto" (click)="$event.stopPropagation()">
-          <div class="ph">🔌 Elegí LPU-PON <span class="mini">tarjeta / puerto</span>
-            <button class="btn sm ghost" style="margin-left:auto" (click)="lpuModal.set(false)">✕</button>
+          <div class="ph"><span class="t"><i class="pi pi-bolt"></i> Elegí LPU-PON</span> <span class="mini">tarjeta / puerto</span>
+            <button class="btn sm ghost" style="margin-left:auto" (click)="lpuModal.set(false)" title="Cerrar"><i class="pi pi-times"></i></button>
           </div>
           <div class="pb">
             <div class="lpu-grid">
@@ -223,8 +223,8 @@ import { areaDs, stats, Stat } from '../shared/charts';
       <div class="overlay on" (click)="closeModal()"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="closeModal()">
         <div class="panel" style="width:42vw;min-width:540px;max-width:680px;max-height:92vh;overflow:auto" (click)="$event.stopPropagation()">
-          <div class="ph">📡 {{ clientOnly(o.clientName) }} <span class="mini">{{ o.rawIndex }} · {{ o.serial || 'sin serial' }}</span>
-            <span style="margin-left:auto;color:var(--red);font-size:11px;font-weight:600">● en vivo · {{ modalCountdown() }} s</span>
+          <div class="ph"><span class="t"><i class="pi pi-wifi"></i> {{ clientOnly(o.clientName) }}</span> <span class="mini">{{ o.rawIndex }} · {{ o.serial || 'sin serial' }}</span>
+            <span class="en-vivo" style="margin-left:auto"><span class="st"></span> En vivo · {{ modalCountdown() }} s</span>
           </div>
           <div class="pb">
             <div class="meta onu-cards">
@@ -314,11 +314,11 @@ import { areaDs, stats, Stat } from '../shared/charts';
                     </div>
                   }
                 </div>
-              } @else { <div style="color:var(--muted);font-size:12px">Sin alertas para esta ONU. 👍</div> }
+              } @else { <div style="color:var(--muted);font-size:12px">Sin alertas para esta ONU.</div> }
             </div>
           </div>
           <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end">
-            @if (busy()) { <span style="color:var(--muted);font-size:12.5px;margin-right:auto">⏳ Actualizando en vivo…</span> }
+            @if (busy()) { <span style="color:var(--muted);font-size:12.5px;margin-right:auto"><i class="pi pi-spinner" style="animation:monSpin 1.1s linear infinite"></i> Actualizando en vivo…</span> }
             <button class="btn" (click)="closeModal()">Cerrar</button>
           </div>
         </div>
@@ -331,8 +331,8 @@ import { areaDs, stats, Stat } from '../shared/charts';
         <div class="panel" style="width:92vw;max-width:1200px" (click)="$event.stopPropagation()">
           <div class="ph">{{ b.title }}
             <span style="margin-left:auto;display:flex;align-items:center;gap:12px">
-              <span style="color:var(--red);font-size:11px;font-weight:600">● en vivo · {{ modalCountdown() }} s</span>
-              <button class="btn sm ghost" (click)="big.set(null)" title="Cerrar">✕</button>
+              <span class="en-vivo"><span class="st"></span> En vivo · {{ modalCountdown() }} s</span>
+              <button class="btn sm ghost" (click)="big.set(null)" title="Cerrar"><i class="pi pi-times"></i></button>
             </span>
           </div>
           <div class="pb">
@@ -744,8 +744,8 @@ export class ClientesOnu implements OnDestroy {
             this.stopElapsed();
             const pend = (s.total || 0) - (s.withDistance || 0);
             this.flash(pend > 0 && s.running
-              ? `✅ Nombres, contrato, IP y serial listos en ${this.elapsedStr()}. Completando distancia y consumo de ${pend} clientes en segundo plano…`
-              : `✅ OLT completa en ${this.elapsedStr()} · ${s.named}/${s.total} clientes con datos.`);
+              ? `Nombres, contrato, IP y serial listos en ${this.elapsedStr()}. Completando distancia y consumo de ${pend} clientes en segundo plano…`
+              : `OLT completa en ${this.elapsedStr()} · ${s.named}/${s.total} clientes con datos.`);
             this.loadingOlt.set(false);
             this.loadOnus();
           }
@@ -767,7 +767,7 @@ export class ClientesOnu implements OnDestroy {
     clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     this.stopElapsed();
     this.loadingOlt.set(false);
-    this.flash('👤 Completando datos en segundo plano. La tabla se irá llenando sola.');
+    this.flash('Completando datos en segundo plano. La tabla se irá llenando sola.');
     this.loadOnus();
     this.autoEnrichSilencioso();   // asegura que el paso 2 (datos de cliente) siga en 2º plano
   }
@@ -875,7 +875,7 @@ export class ClientesOnu implements OnDestroy {
     this.api.zteEnrich(this.oltId).subscribe({
       next: (r: any) => {
         this.busy.set(false);
-        this.note.set(`👤 Enriquecimiento iniciado: ${r?.encoladas ?? 0} ONUs en cola. La tabla se irá llenando sola; recargá en unos minutos.`);
+        this.note.set(`Enriquecimiento iniciado: ${r?.encoladas ?? 0} ONUs en cola. La tabla se irá llenando sola; recargá en unos minutos.`);
         setTimeout(() => this.loadOnus(), 10000);
       },
       error: () => this.busy.set(false),

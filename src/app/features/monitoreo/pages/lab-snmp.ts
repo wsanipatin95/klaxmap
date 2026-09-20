@@ -14,20 +14,20 @@ import { NocApi } from '../services/noc-api';
   template: `
     <div class="lab">
       <div class="hd">
-        <span class="ttl">🔬 Laboratorio SNMP</span>
+        <span class="ttl"><i class="pi pi-search"></i> Laboratorio SNMP</span>
         <span class="sub">Cazar el OID de tráfico por ONU sin saturar la OLT</span>
       </div>
 
       <!-- Prueba de conexión NetFlow (Traffic Flow del MikroTik) -->
       <div class="card nf">
         <div class="nfhd">
-          <span class="nftl">🛰️ Prueba de conexión NetFlow</span>
+          <span class="nftl"><i class="pi pi-wifi"></i> Prueba de conexión NetFlow</span>
           <label class="nfauto"><input type="checkbox" [(ngModel)]="nfAuto" (ngModelChange)="nfToggle()"> Auto (3s)</label>
           <button class="b pri" [disabled]="nfBusy()" (click)="nfProbe()">Probar ahora</button>
         </div>
         @if (nf(); as s) {
           <div class="verdict" [class.ok]="nfState()==='ok'" [class.wait]="nfState()==='wait'" [class.bad]="nfState()==='bad'">
-            <div class="vico">{{ nfIcon() }}</div>
+            <div class="vico"><i class="pi" [class.pi-check-circle]="nfState()==='ok'" [class.pi-times-circle]="nfState()==='bad'" [class.pi-clock]="nfState()!=='ok' && nfState()!=='bad'"></i></div>
             <div class="vtx">
               <div class="vt1">{{ nfTitle() }}</div>
               <div class="vt2">{{ nfSub() }}</div>
@@ -41,11 +41,11 @@ import { NocApi } from '../services/noc-api';
             <div><span>Último exportador</span><b>{{ s.lastExporter || '—' }}</b></div>
             <div><span>Último paquete</span><b>{{ s.secsSincePacket==null ? 'nunca' : 'hace ' + s.secsSincePacket + 's' }}</b></div>
           </div>
-          @if (s.lastError) { <div class="nferr">⚠ {{ s.lastError }}</div> }
+          @if (s.lastError) { <div class="nferr"><i class="pi pi-exclamation-triangle"></i> {{ s.lastError }}</div> }
         } @else {
           <div class="nfempty">Tocá "Probar ahora" para preguntarle al colector del NOC si le está llegando algo.</div>
         }
-        <div class="hint">💡 Apuntá el MikroTik con <code>/ip traffic-flow target</code> a la IP del NOC, puerto {{ nf()?.port || 2055 }}, versión 9. Si "Paquetes recibidos" sube, ¡ya conecta!</div>
+        <div class="hint"><i class="pi pi-info-circle"></i> Apuntá el MikroTik con <code>/ip traffic-flow target</code> a la IP del NOC, puerto {{ nf()?.port || 2055 }}, versión 9. Si "Paquetes recibidos" sube, ¡ya conecta!</div>
       </div>
 
       <div class="card">
@@ -74,12 +74,12 @@ import { NocApi } from '../services/noc-api';
 
       <div class="card out">
         <div class="ohd">
-          <span>Resultado {{ busy() ? '· ⏳ corriendo…' : '' }}</span>
-          <button class="b xs" [disabled]="!salida()" (click)="copiar()">📋 Copiar</button>
+          <span>Resultado {{ busy() ? '· corriendo…' : '' }}</span>
+          <button class="b xs" [disabled]="!salida()" (click)="copiar()"><i class="pi pi-copy"></i> Copiar</button>
           <button class="b xs" [disabled]="!salida()" (click)="salida.set('')">Limpiar</button>
         </div>
         <textarea readonly [value]="salida()" placeholder="Aquí sale el resultado. Cópialo y pégamelo en el chat."></textarea>
-        <div class="hint">💡 Cuando termine, copia todo y pégamelo — yo te digo cuál columna es el tráfico ↓/↑.</div>
+        <div class="hint"><i class="pi pi-info-circle"></i> Cuando termine, copiá todo y pegámelo: te digo cuál columna es la de bajada y cuál la de subida.</div>
       </div>
     </div>
   `,
@@ -162,7 +162,6 @@ export class LabSnmp implements OnDestroy {
     if ((s.packetsTotal || 0) > 0 && s.receiving) return 'ok';
     return 'wait';
   }
-  nfIcon(): string { const st = this.nfState(); return st === 'ok' ? '✅' : st === 'bad' ? '❌' : '⏳'; }
   nfTitle(): string {
     const s = this.nf(); if (!s) return '';
     if (!s.listening) return 'Colector apagado';
@@ -197,9 +196,9 @@ export class LabSnmp implements OnDestroy {
 
   private append(t: string) { this.salida.set(this.salida() + t); }
   private errText(e: any): string {
-    if (e?.status === 404) return '\n⚠ El modo laboratorio está APAGADO en el NOC. Pídele a quien administra el servidor que ponga NOC_DIAG_ENABLED=true y reinicie el NOC.\n';
-    if (e?.status === 401 || e?.status === 403) return '\n⚠ Sesión/permiso. Vuelve a entrar a la app e intenta de nuevo.\n';
-    return '\n⚠ Error: ' + (e?.message || 'no se pudo conectar') + '\n';
+    if (e?.status === 404) return '\nEl modo laboratorio está APAGADO en el NOC. Pídele a quien administra el servidor que ponga NOC_DIAG_ENABLED=true y reinicie el NOC.\n';
+    if (e?.status === 401 || e?.status === 403) return '\nSesión/permiso. Vuelve a entrar a la app e intenta de nuevo.\n';
+    return '\nError: ' + (e?.message || 'no se pudo conectar') + '\n';
   }
 
   probar() {

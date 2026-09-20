@@ -22,15 +22,15 @@ type Sel = 'ok' | 'sig' | 'down' | 'all';
   imports: [],
   template: `
     <div class="tools">
-      @if (showBack()) { <button class="btn ghost sm" (click)="back()" title="Volver">← Atrás</button> }
-      <span style="font-weight:700;font-size:16px">🩺 Salud GPON</span>
-      <span style="margin-left:auto;font-family:'Consolas',monospace;font-size:14px;font-weight:700;color:#333">🕒 {{ clock() }}</span>
+      @if (showBack()) { <button class="btn ghost sm" (click)="back()" title="Volver"><i class="pi pi-chevron-left"></i> Atrás</button> }
+      <span class="pg-title"><i class="pi pi-heart"></i> Salud GPON</span>
+      <span style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-family:'Consolas',monospace;font-size:14px;font-weight:700;color:#333"><i class="pi pi-clock" style="color:var(--muted)"></i> {{ clock() }}</span>
       @if (olts().length > 1) {
-        <button class="btn ghost" (click)="toggleRotate()" [title]="rotate() ? 'Pausar rotación de OLTs' : 'Rotar OLTs automáticamente'">{{ rotate() ? '⏸ Fijar' : '🔄 Rotar' }}</button>
+        <button class="btn ghost" (click)="toggleRotate()" [title]="rotate() ? 'Pausar rotación de OLTs' : 'Rotar OLTs automáticamente'"><i class="pi" [class.pi-pause]="rotate()" [class.pi-sync]="!rotate()"></i> {{ rotate() ? 'Fijar' : 'Rotar' }}</button>
         @if (rotate()) { <span style="color:var(--primary);font-size:12px;font-weight:600">rota en {{ rotateLeft() }}s</span> }
       }
-      <button class="btn ghost" (click)="toggleFull()">{{ full() ? '✕ Salir de pantalla completa' : '⛶ Pantalla completa' }}</button>
-      <span style="color:var(--red);font-size:12px;font-weight:600">● en vivo · {{ countdown() }} s</span>
+      <button class="btn ghost" (click)="toggleFull()"><i class="pi" [class.pi-times]="full()" [class.pi-window-maximize]="!full()"></i> {{ full() ? 'Salir de pantalla completa' : 'Pantalla completa' }}</button>
+      <span class="en-vivo" style="font-size:12px"><span class="st"></span> En vivo · {{ countdown() }} s</span>
     </div>
 
     @if (olts().length) {
@@ -61,7 +61,11 @@ type Sel = 'ok' | 'sig' | 'down' | 'all';
 
       <!-- Lista desplegada de la acción elegida -->
       <div class="panel" style="margin-top:12px">
-        <div class="ph">{{ selIcon() }} {{ selTitle() }} <span class="cnt" style="margin-left:auto">{{ current().length }}</span></div>
+        <div class="ph"><span class="t">
+            <i class="pi" [class.pi-check-circle]="sel()==='ok'" [class.pi-exclamation-triangle]="sel()==='sig'"
+               [class.pi-ban]="sel()==='down'" [class.pi-list]="sel()!=='ok' && sel()!=='sig' && sel()!=='down'"
+               [style.color]="sel()==='ok' ? 'var(--green)' : sel()==='sig' ? 'var(--amber)' : sel()==='down' ? 'var(--red)' : 'var(--muted)'"></i>
+            {{ selTitle() }}</span> <span class="cnt" style="margin-left:auto">{{ current().length }}</span></div>
         @if (current().length) {
           <div class="tbl">
             @if (sel() === 'down') {
@@ -116,7 +120,7 @@ type Sel = 'ok' | 'sig' | 'down' | 'all';
               </table>
             }
           </div>
-        } @else { <div class="empty">✅ Sin clientes en esta categoría.</div> }
+        } @else { <div class="empty"><i class="pi pi-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:var(--green)"></i> Sin clientes en esta categoría.</div> }
       </div>
     }
 
@@ -125,8 +129,8 @@ type Sel = 'ok' | 'sig' | 'down' | 'all';
       <div class="overlay on" (click)="closeLog()"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="closeLog()">
         <div class="panel" style="width:46vw;min-width:560px;max-width:720px;max-height:90vh;overflow:auto" (click)="$event.stopPropagation()">
-          <div class="ph">📜 Log de eventos <span class="mut" style="font-weight:400">{{ clientOnly(o.clientName) }} · {{ o.rawIndex }}</span>
-            <button class="btn sm ghost" style="margin-left:auto" (click)="closeLog()">✕</button>
+          <div class="ph"><span class="t"><i class="pi pi-file"></i> Log de eventos</span> <span class="mut" style="font-weight:400">{{ clientOnly(o.clientName) }} · {{ o.rawIndex }}</span>
+            <button class="btn sm ghost" style="margin-left:auto" (click)="closeLog()" title="Cerrar"><i class="pi pi-times"></i></button>
           </div>
           <div class="pb">
             <!-- estado actual -->
@@ -443,12 +447,6 @@ export class PanelNoc implements OnDestroy {
       default: return 'Todos los clientes de la OLT';
     }
   }
-  selIcon(): string {
-    switch (this.sel()) {
-      case 'ok': return '✅'; case 'sig': return '⚠️'; case 'down': return '🔌'; default: return '📋';
-    }
-  }
-
   // ---- niveles de señal ----
   sev(rx: number | null): SigLevel | null {
     if (rx == null) return null;

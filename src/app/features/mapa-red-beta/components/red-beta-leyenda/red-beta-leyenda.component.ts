@@ -48,7 +48,7 @@ import { RED_ESTADOS_LEYENDA, estadoVisual } from '../../util/red-beta-estado.ut
           </li>
           <li class="flex items-center gap-2">
             <span class="inline-block w-4 h-4 rounded-full border-2" style="border-color:#7C0061"></span>
-            <span class="text-slate-600">👥N = contratos conectados en la NAP</span>
+            <span class="text-slate-600">N = contratos conectados en la NAP</span>
           </li>
         </ul>
       }

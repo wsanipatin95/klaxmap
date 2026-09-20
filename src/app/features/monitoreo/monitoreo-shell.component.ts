@@ -74,6 +74,39 @@ import { NocNotifyHost } from './shared/noc-notify-host';
     .mon-scope .inp { padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--panel) }
     .mon-scope .chip { padding:4px 10px;border:1px solid var(--border);border-radius:9px;background:var(--panel);cursor:pointer;font-size:11.5px;color:var(--muted) }
     .mon-scope .chip.on { background:var(--primary);color:#fff;border-color:var(--primary) }
+    /* ===== Iconografia y utilidades de estado (sin emojis) =====
+       Regla del proyecto: la UI no usa emojis. Los iconos son PrimeIcons, heredan
+       el color del contexto y van SIEMPRE acompanados de texto salvo en botones
+       de accion evidente (cerrar, borrar), que llevan title. */
+    .mon-scope .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px }
+    .mon-scope .btn i.pi { font-size:12px; line-height:1 }
+    .mon-scope .btn.sm i.pi { font-size:11px }
+    .mon-scope .btn.icon { width:28px; padding:0 }
+    .mon-scope .ph .t { display:inline-flex; align-items:center; gap:7px; min-width:0 }
+    .mon-scope .ph .t i.pi { color:var(--muted); font-size:13px }
+    .mon-scope .pg-title { display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.01em }
+    .mon-scope .pg-title i.pi { color:var(--muted); font-size:15px }
+    .mon-scope .st { width:8px; height:8px; border-radius:50%; display:inline-block; flex:none; background:#94a3b8 }
+    .mon-scope .st.up { background:var(--green) }
+    .mon-scope .st.down { background:var(--red) }
+    .mon-scope .st.warn { background:var(--amber) }
+    .mon-scope .en-vivo { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--red) }
+    .mon-scope .en-vivo .st { background:var(--red); animation:monLive 1.8s ease-out infinite }
+    @keyframes monLive { 0%{box-shadow:0 0 0 0 rgba(236,24,72,.45)} 70%{box-shadow:0 0 0 6px rgba(236,24,72,0)} 100%{box-shadow:0 0 0 0 rgba(236,24,72,0)} }
+    .mon-scope .buscador { position:relative; display:inline-flex; align-items:center }
+    .mon-scope .buscador > i.pi { position:absolute; left:11px; color:var(--muted); font-size:12px; pointer-events:none }
+    .mon-scope .buscador .inp { padding-left:31px }
+    .mon-scope .dlg-ic { width:46px; height:46px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      margin-bottom:14px; background:#f1f5f9; color:var(--muted) }
+    .mon-scope .dlg-ic i.pi { font-size:20px }
+    .mon-scope .dlg-ic.danger { background:#fdeaea; color:var(--red) }
+    .mon-scope .dlg-ic.warn { background:#fff6e6; color:var(--amber) }
+    .mon-scope .dlg-ic.load { background:var(--primary-soft); color:var(--primary) }
+    .mon-scope .dlg-ic.load i.pi { animation:monSpin 1.1s linear infinite }
+    .mon-scope .gira { animation:monSpin 1.1s linear infinite }
+    @keyframes monSpin { to { transform:rotate(360deg) } }
+    .mon-scope .aviso { display:inline-flex; align-items:center; gap:8px }
+    .mon-scope .aviso i.pi { font-size:14px; flex:none }
     .mon-scope .btn { padding:5px 11px;border:none;border-radius:9px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;font-size:11.5px;line-height:1.5;transition:filter .12s,transform .05s }
     .mon-scope .btn.ghost { background:var(--panel);color:var(--text);border:1px solid var(--border) }
     /* Botón de OPCIÓN dentro de un modal: borde siempre; se PINTA cuando está seleccionado. */

@@ -16,7 +16,7 @@
         <div class="nap-splitter">
           <span class="nap-splitter-label">
             Splitter
-            <span class="nap-lock" *ngIf="bloqueado && !desbloqueado" title="El splitter ya fue fijado">🔒</span>
+            <i class="pi pi-lock nap-lock" *ngIf="bloqueado && !desbloqueado" title="El splitter ya fue fijado" aria-hidden="true"></i>
           </span>
           <div class="nap-splitter-seg" [class.is-locked]="!editable">
             <button type="button" class="nap-seg-btn" [class.active]="d.splitter === '1/8'"

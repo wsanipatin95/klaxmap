@@ -16,13 +16,13 @@ interface Tab { name: string; panels: Panel[]; }
         @for (t of tabs(); track $index) {
           <span class="chip" [class.on]="cur()===$index" (click)="cur.set($index)" style="cursor:pointer">
             {{ t.name }}
-            @if (tabs().length > 1 && !locked()) { <b style="margin-left:7px;opacity:.6" (click)="delTab($index, $event)">✕</b> }
+            @if (tabs().length > 1 && !locked()) { <b style="margin-left:7px;opacity:.6" (click)="delTab($index, $event)" title="Quitar pestaña"><i class="pi pi-times"></i></b> }
           </span>
         }
       </div>
       @if (!locked()) { <button class="chip" (click)="openTab()">＋ pestaña</button> }
       <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
-        <span style="font-size:11px;color:var(--muted)">🕒 Histórico</span>
+        <span class="aviso" style="font-size:11px;color:var(--muted)"><i class="pi pi-clock"></i> Histórico</span>
         <span class="segT">
           @for (r of ranges; track r.min) { <button [class.on]="range()===r.min" (click)="setRange(r.min)">{{ r.label }}</button> }
         </span>
@@ -34,13 +34,13 @@ interface Tab { name: string; panels: Panel[]; }
         <span class="segT">
           @for (s of rotOpts; track s) { <button [class.on]="rot()===s" (click)="setRot(s)">{{ s===0 ? 'Off' : s+'s' }}</button> }
         </span>
-        <button class="btn ghost sm" (click)="full()" title="Pantalla completa (oculta barra y menú)">⛶ Pantalla completa</button>
+        <button class="btn ghost sm" (click)="full()" title="Pantalla completa (oculta barra y menú)"><i class="pi pi-window-maximize"></i> Pantalla completa</button>
         @if (!locked()) {
           <button class="btn" (click)="openAdd()">+ Agregar panel</button>
-          <button class="btn ghost" (click)="lock()">💾 Guardar dashboard</button>
+          <button class="btn ghost" (click)="lock()"><i class="pi pi-save"></i> Guardar dashboard</button>
         } @else {
-          <span class="badge b-ack">🔒 Bloqueado</span>
-          <button class="btn ghost" (click)="unlock()">✎ Editar dashboard</button>
+          <span class="badge b-ack aviso"><i class="pi pi-lock"></i> Bloqueado</span>
+          <button class="btn ghost" (click)="unlock()"><i class="pi pi-pencil"></i> Editar dashboard</button>
         }
       </span>
     </div>
@@ -49,7 +49,7 @@ interface Tab { name: string; panels: Panel[]; }
       @for (p of panels(); track $index) {
         <app-panel-card [deviceId]="p.deviceId" [deviceName]="p.deviceName" [metric]="p.metric" [ifaceId]="p.ifaceId ?? null" [ifaceName]="p.ifaceName || ''" [rangeMin]="range()" [refreshSecs]="refreshSecs()" [locked]="locked()" (remove)="delPanel($index)"></app-panel-card>
       } @empty {
-        <div class="panel"><div class="empty"><span class="ic">➕</span><h2>Pestaña vacía</h2><p>Clic en "Agregar panel" para elegir equipo y métrica a monitorear.</p></div></div>
+        <div class="panel"><div class="empty"><span class="ic"><i class="pi pi-plus"></i></span><h2>Pestaña vacía</h2><p>Clic en "Agregar panel" para elegir equipo y métrica a monitorear.</p></div></div>
       }
     </div>
 

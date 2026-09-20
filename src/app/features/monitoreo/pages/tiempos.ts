@@ -8,7 +8,7 @@ import { NocApi } from '../services/noc-api';
   imports: [FormsModule],
   template: `
     <div class="panel">
-      <div class="ph">⏱ Tiempos</div>
+      <div class="ph"><span class="t"><i class="pi pi-clock"></i> Tiempos</span></div>
       <div class="pb">
         <table style="width:100%">
           <thead><tr><th>Parámetro</th><th>Cada</th><th></th></tr></thead>
@@ -46,7 +46,7 @@ export class TiemposConfig {
 
   save(s: any) {
     this.api.updateSetting(s.settingKey, String(s.settingValue)).subscribe({
-      next: () => { this.msg.set(`✓ "${s.label}" actualizado a ${s.settingValue} ${s.unit}`); setTimeout(() => this.msg.set(''), 3500); },
+      next: () => { this.msg.set(`"${s.label}" actualizado a ${s.settingValue} ${s.unit}`); setTimeout(() => this.msg.set(''), 3500); },
       error: () => this.msg.set('No se pudo guardar.'),
     });
   }
