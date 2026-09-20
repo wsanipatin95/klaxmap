@@ -236,7 +236,7 @@ export class RedBetaMapComponent implements AfterViewInit, OnChanges, OnDestroy 
           if (nc > 0) {
             L.circleMarker(ll, { radius: 8, color: '#7C0061', weight: 2, fill: false, opacity: this.op(0.9, rel) }).addTo(this.baseGroup);
           }
-          const lbl = nombre + (nc > 0 ? ' 👥' + nc : '');
+          const lbl = nombre + (nc > 0 ? ' · ' + nc : '');   // N = contratos conectados (ver leyenda)
           if (lbl) {
             if (showLabels && labels < LABEL_CAP) { marker.bindTooltip(lbl, { permanent: true, direction: 'top', className: 'rb-label', offset: [0, -6] }); labels++; }
             else marker.bindTooltip(lbl);

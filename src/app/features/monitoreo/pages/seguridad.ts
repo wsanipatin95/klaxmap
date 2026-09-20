@@ -18,12 +18,12 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
   imports: [FormsModule],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">🛡️ Seguridad · Reputación IP</span>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-shield"></i> Seguridad · Reputación IP</span>
       <span style="margin-left:auto;font-size:12px;color:var(--muted)">Actualizado {{ clock() }}</span>
     </div>
 
     <div class="panel"><div class="pb" style="display:flex;gap:10px;align-items:flex-start">
-      <span style="font-size:18px">🔒</span>
+      <span style="color:var(--muted)"><i class="pi pi-lock"></i></span>
       <div style="font-size:12.5px;color:var(--muted)">
         <b style="color:var(--text,#222)">Pura consulta, sin tocar al cliente.</b>
         Se le pregunta a las listas negras públicas si la IP está marcada. <u>No se envía ningún paquete al equipo del cliente.</u>
@@ -32,7 +32,7 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
 
     <!-- Consulta instantánea -->
     <div class="panel">
-      <div class="ph">🔎 Consultar una IP</div>
+      <div class="ph"><span class="t"><i class="pi pi-search"></i> Consultar una IP</span></div>
       <div class="pb">
         <div style="display:flex;gap:10px">
           <input class="inp" style="flex:1;max-width:280px" placeholder="Ej. 186.209.212.5"
@@ -41,11 +41,11 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
         </div>
         @if (result(); as r) {
           @if (r.ok === false) {
-            <div style="margin-top:12px;color:var(--red)">⚠ {{ r.error }}</div>
+            <div class="aviso" style="margin-top:12px;color:var(--red)"><i class="pi pi-exclamation-triangle"></i> {{ r.error }}</div>
           } @else if (r.listed) {
             <div style="margin-top:12px;padding:12px;border-radius:10px"
                  [style.background]="sevBg(resSev())" [style.border]="'1px solid ' + sevBorder(resSev())">
-              <b [style.color]="sevColor(resSev())">{{ sevIcon(resSev()) }} {{ r.ip }} — {{ sevHead(resSev()) }}</b>
+              <b [style.color]="sevColor(resSev())">{{ r.ip }} — {{ sevHead(resSev()) }}</b>
               <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
                 @for (l of resListings(); track l.label) {
                   <span class="badge" [style.background]="sevBg(l.sev)" [style.color]="sevColor(l.sev)"
@@ -56,11 +56,11 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
             </div>
           } @else {
             <div style="margin-top:12px;padding:12px;border-radius:10px;background:#e8f5e9;border:1px solid #c8e6c9">
-              <b style="color:var(--green)">✓ {{ r.ip }} está limpia</b>
+              <b style="color:var(--green)">{{ r.ip }} está limpia</b>
               <span style="font-size:12px;color:var(--muted)"> — no aparece en las listas consultadas</span>
             </div>
           }
-          @if (r.warn) { <div style="margin-top:8px;font-size:12px;color:#b26a00">⚠ {{ r.warn }}</div> }
+          @if (r.warn) { <div style="margin-top:8px;font-size:12px;color:#b26a00"><i class="pi pi-exclamation-triangle"></i> {{ r.warn }}</div> }
         }
       </div>
     </div>
@@ -68,20 +68,20 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
     <!-- Resumen visual por gravedad -->
     @if (summary().total > 0) {
       <div class="panel">
-        <div class="ph">📊 Resumen por gravedad</div>
+        <div class="ph"><span class="t"><i class="pi pi-chart-bar"></i> Resumen por gravedad</span></div>
         <div class="pb">
           <div style="display:flex;gap:12px;flex-wrap:wrap">
             <div class="stat" style="border-left:4px solid #e02424">
               <div class="sv" style="color:#e02424">{{ summary().crit }}</div>
-              <div class="sl">🚨 Infectadas / botnet<br><span>XBL · acción urgente</span></div>
+              <div class="sl">Infectadas / botnet<br><span>XBL · acción urgente</span></div>
             </div>
             <div class="stat" style="border-left:4px solid #f39c12">
               <div class="sv" style="color:#e08600">{{ summary().spam }}</div>
-              <div class="sl">⚠ Reputación de spam<br><span>SBL / SpamCop / etc.</span></div>
+              <div class="sl">Reputación de spam<br><span>SBL / SpamCop / etc.</span></div>
             </div>
             <div class="stat" style="border-left:4px solid #3b82f6">
               <div class="sv" style="color:#2563eb">{{ summary().info }}</div>
-              <div class="sl">ℹ Usuario final (PBL)<br><span>normal en residencial/CGNAT</span></div>
+              <div class="sl">Usuario final (PBL)<br><span>normal en residencial/CGNAT</span></div>
             </div>
           </div>
           <!-- barra de proporción -->
@@ -100,7 +100,7 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
 
     <!-- Barrido del pool -->
     <div class="panel">
-      <div class="ph">📡 Barrido del pool público
+      <div class="ph"><span class="t"><i class="pi pi-wifi"></i> Barrido del pool público</span>
         <button class="btn sm" style="margin-left:auto" (click)="sweep()" [disabled]="running()">
           {{ running() ? 'Barriendo…' : 'Barrer pool ahora' }}
         </button>
@@ -120,7 +120,7 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
               <div style="height:100%;background:var(--primary,#4b3bff);transition:width .4s" [style.width.%]="pct(s)"></div>
             </div>
           }
-          @if (s.note) { <div style="margin-top:8px;font-size:12px;color:#b26a00">⚠ {{ s.note }}</div> }
+          @if (s.note) { <div style="margin-top:8px;font-size:12px;color:#b26a00"><i class="pi pi-exclamation-triangle"></i> {{ s.note }}</div> }
         }
         <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">
           El barrido corre en segundo plano y es lento a propósito (pausa entre consultas) para no ser bloqueado por las listas.
@@ -131,7 +131,7 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
 
     <!-- Tabla -->
     <div class="panel">
-      <div class="ph">🧾 IPs marcadas ({{ listed().length }})</div>
+      <div class="ph"><span class="t"><i class="pi pi-file"></i> IPs marcadas ({{ listed().length }})</span></div>
       <div class="pb">
         @if (listed().length) {
           <table>
@@ -141,9 +141,9 @@ interface Listing { cat: string; sev: 'crit' | 'spam' | 'info'; label: string; m
                 <tr>
                   <td class="mono"><b>{{ r.ip }}</b></td>
                   <td>
-                    @if (!r.listed) { <span class="badge" style="background:#e8f5e9;color:var(--green)">✓ Limpia</span> }
+                    @if (!r.listed) { <span class="badge" style="background:#e8f5e9;color:var(--green)">Limpia</span> }
                     @else { <span class="badge" [style.background]="sevBg(rowSev(r))" [style.color]="sevColor(rowSev(r))"
-                                  [style.border]="'1px solid ' + sevBorder(rowSev(r))">{{ sevIcon(rowSev(r)) }} {{ sevShort(rowSev(r)) }}</span> }
+                                  [style.border]="'1px solid ' + sevBorder(rowSev(r))">{{ sevShort(rowSev(r)) }}</span> }
                   </td>
                   <td style="font-size:12px">
                     @for (l of rowListings(r); track l.label) {
@@ -254,7 +254,6 @@ export class Seguridad implements OnDestroy {
   sevColor(s: string) { return s === 'crit' ? '#e02424' : s === 'spam' ? '#e08600' : '#2563eb'; }
   sevBg(s: string) { return s === 'crit' ? '#fdecea' : s === 'spam' ? '#fff4e5' : '#eaf1fe'; }
   sevBorder(s: string) { return s === 'crit' ? '#f5c6cb' : s === 'spam' ? '#ffe0b2' : '#c7dbfb'; }
-  sevIcon(s: string) { return s === 'crit' ? '🚨' : s === 'spam' ? '⚠' : 'ℹ'; }
   sevShort(s: string) { return s === 'crit' ? 'Infectada' : s === 'spam' ? 'Spam' : 'PBL'; }
   sevHead(s: string) { return s === 'crit' ? 'posible equipo infectado / botnet' : s === 'spam' ? 'reputación de spam' : 'espacio de usuario final (normal)'; }
 

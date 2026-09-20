@@ -20,9 +20,9 @@ import { SessionStore } from '../../seg/store/session.store';
         <select class="ip" [(ngModel)]="selArea" (ngModelChange)="onArea()">
           @for (g of grupos(); track g.id) { <option [ngValue]="g.id">{{ g.nombre }}</option> }
         </select>
-        <button class="tg" [class.on]="mio" (click)="toggleMio()">👤 Míos</button>
-        <input class="ip srch" [(ngModel)]="q" placeholder="🔍 Contrato, cédula, móvil…">
-        <button class="tg ic" (click)="reload()" title="Actualizar">🔄</button>
+        <button class="tg" [class.on]="mio" (click)="toggleMio()"><i class="pi pi-user"></i> Míos</button>
+        <input class="ip srch" [(ngModel)]="q" placeholder="Contrato, cédula, móvil…">
+        <button class="tg ic" (click)="reload()" title="Actualizar"><i class="pi pi-refresh"></i></button>
       </div>
 
       <div class="pills">
@@ -49,10 +49,10 @@ import { SessionStore } from '../../seg/store/session.store';
               <span class="bdg" [style.background]="softColor(estadoNombre(r))" [style.color]="estadoColor(estadoNombre(r))">
                 <span class="dt" [style.background]="estadoColor(estadoNombre(r))"></span>{{ estadoNombre(r) }}
               </span>
-              @if (flag(r)) { <div class="fl">{{ flag(r) }}</div> }
+              @if (flagClases(r).length) { <div class="fl">@for (c of flagClases(r); track c) { <i class="pi {{ c }}"></i> }</div> }
             </div>
           </div>
-        } @empty { <div class="empty">Nada en esta cola. 🎉</div> }
+        } @empty { <div class="empty">Nada en esta cola.</div> }
       </div>
     </div>
   `,
@@ -210,5 +210,10 @@ export class Bandeja implements OnInit {
 
   estadoNombre(r: any): string { return this.estMap.get(String(r.id_tic_estado_fk)) || ('estado ' + (r.id_tic_estado_fk ?? '—')); }
   reqNombre(r: any): string { return this.reqMap.get(String(r.id_tic_requer_fk ?? r.id_tic_requer)) || ''; }
-  flag(r: any): string { return (String(r.adjunto) === 'true' ? '📎' : '') + (String(r.observacion) === 'true' ? '📝' : ''); }
+  flagClases(r: any): string[] {
+    const out: string[] = [];
+    if (String(r.adjunto) === 'true') out.push('pi-paperclip');
+    if (String(r.observacion) === 'true') out.push('pi-file-edit');
+    return out;
+  }
 }

@@ -1552,7 +1552,7 @@ private seedCreateForm(defaultName: string) {
       html: `
         <div class="mapa-embed-origin-pulse"></div>
         <div class="mapa-embed-origin-pin">
-          <span class="mapa-embed-origin-symbol">${this.mode() === 'tecnico' ? '👤' : '⌂'}</span>
+          <span class="mapa-embed-origin-symbol">${this.mode() === 'tecnico' ? 'T' : 'C'}</span>
         </div>
       `,
       iconSize: [36, 36],

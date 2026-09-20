@@ -10,11 +10,11 @@ import { TableSort } from '../shared/table-sort';
   template: `
     <div class="tools">
       @if (showBack()) { <button class="btn ghost sm" (click)="back()" title="Volver">← Atrás</button> }
-      <span style="font-weight:600;font-size:15px">⚠ Alertas</span>
+      <span class="pg-title" style="font-size:15px"><i class="pi pi-exclamation-triangle"></i> Alertas</span>
       <span style="color:var(--muted);font-size:12.5px">— {{ rows().length }} {{ filtered() ? 'que coinciden' : 'registradas' }}</span>
       @if (filtered()) {
         <span class="badge b-ack">{{ filterLabel() }}</span>
-        <a class="btn ghost sm" routerLink="/app/monitoreo/alertas" style="text-decoration:none">✕ Ver todas</a>
+        <a class="btn ghost sm" routerLink="/app/monitoreo/alertas" style="text-decoration:none"><i class="pi pi-list"></i> Ver todas</a>
       }
     </div>
     <div class="panel">

@@ -16,7 +16,7 @@ import { NocNotify } from '../services/noc-notify';
     <div class="panel">
       <div class="pb">
         @if (loaded()) {
-          <div class="sec">📡 GPON · señal óptica del cliente</div>
+          <div class="sec aviso"><i class="pi pi-wifi"></i> GPON · señal óptica del cliente</div>
           <table class="lvl">
             <thead><tr><th>Métrica</th><th>En riesgo</th><th>Débil</th><th>Crítica</th><th></th></tr></thead>
             <tbody>
@@ -30,7 +30,7 @@ import { NocNotify } from '../services/noc-notify';
             </tbody>
           </table>
 
-          <div class="sec" style="margin-top:22px">🖧 Equipos · Core / Borde / MikroTik</div>
+          <div class="sec aviso" style="margin-top:22px"><i class="pi pi-sitemap"></i> Equipos · Core / Borde / MikroTik</div>
           <table class="lvl">
             <thead><tr><th>Métrica</th><th>Mínimo</th><th>Warning</th><th>Máximo (crítico)</th><th></th></tr></thead>
             <tbody>
@@ -45,7 +45,7 @@ import { NocNotify } from '../services/noc-notify';
               }
             </tbody>
           </table>
-          <div class="sec" style="margin-top:22px">🔔 Reglas de notificación</div>
+          <div class="sec aviso" style="margin-top:22px"><i class="pi pi-bell"></i> Reglas de notificación</div>
           <table class="lvl">
             <thead><tr><th>Regla</th><th>Valor</th><th></th></tr></thead>
             <tbody>
@@ -120,7 +120,7 @@ export class SaludGponConfig {
       const s = this.map[k];
       if (!s) { done++; return; }
       this.api.updateSetting(k, String(s.settingValue)).subscribe({
-        next: () => { if (++done === keys.length) { this.flash('✓ Umbrales guardados.'); this.notify.ok('Configuración de Salud GPON guardada.'); } },
+        next: () => { if (++done === keys.length) { this.flash('Umbrales guardados.'); this.notify.ok('Configuración de Salud GPON guardada.'); } },
         error: () => { this.flash('No se pudo guardar.'); this.notify.error('No se pudo guardar la configuración de Salud GPON.'); },
       });
     });

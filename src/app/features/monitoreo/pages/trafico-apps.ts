@@ -12,10 +12,10 @@ import { NocApi } from '../services/noc-api';
   imports: [],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">📺 Tráfico por aplicación</span>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-desktop"></i> Tráfico por aplicación</span>
       <div class="ctabs" style="margin-left:12px">
-        <button [class.on]="dir()==='d'" (click)="setDir('d')">⬇ Bajada</button>
-        <button [class.on]="dir()==='u'" (click)="setDir('u')">⬆ Subida</button>
+        <button [class.on]="dir()==='d'" (click)="setDir('d')"><i class="pi pi-arrow-down"></i> Bajada</button>
+        <button [class.on]="dir()==='u'" (click)="setDir('u')"><i class="pi pi-arrow-up"></i> Subida</button>
       </div>
       <div class="ctabs" style="margin-left:8px">
         <button [class.on]="hours()===1" (click)="setHours(1)">1h</button>
@@ -30,7 +30,7 @@ import { NocApi } from '../services/noc-api';
       @if (st(); as s) {
         @if (s.receiving) {
           <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;font-size:12.5px">
-            <span class="badge" style="background:#e8f5e9;color:var(--green)">● Recibiendo flujos</span>
+            <span class="badge aviso" style="background:#e8f5e9;color:var(--green)"><span class="st up"></span> Recibiendo flujos</span>
             <div><span style="color:var(--muted)">Puerto UDP</span><br><b class="mono">{{ s.port }}</b></div>
             <div><span style="color:var(--muted)">Exportador</span><br><b class="mono">{{ s.lastExporter || '—' }}</b></div>
             <div><span style="color:var(--muted)">Paquetes</span><br><b>{{ s.packetsTotal }}</b></div>
@@ -39,7 +39,7 @@ import { NocApi } from '../services/noc-api';
           </div>
         } @else {
           <div style="display:flex;gap:10px;align-items:flex-start">
-            <span style="font-size:18px">⏳</span>
+            <span style="color:var(--muted)"><i class="pi pi-clock"></i></span>
             <div style="font-size:12.5px">
               <b style="color:#b26a00">Esperando flujos del MikroTik…</b>
               <div style="color:var(--muted);margin-top:4px">
@@ -55,7 +55,7 @@ import { NocApi } from '../services/noc-api';
 
     <!-- Top apps -->
     <div class="panel">
-      <div class="ph">🏆 Aplicaciones más consumidas · {{ dir()==='d' ? 'bajada' : 'subida' }} · últimas {{ hours() }}h</div>
+      <div class="ph"><span class="t"><i class="pi pi-chart-bar"></i> Aplicaciones más consumidas</span> <span class="mini">{{ dir()==='d' ? 'bajada' : 'subida' }} · últimas {{ hours() }}h</span></div>
       <div class="pb">
         @if (apps().length) {
           @for (a of apps(); track a.app) {
@@ -82,7 +82,7 @@ import { NocApi } from '../services/noc-api';
 
     <!-- Top clientes -->
     <div class="panel">
-      <div class="ph">👥 Clientes que más consumen · últimas {{ hours() }}h</div>
+      <div class="ph"><span class="t"><i class="pi pi-users"></i> Clientes que más consumen</span> <span class="mini">últimas {{ hours() }}h</span></div>
       <div class="pb">
         @if (clients().length) {
           <table>

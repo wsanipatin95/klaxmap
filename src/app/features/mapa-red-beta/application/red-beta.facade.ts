@@ -416,7 +416,7 @@ export class RedBetaFacade {
   ejecutarAccion(ev: RedAccionEvento) {
     const done = (msg: string) => {
       this.error.set(null);
-      this.mensaje.set('✓ Guardado. ' + msg + ' (asi quedo el elemento)');
+      this.mensaje.set('Guardado. ' + msg + ' (asi quedo el elemento)');
       this.recargarListas();
     };
     const fail = (e: unknown) => {

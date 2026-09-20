@@ -40,8 +40,8 @@ export const METLABEL: Record<string, string> = {
     <div class="panel">
       <div class="ph">{{ deviceName }} · {{ metric === 'iface_traffic' ? (ifaceName || 'interfaz') : label }}
         <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
-          @if (isLive()) { <span style="color:var(--red);font-size:11px;font-weight:600">● en vivo · {{ countdown() }}s</span> }
-          @if (!locked) { <button class="btn sm ghost" (click)="remove.emit()" title="Quitar">✕</button> }
+          @if (isLive()) { <span class="en-vivo"><span class="st"></span> En vivo · {{ countdown() }}s</span> }
+          @if (!locked) { <button class="btn sm ghost" (click)="remove.emit()" title="Quitar"><i class="pi pi-times"></i></button> }
         </span>
       </div>
       <div class="pb">
@@ -67,7 +67,7 @@ export const METLABEL: Record<string, string> = {
         } @else if (metric === 'onu_top_consumo') {
           @if (topRows().length) {
             <div class="topbar">
-              <button class="btn sm" [class.ghost]="topView()!=='gauge'" (click)="topView.set('gauge')">🚀 Medidores</button>
+              <button class="btn sm" [class.ghost]="topView()!=='gauge'" (click)="topView.set('gauge')"><i class="pi pi-gauge"></i> Medidores</button>
               <button class="btn sm" [class.ghost]="topView()!=='tabla'" (click)="topView.set('tabla')">Tabla</button>
               <label style="font-size:12px;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:6px">Top
                 <input class="inp" type="number" min="1" max="60" style="width:62px;padding:4px 8px" [(ngModel)]="topN"></label>
@@ -125,7 +125,7 @@ export const METLABEL: Record<string, string> = {
           }
           @if (!topRows().length) {
             <div style="color:var(--muted);font-size:12px;padding:8px 0">
-              Sin consumo aún. En Clientes/ONUs corré <b>👤 Datos cliente</b> sobre esta OLT.
+              Sin consumo aún. En Clientes/ONUs corré <b>Datos cliente</b> sobre esta OLT.
             </div>
           }
         } @else {
@@ -151,7 +151,7 @@ export const METLABEL: Record<string, string> = {
           }
           @if (metric === 'cpu_cores' && cpuStat(); as cs) {
             <div style="margin-top:8px;display:flex;gap:20px;font-size:13px;align-items:center">
-              <span>🔺 Pico más alto: <b style="color:var(--red);font-size:15px">{{ cs.max }}%</b></span>
+              <span class="aviso"><i class="pi pi-arrow-up"></i> Pico más alto: <b style="color:var(--red);font-size:15px">{{ cs.max }}%</b></span>
               <span>Promedio: <b>{{ cs.avg }}%</b></span>
               <span>Mínimo: <b style="color:var(--muted)">{{ cs.min }}%</b></span>
             </div>
@@ -165,10 +165,10 @@ export const METLABEL: Record<string, string> = {
       <div class="overlay on" style="z-index:80" (click)="closeHist()"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:81" (click)="closeHist()">
         <div class="panel" style="width:80vw;max-width:1100px" (click)="$event.stopPropagation()">
-          <div class="ph">📈 {{ h.client_name || h.raw_index }} · histórico de consumo
+          <div class="ph"><span class="t"><i class="pi pi-chart-line"></i> {{ h.client_name || h.raw_index }} · histórico de consumo</span>
             <span style="margin-left:auto;display:flex;align-items:center;gap:12px">
-              <span style="color:var(--red);font-size:11px;font-weight:600">● en vivo · {{ histCountdown() }} s</span>
-              <button class="btn sm ghost" (click)="closeHist()" title="Cerrar">✕</button>
+              <span class="en-vivo"><span class="st"></span> En vivo · {{ histCountdown() }} s</span>
+              <button class="btn sm ghost" (click)="closeHist()" title="Cerrar"><i class="pi pi-times"></i></button>
             </span>
           </div>
           <div class="pb">

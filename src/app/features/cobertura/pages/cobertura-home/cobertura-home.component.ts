@@ -102,9 +102,9 @@ class HeatOverlay {
           <label class="flex items-center gap-1 text-[11px] text-slate-500">
             <input type="checkbox" class="accent-blue-600" [checked]="verNombres()" (change)="onToggleNombres()" /> Nombres
           </label>
-          <button class="cob-toggle" [class.cob-toggle-on]="heatOn()" (click)="toggleHeat()" title="Mapa de calor de clientes">🔥 Mapa de calor</button>
-          <button class="cob-toggle" [class.cob-toggle-on]="satOn()" (click)="toggleSat()" title="Cambiar vista del mapa">{{ satOn() ? '🗺️ Calles' : '🛰️ Satélite' }}</button>
-          <button class="cob-toggle" [class.cob-toggle-on]="zonasOn()" (click)="toggleZonas()" title="Zonas (barrios) coloreadas por métrica">🟦 Zonas</button>
+          <button class="cob-toggle" [class.cob-toggle-on]="heatOn()" (click)="toggleHeat()" title="Mapa de calor de clientes"><i class="pi pi-chart-bar"></i> Mapa de calor</button>
+          <button class="cob-toggle" [class.cob-toggle-on]="satOn()" (click)="toggleSat()" title="Cambiar vista del mapa"><i class="pi" [class.pi-map]="satOn()" [class.pi-globe]="!satOn()"></i> {{ satOn() ? 'Calles' : 'Satélite' }}</button>
+          <button class="cob-toggle" [class.cob-toggle-on]="zonasOn()" (click)="toggleZonas()" title="Zonas (barrios) coloreadas por métrica"><i class="pi pi-th-large"></i> Zonas</button>
           @if (zonasOn()) {
             <select class="cob-sel" (change)="onZonaMetric($event)">
               <option value="total" [selected]="zonaMetric() === 'total'">Total clientes</option>
@@ -121,7 +121,7 @@ class HeatOverlay {
             <option [selected]="radio() === 1000" value="1000">1000</option>
           </select>
           <button class="cob-btn" (click)="recargar()" [disabled]="loading()">{{ loading() ? 'Cargando…' : '↻ Recargar' }}</button>
-          <button class="cob-btn" (click)="descargarExcel()" title="Descargar a Excel los clientes visibles según las capas activas">⬇ Excel</button>
+          <button class="cob-btn" (click)="descargarExcel()" title="Descargar a Excel los clientes visibles según las capas activas"><i class="pi pi-download"></i> Excel</button>
           <span class="text-[11px] text-slate-500">{{ naps().length }} NAP</span>
         </div>
       </div>
@@ -163,7 +163,7 @@ class HeatOverlay {
 
             @if (esNap1()) {
               <div class="cob-wiz">
-                <div class="cob-wiz-h">🔌 Confirmador de PON de esta NAP</div>
+                <div class="cob-wiz-h"><i class="pi pi-bolt"></i> Confirmador de PON de esta NAP</div>
                 @if (napPons().length) {
                   <div class="cob-wiz-chips">
                     @for (p of napPons(); track p.idRedNapPon) {
@@ -199,10 +199,10 @@ class HeatOverlay {
               <div class="cob-sec">Clientes de la NAP · {{ cliGeo().length }}</div>
               @if (cliGeo().length) {
                 <div class="cob-cal-counts">
-                  <span class="cob-cal cal-3">🟢 {{ calCount(3) }} confirmado</span>
-                  <span class="cob-cal cal-2">🟡 {{ calCount(2) }} sin confirmar</span>
-                  @if (calCount(1)) { <span class="cob-cal cal-1">🔴 {{ calCount(1) }} otro PON</span> }
-                  @if (calCount(0)) { <span class="cob-cal cal-0">⬛ {{ calCount(0) }} sin GPS</span> }
+                  <span class="cob-cal cal-3">{{ calCount(3) }} confirmado</span>
+                  <span class="cob-cal cal-2">{{ calCount(2) }} sin confirmar</span>
+                  @if (calCount(1)) { <span class="cob-cal cal-1">{{ calCount(1) }} otro PON</span> }
+                  @if (calCount(0)) { <span class="cob-cal cal-0">{{ calCount(0) }} sin GPS</span> }
                 </div>
                 <ul class="cob-list">
                   @for (c of cliGeo(); track c.idRedCoberturaCliente) {
@@ -217,7 +217,7 @@ class HeatOverlay {
                         · {{ dist(c.distanciaM) }}
                       </div>
                       <div class="cob-card-svc">
-                        <span class="cob-tag cob-tag-olt" [title]="'OLT'">🖧 {{ c.oltNombre || 'Sin OLT' }}</span>
+                        <span class="cob-tag cob-tag-olt" [title]="'OLT'"><i class="pi pi-sitemap"></i> {{ c.oltNombre || 'Sin OLT' }}</span>
                         <span class="cob-tag" [title]="'Puerto PON (tarjeta/puerto)'">PON {{ ponLabel(c) }}</span>
                         <span class="cob-tag" [title]="'ONU'">ONU {{ c.gponOnu ?? '—' }}</span>
                       </div>
@@ -237,11 +237,11 @@ class HeatOverlay {
           <div class="cob-modal" (click)="$event.stopPropagation()">
             <div class="cob-modal-head">
               @if (pickerStep() === 'olt') {
-                <div class="cob-modal-title">🖧 Elegí la OLT <span class="cob-modal-sub">clic para ver sus LPU-PON</span></div>
+                <div class="cob-modal-title"><i class="pi pi-sitemap"></i> Elegí la OLT <span class="cob-modal-sub">clic para ver sus LPU-PON</span></div>
               } @else {
                 <div class="cob-modal-title">
                   <button class="cob-modal-back-btn" (click)="volverOlt()" title="Volver a OLTs">‹</button>
-                  📍 Elegí LPU-PON <span class="cob-modal-sub">{{ wizOlt()?.nombre }} · tarjeta/puerto</span>
+                  <i class="pi pi-map-marker"></i> Elegí LPU-PON <span class="cob-modal-sub">{{ wizOlt()?.nombre }} · tarjeta/puerto</span>
                 </div>
               }
               <button class="cob-x" (click)="closePicker()" title="Cerrar">×</button>
@@ -273,7 +273,7 @@ class HeatOverlay {
                               [title]="enOtraNap(lp) ? ('Ya amarrado a la NAP ' + (lp.napCodigo || '')) : (enEstaNap(lp) ? 'Amarrado a esta NAP' : 'Amarrar a esta NAP')"
                               (click)="pickLpuPon(lp)">
                         <span>{{ lpLabel(lp) }}</span>
-                        @if (enOtraNap(lp)) { <span class="cob-pon-nap">🔒 {{ lp.napCodigo }}</span> }
+                        @if (enOtraNap(lp)) { <span class="cob-pon-nap"><i class="pi pi-lock"></i> {{ lp.napCodigo }}</span> }
                       </button>
                     }
                   </div>

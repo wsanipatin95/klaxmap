@@ -94,7 +94,7 @@ export class LoginComponent {
       .subscribe({
         next: () => {
           const target = this.landing.resolveLoginTarget(returnUrl);
-          this.notify.success('Bienvenido 👋');
+          this.notify.success('Bienvenido');
           this.router.navigateByUrl(target);
         },
         error: (err: HttpErrorResponse) => {

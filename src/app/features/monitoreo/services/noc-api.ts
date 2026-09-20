@@ -29,6 +29,9 @@ export interface Device {
   snmp_port: number;
   snmp_enabled: boolean;
   mon_temp: boolean;
+  /** Solo OLT: firmware real (decide el arbol de OIDs) y perfil del catalogo multimarca. */
+  software_version?: string | null;
+  id_olt_perfil?: number | null;
   status: string;
   cpu_percent: number | null;
   memory_percent: number | null;
@@ -220,8 +223,10 @@ export class NocApi {
 
   // ---- Configurar OLT ----
   oltcTemplates(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/olt-config/templates`).pipe(map(unwrap)); }
+  /** Estado de los interruptores del modulo: CLI global + escritura, con el motivo si no se puede enviar. */
+  oltcEstado(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/olt-config/estado`).pipe(map(unwrap)); }
   oltcPreview(code: string, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/preview`, { code, params }).pipe(map(unwrap)); }
-  oltcExecute(code: string, oltId: number, params: any, user?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/execute`, { code, oltId, params, user }).pipe(map(unwrap)); }
+  oltcExecute(code: string, oltId: number, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/execute`, { code, oltId, params }).pipe(map(unwrap)); }
   oltcUpdateBody(code: string, body: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/olt-config/templates/${code}`, { body }).pipe(map(unwrap)); }
   oltcLogs(oltId?: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/olt-config/logs${oltId ? '?oltId=' + oltId : ''}`).pipe(map(unwrap)); }
 

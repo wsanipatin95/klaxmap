@@ -1,7 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { NocApi } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
 import { Bandeja } from './bandeja';
@@ -14,10 +12,10 @@ import { Bandeja } from './bandeja';
 @Component({
   selector: 'app-soporte',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, Bandeja],
+  imports: [FormsModule, Bandeja],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">🎧 Soporte</span>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-headphones"></i> Soporte</span>
     </div>
 
     @if (view()==='bandeja') {
@@ -46,8 +44,8 @@ import { Bandeja } from './bandeja';
               <div class="cn">{{ t.contrato || '—' }}@if (cf('numero_megas','megas','plan')) { · {{ cf('numero_megas','megas','plan') }} Mbps }</div>
             </div>
             <div class="fst" style="display:flex;gap:8px">
-              <button class="btn2 wa" [disabled]="!(cf('movil','telefono','celular') || t.movil)" (click)="waCliente()">💬 WhatsApp</button>
-              <a class="btn2" [href]="'tel:'+(cf('movil','telefono','celular') || t.movil || '')" style="text-decoration:none">📞 Llamar</a>
+              <button class="btn2 wa" [disabled]="!(cf('movil','telefono','celular') || t.movil)" (click)="waCliente()"><i class="pi pi-comment"></i> WhatsApp</button>
+              <a class="btn2" [href]="'tel:'+(cf('movil','telefono','celular') || t.movil || '')" style="text-decoration:none"><i class="pi pi-phone"></i> Llamar</a>
             </div>
           </div>
 
@@ -71,18 +69,18 @@ import { Bandeja } from './bandeja';
           <div class="sect">
             <div class="sh">Acciones remotas</div>
             <div class="actg">
-              <button class="act" (click)="runAction('estado')"><span class="ai">📶</span>Estado ONU</button>
-              <button class="act" (click)="runAction('potencia')"><span class="ai">📉</span>Potencia</button>
-              <button class="act" (click)="runAction('ping')"><span class="ai">📡</span>Ping</button>
-              <button class="act" (click)="runAction('consumo')"><span class="ai">📊</span>Tráfico</button>
-              <button class="act" (click)="runAction('caidas')"><span class="ai">⏱</span>Caídas</button>
-              <button class="act" (click)="copyIp()"><span class="ai">📋</span>Copiar IP</button>
+              <button class="act" (click)="runAction('estado')"><span class="ai"><i class="pi pi-wifi"></i></span>Estado ONU</button>
+              <button class="act" (click)="runAction('potencia')"><span class="ai"><i class="pi pi-chart-line"></i></span>Potencia</button>
+              <button class="act" (click)="runAction('ping')"><span class="ai"><i class="pi pi-send"></i></span>Ping</button>
+              <button class="act" (click)="runAction('consumo')"><span class="ai"><i class="pi pi-chart-bar"></i></span>Tráfico</button>
+              <button class="act" (click)="runAction('caidas')"><span class="ai"><i class="pi pi-clock"></i></span>Caídas</button>
+              <button class="act" (click)="copyIp()"><span class="ai"><i class="pi pi-copy"></i></span>Copiar IP</button>
             </div>
             @if (lastResult()) { <div class="res">{{ lastResult() }}</div> }
           </div>
 
           <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('hist')" (click)="toggleSec('hist')">Historial de acciones<span class="ic">▶</span></div>
+            <div class="acc-h" [class.open]="secOpen('hist')" (click)="toggleSec('hist')">Historial de acciones<span class="ic"><i class="pi pi-chevron-right"></i></span></div>
             @if (secOpen('hist')) {
               <div class="acc-b">
                 @if (t.idTic) {
@@ -98,10 +96,10 @@ import { Bandeja } from './bandeja';
           </div>
 
           <div class="foot">
-            @if (t.idTic) { <button class="btn2 primary" (click)="tomarTicket(t)">🙋 Tomar</button> }
-            <button class="btn2 ok" [disabled]="!t.idTic" (click)="marcarSolucionado(t)">✅ Solucionado</button>
+            @if (t.idTic) { <button class="btn2 primary" (click)="tomarTicket(t)"><i class="pi pi-user-plus"></i> Tomar</button> }
+            <button class="btn2 ok" [disabled]="!t.idTic" (click)="marcarSolucionado(t)"><i class="pi pi-check"></i> Solucionado</button>
             <button class="btn2 esc" [disabled]="!t.idTic" (click)="escalar(t)">↗ Escalar a NOC</button>
-            <button class="btn2 primary" (click)="showOrder.set(true)">🔧 Orden</button>
+            <button class="btn2 primary" (click)="showOrder.set(true)"><i class="pi pi-wrench"></i> Orden</button>
             @if (t.idTic) {
               <div style="flex:1"></div>
               <select class="isel" [(ngModel)]="nuevoEstado"><option [ngValue]="null">Otro estado…</option>@for (e of estadosCat(); track e.id) { <option [ngValue]="e.id">{{ e.nombre }}</option> }</select>
@@ -135,7 +133,7 @@ import { Bandeja } from './bandeja';
           @if (acs(); as a) {
             @if (acsWrite() === false) {
               <div style="display:flex;gap:8px;align-items:center;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:12.5px;color:#9a3412">
-                <span>🔒 Escritura ACS deshabilitada.</span>
+                <span class="aviso"><i class="pi pi-lock"></i> Escritura ACS deshabilitada.</span>
                 <button class="btn2 xs" style="margin-left:auto" (click)="activarEscritura()">Activar</button>
               </div>
             }
@@ -146,9 +144,9 @@ import { Bandeja } from './bandeja';
               <div><span>WiFi</span><b>{{ acsParam('.SSID') }}</b></div>
             </div>
             <div class="chips" style="margin-top:10px">
-              <button class="chip" (click)="acsRefresh()">🔄 Refrescar</button>
-              <button class="chip" (click)="acsReboot()">♻ Reiniciar</button>
-              <button class="chip acs-now" (click)="acsConnReq()" title="Contactar al router ahora (no funciona tras CGNAT)">⚡ Aplicar ahora</button>
+              <button class="chip" (click)="acsRefresh()"><i class="pi pi-refresh"></i> Refrescar</button>
+              <button class="chip" (click)="acsReboot()"><i class="pi pi-replay"></i> Reiniciar</button>
+              <button class="chip acs-now" (click)="acsConnReq()" title="Contactar al router ahora (no funciona tras CGNAT)"><i class="pi pi-bolt"></i> Aplicar ahora</button>
             </div>
             <div class="ir"><input class="isel" style="flex:1" [(ngModel)]="wifiSsid" placeholder="Nuevo nombre WiFi"><button class="btn2 xs" (click)="acsSetWifiNombre()">Cambiar</button></div>
             <div class="ir"><input class="isel" style="flex:1" type="password" [(ngModel)]="wifiPass" placeholder="Nueva clave WiFi (mín. 8)"><button class="btn2 xs" (click)="acsSetWifiClave()">Cambiar</button></div>
@@ -165,14 +163,14 @@ import { Bandeja } from './bandeja';
           </div>
 
           <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('alertas')" (click)="toggleSec('alertas')">Alertas y sugerencias<span class="ic">▶</span></div>
+            <div class="acc-h" [class.open]="secOpen('alertas')" (click)="toggleSec('alertas')">Alertas y sugerencias<span class="ic"><i class="pi pi-chevron-right"></i></span></div>
             @if (secOpen('alertas')) {
               <div class="acc-b">
                 @for (sg of sugerencias(); track $index) {
-                  <div class="al" [class.r]="sg.cls==='r'" [class.a]="sg.cls==='a'"><span class="ab">{{ sg.ic }}</span><div><div class="att">{{ sg.att }}</div><div class="as">{{ sg.as }}</div></div></div>
+                  <div class="al" [class.r]="sg.cls==='r'" [class.a]="sg.cls==='a'"><span class="ab"><i class="pi {{ sg.ic }}"></i></span><div><div class="att">{{ sg.att }}</div><div class="as">{{ sg.as }}</div></div></div>
                 }
                 @for (a of onuAlertas(); track $index) {
-                  <div class="al" [class.r]="a.to_state==='sin_servicio'" [class.a]="a.to_state==='riesgo'"><span class="ab">{{ a.to_state==='sin_servicio' ? '🔴' : a.to_state==='riesgo' ? '⚠️' : '🟢' }}</span><div><div class="att" [innerHTML]="alertaTxt(a)"></div><div class="as">{{ a.cuando }}</div></div></div>
+                  <div class="al" [class.r]="a.to_state==='sin_servicio'" [class.a]="a.to_state==='riesgo'"><span class="ab"><span class="st" [class.down]="a.to_state==='sin_servicio'" [class.warn]="a.to_state==='riesgo'" [class.up]="a.to_state!=='sin_servicio' && a.to_state!=='riesgo'"></span></span><div><div class="att" [innerHTML]="alertaTxt(a)"></div><div class="as">{{ a.cuando }}</div></div></div>
                 }
                 @if (!onuAlertas().length && !sugerencias().length) { <div class="note">Sin alertas para esta ONU.</div> }
               </div>
@@ -180,7 +178,7 @@ import { Bandeja } from './bandeja';
           </div>
 
           <div class="acc">
-            <div class="acc-h" [class.open]="secOpen('consumo')" (click)="toggleSec('consumo')">📈 Consumo del día (NetFlow)<span class="ic">▶</span></div>
+            <div class="acc-h" [class.open]="secOpen('consumo')" (click)="toggleSec('consumo')">Consumo del día (NetFlow)<span class="ic"><i class="pi pi-chevron-right"></i></span></div>
             @if (secOpen('consumo')) {
               <div class="acc-b">
                 @if (consumo(); as cn) {
@@ -209,7 +207,7 @@ import { Bandeja } from './bandeja';
         <div class="overlay on" (click)="showOrder.set(false)"></div>
         <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="showOrder.set(false)">
           <div class="panel" style="width:min(560px,94vw)" (click)="$event.stopPropagation()">
-            <div class="ph">🔧 Crear Orden Técnica <span class="mini">datos del cliente ya van cargados</span></div>
+            <div class="ph"><span class="t"><i class="pi pi-wrench"></i> Crear Orden Técnica</span> <span class="mini">datos del cliente ya van cargados</span></div>
             <div class="pb" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <div class="fld"><label>Prioridad</label>
                 <select class="inp" [(ngModel)]="of.prioridad"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
@@ -466,12 +464,12 @@ export class Soporte {
     const t: any = this.ticket() || {};
     const out: { ic: string; att: string; as: string; cls: string }[] = [];
     const rx = t.rx_dbm;
-    if (rx != null && rx <= -25) out.push({ ic: '⚠️', att: 'Potencia RX baja', as: 'RX ' + Number(rx).toFixed(2) + ' dBm — revisar fibra/conector.', cls: 'a' });
+    if (rx != null && rx <= -25) out.push({ ic: 'pi-exclamation-triangle', att: 'Potencia RX baja', as: 'RX ' + Number(rx).toFixed(2) + ' dBm — revisar fibra/conector.', cls: 'a' });
     const al = this.onuAlertas();
     const sin = al.filter((a: any) => a.to_state === 'sin_servicio').length;
-    if (sin >= 2) out.push({ ic: '🔴', att: sin + ' caídas de servicio', as: 'Intermitencia reciente — considerar orden preventiva.', cls: 'r' });
+    if (sin >= 2) out.push({ ic: 'pi-circle-fill', att: sin + ' caídas de servicio', as: 'Intermitencia reciente — considerar orden preventiva.', cls: 'r' });
     const riesgo = al.some((a: any) => a.to_state === 'riesgo');
-    if (riesgo && (rx == null || rx > -25)) out.push({ ic: '💡', att: 'Historial de riesgo', as: 'RX estable pero con transiciones a riesgo — revisión preventiva.', cls: '' });
+    if (riesgo && (rx == null || rx > -25)) out.push({ ic: 'pi-info-circle', att: 'Historial de riesgo', as: 'RX estable pero con transiciones a riesgo — revisión preventiva.', cls: '' });
     return out;
   }
 
@@ -566,7 +564,7 @@ export class Soporte {
     this.api.supCreateOrder(t.id, { ...this.of, usuario: this.usuario }).subscribe({
       next: (r: any) => {
         this.showOrder.set(false);
-        this.lastResult.set('✅ Orden técnica ' + r.numero + ' creada.');
+        this.lastResult.set('Orden técnica ' + r.numero + ' creada.');
         this.reload();
         this.notify.ok('Orden técnica ' + r.numero + ' creada.');
       },
@@ -588,8 +586,8 @@ export class Soporte {
     const t = this.ticket(); if (!t) return;
     this.acsMsg.set('Encolando…');
     obs.subscribe({
-      next: () => { this.acsMsg.set('✅ ' + okMsg); this.loadAcs(t.contrato); this.notify.ok(okMsg); },
-      error: (e: any) => { const m = e?.error?.mensaje || 'No se pudo encolar la acción.'; this.acsMsg.set('⚠ ' + m); this.notify.error(m); },
+      next: () => { this.acsMsg.set(okMsg); this.loadAcs(t.contrato); this.notify.ok(okMsg); },
+      error: (e: any) => { const m = e?.error?.mensaje || 'No se pudo encolar la acción.'; this.acsMsg.set(m); this.notify.error(m); },
     });
   }
   acsParam(suffix: string): string { const p = this.acsParams().find((x) => (x.parameterName || '').endsWith(suffix)); return (p && p.parameterValue) || '—'; }
@@ -614,17 +612,17 @@ export class Soporte {
         const ok = !!(r && r.contacted);
         const m = ok ? 'Router contactado: aplicará los cambios al instante.'
                      : 'El router no respondió (CGNAT/NAT). Se aplicará en el próximo contacto.';
-        this.acsMsg.set((ok ? '✅ ' : '⌛ ') + m);
+        this.acsMsg.set(m);
         if (ok) this.notify.ok(m);
         this.loadAcs(t.contrato);
       },
-      error: (e: any) => { const m = e?.error?.mensaje || 'No se pudo contactar al router.'; this.acsMsg.set('⚠ ' + m); this.notify.error(m); },
+      error: (e: any) => { const m = e?.error?.mensaje || 'No se pudo contactar al router.'; this.acsMsg.set(m); this.notify.error(m); },
     });
   }
   isOnline(a: any): boolean { return String(a?.status || '').toLowerCase() === 'online'; }
   activarEscritura() {
     this.api.acsSaveConfig({ write_enabled: true }).subscribe({
-      next: () => { this.acsWrite.set(true); this.acsMsg.set('✅ Escritura ACS activada.'); this.notify.ok('Escritura ACS activada. Ya puedes aplicar cambios.'); },
+      next: () => { this.acsWrite.set(true); this.acsMsg.set('Escritura ACS activada.'); this.notify.ok('Escritura ACS activada. Ya puedes aplicar cambios.'); },
       error: (e: any) => this.notify.error(e?.error?.mensaje || 'No se pudo activar la escritura ACS.'),
     });
   }

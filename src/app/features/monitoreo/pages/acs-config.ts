@@ -11,7 +11,7 @@ import { NocNotify } from '../services/noc-notify';
   template: `
     <div class="acs">
       <div class="hd">
-        <div class="ttl">📊 ACS <span class="tr">TR-069</span></div>
+        <div class="ttl"><i class="pi pi-wifi"></i> ACS <span class="tr">TR-069</span></div>
         <div class="sub">Autoconfiguración y gestión remota de routers</div>
       </div>
 
@@ -32,7 +32,7 @@ import { NocNotify } from '../services/noc-notify';
           <div class="ch bar">
             <span>Routers registrados <span class="cnt">{{ filtered().length }}</span></span>
             <input class="search" [(ngModel)]="q" placeholder="Buscar serie, contrato, marca, IP, MAC…">
-            <span class="live" title="La lista se actualiza sola cada 8 s">● En vivo</span>
+            <span class="live" title="La lista se actualiza sola cada 8 s"><i class="pi pi-circle-fill" style="font-size:7px"></i> En vivo</span>
           </div>
 
           @if (filtered().length) {
@@ -58,7 +58,7 @@ import { NocNotify } from '../services/noc-notify';
                       <td><span class="tag">{{ d.dataModel || '—' }}</span></td>
                       <td class="sm mono">{{ d.ssid || '—' }}</td>
                       <td class="sm" [title]="d.lastInformAt || ''">{{ abs(d.lastInformAt) }}</td>
-                      <td>@if (d.hasConnReq) { <span class="ok-dot">✔</span> } @else { <span class="mut">—</span> }</td>
+                      <td>@if (d.hasConnReq) { <span class="ok-dot"><i class="pi pi-check"></i></span> } @else { <span class="mut">—</span> }</td>
                       <td class="go">›</td>
                     </tr>
                   }
@@ -131,7 +131,7 @@ import { NocNotify } from '../services/noc-notify';
               <div class="ms mono">{{ d.serialNumber || '—' }}</div>
             </div>
             <span class="pill" [class.on]="dOnline(d)">{{ dOnline(d) ? 'online' : (d.status || '—') }}</span>
-            <button class="x" (click)="closeModal()">✕</button>
+            <button class="x" (click)="closeModal()" title="Cerrar"><i class="pi pi-times"></i></button>
           </div>
           <div class="mb">
             <div class="dgrid">
@@ -159,14 +159,14 @@ import { NocNotify } from '../services/noc-notify';
             @if (d.contrato) {
               <div class="msec">Acciones</div>
               <div class="dacts">
-                <button class="btn pri" (click)="optimizar(d)" title="Canal automático (menos interferencia) + potencia máxima">✨ Optimizar WiFi</button>
-                <button class="btn" (click)="refresh(d)">🔄 Refrescar</button>
-                <button class="btn" (click)="reboot(d)">♻ Reiniciar</button>
-                <button class="btn" (click)="connreq(d)">📡 Connection Request</button>
-                <button class="btn" (click)="abrirArbol(d)">🔍 Explorar parámetros</button>
-                <button class="btn" (click)="wifiEdit.set('nombre')">✏️ Cambiar nombre WiFi</button>
-                <button class="btn" (click)="wifiEdit.set('clave')">🔑 Cambiar clave WiFi</button>
-                <button class="btn danger" (click)="pedirEliminar(d)" title="Quitar este router del ACS (router viejo por cambio de equipo)">🗑 Eliminar del ACS</button>
+                <button class="btn pri" (click)="optimizar(d)" title="Canal automático (menos interferencia) + potencia máxima"><i class="pi pi-bolt"></i> Optimizar WiFi</button>
+                <button class="btn" (click)="refresh(d)"><i class="pi pi-refresh"></i> Refrescar</button>
+                <button class="btn" (click)="reboot(d)"><i class="pi pi-replay"></i> Reiniciar</button>
+                <button class="btn" (click)="connreq(d)"><i class="pi pi-send"></i> Connection Request</button>
+                <button class="btn" (click)="abrirArbol(d)"><i class="pi pi-search"></i> Explorar parámetros</button>
+                <button class="btn" (click)="wifiEdit.set('nombre')"><i class="pi pi-pencil"></i> Cambiar nombre WiFi</button>
+                <button class="btn" (click)="wifiEdit.set('clave')"><i class="pi pi-key"></i> Cambiar clave WiFi</button>
+                <button class="btn danger" (click)="pedirEliminar(d)" title="Quitar este router del ACS (router viejo por cambio de equipo)"><i class="pi pi-trash"></i> Eliminar del ACS</button>
               </div>
               <div class="msec">WiFi</div>
               <div class="wifinow">
@@ -179,7 +179,7 @@ import { NocNotify } from '../services/noc-notify';
                 <div class="hostbox">
                   <div class="hosthd">
                     <span>Conectados{{ hosts().length ? ' (' + hosts().length + ')' : '' }}</span>
-                    <span class="live" title="Se actualiza solo">● En vivo</span>
+                    <span class="live" title="Se actualiza solo"><i class="pi pi-circle-fill" style="font-size:7px"></i> En vivo</span>
                   </div>
                   @if (hosts().length) {
                     <div class="htw"><table class="htab">
@@ -191,7 +191,7 @@ import { NocNotify } from '../services/noc-notify';
                             <td class="mono">{{ h.ip || '—' }}</td>
                             <td class="mono">{{ h.mac || '—' }}</td>
                             <td>{{ h.iface || '—' }}</td>
-                            <td>{{ (h.active === 'true' || h.active === '1') ? '🟢' : '⚪' }}</td>
+                            <td><span class="st" [class.up]="h.active === 'true' || h.active === '1'"></span></td>
                           </tr>
                         }
                       </tbody>
@@ -209,7 +209,7 @@ import { NocNotify } from '../services/noc-notify';
                       <span [class]="taskCls(t.status)">{{ taskLabel(t.status) }}</span>
                       <span class="tkn">{{ taskName(t) }}</span>
                       <span class="tkt">{{ t.createdBy || 'sistema' }} · {{ rel(t.createdAt) }}</span>
-                      @if (t.errorMessage) { <span class="tke">⚠ {{ t.errorMessage }}</span> }
+                      @if (t.errorMessage) { <span class="tke"><i class="pi pi-exclamation-triangle"></i> {{ t.errorMessage }}</span> }
                     </div>
                   }
                 </div>
@@ -230,12 +230,12 @@ import { NocNotify } from '../services/noc-notify';
           <div class="acsov2" (click)="arbolOpen.set(false)">
             <div class="acsmd" (click)="$event.stopPropagation()" style="max-width:760px">
               <div class="mh">
-                <div class="mhx"><div class="mt">🔍 Explorador de parámetros</div><div class="ms">{{ arbolModeloTxt() }}</div></div>
-                <button class="x" (click)="arbolOpen.set(false)">✕</button>
+                <div class="mhx"><div class="mt"><i class="pi pi-search"></i> Explorador de parámetros</div><div class="ms">{{ arbolModeloTxt() }}</div></div>
+                <button class="x" (click)="arbolOpen.set(false)" title="Cerrar"><i class="pi pi-times"></i></button>
               </div>
               <div class="mb">
                 <div class="dacts" style="margin-bottom:10px">
-                  <button class="btn pri" (click)="explorarActual()">🔍 Explorar ahora</button>
+                  <button class="btn pri" (click)="explorarActual()"><i class="pi pi-search"></i> Explorar ahora</button>
                   <button class="btn" (click)="recargarArbol()">↻ Recargar</button>
                   <input class="search" style="width:auto;flex:1;min-width:160px" [(ngModel)]="arbolQ" placeholder="Filtrar ruta…">
                 </div>
@@ -263,13 +263,13 @@ import { NocNotify } from '../services/noc-notify';
             <div class="acsmd2" (click)="$event.stopPropagation()">
               <div class="mh">
                 <div class="mhx"><div class="mt">Eliminar router del ACS</div></div>
-                <button class="x" (click)="borrarDev.set(null)">✕</button>
+                <button class="x" (click)="borrarDev.set(null)" title="Cerrar"><i class="pi pi-times"></i></button>
               </div>
               <div class="mb">
                 <p style="font-size:13px;margin:0 0 6px">Se quitará del ACS el router <b>{{ borrarDev().manufacturer }} {{ borrarDev().modelName || '' }}</b> (serie <span class="mono">{{ borrarDev().serialNumber || '—' }}</span>@if (borrarDev().contrato) {<span>, contrato <span class="mono">{{ borrarDev().contrato }}</span></span>}).</p>
                 <p style="font-size:12px;color:var(--mut);margin:0 0 12px">Se borran sus tareas y parámetros. Si el router vuelve a informar, se registra de nuevo. Usalo para limpiar equipos viejos tras un cambio de router.</p>
                 <div class="mbtns" style="display:flex;gap:8px">
-                  <button class="btn danger" (click)="confirmarEliminar()">🗑 Eliminar</button>
+                  <button class="btn danger" (click)="confirmarEliminar()"><i class="pi pi-trash"></i> Eliminar</button>
                   <button class="btn" (click)="borrarDev.set(null)">Cancelar</button>
                 </div>
               </div>
@@ -282,7 +282,7 @@ import { NocNotify } from '../services/noc-notify';
           <div class="acsmd2" (click)="$event.stopPropagation()">
             <div class="mh">
               <div class="mhx"><div class="mt">{{ wifiEdit() === 'nombre' ? 'Cambiar nombre WiFi' : 'Cambiar clave WiFi' }}</div></div>
-              <button class="x" (click)="wifiEdit.set(null)">✕</button>
+              <button class="x" (click)="wifiEdit.set(null)" title="Cerrar"><i class="pi pi-times"></i></button>
             </div>
             <div class="mb">
               @if (wifiEdit() === 'nombre') {
@@ -460,15 +460,15 @@ export class AcsConfig implements OnInit, OnDestroy {
 
   save() {
     this.api.acsSaveConfig(this.cfg).subscribe({
-      next: (c) => { this.cfg = c; this.msg.set('✅ Guardado'); setTimeout(() => this.msg.set(''), 2500); this.notify.ok('Configuración del ACS guardada.'); },
+      next: (c) => { this.cfg = c; this.msg.set('Guardado'); setTimeout(() => this.msg.set(''), 2500); this.notify.ok('Configuración del ACS guardada.'); },
       error: (e: any) => this.notify.error(e?.message || 'No se pudo guardar la configuración del ACS.'),
     });
   }
   push() {
     if (!this.contrato.trim()) { this.pushMsg.set('Escribe el contrato del cliente.'); return; }
     this.api.acsPushMgmt(this.contrato.trim(), {}).subscribe({
-      next: () => this.pushMsg.set('✅ Config encolada para el router'),
-      error: (e: any) => this.pushMsg.set('⚠ ' + (e?.error?.mensaje || 'No se pudo encolar')),
+      next: () => this.pushMsg.set('Config encolada para el router'),
+      error: (e: any) => this.pushMsg.set((e?.error?.mensaje || 'No se pudo encolar')),
     });
   }
   asignarContrato(d: any) {
@@ -573,5 +573,5 @@ export class AcsConfig implements OnInit, OnDestroy {
     const dt = new Date(t); const p = (n: number) => String(n).padStart(2, '0');
     return p(dt.getDate()) + '/' + p(dt.getMonth() + 1) + ' ' + p(dt.getHours()) + ':' + p(dt.getMinutes());
   }
-  copiar(v: string) { navigator.clipboard?.writeText(v || ''); this.msg.set('📋 Copiado'); setTimeout(() => this.msg.set(''), 1500); }
+  copiar(v: string) { navigator.clipboard?.writeText(v || ''); this.msg.set('Copiado'); setTimeout(() => this.msg.set(''), 1500); }
 }

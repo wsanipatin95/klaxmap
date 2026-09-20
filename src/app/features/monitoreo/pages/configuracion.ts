@@ -16,16 +16,16 @@ import { LabSnmp } from './lab-snmp';
   imports: [TiemposConfig, Notificaciones, SaludGponConfig, OltConfig, CatalogoComandos, LabSnmp],
   template: `
     <div class="tools">
-      <span style="font-weight:700;font-size:16px">⚙️ Configuración</span>
+      <span class="pg-title" style="font-size:16px"><i class="pi pi-cog"></i> Configuración</span>
     </div>
 
     <div class="ctabs">
-      <button [class.on]="tab()==='tiempos'" (click)="tab.set('tiempos')">⏱ Tiempos</button>
-      <button [class.on]="tab()==='gpon'" (click)="tab.set('gpon')">🩺 Monitoreo y alertas</button>
-      <button [class.on]="tab()==='notif'" (click)="tab.set('notif')">🔔 Notificaciones</button>
-      <button [class.on]="tab()==='olt'" (click)="tab.set('olt')">🛠️ Configurar OLT</button>
-      <button [class.on]="tab()==='catalogo'" (click)="tab.set('catalogo')">📜 Catálogo de comandos</button>
-      <button [class.on]="tab()==='lab'" (click)="tab.set('lab')">🔬 Lab SNMP</button>
+      <button [class.on]="tab()==='tiempos'" (click)="tab.set('tiempos')"><i class="pi pi-clock"></i> Tiempos</button>
+      <button [class.on]="tab()==='gpon'" (click)="tab.set('gpon')"><i class="pi pi-heart"></i> Monitoreo y alertas</button>
+      <button [class.on]="tab()==='notif'" (click)="tab.set('notif')"><i class="pi pi-bell"></i> Notificaciones</button>
+      <button [class.on]="tab()==='olt'" (click)="tab.set('olt')"><i class="pi pi-wrench"></i> Configurar OLT</button>
+      <button [class.on]="tab()==='catalogo'" (click)="tab.set('catalogo')"><i class="pi pi-file"></i> Catálogo de comandos</button>
+      <button [class.on]="tab()==='lab'" (click)="tab.set('lab')"><i class="pi pi-search"></i> Lab SNMP</button>
     </div>
 
     @if (tab() === 'tiempos') { <app-tiempos /> }
