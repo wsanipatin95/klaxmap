@@ -45,6 +45,10 @@ interface Caida { id: number; name: string; desde: string; }
     .autochip { height:30px; display:inline-flex; align-items:center; gap:7px; padding:0 13px; border-radius:8px;
       background:#f1f5f9; color:var(--c-mute); font-size:12px; font-weight:500; white-space:nowrap; border:1px solid #e2e8f0; }
     .autochip .dot { width:6px; height:6px; border-radius:50%; background:var(--c-ok); box-shadow:0 0 0 2.5px rgba(22,163,74,.16); }
+    /* Mismo indicador, en ambar, cuando dejaron de llegar datos: el punto verde mintiendo
+       es peor que no tener indicador. */
+    .autochip.viejo { background:#fffbeb; border-color:#fde68a; color:#92400e; font-weight:600; }
+    .autochip.viejo .dot { background:#d97706; box-shadow:0 0 0 2.5px rgba(217,119,6,.18); }
 
     .canvas-outer { position:relative; }
     .hud { position:absolute; top:12px; left:12px; z-index:6; display:flex; gap:7px; flex-wrap:wrap; align-items:center; pointer-events:none; }
@@ -57,9 +61,20 @@ interface Caida { id: number; name: string; desde: string; }
       padding:8px 13px; font-size:12.5px; color:#334; box-shadow:0 4px 14px rgba(11,34,57,.12); display:inline-flex; align-items:center; gap:10px; max-width:74%; }
     .hud-note { pointer-events:none; } .hud-note button { pointer-events:auto; }
     .hud-note.lnk { border-color:#bfdbfe; background:#eff6ff; color:#1d4ed8; }
-    .hud-note.caida { border-color:#fecaca; background:#fef2f2; color:#991b1b; padding-left:11px; }
+    /* Aviso de datos viejos: va arriba de todo porque invalida TODO lo demas de la pantalla. */
+    .hud-note.stale { top:52px; border-color:#fde68a; background:#fffbeb; color:#92400e; max-width:520px; }
+    /* Con varios equipos caidos el texto corrido no se lee: lista, uno por linea,
+       con la hora alineada a la derecha para poder barrerla de un vistazo. */
+    .hud-note.caida { border-color:#fecaca; background:#fef2f2; color:#991b1b;
+      flex-direction:column; align-items:stretch; gap:7px; padding:9px 11px; max-width:360px; }
+    .hud-note.caida .cab { display:flex; align-items:center; gap:8px; }
+    .hud-note.caida .cab .sp { flex:1; }
     .hud-note.caida .lbl { font-weight:600; }
-    .hud-note.caida .eq { color:#7f1d1d; }
+    .hud-note.caida .eqs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px;
+      max-height:calc(100vh - 260px); overflow:auto; pointer-events:auto; }
+    .hud-note.caida .eqs li { display:flex; align-items:baseline; gap:10px; font-size:12px; line-height:1.5; }
+    .hud-note.caida .eqs .n { font-weight:600; color:#7f1d1d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hud-note.caida .eqs .h { margin-left:auto; flex:none; color:#b91c1c; font-size:11px; font-variant-numeric:tabular-nums; }
     .hud-note.caida .hint { color:#b45309; font-size:11.5px; }
     .pulse { width:8px; height:8px; border-radius:50%; background:var(--c-down); flex:none; animation:pulse 1.6s ease-out infinite; }
     .hud-note.caida.silenciada .pulse { animation:none; opacity:.55; }
@@ -112,7 +127,10 @@ interface Caida { id: number; name: string; desde: string; }
       <h2><i class="pi pi-sitemap"></i> Topología de Red</h2>
       <span class="toolbar" style="margin-left:auto;position:relative">
         <button class="btn ghost" (click)="importar()" title="Traer o actualizar equipos del ERP"><i class="pi pi-download"></i> Importar</button>
-        <span class="autochip" title="El estado se refresca automáticamente"><span class="dot"></span> Auto {{ autoSecs }}s</span>
+        <span class="autochip" [class.viejo]="datosViejos()"
+              [title]="datosViejos() ? 'La pantalla dejó de recibir datos: lo que se ve es la última lectura buena, no el estado de ahora.' : 'El estado se refresca solo. El tiempo es desde la última lectura con datos.'">
+          <span class="dot"></span> Auto {{ autoSecs }}s · {{ edadTxt() }}
+        </span>
         <button class="btn" [class.alarm-on]="alarm().on" (click)="toggleAlarma()"
                 [title]="alarm().on ? 'Alarma sonora activada' : 'Alarma sonora desactivada'">
           <i class="pi pi-bell"></i> Alarma</button>
@@ -188,14 +206,31 @@ interface Caida { id: number; name: string; desde: string; }
         <span class="chip lnk">Enlaces <b>{{ links().length }}</b></span>
       </div>
 
+      @if (datosViejos()) {
+        <div class="hud-note stale">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span><b>Sin datos nuevos {{ edadTxt() }}.</b> Esto es la última lectura buena, no el estado de ahora.
+            Revisá la conexión con el NOC o recargá la pantalla.</span>
+        </div>
+      }
+
       @if (caidas().length) {
         <div class="hud-note caida" [class.silenciada]="silenciado()">
-          <span class="pulse"></span>
-          <span class="lbl">{{ caidas().length === 1 ? 'Equipo caído' : caidas().length + ' equipos caídos' }}</span>
-          <span class="eq">{{ nombresCaidas() }}</span>
-          @if (audioBloqueado() && alarm().on) { <span class="hint">Hacé clic en la pantalla para habilitar el audio</span> }
-          @if (alarm().on && !silenciado()) { <button class="btn sm ghost" (click)="silenciar()"><i class="pi pi-volume-off"></i> Silenciar</button> }
-          <button class="btn sm ghost" (click)="descartarCaidas()">Descartar</button>
+          <div class="cab">
+            <span class="pulse"></span>
+            <span class="lbl">{{ caidas().length === 1 ? 'Equipo caído' : caidas().length + ' equipos caídos' }}</span>
+            <span class="sp"></span>
+            @if (alarm().on && !silenciado()) { <button class="btn sm ghost" (click)="silenciar()" title="Silenciar la alarma"><i class="pi pi-volume-off"></i></button> }
+            <button class="btn sm ghost" (click)="descartarCaidas()">Descartar</button>
+          </div>
+          <ul class="eqs">
+            @for (c of caidas(); track c.id) {
+              <li><span class="n" [title]="c.name">{{ c.name }}</span><span class="h">{{ c.desde }}</span></li>
+            }
+          </ul>
+          @if (audioBloqueado() && alarm().on) {
+            <div class="hint">Hacé clic en la pantalla para habilitar el audio</div>
+          }
         </div>
       } @else if (linkFrom(); as lf) {
         <div class="hud-note lnk"><i class="pi pi-link"></i> Conectando desde <b>{{ lf.deviceName }} · {{ lf.portLabel }}</b> — abrí otro equipo y elegí "Conectar aquí".
@@ -373,17 +408,60 @@ export class Topologia implements OnInit, OnDestroy {
     // ni empujar equipos (evita duplicados).
     this.load();
     this.timer = setInterval(() => this.load(), this.autoSecs * 1000);
+    // Reloj propio: sin esto el "hace Xs" solo se moveria cuando la carga funciona,
+    // que es justo el caso que NO hay que disimular.
+    this.relojTimer = setInterval(() => this.ahora.set(Date.now()), 5000);
   }
-  ngOnDestroy() { if (this.timer) clearInterval(this.timer); this.pararRepeticion(); this.ponerTitulo(0); }
+  private relojTimer: any;
+  ngOnDestroy() {
+    if (this.timer) clearInterval(this.timer);
+    if (this.relojTimer) clearInterval(this.relojTimer);
+    this.pararRepeticion(); this.ponerTitulo(0);
+  }
+
+  /**
+   * Momento del ultimo refresco que SI trajo datos, y si el ultimo intento fallo.
+   *
+   * <p>Esta pantalla vive en un televisor. Si la carga empieza a fallar —se cayo la red,
+   * vencio el token, se reinicio el backend— antes se seguia mostrando la ultima foto
+   * buena para siempre, sin decir nada: el tablero quedaba en "todo bien" mientras la
+   * red se caia. Un monitor que no puede decir "no se" es peor que una pantalla apagada.</p>
+   */
+  ultimaOk = signal<number>(0);
+  fallo = signal(false);
+  ahora = signal<number>(Date.now());
 
   load() {
-    this.api.topologia().subscribe((r: any) => {
-      const nodes: TopoNode[] = (r?.nodes || []).map((n: any) => ({ ...n, vlan: n.vlan ?? null, x: 0, y: 0 }));
-      this.layout(nodes);
-      this.nodes.set(nodes);
-      this.links.set(r?.links || []);
-      this.evaluarCaidas(nodes);
+    this.api.topologia().subscribe({
+      next: (r: any) => {
+        const nodes: TopoNode[] = (r?.nodes || []).map((n: any) => ({ ...n, vlan: n.vlan ?? null, x: 0, y: 0 }));
+        this.layout(nodes);
+        this.nodes.set(nodes);
+        this.links.set(r?.links || []);
+        this.evaluarCaidas(nodes);
+        this.ultimaOk.set(Date.now());
+        this.fallo.set(false);
+      },
+      error: () => this.fallo.set(true),
     });
+  }
+
+  /** Segundos desde el ultimo refresco con datos. */
+  edadSeg() { return this.ultimaOk() ? Math.round((this.ahora() - this.ultimaOk()) / 1000) : -1; }
+
+  /**
+   * ¿Los datos dejaron de llegar? Se da margen de 3 ciclos antes de gritar: un refresco
+   * perdido es normal, tres seguidos ya es que la pantalla dejo de saber lo que pasa.
+   */
+  datosViejos() { const e = this.edadSeg(); return e < 0 || e > this.autoSecs * 3; }
+
+  /** Texto corto de antiguedad, para la cabecera. */
+  edadTxt() {
+    const e = this.edadSeg();
+    if (e < 0) return 'sin datos';
+    if (e < 60) return 'hace ' + e + 's';
+    const m = Math.round(e / 60);
+    return m < 60 ? 'hace ' + m + ' min' : 'hace ' + Math.round(m / 60) + ' h';
   }
 
   // =====================================================================
@@ -418,7 +496,7 @@ export class Topologia implements OnInit, OnDestroy {
   probarAlarma() { this.ensureCtx(); this.tocar(this.alarm().tono, this.alarm().vol); }
   silenciar() { this.silenciado.set(true); this.pararRepeticion(); }
   descartarCaidas() { this.caidas.set([]); this.silenciado.set(false); this.pararRepeticion(); this.ponerTitulo(0); }
-  nombresCaidas() { return this.caidas().map((c) => c.name + ' (' + c.desde + ')').join(', '); }
+
 
   @HostListener('document:pointerdown')
   onPointer() { if (this.audioBloqueado() || this.alarm().on) this.ensureCtx(); }

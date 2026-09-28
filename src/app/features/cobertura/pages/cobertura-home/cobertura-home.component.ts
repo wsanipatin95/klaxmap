@@ -1,6 +1,6 @@
 import {
   AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, ViewEncapsulation,
-  inject, signal,
+  computed, inject, signal,
 } from '@angular/core';
 import * as L from 'leaflet';
 import * as XLSX from 'xlsx';
@@ -131,7 +131,7 @@ class HeatOverlay {
         @for (q of [3, 2, 1, 0]; track q) {
           <button class="cob-lg" [class.off]="!verCal()[q]" (click)="toggleCal(q)" [title]="'Mostrar/ocultar: ' + calMeta(q).lbl">
             <span class="cob-lg-dot" [style.background]="calMeta(q).fill"></span>
-            {{ calMeta(q).lbl }}
+            {{ calMeta(q).lbl }} <b>{{ n(conteo().porCal[q]) }}</b>
           </button>
         }
         <span class="mx-1 text-slate-300">|</span>
@@ -139,9 +139,14 @@ class HeatOverlay {
         @for (g of [1, 2, 3]; track g) {
           <button class="cob-lg" [class.off]="!verEstado()[g]" (click)="toggleEstado(g)" [title]="'Mostrar/ocultar: ' + estMeta(g).lbl">
             <span class="cob-lg-dot is-est" [style.background]="estMeta(g).fill"></span>
-            {{ estMeta(g).lbl }}
+            {{ estMeta(g).lbl }} <b>{{ n(conteo().porEst[g]) }}</b>
           </button>
         }
+        <span class="mx-1 text-slate-300">|</span>
+        <span class="text-[11px] text-slate-600" title="Clientes que quedan con el filtro actual, sobre el total cargado dentro del radio">
+          En pantalla: <b class="text-slate-900">{{ n(conteo().visibles) }}</b>
+          <span class="text-slate-400">de {{ n(conteo().total) }}</span>
+        </span>
       </div>
 
       @if (error()) {
@@ -351,6 +356,15 @@ class HeatOverlay {
      .cob-lg-dot{width:.6rem;height:.6rem;border-radius:50%;display:inline-block;flex:0 0 auto;}
      .cob-lg-dot.is-est{border-radius:2px;}   /* estado = cuadrito; calidad = círculo (no confundir) */
      .cob-lg b{color:#0f172a;}
+     /* ficha del cliente al hacer clic en su punto */
+     .cob-pop .leaflet-popup-content{margin:.6rem .75rem;}
+     .cob-pop-t{font-size:12.5px;font-weight:700;color:#0f172a;line-height:1.25;}
+     .cob-pop-s{font-size:10.5px;color:#64748b;margin-top:.1rem;}
+     .cob-pop-chips{display:flex;gap:.25rem;flex-wrap:wrap;margin:.4rem 0 .35rem;}
+     .cob-pop-chip{font-size:9.5px;font-weight:700;color:#fff;border-radius:.4rem;padding:.1rem .35rem;letter-spacing:.2px;}
+     .cob-pop-r{display:flex;gap:.5rem;font-size:10.5px;line-height:1.5;border-top:1px dashed #e2e8f0;padding-top:.15rem;}
+     .cob-pop-r span{color:#64748b;min-width:62px;flex:0 0 auto;}
+     .cob-pop-r b{color:#0f172a;font-weight:600;}
      .cob-cal-counts{display:flex;flex-wrap:wrap;gap:.3rem;margin:.1rem 0 .5rem;}
      .cob-cal{font-size:10px;padding:.05rem .4rem;border-radius:.3rem;font-weight:600;}
      .cal-0{background:#f3f4f6;color:#4b5563;}
@@ -414,6 +428,11 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   // filtro por estado del cliente (1 activo, 2 cortado/suspension, 3 los demas). Arrancan TODOS
   // encendidos: es un refinamiento sobre lo que ya prendiste en "Capas de conexión".
   readonly verEstado = signal<Record<number, boolean>>({ 1: true, 2: true, 3: true });
+  /**
+   * TODOS los clientes cargados (dentro del radio), aplanados. Existe solo para que los
+   * contadores puedan ser un computed: cliPorNap es un Map comun y no notifica cambios.
+   */
+  private readonly cliTodos = signal<CoberturaClienteGeo[]>([]);
   readonly satOn = signal(false);   // vista satelite
   // coroplético de zonas (barrios)
   readonly zonasOn = signal(false);
@@ -450,13 +469,48 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   estMeta(g: number | null | undefined) { return this.EST[g ?? 3] ?? this.EST[3]; }
 
   /**
+   * Contadores que se mueven CON el filtro. Los dos ejes se cruzan:
+   *  - el numero de cada chip de Estado cuenta solo los clientes de las capas de conexion encendidas;
+   *  - el de cada chip de Conexion cuenta solo los estados encendidos.
+   * Asi el numero siempre responde a "de lo que estoy viendo, cuantos hay de esto".
+   * Al abrir la pantalla las capas de conexion arrancan apagadas, asi que los chips marcan 0
+   * hasta que prendas una: el total de la derecha ("0 de N") lo deja claro.
+   */
+  readonly conteo = computed(() => {
+    const vc = this.verCal(), ve = this.verEstado();
+    const porCal: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    const porEst: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+    let visibles = 0;
+    const todos = this.cliTodos();
+    for (const c of todos) {
+      const q = c.calidad ?? 2;
+      const g = c.estadoGrupo ?? 3;
+      if (ve[g]) porCal[q] = (porCal[q] ?? 0) + 1;
+      if (vc[q]) porEst[g] = (porEst[g] ?? 0) + 1;
+      if (vc[q] && ve[g]) visibles++;
+    }
+    return { porCal, porEst, visibles, total: todos.length };
+  });
+  /** Numero con separador de miles. */
+  n(v: number | null | undefined): string { return (v ?? 0).toLocaleString('es-EC'); }
+
+  /** Asigna el mapa NAP->clientes y mantiene sincronizado el signal que alimenta los contadores. */
+  private setCli(m: Map<number, CoberturaClienteGeo[]>): void {
+    this.cliPorNap = m;
+    const todos: CoberturaClienteGeo[] = [];
+    for (const [, arr] of m) for (const c of arr) todos.push(c);
+    this.cliTodos.set(todos);
+  }
+
+  /**
    * Descarga a Excel (.xlsx) los clientes que pasan las CAPAS ACTIVAS (calidad + estado) — lo mismo
    * que se está pintando en el mapa. Una fila por cliente con su estado, NAP, OLT/PON/ONU y distancia.
    */
   descargarExcel(): void {
     const vis = this.verCal(), visEst = this.verEstado();
     const rows: Record<string, string | number>[] = [];
-    for (const [, clientes] of this.cliPorNap) {
+    for (const [napId, clientes] of this.cliPorNap) {
+      const etiqueta = this.etiquetaNap(napId);
       for (const c of clientes) {
         const q = c.calidad ?? 2;
         const g = c.estadoGrupo ?? 3;
@@ -467,7 +521,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           'Estado': c.estado ?? '',
           'Grupo estado': this.estMeta(g).lbl,
           'Calidad conexión': this.calMeta(q).lbl,
-          'NAP': c.napCodigo ?? '',
+          'NAP': etiqueta,
           'Nivel NAP': c.nivelNap ?? '',
           'OLT': c.oltNombre ?? '',
           'PON (tarjeta/puerto)': this.ponLabel(c),
@@ -488,7 +542,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
 
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = [
-      { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 12 },
+      { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
       { wch: 9 }, { wch: 20 }, { wch: 18 }, { wch: 7 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
     ];
     const wb = XLSX.utils.book_new();
@@ -578,6 +632,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   /** Pinta TODAS las conexiones (todas las NAP) de las capas encendidas — vista global para cazar problemas. */
   private pintarGlobal(): void {
     this.capaGlobal.clearLayers();
+    this.ptsGlobal = [];
     if (!this.map) return;
     if (!this.filtroActivo()) return;   // ninguna capa encendida -> nada que pintar
     const vis = this.verCal(), visEst = this.verEstado();
@@ -602,9 +657,71 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           { color: col.line, weight: 2, opacity: 0.85, interactive: false, renderer: this.canvasRenderer }).addTo(this.capaGlobal);
         L.circleMarker(cliLL,
           { radius: 3.4, color: col.stroke, weight: 1, fillColor: col.fill, fillOpacity: 0.95, interactive: false, renderer: this.canvasRenderer }).addTo(this.capaGlobal);
+        // Los puntos se dibujan en canvas y NO son interactivos (8000 marcadores con eventos
+        // ponen el mapa a gatear). El clic se resuelve buscando el punto mas cercano, que
+        // ademas perdona el pulso: no hace falta acertarle al pixel.
+        this.ptsGlobal.push({ c, ll: cliLL, napId });
         k++;
       }
     }
+  }
+
+  /** Puntos de cliente pintados ahora mismo en la vista global, para resolver el clic. */
+  private ptsGlobal: { c: CoberturaClienteGeo; ll: L.LatLngTuple; napId: number }[] = [];
+
+  /**
+   * Clic en el mapa: abre la ficha del cliente mas cercano al punto donde tocaste.
+   *
+   * Los puntos de la vista global se dibujan en canvas y sin eventos (con 8000 marcadores
+   * interactivos el mapa se arrastra), asi que el clic se resuelve por distancia en pixeles
+   * contra los puntos que estan pintados. Si no hay ninguno cerca, no pasa nada.
+   */
+  private clicEnMapa(e: L.LeafletMouseEvent): void {
+    const map = this.map;
+    if (!map || !this.ptsGlobal.length) return;
+    const p = map.latLngToContainerPoint(e.latlng);
+    let mejor: { c: CoberturaClienteGeo; ll: L.LatLngTuple; napId: number } | null = null;
+    let mejorD = 15;   // radio de tolerancia en pixeles
+    for (const it of this.ptsGlobal) {
+      const q = map.latLngToContainerPoint(L.latLng(it.ll));
+      const d = Math.hypot(q.x - p.x, q.y - p.y);
+      if (d < mejorD) { mejorD = d; mejor = it; }
+    }
+    if (mejor) this.fichaCliente(mejor.c, mejor.ll, mejor.napId);
+  }
+
+  /** Ficha emergente del cliente: quien es, en que estado esta y por donde esta servido. */
+  private fichaCliente(c: CoberturaClienteGeo, ll: L.LatLngTuple, napId?: number | null): void {
+    if (!this.map) return;
+    const est = this.estMeta(c.estadoGrupo);
+    const cal = this.calMeta(c.calidad);
+    const nom = (c.clienteNombre && c.clienteNombre.trim()) || c.documento || ('#' + c.idConContratoFk);
+    const nap = this.etiquetaNap(napId ?? c.idGeoElementoFk ?? 0);
+    const fila = (k: string, v: string) => (v ? `<div class="cob-pop-r"><span>${k}</span><b>${v}</b></div>` : '');
+    const onu = c.gponOnu != null ? this.esc(c.gponOnu) + (c.onuEstado ? ' \u00b7 ' + this.esc(c.onuEstado) : '') : '';
+    const html =
+      `<div class="cob-pop-t">${this.esc(nom)}</div>` +
+      `<div class="cob-pop-s">${this.esc(c.documento || 's/d')} \u00b7 contrato #${this.esc(c.idConContratoFk)}</div>` +
+      `<div class="cob-pop-chips">` +
+        `<span class="cob-pop-chip" style="background:${est.fill}">${this.esc(c.estado || est.lbl)}</span>` +
+        `<span class="cob-pop-chip" style="background:${cal.fill}">${this.esc(cal.lbl)}</span>` +
+      `</div>` +
+      fila('NAP', this.esc(nap) + (c.nivelNap ? ' \u00b7 nivel ' + c.nivelNap : '')) +
+      fila('OLT', this.esc(c.oltNombre || '')) +
+      fila('PON', this.ponLabel(c) === '\u2014' ? '' : this.esc(this.ponLabel(c))) +
+      fila('ONU', onu) +
+      fila('Distancia', c.distanciaM == null ? '' : this.dist(c.distanciaM)) +
+      fila('Origen', c.fuente === 'RED' ? 'Red (amarre confirmado)' : 'GPS (cercan\u00eda)');
+    L.popup({ className: 'cob-pop', maxWidth: 280, autoPan: true, closeButton: true })
+      .setLatLng(L.latLng(ll))
+      .setContent(html)
+      .openOn(this.map);
+  }
+
+  /** Escapa el texto que va dentro del HTML del popup (los nombres vienen del ERP). */
+  private esc(v: unknown): string {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // ---- confirmador de PON (wizard) ----
@@ -695,7 +812,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           a.push(c);
           m.set(c.idGeoElementoFk, a);
         }
-        this.cliPorNap = m;
+        this.setCli(m);
         if (this.napSel) {
           this.cliGeo.set(m.get(this.napSel.idGeoElemento) ?? []);
           this.dibujarSel(this.napSel);
@@ -738,6 +855,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     this.capaHi.addTo(this.map);
     this.capa.addTo(this.map);
     this.map.on('moveend zoomend', () => this.scheduleRender());
+    this.map.on('click', (e: L.LeafletMouseEvent) => this.clicEnMapa(e));
     setTimeout(() => this.map?.invalidateSize(), 150);
     this.cargar();
     this.api.listarOlts().subscribe({ next: (o) => this.olts.set(o ?? []), error: () => {} });
@@ -782,7 +900,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       error: () => { /* fallback de nombre */ },
     });
 
-    this.cliPorNap = new Map();
+    this.setCli(new Map());
     this.heatPts = [];
     this.api.listarClientesGeo(r).subscribe({
       next: (rows) => {
@@ -795,7 +913,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           a.push(c);
           m.set(c.idGeoElementoFk, a);
         }
-        this.cliPorNap = m;
+        this.setCli(m);
         this.heatPts = pts;
         if (this.heat.active) this.heat.setPoints(this.heatPts);
         this.pintarGlobal();   // repinta el global con los datos frescos
@@ -814,7 +932,37 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
 
   private nombreCorto(nap: CoberturaNap): string {
     const mt = this.meta.get(nap.idGeoElemento);
-    return (mt?.etiqueta || mt?.nombre || nap.napNombre || nap.napCodigo || ('NAP ' + nap.idGeoElemento)).trim();
+    return this.soloEtiqueta(mt?.etiqueta || mt?.nombre || nap.napNombre || nap.napCodigo || ('NAP ' + nap.idGeoElemento));
+  }
+
+  /** Misma etiqueta que el mapa, pero buscando por id (el Excel recorre el Map por id). */
+  private etiquetaNap(napId: number): string {
+    const mt = this.meta.get(napId);
+    if (mt?.etiqueta || mt?.nombre) return this.soloEtiqueta(mt.etiqueta || mt.nombre || '');
+    const n = this.naps().find((x) => x.idGeoElemento === napId);
+    return this.soloEtiqueta(n?.napNombre || n?.napCodigo || ('NAP ' + napId));
+  }
+
+  /**
+   * Deja SOLO la etiqueta de la caja NAP.
+   *
+   * Los nombres que vienen del KMZ traen toda la ruta del archivo pegada, por ejemplo
+   * "KMLE_4_INNO_TOTAL_CALD_10AGO2024_KMZ_SAN_JOSE_MORAN_CALDERON_SJMO24_2_POINT_7182_d1d0..."
+   * y lo unico que identifica la caja es "SJMO24_2". Lo que sigue a "_POINT_" es el id del
+   * punto y el hash del KMZ, no aporta nada en un reporte.
+   *
+   * Si el texto no tiene "_POINT_" (etiqueta ya limpia) se devuelve tal cual.
+   */
+  private soloEtiqueta(s: string): string {
+    const t = (s || '').trim();
+    const i = t.toUpperCase().indexOf('_POINT_');
+    if (i < 0) return t;
+    const partes = t.slice(0, i).split('_').filter((x) => !!x);
+    if (!partes.length) return t;
+    const ultimo = partes[partes.length - 1];
+    // "..._SJMO24_2_POINT_7182" -> "SJMO24_2"   |   "..._SJMO24_POINT_7182" -> "SJMO24"
+    if (/^\d+$/.test(ultimo) && partes.length >= 2) return partes[partes.length - 2] + '_' + ultimo;
+    return ultimo;
   }
 
   private fitOnce(): void {
@@ -939,6 +1087,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       const dot = L.circleMarker(cll, { radius: 3.8, color: col.stroke, weight: 1, fillColor: col.fill, fillOpacity: 0.95 });
       const nom = (c.clienteNombre && c.clienteNombre.trim()) || c.documento || ('#' + c.idConContratoFk);
       dot.bindTooltip(nom + ' · ' + col.lbl + ' · ' + this.dist(c.distanciaM), { direction: 'top' });
+      dot.on('click', () => this.fichaCliente(c, cll, nap.idGeoElemento));
       dot.addTo(this.capaSel);
       k++;
     }

@@ -137,10 +137,16 @@ import { NocNotify } from '../services/noc-notify';
               <span title="Con hide-sensitive el archivo sale sin claves de PPPoE, comunidades SNMP ni tokens. Sigue sirviendo para restaurar.">MikroTik (por SSH)</span>
               <input [(ngModel)]="cfg.cfgbkp_mk_cmd" placeholder="/export hide-sensitive">
             </label>
-            <label class="fld">
-              <span title="Comando de lectura de configuración de la OLT.">OLT ZTE (por Telnet)</span>
-              <input [(ngModel)]="cfg.cfgbkp_olt_cmd" placeholder="show running-config">
+            <label class="fld chk">
+              <input type="checkbox" [(ngModel)]="cfg.cfgbkp_olt_enabled">
+              <span title="Las OLT solo se pueden respaldar por Telnet. Esta es la única función del NOC que usa Telnet: una sesión por OLT, un comando de lectura, cada 12 h. El barrido periódico por CLI sigue apagado.">Respaldar también las OLT (por Telnet)</span>
             </label>
+            @if (cfg.cfgbkp_olt_enabled) {
+              <label class="fld">
+                <span title="Comando de lectura de configuración de la OLT.">OLT ZTE (por Telnet)</span>
+                <input [(ngModel)]="cfg.cfgbkp_olt_cmd" placeholder="show running-config">
+              </label>
+            }
 
             <div class="sep">Copia binaria completa del MikroTik</div>
             <label class="fld chk">
@@ -329,7 +335,7 @@ export class Backup implements OnInit, OnDestroy {
   tab = signal<'panel' | 'config'>('panel');
   backups = signal<any[]>([]);
   cfg: any = { cfgbkp_enabled: true, cfgbkp_cron: '0 0 */12 * * *', cfgbkp_keep: 60, cfgbkp_dir: 'backups/config',
-    cfgbkp_mk_cmd: '/export hide-sensitive', cfgbkp_olt_cmd: 'show running-config',
+    cfgbkp_mk_cmd: '/export hide-sensitive', cfgbkp_olt_cmd: 'show running-config', cfgbkp_olt_enabled: true,
     cfgbkp_bin_enabled: false, cfgbkp_bin_keep: 10, cfgbkp_bin_name: 'noc-backup', cfgbkp_bin_pass_set: false,
     cfgbkp_cert_pem: '',
     cfgbkp_r1_enabled: false, cfgbkp_r1_label: 'Nube', cfgbkp_r1_host: '', cfgbkp_r1_port: 22, cfgbkp_r1_user: '', cfgbkp_r1_dir: 'noc-backups', cfgbkp_r1_pass_set: false,
@@ -447,6 +453,7 @@ export class Backup implements OnInit, OnDestroy {
       cfgbkp_dir: this.cfg.cfgbkp_dir,
       cfgbkp_mk_cmd: this.cfg.cfgbkp_mk_cmd,
       cfgbkp_olt_cmd: this.cfg.cfgbkp_olt_cmd,
+      cfgbkp_olt_enabled: this.cfg.cfgbkp_olt_enabled,
       cfgbkp_bin_enabled: this.cfg.cfgbkp_bin_enabled,
       cfgbkp_bin_keep: this.cfg.cfgbkp_bin_keep,
       cfgbkp_cert_pem: this.cfg.cfgbkp_cert_pem,

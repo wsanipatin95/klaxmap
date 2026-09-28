@@ -2,7 +2,9 @@ import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NocApi, Device, Iface, OltMarca } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
 import { TableSort } from '../shared/table-sort';
+import { opcionesMarca } from '../shared/marcas';
 import { LineChart } from '../shared/line-chart';
 import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } from '../shared/charts';
 
@@ -28,7 +30,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
         <div class="m"><div class="k">IP</div><div class="v mono">{{ d.ip_address }}</div></div>
         <div class="m"><div class="k">Nombre SNMP</div><div class="v">{{ d.sys_name || '—' }}</div></div>
         <div class="m"><div class="k">Uptime</div><div class="v">{{ upt(d.uptime_seconds) }}</div></div>
-        <div class="m"><div class="k">Último visto</div><div class="v">{{ d.status==='up' ? 'hace instantes' : 'sin respuesta' }}</div></div>
+        <div class="m"><div class="k">Último visto</div><div class="v" [title]="d.last_seen_at || 'nunca respondió'">{{ visto(d.last_seen_at) }}</div></div>
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
@@ -119,7 +121,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
                   </select>
                 </div>
               } @else {
-                <div><label class="k">Vendor</label><input class="inp" style="width:100%" [(ngModel)]="ef.vendor"></div>
+                <div><label class="k" title="La marca se elige de la lista. Un vendor mal escrito deja al equipo sin CPU ni memoria.">Marca</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="showMarca.set(true)">{{ ef.vendor || '— Elegir marca —' }}</button></div>
                 <div><label class="k">Modelo</label><input class="inp" style="width:100%" [(ngModel)]="ef.model"></div>
               }
               <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option></select></div>
@@ -130,6 +132,9 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
               <div><label class="k">Puerto SNMP</label><input class="inp" type="number" style="width:100%" [(ngModel)]="ef.snmp_port"></div>
               <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.snmp_enabled"> <span>Habilitar SNMP</span></div>
               <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.mon_temp"> <span>Monitorear temperatura</span></div>
+              <div style="grid-column:1/3;display:flex;justify-content:flex-end">
+                <button type="button" class="btn ghost sm" (click)="probarSnmp()" [disabled]="probandoSnmp()" title="Consulta sysName al equipo con esta IP, puerto, community y versión. Dice si contesta o no, sin esperar al próximo barrido."><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button>
+              </div>
 
               @if (ef.device_type === 'olt') {
                 <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.telnet_user"></div>
@@ -152,6 +157,19 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
                 <button class="btn ghost" (click)="showEdit.set(false)">Cancelar</button>
                 <button class="btn" (click)="saveEdit()">Guardar cambios</button>
               </span>
+            </div>
+          </div>
+        </div>
+      }
+      @if (showMarca()) {
+        <div class="overlay on" style="z-index:70" (click)="showMarca.set(false)"></div>
+        <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:71" (click)="showMarca.set(false)">
+          <div class="panel" style="width:340px;max-width:92vw" (click)="$event.stopPropagation()">
+            <div class="ph">Marca del equipo</div>
+            <div class="pb" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto">
+              @for (m of marcaOpts(); track m) {
+                <button type="button" class="btn ghost" [class.on]="m === ef.vendor" style="justify-content:flex-start" (click)="elegirMarca(m)">{{ m }}</button>
+              }
             </div>
           </div>
         </div>
@@ -227,6 +245,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
 })
 export class EquipoDetalle implements OnDestroy {
   private api = inject(NocApi);
+  private notify = inject(NocNotify);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private timer: any;
@@ -236,6 +255,7 @@ export class EquipoDetalle implements OnDestroy {
   id = 0;
   dev = signal<Device | null>(null);
   showEdit = signal(false);
+  showMarca = signal(false);   // selector de marca (nunca se escribe a mano)
   testing = signal(false);
   testErr = signal('');
   saveErr = signal('');   // error al guardar (NO es un fallo de Telnet)
@@ -312,7 +332,16 @@ export class EquipoDetalle implements OnDestroy {
     estado: (f) => f.status,
   }, 'interfaz');
 
-  ifaceRows(): Iface[] { return this.ifSort.apply(this.myIfaces()); }
+  /**
+   * Interfaces del equipo, sin las que no tienen nombre.
+   *
+   * <p>Si el agente SNMP no devolvio ifName ni ifDescr, la fila no se puede identificar
+   * ni buscar: mostrarla solo ensucia. La fila sigue existiendo en la base —su id lo
+   * guardan los paneles del dashboard y el historico— pero no se lista.</p>
+   */
+  ifaceRows(): Iface[] {
+    return this.ifSort.apply(this.myIfaces().filter((f) => (f.real_name || f.noc_alias || '').trim()));
+  }
 
   setRange(min: number) { this.range.set(min); this.loadCharts(); }
 
@@ -435,6 +464,35 @@ export class EquipoDetalle implements OnDestroy {
     }
   }
 
+  /**
+   * Marcas disponibles: la lista oficial mas lo que ya tenga el equipo, para no
+   * perder un vendor historico. Nunca hay campo libre: el vendor es la llave con
+   * la que el monitor decide que OIDs consultar.
+   */
+  marcaOpts() { return opcionesMarca([this.ef?.vendor, this.dev()?.vendor]); }
+  elegirMarca(m: string) { this.ef.vendor = m; this.showMarca.set(false); }
+
+  probandoSnmp = signal(false);
+  /**
+   * Prueba SNMP en vivo con lo que hay AHORA en el formulario (IP, puerto, community,
+   * version). Responde de una si el equipo contesta o no, en vez de guardar y esperar
+   * al proximo barrido para adivinar por que las tarjetas quedaron vacias.
+   */
+  probarSnmp() {
+    if (!this.ef.ip_address) { this.notify.error('Escribe la IP del equipo antes de probar SNMP.'); return; }
+    this.probandoSnmp.set(true);
+    this.api.testSnmp({ host: this.ef.ip_address, port: this.ef.snmp_port || 161,
+                        community: this.ef.snmp_community || 'public', version: this.ef.snmp_version || 'v2c' })
+      .subscribe({
+        next: (r: any) => {
+          this.probandoSnmp.set(false);
+          if (r?.ok) this.notify.ok((r.sysName ? r.sysName + '\n' : '') + 'El equipo responde por SNMP con estos datos.', 'SNMP OK');
+          else this.notify.error(r?.error || 'El equipo no respondio por SNMP.', 'SNMP sin respuesta');
+        },
+        error: (e: any) => { this.probandoSnmp.set(false); this.notify.error(e?.message || 'No se pudo ejecutar la prueba SNMP.'); },
+      });
+  }
+
   /** Al elegir la marca del ERP, guarda su id y refleja el nombre en vendor (llave del motor). */
   applyMarca(id: any) {
     const m = this.marcas().find((x) => x.idRedOltMarca === id);
@@ -486,5 +544,24 @@ export class EquipoDetalle implements OnDestroy {
     return v < 10 ? v.toFixed(2) : Math.round(v).toString();
   }
   utilColor(u: number) { return u >= 90 ? '#dc2626' : u >= 80 ? '#d97706' : '#16a34a'; }
+  /**
+   * Cuanto hace que el equipo respondio, por ping o por SNMP.
+   *
+   * <p>Antes esto se deducia del estado ("up" -> "hace instantes"), que no es lo mismo:
+   * un equipo puede estar caido AHORA y haber respondido hace cinco minutos, y eso es
+   * justo lo que uno necesita saber cuando algo se cae.</p>
+   */
+  visto(iso: string | null | undefined): string {
+    if (!iso) return 'nunca respondió';
+    const seg = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (isNaN(seg)) return '—';
+    if (seg < 90) return 'hace instantes';
+    const min = Math.round(seg / 60);
+    if (min < 60) return 'hace ' + min + ' min';
+    const h = Math.round(min / 60);
+    if (h < 48) return 'hace ' + h + ' h';
+    return 'hace ' + Math.round(h / 24) + ' días';
+  }
+
   ifBadge(s: string) { return s === 'up' ? '<span class="badge b-up">UP</span>' : s === 'down' ? '<span class="badge b-down">DOWN</span>' : '<span class="badge b-maint">UNKNOWN</span>'; }
 }

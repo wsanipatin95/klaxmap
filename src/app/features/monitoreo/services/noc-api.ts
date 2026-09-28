@@ -32,6 +32,8 @@ export interface Device {
   /** Solo OLT: firmware real (decide el arbol de OIDs) y perfil del catalogo multimarca. */
   software_version?: string | null;
   id_olt_perfil?: number | null;
+  /** Ultima vez que el equipo respondio, por ping o por SNMP. Null = nunca. */
+  last_seen_at?: string | null;
   status: string;
   cpu_percent: number | null;
   memory_percent: number | null;

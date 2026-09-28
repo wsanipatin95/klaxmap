@@ -24,11 +24,9 @@ import { NocNotify } from '../services/noc-notify';
       @if (!st.cliEnabled) {
         <div class="panel cli-off">
           <div class="pb">
-            <div class="cli-off-t"><i class="pi pi-ban"></i> El envío por CLI está apagado en todo el NOC</div>
+            <div class="cli-off-t"><i class="pi pi-ban"></i> El Telnet maestro está apagado</div>
             <div class="cli-off-x">
               {{ st.motivo }}
-              Podés seguir usando la <b>vista previa</b> para revisar los comandos, pero el botón de envío queda bloqueado.
-              Se enciende con <code>NOC_ZTE_CLI_ENABLED=true</code> en el entorno del backend.
             </div>
           </div>
         </div>
@@ -45,7 +43,8 @@ import { NocNotify } from '../services/noc-notify';
         <span class="chip" [style.background]="writeEnabled() ? '#e7f6ec' : '#fdeaea'" [style.color]="writeEnabled() ? '#2a9d2a' : '#c0392b'">
           {{ writeEnabled() ? 'HABILITADO' : 'DESHABILITADO' }}
         </span>
-        <span style="font-size:12px;color:var(--muted);flex:1;min-width:240px">Interruptor maestro. En OFF no se envía ningún comando (ni los <code>show</code>). Los comandos destructivos quedan bloqueados aparte aunque esté en ON.</span>
+        <span style="font-size:12px;color:var(--muted);flex:1;min-width:200px"
+              title="Habilita las ESCRITURAS del módulo (riesgo medio y alto). Las consultas no dependen de este interruptor: salen por la puerta de consultas. Se apaga solo tras los minutos de inactividad configurados abajo.">Escrituras del módulo</span>
       </div>
     </div>
 
@@ -53,6 +52,45 @@ import { NocNotify } from '../services/noc-notify';
     <div class="panel">
       <div class="ph"><span class="t"><i class="pi pi-lock"></i> Seguridad del módulo</span></div>
       <div class="pb" style="display:flex;flex-direction:column;gap:12px;max-width:660px">
+
+        <!-- Permisos: chips compactos. Toda la explicacion va en el title (flotante),
+             no en leyendas: el panel se leia como un muro de texto. -->
+        <div class="permrow">
+          <span class="permk">Qué se puede ejecutar</span>
+          <div class="pills">
+            <button type="button" class="pill baja" [class.on]="bajaEnabled()"
+                    (click)="toggleNivel('baja', !bajaEnabled())"
+                    title="Consultas · riesgo BAJO — potencia, consumo, detalle de ONU, estado del puerto, tarjetas, temperatura, alarmas, versión, MAC. Solo comandos show: no cambian nada. No necesitan el Telnet maestro: salen por la puerta de consultas.">
+              <i class="dot"></i>Consultas</button>
+            <button type="button" class="pill media" [class.on]="mediaEnabled()"
+                    (click)="toggleNivel('media', !mediaEnabled())"
+                    title="Riesgo MEDIO — reiniciar ONU, habilitar (no shutdown), renombrar. Le cortan el servicio a un cliente por un rato. Piden además el interruptor maestro.">
+              <i class="dot"></i>Medio</button>
+            <button type="button" class="pill alta" [class.on]="altaEnabled()"
+                    (click)="toggleNivel('alta', !altaEnabled())"
+                    title="Riesgo ALTO — provisionar ONU, crear VLAN, cambiar plan, perfil de tráfico, clave WiFi, guardar configuración. Tocan la configuración de la OLT. Piden además el interruptor maestro.">
+              <i class="dot"></i>Alto</button>
+          </div>
+        </div>
+
+        <div class="permrow">
+          <span class="permk">Puertas del Telnet</span>
+          <div class="pills">
+            <button type="button" class="pill baja" [class.on]="lecturaEnabled()"
+                    (click)="toggleCli('lectura', !lecturaEnabled())"
+                    title="Consultas a pedido — una sesión y un show, solo cuando alguien aprieta un botón. Es la puerta por la que el técnico ve la potencia de un cliente desde la OT-A.">
+              <i class="dot"></i>Consultas</button>
+            <button type="button" class="pill baja" [class.on]="respaldoEnabled()"
+                    (click)="toggleCli('respaldo', !respaldoEnabled())"
+                    title="Respaldo de configuración — una sesión por OLT, un comando de lectura, cada 12 horas.">
+              <i class="dot"></i>Respaldo</button>
+            <button type="button" class="pill alta" [class.on]="telnetEnabled()"
+                    (click)="toggleCli('telnet', !telnetEnabled())"
+                    title="Telnet MAESTRO — reabre el barrido periódico por CLI, el que saturaba el vty del C300 y botaba clientes. Las consultas no lo necesitan. Prenderlo solo para un caso puntual, por ejemplo si se cae el agente SNMP de una OLT.">
+              <i class="dot"></i>Maestro</button>
+          </div>
+        </div>
+
         <div>
           <label class="k">Operadores autorizados (emails, separados por coma) · vacío = sin restricción</label>
           <div style="display:flex;gap:8px">
@@ -194,7 +232,7 @@ import { NocNotify } from '../services/noc-notify';
             } @else {
               <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Estos comandos exactos se enviarán por Telnet a <b>{{ oltName() }}</b>:</div>
               <pre class="cmdbox">{{ cmdText(pv.commands) }}</pre>
-              <button class="btn big" [style.background]="puedeEnviar() ? dangerColor(t.danger) : '#94a3b8'"
+              <button class="btn big" [title]="motivoNivel(t.danger) || ''" [style.background]="puedeCorrer(t.danger) ? dangerColor(t.danger) : '#94a3b8'"
                       (click)="doExecute()" [disabled]="running() || !puedeEnviar()" [title]="motivoBloqueo() || ''">
                 <i class="pi" [class.pi-spinner]="running()" [class.gira]="running()"
                    [class.pi-ban]="!running() && !puedeEnviar()" [class.pi-bolt]="!running() && puedeEnviar()"></i>
@@ -261,6 +299,22 @@ import { NocNotify } from '../services/noc-notify';
     </div>
   `,
   styles: [`
+    /* Permisos de la OLT: una fila por grupo, chips que se prenden. La ayuda va en el
+       title del chip, no en leyendas debajo: el panel se volvia un muro de texto. */
+    .permrow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .permk { font-size:12px; color:var(--muted); min-width:150px; }
+    .pills { display:flex; gap:6px; flex-wrap:wrap; }
+    .pill { display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+            border:1px solid var(--line,#e5e7eb); background:#fff; color:#6b7280;
+            border-radius:999px; padding:5px 12px; font-size:12.5px; font-weight:600;
+            transition:background .15s,border-color .15s,color .15s; }
+    .pill:hover { border-color:#c7ccd6; }
+    .pill .dot { width:7px; height:7px; border-radius:50%; background:#cbd2dc; }
+    .pill.on { color:#fff; }
+    .pill.on .dot { background:rgba(255,255,255,.85); }
+    .pill.baja.on  { background:#2e7d32; border-color:#2e7d32; }
+    .pill.media.on { background:#e08600; border-color:#e08600; }
+    .pill.alta.on  { background:#e02424; border-color:#e02424; }
     .cli-off { border-left:4px solid #b45309; background:#fffbeb; margin-bottom:12px; }
     .cli-off-t { display:flex; align-items:center; gap:8px; font-weight:700; color:#92400e; font-size:13.5px; }
     .cli-off-t i.pi { font-size:14px; }
@@ -297,6 +351,15 @@ export class OltConfig {
   private notify = inject(NocNotify);
 
   writeEnabled = signal(false);   // olt_write_enabled (kxt_setting)
+  // Permiso por NIVEL DE RIESGO (V96). Las de riesgo BAJO son consultas y salen por una
+  // puerta acotada que NO necesita el interruptor maestro de Telnet.
+  bajaEnabled = signal(false);     // olt_cli_baja_enabled
+  mediaEnabled = signal(false);    // olt_cli_media_enabled
+  altaEnabled = signal(false);     // olt_cli_alta_enabled
+  // Las puertas del Telnet (V97): antes solo por .env y reinicio, ahora desde esta pantalla.
+  telnetEnabled = signal(false);   // olt_cli_telnet_enabled
+  lecturaEnabled = signal(false);  // olt_cli_lectura_enabled
+  respaldoEnabled = signal(false); // olt_cli_respaldo_enabled
   estado = signal<any>(null);     // GET /olt-config/estado: CLI global + escritura + motivo
   adminEmails = '';
   autoOffMin = 30;
@@ -335,9 +398,14 @@ export class OltConfig {
   constructor() {
     this.api.zteOlts().subscribe({ next: (o) => this.olts.set(o || []), error: () => {} });
     this.api.oltcTemplates().subscribe({ next: (t) => this.templates.set(t || []), error: () => {} });
-    this.api.oltcEstado().subscribe({ next: (e) => this.estado.set(e), error: () => {} });
+    this.loadEstado();
     this.loadLogs();
     this.loadWriteEnabled();
+  }
+
+  /** Relee el estado del módulo (CLI global, escritura y permiso por nivel). */
+  loadEstado() {
+    this.api.oltcEstado().subscribe({ next: (e) => this.estado.set(e), error: () => {} });
   }
 
   onOltChange() {
@@ -433,6 +501,25 @@ export class OltConfig {
     return this.writeEnabled();
   }
 
+  /**
+   * ¿Se puede correr ESTA operación? Depende de su nivel, no de un interruptor único.
+   * Las de riesgo bajo son consultas: salen por la puerta acotada y no miran el maestro.
+   */
+  puedeCorrer(danger: string): boolean {
+    const d = (danger || '').toLowerCase();
+    if (d === 'baja') return this.bajaEnabled();
+    if (!this.puedeEnviar()) return false;
+    return d === 'media' ? this.mediaEnabled() : this.altaEnabled();
+  }
+
+  motivoNivel(danger: string): string | null {
+    const d = (danger || '').toLowerCase();
+    if (this.puedeCorrer(d)) return null;
+    if (d === 'baja') return 'Las consultas (riesgo bajo) están apagadas en Seguridad del módulo.';
+    if (!this.puedeEnviar()) return this.motivoBloqueo();
+    return 'Las operaciones de riesgo ' + d.toUpperCase() + ' están apagadas en Seguridad del módulo.';
+  }
+
   /** Texto que explica por que el boton esta bloqueado (o null si se puede enviar). */
   motivoBloqueo(): string | null {
     const st = this.estado();
@@ -457,6 +544,12 @@ export class OltConfig {
       next: (list: any[]) => {
         const find = (key: string) => { const r = (list || []).find((x: any) => k(x) === key); return r != null ? v(r) : undefined; };
         this.writeEnabled.set(this.truthy(find('olt_write_enabled')));
+        this.bajaEnabled.set(this.truthy(find('olt_cli_baja_enabled')));
+        this.mediaEnabled.set(this.truthy(find('olt_cli_media_enabled')));
+        this.altaEnabled.set(this.truthy(find('olt_cli_alta_enabled')));
+        this.telnetEnabled.set(this.truthy(find('olt_cli_telnet_enabled')));
+        this.lecturaEnabled.set(this.truthy(find('olt_cli_lectura_enabled')));
+        this.respaldoEnabled.set(this.truthy(find('olt_cli_respaldo_enabled')));
         const em = find('olt_admin_emails'); if (em != null) this.adminEmails = String(em);
         const ao = find('olt_write_auto_off_minutes'); if (ao != null) this.autoOffMin = Number(ao);
         const rd = find('olt_log_retention_days'); if (rd != null) this.logRetentionDays = Number(rd);
@@ -464,6 +557,35 @@ export class OltConfig {
       error: () => {},
     });
   }
+  /** Prende o apaga un nivel de riesgo. Mismo camino que toggleWrite: kxt_setting, en vivo. */
+  toggleNivel(nivel: 'baja' | 'media' | 'alta', on: boolean) {
+    const clave = 'olt_cli_' + nivel + '_enabled';
+    const sig = nivel === 'baja' ? this.bajaEnabled : nivel === 'media' ? this.mediaEnabled : this.altaEnabled;
+    sig.set(on);
+    this.api.updateSetting(clave, on ? '1' : '0').subscribe({
+      next: () => this.loadEstado(),
+      error: () => { sig.set(!on); alert('No se pudo cambiar el ajuste (' + clave + ').'); },
+    });
+  }
+
+  /** Prende o apaga una puerta del Telnet. Tarda unos segundos en aplicarse en el NOC. */
+  toggleCli(cual: 'telnet' | 'lectura' | 'respaldo', on: boolean) {
+    const clave = 'olt_cli_' + cual + '_enabled';
+    const sig = cual === 'telnet' ? this.telnetEnabled
+              : cual === 'lectura' ? this.lecturaEnabled : this.respaldoEnabled;
+    if (cual === 'telnet' && on &&
+        !confirm('El Telnet maestro reabre el barrido por CLI, que satura el vty del C300 y '
+               + 'puede botar clientes.\n\nLas consultas NO lo necesitan: ya entran por su '
+               + 'propia puerta.\n\n¿Prenderlo igual?')) {
+      return;
+    }
+    sig.set(on);
+    this.api.updateSetting(clave, on ? '1' : '0').subscribe({
+      next: () => setTimeout(() => this.loadEstado(), 1200),
+      error: () => { sig.set(!on); alert('No se pudo cambiar el ajuste (' + clave + ').'); },
+    });
+  }
+
   toggleWrite(ev: any) {
     const on = !!ev?.target?.checked;
     this.api.updateSetting('olt_write_enabled', on ? '1' : '0').subscribe({

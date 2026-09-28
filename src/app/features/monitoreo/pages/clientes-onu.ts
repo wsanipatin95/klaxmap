@@ -19,10 +19,15 @@ import { areaDs, stats, Stat } from '../shared/charts';
         } @else {
           <input class="inp" style="min-width:110px" [(ngModel)]="port" placeholder="ej: 1/12/1" title="Filtra las ONUs por LPU-PON">
         }
-        <button class="btn ghost" (click)="oltSystem()" [disabled]="busy()"
-                title="Leer la temperatura por tarjeta de la OLT."><i class="pi pi-chart-line"></i> Estado OLT</button>
-        <button class="btn ghost" (click)="verificar()"
-                title="Confirma que los datos mostrados se recolectaron de verdad: cuántas ONU, con señal, y cuántas cruzaron con contratos del ERP."><i class="pi pi-check"></i> Verificar datos</button>
+        @if (!oltFuera()) {
+          <button class="btn ghost" (click)="oltSystem()" [disabled]="busy()"
+                  title="Leer la temperatura por tarjeta de la OLT."><i class="pi pi-chart-line"></i> Estado OLT</button>
+          <button class="btn ghost" (click)="verificar()"
+                  title="Confirma que los datos mostrados se recolectaron de verdad: cuántas ONU, con señal, y cuántas cruzaron con contratos del ERP."><i class="pi pi-check"></i> Verificar datos</button>
+        }
+        @if (oltFuera()) {
+          <span class="badge fuera" title="Esta OLT está deshabilitada en el NOC: no se consulta ni se recolecta nada de ella.">Fuera de servicio</span>
+        }
         @if (curOlt()?.tempMaxC != null) {
           <span class="badge" [style.background]="tempBg(curOlt()!.tempMaxC!)" [style.color]="'#fff'"
                 title="Temperatura máxima de la OLT y el slot más caliente">OLT {{ curOlt()!.tempMaxC }}°C (slot {{ curOlt()!.tempHotSlot }})</span>
@@ -155,7 +160,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
           <div class="pb">
             <div class="olt-grid">
               @for (o of olts(); track o.id) {
-                <button class="olt-b" [class.on]="o.id === oltId" (click)="pickOlt(o.id)">
+                <button class="olt-b" [class.on]="o.id === oltId" [class.off]="o.enabled === false" (click)="pickOlt(o.id)">
                   <div class="nm">{{ o.name }}</div>
                   <div class="ip">{{ o.host }}</div>
                 </button>
@@ -186,6 +191,18 @@ import { areaDs, stats, Stat } from '../shared/charts';
       </div>
     }
 
+    @if (oltFuera()) {
+      <div class="panel fuera-panel">
+        <div class="fp-ic"><i class="pi pi-power-off"></i></div>
+        <div class="fp-tx">
+          <b>{{ curOlt()?.name }} está fuera de servicio</b>
+          <span>Está deshabilitada en el NOC, así que no se consulta ni se recolecta nada de ella.
+            Lo que se mostraba antes eran datos viejos de la última recolección, y por eso se ocultan:
+            en una pantalla de clientes, un dato viejo se lee como actual.</span>
+          <span class="mini">Para volver a verla, habilitala en Equipos.</span>
+        </div>
+      </div>
+    } @else {
     <div class="panel">
       <table>
         <thead><tr>
@@ -218,6 +235,7 @@ import { areaDs, stats, Stat } from '../shared/charts';
         </tbody>
       </table>
     </div>
+    }
 
     @if (sel(); as o) {
       <div class="overlay on" (click)="closeModal()"></div>
@@ -409,6 +427,15 @@ import { areaDs, stats, Stat } from '../shared/charts';
     .olt-b .nm { font-weight:600; font-size:13px; color:var(--text); }
     .olt-b.on .nm { color:#fff; }
     .olt-b .ip { font-size:11.5px; color:var(--muted); font-family:'Consolas',monospace; margin-top:2px; }
+    .olt-b.off { opacity:.55; border-style:dashed; }
+    .olt-b.off .nm::after { content:' · fuera de servicio'; font-weight:400; font-size:11px; color:var(--red); }
+    .badge.fuera { background:#fef2f2; color:#b42318; border:1px solid #fecaca; }
+    .fuera-panel { display:flex; align-items:flex-start; gap:14px; padding:22px 20px; }
+    .fuera-panel .fp-ic { width:38px; height:38px; flex:none; border-radius:50%; display:grid; place-items:center;
+      background:#fef2f2; color:#b42318; font-size:17px; }
+    .fuera-panel .fp-tx { display:flex; flex-direction:column; gap:5px; font-size:13px; color:var(--text); max-width:640px; }
+    .fuera-panel .fp-tx span { color:var(--muted); line-height:1.5; }
+    .fuera-panel .fp-tx .mini { font-size:12px; }
     .olt-b.on .ip { color:#f2dcec; }
     .prog-bar { height: 100%; width: 42%; border-radius: 99px; background: #7b0061; animation: progslide 1.1s ease-in-out infinite; }
     @keyframes progslide { 0% { margin-left: -45%; } 100% { margin-left: 100%; } }
@@ -524,6 +551,13 @@ export class ClientesOnu implements OnDestroy {
 
   onOltChange() {
     this.port = '';        // por defecto: todas las ONUs de la OLT
+    // OLT deshabilitada: se corta acá. Sin esto la pantalla seguia consultando por SNMP
+    // y por Telnet un equipo que el operador dio de baja a proposito.
+    if (this.oltFuera()) {
+      clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
+      this.onus.set([]); this.oltPorts.set([]); this.loaded.set(true);
+      return;
+    }
     this.loadOltPorts();   // trae TODOS los puertos físicos de la OLT (incluidos los vacíos)
     this.autoLoad();
   }
@@ -535,7 +569,7 @@ export class ClientesOnu implements OnDestroy {
     this.onOltChange();                 // recarga, muestra, y enriquece en 2º plano si falta
     // Refresco al elegir (incluida la MISMA OLT): fuerza un barrido SNMP en 2º plano para
     // actualizar estado/señal y refresca la tabla al terminar.
-    if (this.snmpListo()) {
+    if (this.snmpListo() && !this.oltFuera()) {
       this.api.zteCollectSnmp(this.oltId).subscribe({
         next: () => setTimeout(() => this.loadOnus(), 4000),
         error: () => {},
@@ -546,7 +580,7 @@ export class ClientesOnu implements OnDestroy {
   /** Todos los puertos PON físicos de la OLT (de kxt_olt_port, vía ifName). Incluye los sin ONUs. */
   oltPorts = signal<string[]>([]);
   loadOltPorts() {
-    if (!this.oltId) { this.oltPorts.set([]); return; }
+    if (!this.oltId || this.oltFuera()) { this.oltPorts.set([]); return; }
     this.api.zteOltPorts(this.oltId).subscribe({
       next: (r) => this.oltPorts.set(
         (r || []).map((p: any) => String(p.port_name || '').replace(/^gpon[_-]?/i, '').trim()).filter((s: string) => !!s)),
@@ -561,7 +595,7 @@ export class ClientesOnu implements OnDestroy {
    *     con la ventana de progreso, sin cerrar hasta terminar.
    */
   autoLoad() {
-    if (!this.oltId) return;
+    if (!this.oltId || this.oltFuera()) return;
     clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     this.api.zteOnusOfOlt(this.oltId).subscribe({
       next: (r) => {
@@ -619,7 +653,7 @@ export class ClientesOnu implements OnDestroy {
    *   Paso 2 (CLI):  nombre / contrato / IP / serial / distancia, cliente por cliente.
    */
   autoCollect() {
-    if (!this.oltId) return;
+    if (!this.oltId || this.oltFuera()) return;
     if (!this.snmpListo()) { this.snmpCfg.set(true); return; }
     clearInterval(this.enrichTimer); clearInterval(this.snmpTimer);
     // NO bloquear: la tabla se muestra y se va llenando sola conforme el SNMP responde.
@@ -780,6 +814,16 @@ export class ClientesOnu implements OnDestroy {
   }
 
   curOlt() { return this.olts().find((x) => x.id === this.oltId); }
+
+  /**
+   * ¿La OLT elegida está deshabilitada?
+   *
+   * <p>Cuando lo está, la pantalla no consulta NADA de ella: ni SNMP, ni Telnet, ni los
+   * puertos. Y sobre todo no muestra lo ultimo que quedo en la base: en una pantalla de
+   * clientes un dato viejo se lee como actual, y eso lleva a diagnosticar sobre algo que
+   * ya no es cierto.</p>
+   */
+  oltFuera() { const o = this.curOlt(); return !!o && o.enabled === false; }
   /** SNMP "configurado" = comunidad real (seteada y distinta de 'public', el default). */
   snmpListo(): boolean {
     const c = (this.curOlt()?.snmpCommunity || '').trim().toLowerCase();
@@ -801,7 +845,7 @@ export class ClientesOnu implements OnDestroy {
   /** Confirmador: valida que lo mostrado se recolectó de verdad y cuánto cruzó con el ERP. */
   verif = signal<any>(null);
   verificar() {
-    if (!this.oltId) return;
+    if (!this.oltId || this.oltFuera()) return;
     this.api.zteVerificacion(this.oltId).subscribe({
       next: (v) => this.verif.set(v),
       error: () => this.verif.set({ recoleccion_ok: false, onus: 0, con_senal: 0, con_serial: 0,
@@ -810,6 +854,7 @@ export class ClientesOnu implements OnDestroy {
   }
 
   oltSystem() {
+    if (this.oltFuera()) return;
     this.busy.set(true);
     this.api.zteOltSystem(this.oltId).subscribe({
       next: (olt) => { this.busy.set(false); this.olts.update((l) => l.map((x) => (x.id === olt.id ? olt : x))); },
@@ -837,11 +882,12 @@ export class ClientesOnu implements OnDestroy {
     });
     // La tabla se refresca sola cada 30s (salvo mientras hay algo en curso).
     this.tableTimer = setInterval(() => {
-      if (this.oltId && !this.busy()) this.loadOnus();
+      if (this.oltId && !this.busy() && !this.oltFuera()) this.loadOnus();
     }, 30000);
   }
 
   loadOnus() {
+    if (this.oltFuera()) { this.onus.set([]); return; }
     if (!this.oltId) return;
     this.api.zteOnusOfOlt(this.oltId).subscribe({
       next: (r) => { this.onus.set(r); this.loaded.set(true); },

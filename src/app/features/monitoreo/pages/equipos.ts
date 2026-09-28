@@ -6,6 +6,7 @@ import { NocApi, Device, OltMarca, OltPerfil } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
 import { cpuColor } from '../shared/charts';
 import { TableSort } from '../shared/table-sort';
+import { opcionesMarca } from '../shared/marcas';
 
 @Component({
   selector: 'app-equipos',
@@ -147,11 +148,13 @@ import { TableSort } from '../shared/table-sort';
             @for (o of pickerOpts(); track o) {
               <button type="button" class="btn ghost" [class.on]="o === (picker()==='vendor' ? f.vendor : f.model)" style="justify-content:flex-start" (click)="choosePicker(o)">{{ o }}</button>
             }
-            @if (pickerOpts().length === 0) { <div style="color:var(--muted);font-size:12px">Aún no hay valores registrados. Escribe uno nuevo abajo.</div> }
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <input class="inp" style="flex:1" placeholder="Otro / nuevo…" [(ngModel)]="pickerCustom">
-              <button class="btn" (click)="choosePicker(pickerCustom)">Usar</button>
-            </div>
+            @if (picker() === 'model') {
+              @if (pickerOpts().length === 0) { <div style="color:var(--muted);font-size:12px">Aún no hay modelos registrados. Escribe uno nuevo abajo.</div> }
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <input class="inp" style="flex:1" placeholder="Otro / nuevo…" [(ngModel)]="pickerCustom">
+                <button class="btn" (click)="choosePicker(pickerCustom)">Usar</button>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -302,7 +305,7 @@ export class Equipos implements OnDestroy {
   // Picker de Vendor/Modelo (foto 4): la lista sale de lo YA registrado en los equipos.
   picker = signal<null | 'vendor' | 'model'>(null);
   pickerCustom = '';
-  vendorOpts = computed(() => Array.from(new Set(this.devices().map((d) => d.vendor).filter((v) => !!v && String(v).trim() !== ''))).sort());
+  vendorOpts = computed(() => opcionesMarca(this.devices().map((d) => d.vendor)));
   modelOpts = computed(() => Array.from(new Set(this.devices().map((d: any) => d.model).filter((v: any) => !!v && String(v).trim() !== ''))).sort());
   pickerOpts = computed(() => (this.picker() === 'vendor' ? this.vendorOpts() : this.modelOpts()));
   openPicker(which: 'vendor' | 'model') { this.pickerCustom = ''; this.picker.set(which); }
