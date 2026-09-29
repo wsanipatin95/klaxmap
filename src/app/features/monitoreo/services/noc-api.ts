@@ -134,6 +134,7 @@ export class NocApi {
   acsReboot(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/reboot`, {}).pipe(map(unwrap)); }
   acsWifiNombre(contrato: string, ssid: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/nombre`, { ssid }).pipe(map(unwrap)); }
   acsWifiClave(contrato: string, password: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/clave`, { password }).pipe(map(unwrap)); }
+  acsWifiCanal(contrato: string, channel: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/canal`, { channel }).pipe(map(unwrap)); }
   acsWifiOptimizar(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/optimizar`, {}).pipe(map(unwrap)); }
   acsLeerHosts(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts/leer`, {}).pipe(map(unwrap)); }
   acsHosts(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts`).pipe(map(unwrap)); }

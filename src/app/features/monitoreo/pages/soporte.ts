@@ -142,6 +142,7 @@ import { Bandeja } from './bandeja';
               <div><span>Firmware</span><b class="mono">{{ a.softwareVersion || '—' }}</b></div>
               <div><span>Estado</span><b><span class="acs-dot" [class.on]="isOnline(a)"></span>{{ a.status || '—' }}</b></div>
               <div><span>WiFi</span><b>{{ acsParam('.SSID') }}</b></div>
+              <div><span>Canal</span><b>{{ acsParam('.Channel') }}</b></div>
             </div>
             <div class="chips" style="margin-top:10px">
               <button class="chip" (click)="acsRefresh()"><i class="pi pi-refresh"></i> Refrescar</button>
@@ -150,6 +151,14 @@ import { Bandeja } from './bandeja';
             </div>
             <div class="ir"><input class="isel" style="flex:1" [(ngModel)]="wifiSsid" placeholder="Nuevo nombre WiFi"><button class="btn2 xs" (click)="acsSetWifiNombre()">Cambiar</button></div>
             <div class="ir"><input class="isel" style="flex:1" type="password" [(ngModel)]="wifiPass" placeholder="Nueva clave WiFi (mín. 8)"><button class="btn2 xs" (click)="acsSetWifiClave()">Cambiar</button></div>
+            <div class="ir" title="Fija el canal a mano y apaga el canal automático. 2.4 GHz: 1, 6 y 11 son los únicos que no se pisan entre sí.">
+              <select class="isel" style="flex:1" [(ngModel)]="wifiCanal">
+                <option [ngValue]="null">Canal WiFi…</option>
+                <optgroup label="2.4 GHz">@for (c of canales24; track c) { <option [ngValue]="c">{{ c }}</option> }</optgroup>
+                <optgroup label="5 GHz">@for (c of canales5; track c) { <option [ngValue]="c">{{ c }}</option> }</optgroup>
+              </select>
+              <button class="btn2 xs" (click)="acsSetWifiCanal()">Cambiar</button>
+            </div>
             <div class="note">Las órdenes se aplican en el próximo contacto del router (CGNAT: ~10–15 min).</div>
             @if (acsTareas().length) {
               <div class="sub">Tareas ACS</div>
@@ -363,6 +372,9 @@ export class Soporte {
   acsParams = signal<any[]>([]);
   wifiSsid = '';
   wifiPass = '';
+  wifiCanal: number | null = null;
+  canales24 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+  canales5 = [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165];
   of: any = { prioridad: 'Alta', tipo_visita: 'Reparación', tecnico: '', fecha: '', observacion: '' };
 
   diagBtns = [
@@ -602,6 +614,14 @@ export class Soporte {
     const t = this.ticket(); if (!t) return;
     if (this.wifiPass.length < 8) { this.acsMsg.set('La clave WiFi debe tener al menos 8 caracteres.'); return; }
     this.acsDo(this.api.acsWifiClave(t.contrato, this.wifiPass), 'Cambio de clave WiFi encolado.'); this.wifiPass = '';
+  }
+
+  acsSetWifiCanal() {
+    const t = this.ticket(); if (!t) return;
+    if (!this.wifiCanal) { this.acsMsg.set('Elige el canal.'); return; }
+    this.acsDo(this.api.acsWifiCanal(t.contrato, this.wifiCanal),
+               'Cambio de canal WiFi encolado (y canal autom\u00e1tico apagado).');
+    this.wifiCanal = null;
   }
 
   acsConnReq() {

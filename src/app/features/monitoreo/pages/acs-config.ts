@@ -98,6 +98,12 @@ import { NocNotify } from '../services/noc-notify';
                 <div><label class="lbl">Expiración tareas (s)</label>
                   <input class="inp" type="number" [(ngModel)]="cfg.task_ttl_seconds"></div>
               </div>
+              <div class="grid2">
+                <div title="Cada cuantas horas el ACS refresca solo la ficha del router (WiFi, radios, conectados) cuando el equipo saluda. Así el técnico la encuentra llena al llegar. 0 = solo cuando alguien apriete refrescar.">
+                  <label class="lbl">Refrescar ficha cada (h)</label>
+                  <input class="inp" type="number" min="0" max="168" [(ngModel)]="cfg.snapshot_horas"></div>
+                <div></div>
+              </div>
               <label class="chk"><input type="checkbox" [(ngModel)]="cfg.write_enabled"> Escritura habilitada (reboot / WiFi)</label>
               <label class="chk"><input type="checkbox" [(ngModel)]="cfg.wifi_optimize_enabled"> Optimización WiFi automática (nocturna, 03:15)</label>
               <div class="actions">
@@ -166,6 +172,7 @@ import { NocNotify } from '../services/noc-notify';
                 <button class="btn" (click)="abrirArbol(d)"><i class="pi pi-search"></i> Explorar parámetros</button>
                 <button class="btn" (click)="wifiEdit.set('nombre')"><i class="pi pi-pencil"></i> Cambiar nombre WiFi</button>
                 <button class="btn" (click)="wifiEdit.set('clave')"><i class="pi pi-key"></i> Cambiar clave WiFi</button>
+                <button class="btn" (click)="wifiEdit.set('canal')" title="Fijar un canal concreto. Al fijarlo se apaga el canal automatico, si no el router lo vuelve a mover."><i class="pi pi-sliders-h"></i> Cambiar canal WiFi</button>
                 <button class="btn danger" (click)="pedirEliminar(d)" title="Quitar este router del ACS (router viejo por cambio de equipo)"><i class="pi pi-trash"></i> Eliminar del ACS</button>
               </div>
               <div class="msec">WiFi</div>
@@ -281,7 +288,7 @@ import { NocNotify } from '../services/noc-notify';
         <div class="acsov2" (click)="wifiEdit.set(null)">
           <div class="acsmd2" (click)="$event.stopPropagation()">
             <div class="mh">
-              <div class="mhx"><div class="mt">{{ wifiEdit() === 'nombre' ? 'Cambiar nombre WiFi' : 'Cambiar clave WiFi' }}</div></div>
+              <div class="mhx"><div class="mt">{{ wifiEdit() === 'nombre' ? 'Cambiar nombre WiFi' : (wifiEdit() === 'canal' ? 'Cambiar canal WiFi' : 'Cambiar clave WiFi') }}</div></div>
               <button class="x" (click)="wifiEdit.set(null)" title="Cerrar"><i class="pi pi-times"></i></button>
             </div>
             <div class="mb">
@@ -289,6 +296,17 @@ import { NocNotify } from '../services/noc-notify';
                 <label class="lbl">Nuevo nombre (SSID)</label>
                 <input class="inp full" [(ngModel)]="wifiNombre" placeholder="Ej. Bryan 007">
                 <div class="mbtns"><button class="btn pri" (click)="wifiNom(d)">Guardar</button></div>
+              } @else if (wifiEdit() === 'canal') {
+                <label class="lbl">Canal</label>
+                <select class="inp full" [(ngModel)]="wifiCanal" title="2.4 GHz: 1, 6 y 11 son los que no se pisan entre si. 5 GHz: mas limpio pero menos alcance.">
+                  <optgroup label="2.4 GHz">
+                    @for (c of canales24; track c) { <option [ngValue]="c">{{ c }}</option> }
+                  </optgroup>
+                  <optgroup label="5 GHz">
+                    @for (c of canales5; track c) { <option [ngValue]="c">{{ c }}</option> }
+                  </optgroup>
+                </select>
+                <div class="mbtns"><button class="btn pri" (click)="wifiCanalGuardar(d)">Guardar</button></div>
               } @else {
                 <label class="lbl">Nueva clave (mín. 8)</label>
                 <input class="inp full" [(ngModel)]="wifiClave" placeholder="Nueva clave WiFi">
@@ -430,7 +448,7 @@ import { NocNotify } from '../services/noc-notify';
 export class AcsConfig implements OnInit, OnDestroy {
   private api = inject(NocApi);
   private notify = inject(NocNotify);
-  cfg: any = { acs_public_url: '', acs_url: '', write_enabled: false, inform_interval_seconds: 900, task_ttl_seconds: 86400 };
+  cfg: any = { acs_public_url: '', acs_url: '', write_enabled: false, inform_interval_seconds: 900, task_ttl_seconds: 86400, snapshot_horas: 6 };
   msg = signal(''); pushMsg = signal(''); contrato = '';
   devices = signal<any[]>([]);
   asignar: any = {};
@@ -441,7 +459,10 @@ export class AcsConfig implements OnInit, OnDestroy {
   tareas = signal<any[]>([]);
   hosts = signal<any[]>([]);
   hostsOpen = signal(false);
-  wifiEdit = signal<'nombre' | 'clave' | null>(null);
+  wifiEdit = signal<'nombre' | 'clave' | 'canal' | null>(null);
+  wifiCanal: number = 1;
+  canales24 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+  canales5 = [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165];
   private openSet = new Set<number>();
   private timer: any = null;
 
@@ -535,6 +556,14 @@ export class AcsConfig implements OnInit, OnDestroy {
   taskLabel(s: any): string { const m: any = { PENDING:'pendiente', SENT:'enviado', DONE:'hecho', ERROR:'error', EXPIRED:'expirado' }; return m[String(s||'').toUpperCase()] || String(s||'—').toLowerCase(); }
   taskCls(s: any): string { const v = String(s||'').toUpperCase(); const k = v==='DONE'?'ok':v==='ERROR'?'err':v==='SENT'?'snt':v==='EXPIRED'?'exp':'pend'; return 'tst ' + k; }
   wifiNom(d: any) { const v = this.wifiNombre.trim(); if (!v) return; this.api.acsWifiNombre(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de nombre WiFi encolado.'); this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
+  wifiCanalGuardar(d: any) {
+    const c = Number(this.wifiCanal);
+    if (!c) { this.notify.error('Elige un canal.'); return; }
+    this.api.acsWifiCanal(d.contrato, c).subscribe({
+      next: () => { this.notify.ok('Cambio de canal WiFi encolado (y canal autom\u00e1tico apagado).'); this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); },
+      error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') });
+  }
+
   wifiPass(d: any) { const v = this.wifiClave.trim(); if (v.length < 8) { this.notify.error('La clave WiFi debe tener al menos 8 caracteres.'); return; } this.api.acsWifiClave(d.contrato, v).subscribe({ next: () => { this.notify.ok('Cambio de clave WiFi encolado.'); this.wifiClave = ''; this.wifiEdit.set(null); this.loadDevices(); if (d.contrato) this.loadTareas(d.contrato); }, error: (e: any) => this.notify.error(e?.message || 'No se pudo encolar.') }); }
 
   // --- modal ---
