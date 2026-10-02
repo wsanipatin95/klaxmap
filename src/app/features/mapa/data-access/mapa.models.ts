@@ -44,6 +44,33 @@ export type MapaGeometryPayload =
   | string
   | ({ wkt: string } & Record<string, MapaMetadataValue | undefined>);
 
+// ── Repositorio de accesos a sitios: quien abre y en que horario se puede entrar ──
+export interface MapaAccesoHorario {
+  id?: number | null;
+  /** ISO: 1=lunes … 7=domingo */
+  dia: number;
+  /** "08:00" */
+  desde: string;
+  /** "17:00". Si es menor que desde, el tramo cruza medianoche. */
+  hasta: string;
+}
+
+export interface MapaAcceso {
+  idGeoAcceso?: number | null;
+  nombre: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  tipoLlave?: string | null;
+  referencia?: string | null;
+  avisoHoras?: number | null;
+  notas?: string | null;
+  horarios: MapaAccesoHorario[];
+  /** Calculado en el servidor. Sin horarios cargados va true. */
+  abiertoAhora?: boolean;
+  /** Cuantos nodos la usan (para no borrarla a ciegas). */
+  nodos?: number;
+}
+
 export interface MapaNodo {
   idRedNodo: number;
   idRedNodoPadreFk?: number | null;
@@ -56,6 +83,7 @@ export interface MapaNodo {
   pathCache?: string | null;
   nivel: number;
   atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
   usuGen?: number | null;
   fecGen?: string | null;
   usuFin?: number | null;
@@ -110,6 +138,8 @@ export interface MapaElemento {
 
   kmlExtendedData?: MapaMetadata | null;
   atributos?: MapaMetadata | null;
+  /** Ficha de acceso al sitio (catalogo compartido). */
+  idGeoAccesoFk?: number | null;
 
   geomTipo: MapaGeomTipo;
   geometria?: MapaGeometryPayload | null;
@@ -178,6 +208,7 @@ export interface MapaNodoSaveRequest {
   orden?: number;
   visible?: boolean;
   atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
 }
 
 export interface MapaTipoElementoSaveRequest {
@@ -220,6 +251,7 @@ export interface MapaElementoSaveRequest {
   styleUrl?: string | null;
   kmlExtendedData?: MapaMetadata | null;
   atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
   wkt: string;
   latLon?: string | null;
   ordenDibujo?: number;
@@ -282,6 +314,26 @@ export interface MapaNapCliente {
   cliente?: string | null;
   documento?: string | null;
   estado?: string | null;
+}
+
+// ── Material que los tecnicos dejaron en una caja (pestana "Materiales"). Solo vista. ──
+export interface MapaMaterialCaja {
+  idSopMater?: number | null;
+  idOrden?: number | null;
+  codigo?: string | null;
+  articulo?: string | null;
+  cantidad?: number | null;
+  serie?: string | null;
+  fecha?: string | null;
+  adicional?: boolean;
+}
+
+export interface MapaMaterialesCaja {
+  idGeoElemento: number;
+  ordenes: number;
+  lineas: number;
+  resumen: MapaMaterialCaja[];
+  detalle: MapaMaterialCaja[];
 }
 
 export interface MapaNapClientes {

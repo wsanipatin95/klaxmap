@@ -8,6 +8,7 @@ import type {
   MapaPatchRequest,
   MapaElementoGeometriaRequest,
   PagedResponse,
+  MapaMaterialesCaja,
   MapaNapClientes,
 } from '../mapa.models';
 
@@ -55,5 +56,9 @@ export class MapaElementosRepository {
 
   clientesNap(id: number) {
     return this.api.clientesNap(id).pipe(map((r) => unwrapOrThrow<MapaNapClientes>(r)));
+  }
+
+  materialesCaja(id: number) {
+    return this.api.materialesCaja(id).pipe(map((r) => unwrapOrThrow<MapaMaterialesCaja>(r)));
   }
 }

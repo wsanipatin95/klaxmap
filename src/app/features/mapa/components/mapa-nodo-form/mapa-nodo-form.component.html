@@ -32,6 +32,160 @@
     Visible
   </label>
 
+  <!-- Equipamiento del sitio. Se guarda en atributos.sitio (jsonb del nodo). -->
+  <fieldset class="sitio">
+    <legend>Equipamiento del sitio</legend>
+
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="sitio.candado" />
+      Hay candado
+    </label>
+
+    <div class="sitio-sub" *ngIf="sitio.candado">
+      <div class="sitio-row">
+        <div class="sitio-col">
+          <label>Clave</label>
+          <div class="clave-box">
+            <input
+              [type]="claveVisible ? 'text' : 'password'"
+              [(ngModel)]="sitio.candadoClave"
+              autocomplete="off"
+              placeholder="Clave o combinación" />
+            <button
+              type="button"
+              class="clave-ver"
+              [title]="claveVisible ? 'Ocultar la clave' : 'Ver la clave'"
+              (click)="claveVisible = !claveVisible">
+              {{ claveVisible ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
+        </div>
+        <div class="sitio-col">
+          <label>Nota del candado</label>
+          <input [(ngModel)]="sitio.candadoNota" placeholder="Ej. el de la reja, no el del poste" />
+        </div>
+      </div>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="sitio.generador" />
+      Hay generador
+    </label>
+
+    <div class="sitio-sub" *ngIf="sitio.generador">
+      <div class="sitio-row">
+        <div class="sitio-col corta">
+          <label>Cantidad</label>
+          <input type="number" min="0" [(ngModel)]="sitio.generadorCantidad" />
+        </div>
+        <div class="sitio-col">
+          <label>Marca / modelo</label>
+          <input [(ngModel)]="sitio.generadorMarca" />
+        </div>
+      </div>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="sitio.baterias" />
+      Hay baterías
+    </label>
+
+    <div class="sitio-sub" *ngIf="sitio.baterias">
+      <div class="sitio-row">
+        <div class="sitio-col corta">
+          <label>Cantidad</label>
+          <input type="number" min="0" [(ngModel)]="sitio.bateriasCantidad" />
+        </div>
+        <div class="sitio-col corta">
+          <label>Capacidad (Ah)</label>
+          <input type="number" min="0" [(ngModel)]="sitio.bateriasAh" />
+        </div>
+      </div>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" [(ngModel)]="sitio.ups" />
+      Hay UPS
+    </label>
+
+    <div class="sitio-sub" *ngIf="sitio.ups">
+      <div class="sitio-row">
+        <div class="sitio-col corta">
+          <label>Autonomía (min)</label>
+          <input type="number" min="0" [(ngModel)]="sitio.upsAutonomiaMin" />
+        </div>
+      </div>
+    </div>
+
+    <div class="sitio-row">
+      <div class="sitio-col">
+        <label>Medidor eléctrico</label>
+        <input [(ngModel)]="sitio.medidor" placeholder="Número o de quién cuelga" />
+      </div>
+    </div>
+
+    <div class="sitio-row" title="Lo que quema equipos en una caseta cerrada">
+      <label class="check-line">
+        <input type="checkbox" [(ngModel)]="sitio.aire" />
+        Aire acondicionado
+      </label>
+      <label class="check-line">
+        <input type="checkbox" [(ngModel)]="sitio.ventilacion" />
+        Ventilación
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="sitio">
+    <legend>Acceso y mantenimiento</legend>
+
+    <label>Ficha de acceso</label>
+    <select
+      [(ngModel)]="form.idGeoAccesoFk"
+      title="Quién abre y en qué horario. Se administra en Accesos, y varios nodos pueden compartir la misma ficha.">
+      <option [ngValue]="null">Sin ficha de acceso</option>
+      <option *ngFor="let a of accesos()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}</option>
+    </select>
+
+    <div class="acceso-info" *ngIf="accesoElegido() as a">
+      <div><b>{{ a.contacto || 'Sin contacto' }}</b><span *ngIf="a.telefono"> · {{ a.telefono }}</span></div>
+      <div class="tenue">{{ resumenHorario(a) }}</div>
+      <div class="tenue" *ngIf="a.avisoHoras">Hay que avisar {{ a.avisoHoras }} h antes</div>
+      <div class="tenue" *ngIf="a.referencia">{{ a.referencia }}</div>
+    </div>
+
+    <label>Cómo se llega</label>
+    <textarea
+      [(ngModel)]="sitio.acceso"
+      title="Dirección o referencia. Lo que necesita el técnico que nunca estuvo ahí."
+      placeholder="Ej. tras la cancha, portón verde a mano derecha"></textarea>
+
+    <div class="sitio-row" title="Si el candado no es tuyo, la clave no sirve: hay que saber a quién llamar">
+      <div class="sitio-col">
+        <label>Quién tiene la llave</label>
+        <input [(ngModel)]="sitio.llaveNombre" placeholder="Nombre" />
+      </div>
+      <div class="sitio-col">
+        <label>Teléfono</label>
+        <input [(ngModel)]="sitio.llaveTelefono" placeholder="09…" />
+      </div>
+    </div>
+
+    <div class="sitio-row">
+      <div class="sitio-col corta">
+        <label>Último mantenimiento</label>
+        <input type="date" [(ngModel)]="sitio.mantenimientoFecha" />
+      </div>
+      <div class="sitio-col">
+        <label>Lo hizo</label>
+        <input [(ngModel)]="sitio.mantenimientoPor" />
+      </div>
+    </div>
+
+    <label>Notas del sitio</label>
+    <textarea [(ngModel)]="sitio.notas" placeholder="Horarios, permisos, cualquier cosa que convenga saber antes de ir…"></textarea>
+  </fieldset>
+
   <p class="form-error" *ngIf="error" style="color:#b91c1c;font-size:.8rem;margin:.25rem 0;">{{ error }}</p>
 
   <button type="button" class="save-btn" (click)="submit()">

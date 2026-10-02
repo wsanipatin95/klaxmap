@@ -37,6 +37,7 @@ export class MapaToolbarComponent {
   @Output() exportRequested = new EventEmitter<void>();
   @Output() importRequested = new EventEmitter<void>();
   @Output() manageTiposRequested = new EventEmitter<void>();
+  @Output() manageAccesosRequested = new EventEmitter<void>();
   @Output() saveEditRequested = new EventEmitter<void>();
   @Output() cancelEditRequested = new EventEmitter<void>();
   @Output() selectModeRequested = new EventEmitter<void>();

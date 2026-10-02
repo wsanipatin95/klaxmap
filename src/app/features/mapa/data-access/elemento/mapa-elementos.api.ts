@@ -8,6 +8,7 @@ import type {
   MapaPatchRequest,
   MapaElementoGeometriaRequest,
   PagedResponse,
+  MapaMaterialesCaja,
   MapaNapClientes,
 } from '../mapa.models';
 
@@ -73,5 +74,9 @@ export class MapaElementosApi {
 
   clientesNap(id: number) {
     return this.http.get<ApiEnvelope<MapaNapClientes>>(`${this.baseUrl}/${id}/clientes`);
+  }
+
+  materialesCaja(id: number) {
+    return this.http.get<ApiEnvelope<MapaMaterialesCaja>>(`${this.baseUrl}/${id}/materiales`);
   }
 }

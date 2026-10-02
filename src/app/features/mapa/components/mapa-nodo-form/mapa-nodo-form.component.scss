@@ -40,3 +40,81 @@ textarea {
   color: white;
   cursor: pointer;
 }
+
+/* ---- Equipamiento del sitio ---- */
+.sitio {
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.sitio legend {
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sitio-sub {
+  margin: 0.1rem 0 0.55rem 1.4rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid #e2e8f0;
+}
+
+.sitio-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+}
+
+.sitio-col { min-width: 0; }
+.sitio-col.corta { max-width: 9rem; }
+
+.clave-box {
+  display: flex;
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.clave-box input { flex: 1; min-width: 0; }
+
+.clave-ver {
+  flex: none;
+  padding: 0 0.6rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.45rem;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clave-ver:hover { background: #f1f5f9; color: #1e293b; }
+
+
+/* Los dos checks de clima van en la misma fila, no uno debajo del otro. */
+.sitio-row .check-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+
+/* Resumen de la ficha de acceso elegida, para no tener que ir a la otra pantalla. */
+.acceso-info {
+  margin: 0.3rem 0 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.acceso-info .tenue { color: #64748b; }

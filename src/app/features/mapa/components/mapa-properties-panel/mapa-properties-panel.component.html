@@ -7,7 +7,7 @@
         <div class="panel-title-wrap">
           <div class="title-row">
             <h3 [title]="headerTitle()">{{ headerTitle() }}</h3>
-            <span class="dirty-badge" *ngIf="activeTab() === 'edicion' && dirty()">Sin guardar</span>
+            <span class="dirty-badge" *ngIf="(activeTab() === 'edicion' || activeTab() === 'equipamiento') && dirty()">Sin guardar</span>
           </div>
         </div>
 
@@ -15,7 +15,7 @@
           <button
             type="button"
             class="close-btn"
-            aria-label="Cerrar panel"
+            aria-label="Cerrar"
             (click)="requestClose()"
           >
             ×
@@ -23,13 +23,81 @@
         </div>
       </div>
 
+      <!--
+        Pestañas. El panel ya tenía por dentro 'edicion' e 'historial', pero sin botones:
+        solo se podía llegar a historial desde el menú contextual. Ahora se ven las tres.
+      -->
+      <nav class="panel-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="activeTab() === 'edicion'"
+          [attr.aria-selected]="activeTab() === 'edicion'"
+          (click)="setTab('edicion')"
+        >
+          Información
+        </button>
+        <button
+          *ngIf="admiteEquipamiento()"
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="activeTab() === 'equipamiento'"
+          [attr.aria-selected]="activeTab() === 'equipamiento'"
+          (click)="setTab('equipamiento')"
+          title="Candado, energía, acceso y mantenimiento de este punto"
+        >
+          Equipamiento
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="activeTab() === 'historial'"
+          [attr.aria-selected]="activeTab() === 'historial'"
+          (click)="setTab('historial')"
+        >
+          Historial
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="activeTab() === 'soporte'"
+          [attr.aria-selected]="activeTab() === 'soporte'"
+          (click)="setTab('soporte')"
+        >
+          Soporte
+          <span class="tab-count" *ngIf="soporte?.ocupados">{{ soporte?.ocupados }}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="activeTab() === 'materiales'"
+          [attr.aria-selected]="activeTab() === 'materiales'"
+          (click)="setTab('materiales')"
+        >
+          Materiales
+          <span class="tab-count" *ngIf="materiales?.lineas">{{ materiales?.lineas }}</span>
+        </button>
+      </nav>
+
       <div class="panel-body">
         <section class="panel-view">
           <div class="panel-view-scroll">
-            <section class="panel-section" *ngIf="activeTab() === 'edicion'">
+            <!--
+              UNA sola instancia del formulario para las dos pestañas: 'seccion' decide
+              qué parte se ve. Montar dos instancias significaría dos estados sucios,
+              dos botones de guardar y una forma fácil de perder lo escrito en la otra.
+            -->
+            <section class="panel-section"
+                     *ngIf="activeTab() === 'edicion' || activeTab() === 'equipamiento'">
               <app-mapa-element-form
                 #elementForm
                 [elemento]="elemento"
+                [seccion]="activeTab() === 'equipamiento' ? 'sitio' : 'datos'"
                 [tipos]="tipos"
                 [nodos]="nodos"
                 (saved)="onSaved($event)"
@@ -48,6 +116,124 @@
                 titulo="Historial del elemento"
                 subtitulo="Mira qué cambió, quién lo hizo y cómo quedó"
               />
+            </section>
+
+            <section class="panel-section" *ngIf="activeTab() === 'soporte'">
+              <!-- Soporte solo tiene sentido donde cuelgan clientes: hoy, las NAP. -->
+              <ng-container *ngIf="esNap; else soporteNoAplica">
+                <div class="sop-head" *ngIf="soporte as s">
+                  <div class="sop-chip" [title]="'Tipo de splitter de esta NAP'">
+                    <span class="sop-k">Splitter</span>
+                    <b>{{ s.splitter || '—' }}</b>
+                  </div>
+                  <div class="sop-chip" [title]="'Puertos ocupados sobre el total'">
+                    <span class="sop-k">Puertos</span>
+                    <b>{{ s.ocupados }}/{{ s.total }}</b>
+                  </div>
+                  <div class="sop-chip" [class.libre]="s.disponibles > 0" [title]="'Puertos libres'">
+                    <span class="sop-k">Libres</span>
+                    <b>{{ s.disponibles }}</b>
+                  </div>
+                  <button
+                    type="button"
+                    class="sop-refresh"
+                    title="Volver a leer los clientes de esta NAP"
+                    (click)="soporteRefresh.emit(elemento)"
+                  >↻</button>
+                </div>
+
+                <div class="sop-msg" *ngIf="soporteLoading">Leyendo los clientes de la NAP…</div>
+                <div class="sop-msg error" *ngIf="soporteError">{{ soporteError }}</div>
+
+                <table class="sop-tab" *ngIf="!soporteLoading && soporte?.clientes?.length">
+                  <thead>
+                    <tr><th>Pto</th><th>Cliente</th><th>Documento</th><th>Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let c of soporte?.clientes">
+                      <td class="pto">{{ c.puerto ?? '—' }}</td>
+                      <td class="cli" [title]="c.cliente || ''">{{ c.cliente || '—' }}</td>
+                      <td class="doc">{{ c.documento || '—' }}</td>
+                      <td>
+                        <span class="est" [class.ok]="esEstadoActivo(c.estado)">{{ c.estado || '—' }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="sop-msg" *ngIf="!soporteLoading && !soporteError && !soporte?.clientes?.length">
+                  Esta NAP todavía no tiene clientes asignados.
+                </div>
+              </ng-container>
+
+              <ng-template #soporteNoAplica>
+                <div class="sop-msg">
+                  Este elemento no tiene clientes colgados. El soporte por cliente se ve en las NAP.
+                </div>
+              </ng-template>
+            </section>
+
+            <section class="panel-section" *ngIf="activeTab() === 'materiales'">
+              <!--
+                Espejo de lo que el tecnico cargo en la orden de trabajo. No se edita aca:
+                el material se carga en la OT y esto solo lo refleja.
+              -->
+              <div class="sop-head">
+                <div class="sop-chip" title="Ordenes de trabajo que dejaron material en este punto">
+                  <span class="sop-k">Órdenes</span>
+                  <b>{{ materiales?.ordenes || 0 }}</b>
+                </div>
+                <div class="sop-chip" title="Líneas de material en total">
+                  <span class="sop-k">Líneas</span>
+                  <b>{{ materiales?.lineas || 0 }}</b>
+                </div>
+                <button
+                  type="button"
+                  class="sop-refresh"
+                  title="Volver a leer el material"
+                  (click)="materialesRefresh.emit(elemento)"
+                >↻</button>
+              </div>
+
+              <div class="sop-msg" *ngIf="materialesLoading">Leyendo el material…</div>
+              <div class="sop-msg error" *ngIf="materialesError">{{ materialesError }}</div>
+
+              <ng-container *ngIf="!materialesLoading && !materialesError">
+                <ng-container *ngIf="materiales?.detalle?.length; else sinMateriales">
+                  <div class="mat-sub">Resumen</div>
+                  <div class="mat-chips">
+                    <span class="mat-chip" *ngFor="let r of materiales?.resumen" [title]="r.codigo || ''">
+                      {{ r.articulo || r.codigo }}
+                      <b>{{ cantidadCorta(r.cantidad) }}</b>
+                    </span>
+                  </div>
+
+                  <div class="mat-sub">Detalle</div>
+                  <table class="sop-tab">
+                    <thead>
+                      <tr><th>Fecha</th><th>Artículo</th><th>Cant.</th><th>Serie</th><th>OT</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let m of materiales?.detalle">
+                        <td class="doc">{{ m.fecha || '—' }}</td>
+                        <td class="cli" [title]="m.codigo || ''">
+                          {{ m.articulo || m.codigo || '—' }}
+                          <span class="mat-extra" *ngIf="m.adicional" title="Material agregado fuera de lo planificado">adicional</span>
+                        </td>
+                        <td class="pto">{{ cantidadCorta(m.cantidad) }}</td>
+                        <td class="doc">{{ m.serie || '—' }}</td>
+                        <td class="doc">{{ m.idOrden || '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </ng-container>
+
+                <ng-template #sinMateriales>
+                  <div class="sop-msg">
+                    Ningún técnico ha cargado material en este punto todavía.
+                  </div>
+                </ng-template>
+              </ng-container>
             </section>
           </div>
         </section>

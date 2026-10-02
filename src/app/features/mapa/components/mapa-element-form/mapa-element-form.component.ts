@@ -15,13 +15,17 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 
 import type {
+  MapaAcceso,
   MapaElemento,
+  MapaMetadata,
   MapaNodo,
   MapaPatchRequest,
   MapaTipoElemento,
 } from '../../data-access/mapa.models';
+import { MapaAccesosRepository } from '../../data-access/acceso/mapa-accesos.repository';
 import { MapaElementosRepository } from '../../data-access/elemento/mapa-elementos.repository';
 import { MapaConfirmDialogComponent } from '../mapa-confirm-dialog/mapa-confirm-dialog.component';
+import { MapaAccesoFormComponent } from '../mapa-acceso-form/mapa-acceso-form.component';
 import type { MapaItemVisualPreview } from '../../utils/mapa-element-visual.utils';
 import {
   previewClassForVisual,
@@ -36,6 +40,76 @@ import {
   showUrlPreviewForVisual,
 } from '../../utils/mapa-element-visual.utils';
 
+/**
+ * Equipamiento y acceso del punto, tal como se edita en pantalla (plano).
+ * Se vuelca a `atributos.sitio` recien al guardar.
+ */
+interface SitioState {
+  candado: boolean;
+  candadoClave: string;
+  candadoNota: string;
+  generador: boolean;
+  generadorCantidad: number;
+  generadorMarca: string;
+  baterias: boolean;
+  bateriasCantidad: number;
+  bateriasAh: number;
+  ups: boolean;
+  upsAutonomiaMin: number;
+  medidor: string;
+  aire: boolean;
+  ventilacion: boolean;
+  acceso: string;
+  mantenimientoFecha: string;
+  mantenimientoPor: string;
+  notas: string;
+}
+
+function sitioVacio(): SitioState {
+  return {
+    candado: false, candadoClave: '', candadoNota: '',
+    generador: false, generadorCantidad: 0, generadorMarca: '',
+    baterias: false, bateriasCantidad: 0, bateriasAh: 0,
+    ups: false, upsAutonomiaMin: 0,
+    medidor: '', aire: false, ventilacion: false,
+    acceso: '', mantenimientoFecha: '', mantenimientoPor: '', notas: '',
+  };
+}
+
+/** Lee `atributos.sitio` con tolerancia: lo que falte queda vacio y nada revienta. */
+function leerSitio(atributos: MapaMetadata | null | undefined): SitioState {
+  const base = sitioVacio();
+  const raw = (atributos ?? {})['sitio'];
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
+  const v = raw as Record<string, unknown>;
+  const bool = (x: unknown) => x === true || x === 'true' || x === 1 || x === '1';
+  const txt = (x: unknown) => (x == null ? '' : String(x));
+  const num = (x: unknown) => {
+    const n = Number(x);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  return {
+    candado: bool(v['candado']),
+    candadoClave: txt(v['candadoClave']),
+    candadoNota: txt(v['candadoNota']),
+    generador: bool(v['generador']),
+    generadorCantidad: num(v['generadorCantidad']),
+    generadorMarca: txt(v['generadorMarca']),
+    baterias: bool(v['baterias']),
+    bateriasCantidad: num(v['bateriasCantidad']),
+    bateriasAh: num(v['bateriasAh']),
+    ups: bool(v['ups']),
+    upsAutonomiaMin: num(v['upsAutonomiaMin']),
+    medidor: txt(v['medidor']),
+    aire: bool(v['aire']),
+    ventilacion: bool(v['ventilacion']),
+    acceso: txt(v['acceso']),
+    mantenimientoFecha: txt(v['mantenimientoFecha']),
+    mantenimientoPor: txt(v['mantenimientoPor']),
+    notas: txt(v['notas']),
+  };
+}
+
 interface ElementFormState {
   nombre: string;
   descripcion: string;
@@ -43,6 +117,8 @@ interface ElementFormState {
   visible: boolean;
   idRedNodoFk: number | null;
   idGeoTipoElementoFk: number | null;
+  idGeoAccesoFk: number | null;
+  sitio: SitioState;
 }
 
 interface TipoAgrupadoVm {
@@ -58,7 +134,7 @@ interface NodoSelectOption {
 @Component({
   selector: 'app-mapa-element-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, SelectModule, MapaConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, SelectModule, MapaConfirmDialogComponent, MapaAccesoFormComponent],
   templateUrl: './mapa-element-form.component.html',
   styleUrl: './mapa-element-form.component.scss',
 })
@@ -67,6 +143,12 @@ export class MapaElementFormComponent implements OnChanges {
   @Input() nodos: MapaNodo[] = [];
   @Input() tipos: MapaTipoElemento[] = [];
   @Input() saving = false;
+  /**
+   * Que parte del formulario se ve. Lo decide la pestana del modal.
+   * 'datos' = los campos de siempre; 'sitio' = equipamiento y acceso.
+   * Es UNA sola instancia: mismo estado sucio y un unico Guardar para las dos.
+   */
+  @Input() seccion: 'datos' | 'sitio' = 'datos';
 
   @Output() saved = new EventEmitter<MapaElemento>();
   @Output() deleted = new EventEmitter<MapaElemento>();
@@ -74,6 +156,19 @@ export class MapaElementFormComponent implements OnChanges {
   @Output() dirtyChange = new EventEmitter<boolean>();
 
   @ViewChild('confirmDialog') confirmDialog?: MapaConfirmDialogComponent;
+
+  private accesosRepo = inject(MapaAccesosRepository);
+
+  constructor() {
+    this.accesosRepo.listar().subscribe({
+      next: (lista) => this.accesos.set(lista ?? []),
+      error: () => this.accesos.set([]),
+    });
+  }
+
+  /** Fichas de acceso del catalogo. Si no cargan, el resto del formulario sigue sirviendo. */
+  readonly accesos = signal<MapaAcceso[]>([]);
+  claveVisible = false;
 
   private readonly repo = inject(MapaElementosRepository);
 
@@ -157,6 +252,8 @@ export class MapaElementFormComponent implements OnChanges {
         visible: this.form.visible,
         idRedNodoFk: this.form.idRedNodoFk,
         idGeoTipoElementoFk: this.form.idGeoTipoElementoFk,
+        idGeoAccesoFk: this.form.idGeoAccesoFk,
+        atributos: this.atributosParaGuardar(),
       },
     };
 
@@ -195,6 +292,98 @@ export class MapaElementFormComponent implements OnChanges {
     this.confirmDelete();
   }
 
+  /**
+   * Vuelve a leer el catalogo de fichas, sin cerrar el modal ni perder lo escrito.
+   *
+   * Hace falta porque las fichas se crean en OTRA pantalla: si no, habria que cerrar
+   * el formulario —perdiendo los cambios— solo para que aparezca la que acabas de crear.
+   */
+  recargarAccesos() {
+    this.accesosRepo.listar().subscribe({
+      next: (lista) => this.accesos.set(lista ?? []),
+      error: () => {},
+    });
+  }
+
+  /**
+   * Alta de ficha AQUI MISMO, encima del modal del elemento.
+   *
+   * Antes esto abria el repositorio en otra pestana. Era un rodeo: te saca de lo que
+   * estabas haciendo para cargar dos datos y volver. Ahora se crea sin salir, y al
+   * guardar queda seleccionada sola — que es lo que uno espera cuando aprieta "+ Nueva".
+   */
+  readonly creandoAcceso = signal(false);
+
+  nuevoAcceso() { this.creandoAcceso.set(true); }
+
+  accesoCreado(a: MapaAcceso | null) {
+    this.creandoAcceso.set(false);
+    if (!a?.idGeoAcceso) { this.recargarAccesos(); return; }
+    // Se mete en la lista y se elige, sin pedir otra vuelta al servidor.
+    this.accesos.set([...this.accesos(), a].sort((x, y) =>
+      (x.nombre || '').localeCompare(y.nombre || '')));
+    this.form.idGeoAccesoFk = a.idGeoAcceso;
+  }
+
+  /** true si este punto YA tiene algo cargado: entonces la seccion se abre sola. */
+  tieneDatosDeSitio(): boolean {
+    const s = this.form.sitio;
+    return (
+      s.candado || s.generador || s.baterias || s.ups || s.aire || s.ventilacion ||
+      !!s.medidor.trim() || !!s.acceso.trim() || !!s.notas.trim() ||
+      !!s.mantenimientoFecha.trim() || !!s.mantenimientoPor.trim() ||
+      this.form.idGeoAccesoFk != null
+    );
+  }
+
+  accesoElegido(): MapaAcceso | null {
+    const id = this.form.idGeoAccesoFk;
+    if (!id) return null;
+    return this.accesos().find((a) => a.idGeoAcceso === id) ?? null;
+  }
+
+  resumenHorario(a: MapaAcceso | null): string {
+    const hs = a?.horarios ?? [];
+    if (!hs.length) return 'Sin restricción de horario';
+    const dias = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    return hs
+      .slice()
+      .sort((x, y) => x.dia - y.dia || x.desde.localeCompare(y.desde))
+      .map((h) => `${dias[h.dia] ?? h.dia} ${h.desde}-${h.hasta}`)
+      .join(' · ');
+  }
+
+  /**
+   * Arma el jsonb a guardar. Respeta las demas llaves de `atributos` (el splitter de
+   * la NAP vive ahi tambien) y solo reemplaza `sitio`.
+   */
+  private atributosParaGuardar(): MapaMetadata {
+    const previos: MapaMetadata = { ...(this.currentElemento()?.atributos ?? {}) };
+    const s = this.form.sitio;
+    previos['sitio'] = {
+      candado: s.candado,
+      // Sin candado no tiene sentido arrastrar la clave guardada.
+      candadoClave: s.candado ? s.candadoClave.trim() : '',
+      candadoNota: s.candado ? s.candadoNota.trim() : '',
+      generador: s.generador,
+      generadorCantidad: s.generador ? Number(s.generadorCantidad) || 0 : 0,
+      generadorMarca: s.generador ? s.generadorMarca.trim() : '',
+      baterias: s.baterias,
+      bateriasCantidad: s.baterias ? Number(s.bateriasCantidad) || 0 : 0,
+      bateriasAh: s.baterias ? Number(s.bateriasAh) || 0 : 0,
+      ups: s.ups,
+      upsAutonomiaMin: s.ups ? Number(s.upsAutonomiaMin) || 0 : 0,
+      medidor: s.medidor.trim(),
+      aire: s.aire,
+      ventilacion: s.ventilacion,
+      acceso: s.acceso.trim(),
+      mantenimientoFecha: s.mantenimientoFecha.trim(),
+      mantenimientoPor: s.mantenimientoPor.trim(),
+      notas: s.notas.trim(),
+    };
+    return previos;
+  }
+
   hasUnsavedChanges(): boolean {
     return !this.statesEqual(this.form, this.initialForm);
   }
@@ -215,6 +404,8 @@ export class MapaElementFormComponent implements OnChanges {
     this.submittedAttempt = false;
     this.error = null;
     this.successMessage = null;
+    // La clave no queda destapada al pasar al siguiente punto.
+    this.claveVisible = false;
 
     this.rebuildNodeOptions();
     this.rebuildCompatibleTypeGroups();
@@ -485,6 +676,8 @@ export class MapaElementFormComponent implements OnChanges {
       visible: elemento?.visible ?? true,
       idRedNodoFk: elemento?.idRedNodoFk ?? null,
       idGeoTipoElementoFk: elemento?.idGeoTipoElementoFk ?? null,
+      idGeoAccesoFk: elemento?.idGeoAccesoFk ?? null,
+      sitio: leerSitio(elemento?.atributos),
     };
   }
 
@@ -496,6 +689,10 @@ export class MapaElementFormComponent implements OnChanges {
       visible: state.visible,
       idRedNodoFk: state.idRedNodoFk,
       idGeoTipoElementoFk: state.idGeoTipoElementoFk,
+      idGeoAccesoFk: state.idGeoAccesoFk,
+      // Copia PROPIA del sitio: compartir el objeto haria que "Revertir cambios"
+      // no revirtiera nada, porque form e initialForm serian el mismo objeto.
+      sitio: { ...state.sitio },
     };
   }
 
@@ -506,7 +703,9 @@ export class MapaElementFormComponent implements OnChanges {
       a.estado === b.estado &&
       a.visible === b.visible &&
       a.idRedNodoFk === b.idRedNodoFk &&
-      a.idGeoTipoElementoFk === b.idGeoTipoElementoFk
+      a.idGeoTipoElementoFk === b.idGeoTipoElementoFk &&
+      a.idGeoAccesoFk === b.idGeoAccesoFk &&
+      JSON.stringify(a.sitio) === JSON.stringify(b.sitio)
     );
   }
 

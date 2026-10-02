@@ -1,5 +1,11 @@
 <div class="element-form-shell" *ngIf="elemento as el">
   <form class="element-form" (ngSubmit)="guardar()">
+    <!--
+      La pestana decide QUE se ve, pero el formulario es UNO solo: misma instancia,
+      mismo estado sucio y un unico Guardar. Partirlo en dos componentes habria
+      significado dos botones de guardar y dos formas de perder cambios.
+    -->
+    <div class="seccion-datos" *ngIf="seccion !== 'sitio'">
     <div class="field" *ngIf="showCoordinates()">
       <label for="elemento-posicion-readonly">{{ coordinatesLabel() }}</label>
 
@@ -145,6 +151,165 @@
       <p class="field-error" *ngIf="controlError('idGeoTipoElementoFk') as err">{{ err }}</p>
     </div>
 
+    </div>
+
+    <div class="sitio-body" *ngIf="seccion === 'sitio'">
+          <label class="lbl">Ficha de acceso</label>
+          <div class="acceso-pick">
+            <select
+              class="inp"
+              [(ngModel)]="form.idGeoAccesoFk"
+              [ngModelOptions]="{ standalone: true }"
+              title="Quién abre y en qué horario. Es un catálogo compartido: varios puntos pueden usar la misma ficha."
+            >
+              <option [ngValue]="null">Sin ficha de acceso</option>
+              <option *ngFor="let a of accesos()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}</option>
+            </select>
+            <button type="button" class="acceso-btn"
+                    title="Crear una ficha de acceso aquí mismo"
+                    (click)="nuevoAcceso()">+ Nueva</button>
+            <button type="button" class="acceso-btn"
+                    title="Volver a leer la lista, por si acabas de crear una"
+                    (click)="recargarAccesos()">↻</button>
+          </div>
+
+          <p class="acceso-vacio" *ngIf="!accesos().length">
+            Todavía no hay fichas de acceso. Dale a <b>+ Nueva</b> y créala sin salir de aquí.
+          </p>
+
+          <div class="acceso-info" *ngIf="accesoElegido() as a">
+            <div><b>{{ a.contacto || 'Sin contacto' }}</b><span *ngIf="a.telefono"> · {{ a.telefono }}</span></div>
+            <div class="tenue">{{ resumenHorario(a) }}</div>
+            <div class="tenue" *ngIf="a.avisoHoras">Hay que avisar {{ a.avisoHoras }} h antes</div>
+            <div class="tenue" *ngIf="a.referencia">{{ a.referencia }}</div>
+          </div>
+
+          <!--
+            Los cuatro "Hay ..." juntos arriba, y los sub-campos debajo. Antes cada
+            check quedaba separado de sus campos por el bloque del anterior, y la
+            pestana se leia como una lista de cosas sueltas.
+          -->
+          <label class="lbl">Qué hay en el sitio</label>
+          <div class="chk-grid">
+            <label class="chk">
+              <input type="checkbox" [(ngModel)]="form.sitio.candado" [ngModelOptions]="{ standalone: true }" />
+              Candado
+            </label>
+            <label class="chk">
+              <input type="checkbox" [(ngModel)]="form.sitio.generador" [ngModelOptions]="{ standalone: true }" />
+              Generador
+            </label>
+            <label class="chk">
+              <input type="checkbox" [(ngModel)]="form.sitio.baterias" [ngModelOptions]="{ standalone: true }" />
+              Baterías
+            </label>
+            <label class="chk">
+              <input type="checkbox" [(ngModel)]="form.sitio.ups" [ngModelOptions]="{ standalone: true }" />
+              UPS
+            </label>
+            <label class="chk" title="Lo que quema equipos en un gabinete cerrado">
+              <input type="checkbox" [(ngModel)]="form.sitio.aire" [ngModelOptions]="{ standalone: true }" />
+              Aire acondicionado
+            </label>
+            <label class="chk">
+              <input type="checkbox" [(ngModel)]="form.sitio.ventilacion" [ngModelOptions]="{ standalone: true }" />
+              Ventilación
+            </label>
+          </div>
+
+          <div class="sitio-sub" *ngIf="form.sitio.candado">
+            <div class="sitio-row">
+              <div class="sitio-col">
+                <label class="lbl">Clave del candado</label>
+                <div class="clave-box">
+                  <input
+                    class="inp"
+                    [type]="claveVisible ? 'text' : 'password'"
+                    autocomplete="off"
+                    [(ngModel)]="form.sitio.candadoClave"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Clave o combinación" />
+                  <button
+                    type="button"
+                    class="clave-ver"
+                    [title]="claveVisible ? 'Ocultar la clave' : 'Ver la clave'"
+                    (click)="claveVisible = !claveVisible"
+                  >{{ claveVisible ? 'Ocultar' : 'Ver' }}</button>
+                </div>
+              </div>
+              <div class="sitio-col">
+                <label class="lbl">Nota del candado</label>
+                <input class="inp full" [(ngModel)]="form.sitio.candadoNota"
+                       [ngModelOptions]="{ standalone: true }"
+                       placeholder="Ej. el de la reja, no el del poste" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sitio-sub" *ngIf="form.sitio.generador">
+            <div class="sitio-row">
+              <div class="sitio-col corta">
+                <label class="lbl">Generadores</label>
+                <input class="inp full" type="number" min="0"
+                       [(ngModel)]="form.sitio.generadorCantidad" [ngModelOptions]="{ standalone: true }" />
+              </div>
+              <div class="sitio-col">
+                <label class="lbl">Marca / modelo</label>
+                <input class="inp full" [(ngModel)]="form.sitio.generadorMarca" [ngModelOptions]="{ standalone: true }" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sitio-sub" *ngIf="form.sitio.baterias">
+            <div class="sitio-row">
+              <div class="sitio-col corta">
+                <label class="lbl">Baterías</label>
+                <input class="inp full" type="number" min="0"
+                       [(ngModel)]="form.sitio.bateriasCantidad" [ngModelOptions]="{ standalone: true }" />
+              </div>
+              <div class="sitio-col corta">
+                <label class="lbl">Capacidad (Ah)</label>
+                <input class="inp full" type="number" min="0"
+                       [(ngModel)]="form.sitio.bateriasAh" [ngModelOptions]="{ standalone: true }" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sitio-sub" *ngIf="form.sitio.ups">
+            <div class="sitio-row">
+              <div class="sitio-col corta">
+                <label class="lbl">Autonomía (min)</label>
+                <input class="inp full" type="number" min="0"
+                       [(ngModel)]="form.sitio.upsAutonomiaMin" [ngModelOptions]="{ standalone: true }" />
+              </div>
+            </div>
+          </div>
+
+          <label class="lbl">Medidor eléctrico</label>
+          <input class="inp full" [(ngModel)]="form.sitio.medidor" [ngModelOptions]="{ standalone: true }"
+                 placeholder="Número o de quién cuelga" />
+
+          <label class="lbl">Cómo se llega</label>
+          <textarea class="inp full" [(ngModel)]="form.sitio.acceso" [ngModelOptions]="{ standalone: true }"
+                    title="Referencia puntual de ESTE punto. Lo general del sitio va en la ficha de acceso."
+                    placeholder="Ej. en el poste de la esquina, lado norte"></textarea>
+
+          <div class="sitio-row">
+            <div class="sitio-col corta">
+              <label class="lbl">Último mantenimiento</label>
+              <input class="inp full" type="date" [(ngModel)]="form.sitio.mantenimientoFecha"
+                     [ngModelOptions]="{ standalone: true }" />
+            </div>
+            <div class="sitio-col">
+              <label class="lbl">Lo hizo</label>
+              <input class="inp full" [(ngModel)]="form.sitio.mantenimientoPor" [ngModelOptions]="{ standalone: true }" />
+            </div>
+          </div>
+
+          <label class="lbl">Notas</label>
+          <textarea class="inp full" [(ngModel)]="form.sitio.notas" [ngModelOptions]="{ standalone: true }"></textarea>
+        </div>
+
     <p class="success" *ngIf="successMessage as ok">{{ ok }}</p>
     <p class="error" *ngIf="error as err">{{ err }}</p>
 
@@ -182,6 +347,26 @@
       </div>
     </div>
   </form>
+</div>
+
+<!--
+  Alta de ficha ENCIMA del modal del elemento. Es el mismo editor que usa la pantalla
+  de Accesos (componente compartido), no una copia: dos editores separados terminan
+  desincronizados.
+-->
+<div class="acc-nuevo-ov" *ngIf="creandoAcceso()" (click)="creandoAcceso.set(false)">
+  <div class="acc-nuevo-md" (click)="$event.stopPropagation()">
+    <div class="acc-nuevo-head">
+      <b>Nueva ficha de acceso</b>
+      <button type="button" class="x" (click)="creandoAcceso.set(false)" title="Cerrar">×</button>
+    </div>
+    <div class="acc-nuevo-body">
+      <app-mapa-acceso-form
+        [acceso]="null"
+        (guardado)="accesoCreado($event)"
+        (cancelado)="creandoAcceso.set(false)" />
+    </div>
+  </div>
 </div>
 
 <app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>

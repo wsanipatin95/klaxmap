@@ -11,31 +11,167 @@
 .properties-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.38);
   z-index: 1;
 }
 
+/* Modal centrado. Antes era un cajon pegado al borde derecho; con tres pestanas
+   adentro el ancho de cajon quedaba corto para la tabla de clientes. */
 .properties-drawer {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: min(42rem, 96vw);
-  height: 100%;
+  top: 50%;
+  left: 50%;
+  width: min(54rem, 94vw);
+  max-height: min(88vh, 46rem);
+  height: auto;
   background: #ffffff;
-  border-left: 1px solid #d8dee6;
-  box-shadow: -12px 0 30px rgba(15, 23, 42, 0.12);
-  transform: translateX(100%);
-  transition: transform 0.22s ease;
+  border: 1px solid #d8dee6;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  transform: translate(-50%, -48%) scale(0.98);
+  opacity: 0;
+  transition: transform 0.18s ease, opacity 0.18s ease;
   z-index: 2;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
   color: #334155;
 }
 
 .properties-drawer.open {
-  transform: translateX(0);
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
 }
+
+/* ---- pestanas ---- */
+.panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e6eaf0;
+  background: #fbfcfe;
+}
+
+.panel-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7c8798;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-tab:hover { color: #334155; }
+
+.panel-tab.active {
+  color: #7c0061;
+  border-bottom-color: #7c0061;
+}
+
+.tab-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ece8f1;
+  color: #6b6478;
+  font-size: 11px;
+  line-height: 17px;
+  text-align: center;
+}
+
+.panel-tab.active .tab-count { background: #7c0061; color: #fff; }
+
+/* ---- soporte ---- */
+.sop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.sop-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #e6eaf0;
+  border-radius: 999px;
+  background: #fbfcfe;
+  font-size: 12.5px;
+}
+
+.sop-chip .sop-k { color: #8a93a3; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+.sop-chip.libre b { color: #15803d; }
+
+.sop-refresh {
+  margin-left: auto;
+  appearance: none;
+  border: 1px solid #e6eaf0;
+  background: #fff;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.sop-refresh:hover { background: #f5f7fa; color: #334155; }
+
+.sop-msg {
+  padding: 14px 2px;
+  font-size: 13px;
+  color: #8a93a3;
+}
+
+.sop-msg.error { color: #b91c1c; }
+
+.sop-tab {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.sop-tab th {
+  text-align: left;
+  color: #8a93a3;
+  font-weight: 700;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e6eaf0;
+  white-space: nowrap;
+}
+
+.sop-tab td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f2f4f8;
+}
+
+.sop-tab .pto { width: 42px; font-weight: 700; color: #475569; }
+.sop-tab .doc { white-space: nowrap; color: #64748b; }
+.sop-tab .cli { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.est {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.est.ok { background: #dcfce7; color: #15803d; }
 
 .panel-save-blocker {
   position: absolute;
@@ -327,3 +463,44 @@
   }
 }
 /* === KLAXMAP RESPONSIVE HARDENING: END === */
+
+
+/* ---- materiales ---- */
+.mat-sub {
+  margin: 10px 0 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #8a93a3;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.mat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e6eaf0;
+  border-radius: 999px;
+  background: #fbfcfe;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.mat-chip b { color: #7c0061; }
+
+.mat-extra {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff4e5;
+  color: #b45309;
+  font-size: 10.5px;
+  font-weight: 700;
+}

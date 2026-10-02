@@ -1,0 +1,130 @@
+<div class="acc">
+  <div class="acc-head">
+    <h2>Accesos a sitios</h2>
+    <div class="acc-tools">
+      <input
+        class="inp"
+        [(ngModel)]="busqueda"
+        (keyup.enter)="cargar()"
+        placeholder="Buscar por nombre, contacto o teléfono"
+        title="Enter para buscar" />
+      <button type="button" class="btn" (click)="cargar()">Buscar</button>
+      <button type="button" class="btn pri" (click)="nuevo()">Nuevo acceso</button>
+    </div>
+  </div>
+
+  <div class="acc-msg error" *ngIf="error()">{{ error() }}</div>
+  <div class="acc-msg ok" *ngIf="msg()">{{ msg() }}</div>
+  <div class="acc-msg" *ngIf="loading()">Cargando…</div>
+
+  <table class="acc-tab" *ngIf="!loading() && accesos().length">
+    <thead>
+      <tr>
+        <th>Acceso</th>
+        <th>Quién abre</th>
+        <th>Teléfono</th>
+        <th>Horario</th>
+        <th>Nodos</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let a of accesos()">
+        <td>
+          <b>{{ a.nombre }}</b>
+          <span class="pill" [class.on]="a.abiertoAhora"
+                [title]="a.abiertoAhora ? 'Según el horario cargado, ahora se puede entrar' : 'Según el horario cargado, ahora no se puede entrar'">
+            {{ a.abiertoAhora ? 'abierto' : 'cerrado' }}
+          </span>
+          <span class="aviso" *ngIf="a.avisoHoras" [title]="'Hay que avisar con anticipación'">
+            avisar {{ a.avisoHoras }} h antes
+          </span>
+        </td>
+        <td>{{ a.contacto || '—' }}<span class="tenue" *ngIf="a.tipoLlave"> · {{ a.tipoLlave }}</span></td>
+        <td class="mono">{{ a.telefono || '—' }}</td>
+        <td class="tenue">{{ resumenHorario(a) }}</td>
+        <td class="num" [title]="'Nodos que usan esta ficha'">{{ a.nodos || 0 }}</td>
+        <td class="acciones">
+          <button type="button" class="btn xs" (click)="abrir(a)">Editar</button>
+          <button type="button" class="btn xs del" (click)="eliminar(a)">Eliminar</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="acc-msg" *ngIf="!loading() && !accesos().length && !error()">
+    Todavía no hay accesos cargados. El primero que cargues ya lo pueden usar todos los nodos.
+  </div>
+</div>
+
+<!-- Editor -->
+<div class="acc-ov" *ngIf="edit() as a" (click)="cerrar()">
+  <div class="acc-md" (click)="$event.stopPropagation()">
+    <div class="acc-md-head">
+      <b>{{ a.idGeoAcceso ? 'Editar acceso' : 'Nuevo acceso' }}</b>
+      <button type="button" class="x" (click)="cerrar()">×</button>
+    </div>
+
+    <div class="acc-md-body">
+      <label>Nombre</label>
+      <input class="inp full" [(ngModel)]="a.nombre" placeholder="Ej. Antena Cangahua · portón principal" />
+
+      <div class="g2">
+        <div>
+          <label>Quién abre</label>
+          <input class="inp full" [(ngModel)]="a.contacto" placeholder="Nombre" />
+        </div>
+        <div>
+          <label>Teléfono</label>
+          <input class="inp full" [(ngModel)]="a.telefono" placeholder="09…" />
+        </div>
+      </div>
+
+      <div class="g2">
+        <div>
+          <label>Tipo de llave</label>
+          <input class="inp full" [(ngModel)]="a.tipoLlave" placeholder="Conserje, guardia 24h, llave en oficina…" />
+        </div>
+        <div>
+          <label>Avisar antes (horas)</label>
+          <input class="inp full" type="number" min="0" [(ngModel)]="a.avisoHoras"
+                 title="Cuántas horas antes hay que avisar para que abran. Vacío o 0 = se cae nomás." />
+        </div>
+      </div>
+
+      <label>Cómo se llega / dónde se pide</label>
+      <textarea class="inp full" [(ngModel)]="a.referencia"
+                placeholder="Ej. tras la cancha, portón verde. La llave se pide en la tienda de la esquina."></textarea>
+
+      <div class="hor-head">
+        <b>Cuándo se puede entrar</b>
+        <span class="tenue" title="Sin ningún tramo cargado se asume que se puede entrar siempre">
+          sin tramos = sin restricción
+        </span>
+      </div>
+
+      <div class="dia" *ngFor="let d of DIAS">
+        <div class="dia-n">{{ d.corto }}</div>
+        <div class="dia-tramos">
+          <div class="tramo" *ngFor="let h of tramosDe(d.n)">
+            <input class="inp hora" type="time" [(ngModel)]="h.desde" />
+            <span class="a">a</span>
+            <input class="inp hora" type="time" [(ngModel)]="h.hasta" />
+            <button type="button" class="x sm" (click)="quitarTramo(h)" title="Quitar este tramo">×</button>
+          </div>
+          <button type="button" class="btn xs" (click)="agregarTramo(d.n)">+ tramo</button>
+        </div>
+      </div>
+
+      <label>Notas</label>
+      <textarea class="inp full" [(ngModel)]="a.notas"></textarea>
+    </div>
+
+    <div class="acc-md-foot">
+      <button type="button" class="btn" (click)="cerrar()">Cancelar</button>
+      <button type="button" class="btn pri" [disabled]="saving()" (click)="guardar()">
+        {{ saving() ? 'Guardando…' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+</div>

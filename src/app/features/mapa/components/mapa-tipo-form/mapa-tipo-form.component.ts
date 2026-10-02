@@ -32,6 +32,13 @@ export class MapaTipoFormComponent {
 
   form: MapaTipoElementoSaveRequest = this.buildDefaultForm();
   atributosText = '{}';
+
+  /**
+   * ¿Este tipo es un SITIO (nodo, caseta, torre)? Solo esos muestran la pestana de
+   * equipamiento en el mapa. Vive dentro de `atributos` del tipo, no en columna propia:
+   * asi no hizo falta migracion y el catalogo ya lo transporta hasta el front.
+   */
+  tieneEquipamiento = false;
   error: string | null = null;
   private lastSnapshot = '';
 
@@ -194,6 +201,9 @@ export class MapaTipoFormComponent {
     if (atributos == null) {
       return;
     }
+    // El check manda sobre lo que diga el JSON crudo: si alguien edito el texto a mano
+    // y ademas movio el check, lo ultimo que toco en pantalla es lo que vale.
+    atributos['tieneEquipamiento'] = !!this.tieneEquipamiento;
 
     const usePointFields = this.showPointAppearance;
 
@@ -432,6 +442,9 @@ export class MapaTipoFormComponent {
       activo: tipo.activo ?? true,
       atributos: tipo.atributos ?? {},
     };
+    // Fuera de `form` a proposito: form es el payload que viaja al backend, y este flag
+    // no es una columna — vive DENTRO de atributos y se vuelca ahi al guardar.
+    this.tieneEquipamiento = ((tipo.atributos ?? {})['tieneEquipamiento'] === true);
 
     this.atributosText = this.stringifyAtributos(this.form.atributos);
     this.error = null;
@@ -481,6 +494,9 @@ export class MapaTipoFormComponent {
     const snapshot = {
       ...this.form,
       atributosText: this.atributosText,
+      // Si no entra aqui, mover el check no marca el formulario como sucio y el boton
+      // Guardar se queda apagado.
+      tieneEquipamiento: this.tieneEquipamiento,
     };
     return JSON.stringify(snapshot);
   }

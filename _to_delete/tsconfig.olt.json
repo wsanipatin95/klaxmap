@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/olt",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "files": [
+    "src/app/features/monitoreo/pages/olt-config.ts",
+    "src/app/features/monitoreo/pages/configuracion.ts"
+  ]
+}

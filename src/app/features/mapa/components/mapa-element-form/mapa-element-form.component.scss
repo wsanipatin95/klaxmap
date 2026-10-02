@@ -120,9 +120,12 @@ textarea:disabled {
   padding-bottom: 0.48rem;
 }
 
+/* Dos columnas FIJAS dejaban media fila vacia cuando solo hay un grupo (el caso
+   "SIN AGRUPACION"), y encima apretaban el grupo a la mitad del ancho. Con auto-fit,
+   un grupo solo ocupa todo el ancho y las opciones de adentro caben a dos por fila. */
 .tipo-groups {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   gap: 0.65rem;
   align-items: start;
 }
@@ -145,9 +148,11 @@ textarea:disabled {
   line-height: 1.1;
 }
 
+/* Las opciones iban de a UNA por fila: con 10-15 tipos el modal se iba todo en scroll.
+   A dos por fila cuando hay ancho, y a una sola si el grupo quedo angosto. */
 .tipo-options {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   gap: 0.42rem;
 }
 
@@ -464,4 +469,219 @@ textarea:disabled {
   .copy-btn {
     width: 100%;
   }
+}
+/* ---- Equipamiento y acceso del punto (plegable) ---- */
+
+
+
+
+
+
+
+
+
+/* Contenido de la pestaña Equipamiento. Ya no hay plegable: la pestaña manda. */
+.sitio-body {
+  padding: 0.2rem 0.1rem 0.4rem;
+}
+
+.sitio-body .lbl {
+  display: block;
+  margin: 0.55rem 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #8a93a3;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sitio-body .inp {
+  border: 1px solid #d8dee6;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
+  color: #334155;
+  background: #fff;
+  min-width: 0;
+}
+
+.sitio-body .inp.full { width: 100%; }
+.sitio-body textarea.inp { min-height: 2.8rem; resize: vertical; font-family: inherit; }
+
+/*
+  OJO: este componente aplica `input { width:100%; height:2.25rem; padding; border }`
+  a TODOS los inputs. Un checkbox con eso se convierte en un cuadrote con borde y el
+  texto se va al otro extremo de la fila — que es exactamente como se veia. Hay que
+  devolverle su tamano explicitamente.
+*/
+.sitio-body input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0.2rem;
+  accent-color: #7b0061;
+  cursor: pointer;
+}
+
+.sitio-body .chk {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.3rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sitio-body .chk:hover { color: #1e293b; }
+
+/* Los "Hay ..." van juntos arriba, no desparramados entre sus sub-campos. */
+.chk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.1rem 1rem;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+}
+
+.sitio-sub {
+  margin: 0.1rem 0 0.4rem 1.3rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid #e2e8f0;
+}
+
+.sitio-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.sitio-row .chk { margin: 0; }
+.sitio-col { min-width: 0; }
+.sitio-col.corta { max-width: 9rem; }
+
+.clave-box { display: flex; gap: 0.3rem; align-items: stretch; }
+.clave-box .inp { flex: 1; min-width: 0; }
+
+.clave-ver {
+  flex: none;
+  padding: 0 0.55rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clave-ver:hover { background: #f1f5f9; color: #1e293b; }
+
+.acceso-info {
+  margin: 0.3rem 0 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.55rem;
+  background: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.acceso-info .tenue { color: #64748b; }
+
+
+/* Selector de ficha + atajos. Las fichas se crean en otra pantalla, asi que el
+   formulario tiene que dar la puerta y la forma de refrescar sin cerrarse. */
+.acceso-pick {
+  display: flex;
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.acceso-pick select {
+  flex: 1;
+  min-width: 0;
+}
+
+.acceso-btn {
+  flex: none;
+  padding: 0 0.6rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acceso-btn:hover { background: #f1f5f9; color: #1e293b; }
+
+.acceso-vacio {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #8a93a3;
+  line-height: 1.4;
+}
+
+
+/* Alta de ficha de acceso, encima del modal del elemento. z-index alto a proposito:
+   tiene que quedar sobre el modal que ya esta abierto. */
+.acc-nuevo-ov {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+
+.acc-nuevo-md {
+  width: min(40rem, 94vw);
+  max-height: 88vh;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.acc-nuevo-head {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e6eaf0;
+  font-size: 0.9rem;
+}
+
+.acc-nuevo-head .x {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: #8a8296;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.acc-nuevo-head .x:hover { color: #1a1526; }
+
+.acc-nuevo-body {
+  padding: 4px 14px 14px;
+  overflow: auto;
 }

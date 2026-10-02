@@ -25,6 +25,13 @@ export const MAPA_ROUTES: Routes = [
       ),
   },
   {
+    path: 'accesos',
+    loadComponent: () =>
+      import('./pages/mapa-accesos/mapa-accesos.component').then(
+        (m) => m.MapaAccesosComponent
+      ),
+  },
+  {
     path: 'tipos',
     loadComponent: () =>
       import('./pages/mapa-tipos/mapa-tipos.component').then(

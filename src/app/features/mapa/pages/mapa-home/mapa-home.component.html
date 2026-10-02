@@ -6,7 +6,7 @@
     [sidebarMode]="ui.sidebarMode()" [basemap]="selectedBasemap()" [basemapOptions]="basemapOptions"
     [labelsVisible]="labelsVisible()" [locatingMyPosition]="locatingMyPosition()" (refreshRequested)="onRefresh()"
     (exportRequested)="abrirExportacion()" (importRequested)="abrirImportacion()"
-    (manageTiposRequested)="irATiposElemento()" (saveEditRequested)="saveGeometryEdition()"
+    (manageTiposRequested)="irATiposElemento()" (manageAccesosRequested)="irAAccesos()" (saveEditRequested)="saveGeometryEdition()"
     (cancelEditRequested)="cancelGeometryEdition()" (selectModeRequested)="onToolbarSelectMode()"
     (editGeometryModeRequested)="onToolbarEditGeometryMode()" (drawPointModeRequested)="onToolbarDrawPointMode()"
     (drawLineModeRequested)="onToolbarDrawLineMode()" (drawPolygonModeRequested)="onToolbarDrawPolygonMode()"
@@ -48,7 +48,11 @@
     (elementoContext)="openContextMenu($event)" />
 
   <app-mapa-properties-panel slot="properties" [open]="ui.propertiesOpen()" [elemento]="selectedElemento()"
-    [tipos]="tipos()" [nodos]="nodos()" [requestedTab]="propertiesRequestedTab()" (saved)="onElementoUpdated($event)"
+    [tipos]="tipos()" [nodos]="nodos()" [requestedTab]="propertiesRequestedTab()"
+    [esNap]="selectedEsNap()" [soporte]="soportePanel()" [soporteLoading]="sopLoading()"
+    [soporteError]="sopError()" (soporteRefresh)="cargarSoportePanel($event)"
+    [materiales]="materialesPanel()" [materialesLoading]="matLoading()" [materialesError]="matError()"
+    (materialesRefresh)="cargarMaterialesPanel($event)" (saved)="onElementoUpdated($event)"
     (deleted)="onElementoDeleted($event)" (restored)="onElementoRestored($event)"
     (dirtyChange)="onPropertiesDirtyChange($event)" (closeRequested)="onPropertiesCloseRequested()" />
 

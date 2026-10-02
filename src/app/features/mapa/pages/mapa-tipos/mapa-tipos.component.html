@@ -82,7 +82,14 @@
 
           <div class="row-copy">
             <strong [title]="t.nombre">{{ t.nombre }}</strong>
-            <span>{{ t.codigo }} · {{ geometryLabel(t) }}</span>
+            <span>
+              {{ t.codigo }} · {{ geometryLabel(t) }}
+              <!-- Para saber de un vistazo cuales son SITIO, sin abrir uno por uno. -->
+              <b class="equip" *ngIf="tieneEquipamiento(t)"
+                 title="Este tipo muestra la pestaña de equipamiento en el mapa: candado, generador, baterías, UPS, acceso.">
+                · con equipamiento
+              </b>
+            </span>
           </div>
 
           <div class="row-meta">

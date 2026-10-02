@@ -185,6 +185,16 @@
           />
           <span>Conectable</span>
         </label>
+
+        <label class="check-card"
+               title="Marca los tipos que son un SITIO: nodo, caseta, torre. Solo esos muestran la pestaña de equipamiento (candado, generador, baterías, UPS) en el mapa. Una NAP o un poste no la necesitan.">
+          <input
+            type="checkbox"
+            [(ngModel)]="tieneEquipamiento"
+            (ngModelChange)="onFieldInput()"
+          />
+          <span>Tiene equipamiento de sitio</span>
+        </label>
       </div>
     </section>
 

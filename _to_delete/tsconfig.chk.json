@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "./out-tsc/chk", "types": ["node"], "noEmit": true },
+  "files": ["src/app/features/monitoreo/pages/equipo-detalle.ts"]
+}

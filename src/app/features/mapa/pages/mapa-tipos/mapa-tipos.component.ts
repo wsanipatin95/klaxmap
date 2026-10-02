@@ -256,6 +256,11 @@ export class MapaTiposComponent {
     this.formDirty.set(dirty);
   }
 
+  /** ¿Este tipo muestra la pestana de equipamiento en el mapa? Vive en atributos del tipo. */
+  tieneEquipamiento(t: MapaTipoElemento): boolean {
+    return ((t?.atributos ?? {}) as Record<string, unknown>)['tieneEquipamiento'] === true;
+  }
+
   geometryLabel(tipo: MapaTipoElemento): string {
     const geom = String(tipo.geometriaPermitida ?? 'point').toLowerCase();
 

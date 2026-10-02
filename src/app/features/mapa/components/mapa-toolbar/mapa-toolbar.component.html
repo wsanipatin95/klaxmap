@@ -161,6 +161,17 @@
       *ngIf="editarTipoElemento()"
       type="button"
       class="tool-btn"
+      title="Accesos a sitios: quién abre y en qué horario se puede entrar"
+      aria-label="Accesos a sitios"
+      (click)="manageAccesosRequested.emit()"
+    >
+      <i class="pi pi-key"></i>
+    </button>
+
+    <button
+      *ngIf="editarTipoElemento()"
+      type="button"
+      class="tool-btn"
       title="Importar KML"
       aria-label="Importar KML"
       (click)="importRequested.emit()"

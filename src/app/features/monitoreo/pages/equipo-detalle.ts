@@ -52,9 +52,19 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
         <div class="panel" style="cursor:pointer" (click)="openLog('temperature_celsius','Temperatura','#d97706')"><div class="ph">Temperatura</div><div class="pb" style="text-align:center">
           <div class="gauge" style="color:var(--amber)">{{ d.temp_celsius!=null ? d.temp_celsius+'°C' : '—' }}</div>
           <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="tempDs()" [mini]="true"></app-line-chart></div></div></div>
-        <div class="panel" style="cursor:pointer" (click)="openLog('ping_ms','Ping','#16a34a')"><div class="ph">Ping</div><div class="pb" style="text-align:center">
-          <div class="gauge">{{ d.ping_ms!=null ? d.ping_ms+' ms' : 'timeout' }}</div>
-          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="pingDs()" [mini]="true"></app-line-chart></div></div></div>
+        <!-- A las OLT no se les hace ping a proposito: la IP que figura es la del MikroTik de
+             borde, que contesta aunque la OLT este muerta. Mostrar un numero ahi es mentir
+             (antes decia "0 ms" con la OLT marcada caida). Su vida se decide por SNMP al
+             puerto real, con TCP al telnet como segunda opinion. -->
+        @if (d.device_type === 'olt') {
+          <div class="panel"><div class="ph">Ping</div><div class="pb" style="text-align:center">
+            <div class="gauge" style="color:var(--muted)" title="La IP publica es la del MikroTik de borde: contestaria el ping aunque la OLT este apagada. El estado de la OLT se mide por SNMP a su puerto, y si el SNMP calla se prueba TCP contra su telnet.">no aplica</div>
+            <div class="chart-sm"></div></div></div>
+        } @else {
+          <div class="panel" style="cursor:pointer" (click)="openLog('ping_ms','Ping','#16a34a')"><div class="ph">Ping</div><div class="pb" style="text-align:center">
+            <div class="gauge">{{ d.ping_ms!=null ? d.ping_ms+' ms' : 'timeout' }}</div>
+            <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="pingDs()" [mini]="true"></app-line-chart></div></div></div>
+        }
       </div>
 
       <div class="panel" style="margin-top:14px">

@@ -16,6 +16,7 @@ import type {
   MapaNodoSaveRequest,
   MapaPatchRequest,
   MapaGeomTipo,
+  MapaMaterialesCaja,
   MapaNapClientes,
 } from '../../data-access/mapa.models';
 
@@ -56,7 +57,7 @@ import {
 } from '../../models/mapa-basemap.models';
 import { getBranchNodeIds } from '../../utils/mapa-visibility.utils';
 
-type PropertiesRequestedTab = 'edicion' | 'historial';
+type PropertiesRequestedTab = 'edicion' | 'historial' | 'soporte' | 'materiales';
 
 @Component({
   selector: 'app-mapa-home',
@@ -126,6 +127,34 @@ export class MapaHomeComponent {
   // Se reutiliza el permiso de edicion de red; si luego crean un privilegio dedicado, se cambia solo aqui.
   readonly puedeDesbloquearNap = computed(() => this.sessionStore.hasCompanyPrivilege('eem_red_red'));
   readonly contextEsNap = computed(() => this.esNapElemento(this.contextElemento()));
+
+  // --- Pestana "Soporte" del modal del elemento ---------------------------------------
+  // Senales PROPIAS, aparte de las del modal de "clientes de la NAP". Comparten el mismo
+  // endpoint pero no el mismo estado: si se reusaran, abrir Soporte de una NAP pisaria los
+  // datos del modal abierto de otra, y al reves. Son cuatro lineas, vale la pena.
+  readonly sopData = signal<MapaNapClientes | null>(null);
+  readonly sopLoading = signal(false);
+  readonly sopError = signal<string | null>(null);
+  /** De que elemento son los datos que tenemos cargados (para no mostrar los de otra NAP). */
+  readonly sopElementoId = signal<number | null>(null);
+  readonly selectedEsNap = computed(() => this.esNapElemento(this.selectedElemento()));
+  /** Los datos solo valen si son del elemento que esta abierto ahora. */
+  readonly soportePanel = computed(() => {
+    const el = this.selectedElemento();
+    if (!el || this.sopElementoId() !== el.idGeoElemento) return null;
+    return this.sopData();
+  });
+
+  // --- Pestana "Materiales": espejo de lo que el tecnico cargo en la orden ---------------
+  readonly matData = signal<MapaMaterialesCaja | null>(null);
+  readonly matLoading = signal(false);
+  readonly matError = signal<string | null>(null);
+  readonly matElementoId = signal<number | null>(null);
+  readonly materialesPanel = computed(() => {
+    const el = this.selectedElemento();
+    if (!el || this.matElementoId() !== el.idGeoElemento) return null;
+    return this.matData();
+  });
 
   readonly hiddenNodeIds = this.visibility.hiddenNodeIds;
   readonly hiddenElementoIds = this.visibility.hiddenElementoIds;
@@ -345,10 +374,23 @@ export class MapaHomeComponent {
       onGeometryDiscardRequested: (onConfirm) => this.confirmDiscardGeometryChanges(onConfirm),
       onInfoDiscardRequested: (onConfirm) => this.confirmDiscardInfoChanges(onConfirm),
       afterSelect: () => {
-        // Click directo sobre una NAP/splitter (ej: "C52.8") abre el modal de clientes.
-        if (item && this.esNapElemento(item)) {
-          this.abrirNapClientes(item);
-        }
+        if (!item) return;
+        // Editando geometria no interrumpimos con el modal encima del mapa.
+        if (this.ui.toolMode() === 'edit-geometry') return;
+
+        // Un click sobre el elemento ABRE SU MODAL. Antes solo lo seleccionaba (se veia en el
+        // statusbar "Activo: ...") y el panel habia que sacarlo por el menu del click derecho
+        // -> "Editar datos". Por eso parecia que el click no hacia nada.
+        //
+        // Si es NAP, abre directo en Soporte: es lo mismo que hacia antes el click (abrir el
+        // modal de clientes de la NAP), solo que ahora vive como pestana adentro. El modal
+        // suelto de clientes sigue disponible en el menu del click derecho.
+        const esNap = this.esNapElemento(item);
+        this.propertiesRequestedTab.set(esNap ? 'soporte' : 'edicion');
+        this.ui.openProperties();
+        // Al entrar DIRECTO en la pestana Soporte no pasa por setTab(), asi que la carga
+        // perezosa no se dispara sola: la pedimos aca.
+        if (esNap) this.cargarSoportePanel(item);
       },
     });
   }
@@ -462,6 +504,12 @@ export class MapaHomeComponent {
   irATiposElemento() {
     this.runGuarded(() => {
       this.router.navigate(['/app/mapa/tipos']);
+    });
+  }
+
+  irAAccesos() {
+    this.runGuarded(() => {
+      this.router.navigate(['/app/mapa/accesos']);
     });
   }
 
@@ -749,6 +797,44 @@ export class MapaHomeComponent {
       error: (err) => {
         this.napLoading.set(false);
         this.napError.set(err?.message || 'No se pudieron cargar los clientes de la NAP');
+      },
+    });
+  }
+
+  /** Carga (o recarga) los clientes para la pestana Soporte del modal del elemento. */
+  cargarSoportePanel(item: MapaElemento) {
+    if (!item || !this.esNapElemento(item)) return;
+    this.sopElementoId.set(item.idGeoElemento);
+    this.sopData.set(null);
+    this.sopError.set(null);
+    this.sopLoading.set(true);
+    this.elementosRepo.clientesNap(item.idGeoElemento).subscribe({
+      next: (data) => {
+        this.sopData.set(data);
+        this.sopLoading.set(false);
+      },
+      error: (err) => {
+        this.sopLoading.set(false);
+        this.sopError.set(err?.message || 'No se pudieron cargar los clientes de la NAP');
+      },
+    });
+  }
+
+  /** Carga (o recarga) el material para la pestana Materiales. */
+  cargarMaterialesPanel(item: MapaElemento) {
+    if (!item) return;
+    this.matElementoId.set(item.idGeoElemento);
+    this.matData.set(null);
+    this.matError.set(null);
+    this.matLoading.set(true);
+    this.elementosRepo.materialesCaja(item.idGeoElemento).subscribe({
+      next: (data) => {
+        this.matData.set(data);
+        this.matLoading.set(false);
+      },
+      error: (err) => {
+        this.matLoading.set(false);
+        this.matError.set(err?.message || 'No se pudo leer el material de este punto');
       },
     });
   }
