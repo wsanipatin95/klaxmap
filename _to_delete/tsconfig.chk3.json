@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "./out-tsc/chk3", "types": ["node"], "noEmit": true },
+  "files": ["src/app/features/monitoreo/pages/backup.ts"]
+}

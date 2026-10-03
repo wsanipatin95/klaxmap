@@ -102,6 +102,14 @@ import { NocNotify } from '../services/noc-notify';
                         }
                       </td>
                     </tr>
+                    <!--
+                      El motivo del fallo estaba SOLO en el title del tag: habia que pasar el
+                      mouse por encima de cada fila roja para enterarse. Con 13 equipos en rojo
+                      eso es inservible. Ahora se lee.
+                    -->
+                    @if (b.status !== 'ok' && b.error) {
+                      <tr class="errrow"><td></td><td colspan="9" class="errmsg">{{ b.error }}</td></tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -115,6 +123,21 @@ import { NocNotify } from '../services/noc-notify';
       @if (tab() === 'config') {
         <div class="card cfg">
           <div class="ch">Configuración del respaldo</div>
+          <!--
+            Antes era una sola columna con todo mezclado: la frecuencia, los comandos, la
+            llave, el cifrado y los destinos externos, uno abajo del otro. Son cinco cosas
+            distintas que se tocan en momentos distintos, asi que ahora cada una tiene su
+            pestaña. El boton Guardar es uno solo y guarda todo.
+          -->
+          <div class="subtabs">
+            <button class="stab" [class.act]="sub() === 'general'"  (click)="sub.set('general')">General</button>
+            <button class="stab" [class.act]="sub() === 'equipos'"  (click)="sub.set('equipos')">Qué se respalda</button>
+            <button class="stab" [class.act]="sub() === 'acceso'"   (click)="sub.set('acceso')">Acceso a los equipos</button>
+            <button class="stab" [class.act]="sub() === 'cifrado'"  (click)="sub.set('cifrado')">Cifrado</button>
+            <button class="stab" [class.act]="sub() === 'destinos'" (click)="sub.set('destinos')">Copias fuera del NOC</button>
+          </div>
+
+          @if (sub() === 'general') {
           <div class="grid">
             <label class="fld chk">
               <input type="checkbox" [(ngModel)]="cfg.cfgbkp_enabled"> Respaldo automático activo
@@ -132,6 +155,11 @@ import { NocNotify } from '../services/noc-notify';
               <input [(ngModel)]="cfg.cfgbkp_dir" placeholder="backups/config">
             </label>
 
+          </div>
+          }
+
+          @if (sub() === 'equipos') {
+          <div class="grid">
             <div class="sep">Comandos que corre el respaldo</div>
             <label class="fld">
               <span title="Con hide-sensitive el archivo sale sin claves de PPPoE, comunidades SNMP ni tokens. Sigue sirviendo para restaurar.">MikroTik (por SSH)</span>
@@ -165,6 +193,60 @@ import { NocNotify } from '../services/noc-notify';
               <div class="aviso-bin"><i class="pi pi-exclamation-triangle"></i> Falta la clave de cifrado: sin ella el respaldo binario va a fallar.</div>
             }
 
+          </div>
+          }
+
+          @if (sub() === 'acceso') {
+          <div class="grid">
+            <div class="sep">Cómo entra el NOC a los MikroTik</div>
+            <!--
+              Con contraseña, el router VE un secreto que sirve en los demás equipos: si te
+              toman uno, se llevan con qué entrar a toda la flota. Con llave guarda solo la
+              mitad pública, que no le sirve a nadie. La privada no sale nunca del NOC.
+            -->
+            <label class="fld chk">
+              <input type="checkbox" [(ngModel)]="cfg.cfgbkp_ssh_llave_enabled"
+                     [disabled]="!llave().hay">
+              <span title="Mientras esté apagado, el respaldo sigue entrando con la contraseña de cada equipo. Prendelo recién cuando todos los equipos estén en verde abajo.">Entrar con llave SSH en vez de contraseña</span>
+            </label>
+            @if (!llave().hay) {
+              <div class="aviso-bin"><i class="pi pi-info-circle"></i> Todavía no hay llave generada.</div>
+            }
+            <label class="fld"><span title="El NOC crea este usuario en cada MikroTik, de solo lectura.">Usuario en el router</span>
+              <input [(ngModel)]="cfg.cfgbkp_ssh_user" placeholder="noc-respaldo"></label>
+            <label class="fld"><span title="Vacío = el usuario puede entrar desde cualquier IP. Poné la IP del NOC para que solo sirva desde acá.">Permitir solo desde (IP del NOC)</span>
+              <input [(ngModel)]="cfg.cfgbkp_ssh_user_addr" placeholder="vacío = sin restricción"></label>
+            @if (llave().hay) {
+              <label class="fld ancho"><span title="Esto es lo que se instala en cada router. No abre nada por sí solo.">Clave pública</span>
+                <textarea rows="3" readonly [value]="llave().publica || ''"></textarea></label>
+              <div class="fld ancho" style="font-size:11.5px;color:var(--muted)">Huella: {{ llave().huella }}</div>
+            }
+            <div class="cfgbtns" style="justify-content:flex-start;gap:8px">
+              <button class="btn" [disabled]="llaveOcupada()" (click)="generarLlave()">
+                {{ llave().hay ? 'Generar una nueva' : 'Generar llave' }}</button>
+              <button class="btn go" [disabled]="llaveOcupada() || !llave().hay" (click)="prepararEquipos()">
+                {{ llaveOcupada() ? 'Trabajando…' : 'Preparar equipos' }}</button>
+            </div>
+            @if (llaveMsg()) { <div class="fld ancho" style="font-size:12px">{{ llaveMsg() }}</div> }
+            @if (prep().length) {
+              <div class="fld ancho">
+                <table style="width:100%;font-size:12px">
+                  @for (p of prep(); track p.equipo) {
+                    <tr>
+                      <td style="padding:2px 6px">{{ p.ok ? '✓' : '✗' }}</td>
+                      <td style="padding:2px 6px"><b>{{ p.equipo }}</b></td>
+                      <td style="padding:2px 6px;color:var(--muted)">{{ p.error || 'listo' }}</td>
+                    </tr>
+                  }
+                </table>
+              </div>
+            }
+
+          </div>
+          }
+
+          @if (sub() === 'cifrado') {
+          <div class="grid">
             <div class="sep">Cifrado de los respaldos</div>
             <label class="fld ancho">
               <span title="El NOC cifra con este certificado y NO puede descifrar: la clave privada vive fuera del servidor y es la única que abre los archivos. Vacío = los respaldos se guardan en claro.">Certificado público (PEM)</span>
@@ -174,6 +256,11 @@ import { NocNotify } from '../services/noc-notify';
               <div class="aviso-bin"><i class="pi pi-exclamation-triangle"></i> Eso es una clave privada. Acá va solo el certificado público; la privada no debe estar en el NOC.</div>
             }
 
+          </div>
+          }
+
+          @if (sub() === 'destinos') {
+          <div class="grid">
             <div class="sep">Destino externo 1 (SFTP — ej. la nube)</div>
             <label class="fld chk"><input type="checkbox" [(ngModel)]="cfg.cfgbkp_r1_enabled"> Réplica 1 activa</label>
             <label class="fld"><span>Nombre</span><input [(ngModel)]="cfg.cfgbkp_r1_label" placeholder="Nube"></label>
@@ -192,6 +279,7 @@ import { NocNotify } from '../services/noc-notify';
             <label class="fld"><span>Clave</span><input type="password" [(ngModel)]="r2Pass" [placeholder]="cfg.cfgbkp_r2_pass_set ? '•••••• (guardada)' : 'sin configurar'"></label>
             <label class="fld"><span>Carpeta destino</span><input [(ngModel)]="cfg.cfgbkp_r2_dir" placeholder="noc-backups"></label>
           </div>
+          }
           <div class="cfgbtns">
             <button class="btn go" [disabled]="guardando()" (click)="guardar()">{{ guardando() ? 'Guardando…' : 'Guardar' }}</button>
           </div>
@@ -308,6 +396,14 @@ import { NocNotify } from '../services/noc-notify';
     .fld textarea { border:1px solid var(--line); border-radius:9px; padding:9px 11px; font-size:12px;
       font-family:ui-monospace,Menlo,Consolas,monospace; outline:none; background:#fff; color:var(--ink); resize:vertical; }
     .fld textarea:focus { border-color:var(--pri); }
+    .errrow td { border-top:0; padding-top:0; }
+    .errmsg { color:var(--red,#c0392b); font-size:12px; line-height:1.5; padding-bottom:9px; max-width:0; }
+    .subtabs { display:flex; gap:2px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin:0 0 16px; }
+    .stab { border:none; background:transparent; padding:8px 13px; font-size:12.5px; font-weight:700;
+            color:var(--mut); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+            font-family:inherit; }
+    .stab:hover { color:var(--ink); }
+    .stab.act { color:var(--pri); border-bottom-color:var(--pri); }
     .sep { grid-column:1 / -1; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--mut); border-top:1px solid var(--line); padding-top:12px; }
     .cfgbtns { display:flex; align-items:center; gap:12px; padding:0 16px 16px; }
     .bkov { position:fixed; inset:0; background:rgba(26,21,38,.42); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:100050; padding:20px; }
@@ -333,6 +429,8 @@ export class Backup implements OnInit, OnDestroy {
   private notify = inject(NocNotify);
 
   tab = signal<'panel' | 'config'>('panel');
+  /** Sub-pestaña de Configuración. Cinco cosas que se tocan en momentos distintos. */
+  sub = signal<'general' | 'equipos' | 'acceso' | 'cifrado' | 'destinos'>('general');
   backups = signal<any[]>([]);
   cfg: any = { cfgbkp_enabled: true, cfgbkp_cron: '0 0 */12 * * *', cfgbkp_keep: 60, cfgbkp_dir: 'backups/config',
     cfgbkp_mk_cmd: '/export hide-sensitive', cfgbkp_olt_cmd: 'show running-config', cfgbkp_olt_enabled: true,
@@ -377,7 +475,13 @@ export class Backup implements OnInit, OnDestroy {
   setFreq(cron: string) { this.cfg.cfgbkp_cron = cron; this.freqOpen.set(false); }
   setKeep(n: number) { this.cfg.cfgbkp_keep = n; this.keepOpen.set(false); }
 
-  ngOnInit() { this.load(); this.timer = setInterval(() => this.reloadList(), 10000); }
+  /** Estado de la llave SSH (lo que el backend deja ver: nunca la parte privada). */
+  llave = signal<any>({ hay: false });
+  llaveOcupada = signal(false);
+  llaveMsg = signal('');
+  prep = signal<any[]>([]);
+
+  ngOnInit() { this.load(); this.cargarLlave(); this.timer = setInterval(() => this.reloadList(), 10000); }
   ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
 
   private load() {
@@ -386,6 +490,42 @@ export class Backup implements OnInit, OnDestroy {
       error: () => {},
     });
   }
+  private cargarLlave() {
+    this.api.backupLlave().subscribe({ next: (r: any) => this.llave.set(r || { hay: false }), error: () => {} });
+  }
+
+  /**
+   * Genera la llave. Si ya hay una, reemplazarla deja a TODOS los equipos afuera hasta
+   * volver a prepararlos, así que se pregunta y recién ahí se manda confirmar.
+   */
+  generarLlave() {
+    const hay = !!this.llave().hay;
+    if (hay && !confirm('Ya hay una llave instalada en los equipos.\n\nSi generás una nueva, '
+        + 'ninguno va a dejar entrar al NOC hasta que corras "Preparar equipos" otra vez.\n\n¿Seguir?')) return;
+    this.llaveOcupada.set(true);
+    this.llaveMsg.set('');
+    this.api.backupLlaveGenerar(hay).subscribe({
+      next: () => { this.cargarLlave(); this.llaveMsg.set('Llave generada. Ahora "Preparar equipos".'); this.llaveOcupada.set(false); },
+      error: (e) => { this.llaveMsg.set(e?.message || 'No se pudo generar la llave.'); this.llaveOcupada.set(false); },
+    });
+  }
+
+  /** El NOC entra a cada MikroTik con la contraseña que todavía funciona e instala la llave. */
+  prepararEquipos() {
+    this.llaveOcupada.set(true);
+    this.llaveMsg.set('Entrando a los equipos, esto tarda…');
+    this.prep.set([]);
+    this.api.backupLlavePreparar().subscribe({
+      next: (r: any) => {
+        this.prep.set(r?.items || []);
+        this.llaveMsg.set((r?.listos ?? 0) + ' listos, ' + (r?.fallados ?? 0) + ' con problema.'
+          + (r?.ok ? ' Ya podés prender el modo llave y guardar.' : ''));
+        this.llaveOcupada.set(false);
+      },
+      error: (e) => { this.llaveMsg.set(e?.message || 'No se pudo preparar.'); this.llaveOcupada.set(false); },
+    });
+  }
+
   private reloadList() {
     this.api.backupState(1000).subscribe({ next: (r: any) => this.backups.set(r?.backups || []), error: () => {} });
   }
@@ -457,6 +597,12 @@ export class Backup implements OnInit, OnDestroy {
       cfgbkp_bin_enabled: this.cfg.cfgbkp_bin_enabled,
       cfgbkp_bin_keep: this.cfg.cfgbkp_bin_keep,
       cfgbkp_cert_pem: this.cfg.cfgbkp_cert_pem,
+      // Los de la llave. Esta lista es fija a proposito (no se manda cfg entero), asi que
+      // CADA campo nuevo de la pantalla hay que sumarlo aca o no se guarda nunca y el
+      // formulario vuelve al valor viejo sin decir nada.
+      cfgbkp_ssh_llave_enabled: this.cfg.cfgbkp_ssh_llave_enabled,
+      cfgbkp_ssh_user: this.cfg.cfgbkp_ssh_user,
+      cfgbkp_ssh_user_addr: this.cfg.cfgbkp_ssh_user_addr,
     };
     if (this.binPass && this.binPass.trim()) body.cfgbkp_bin_pass = this.binPass.trim();
     for (const slot of ['r1', 'r2']) {

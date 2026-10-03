@@ -280,6 +280,9 @@ export class NocApi {
   backupState(limit = 200): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config?limit=${limit}`).pipe(map(unwrap)); }
   backupRun(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/run`, {}).pipe(map(unwrap)); }
   backupSaveCfg(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/backup/config/settings`, body).pipe(map(unwrap)); }
+  backupLlave(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/llave`).pipe(map(unwrap)); }
+  backupLlaveGenerar(confirmar: boolean): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/generar?confirmar=${confirmar}`, {}).pipe(map(unwrap)); }
+  backupLlavePreparar(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/preparar`, {}).pipe(map(unwrap)); }
   backupVer(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/${id}/ver`).pipe(map(unwrap)); }
   backupDownload(id: number): Observable<Blob> { return this.http.get(`${API}/backup/config/${id}/download`, { responseType: 'blob' }); }
 }
