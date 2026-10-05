@@ -35,7 +35,14 @@ export class MapaPropertiesPanelComponent implements OnChanges {
   @Input() open = false;
   @Input() requestedTab: PropertiesPanelTab | null = null;
 
-  /** Pestana Soporte: solo aplica donde cuelgan clientes (hoy, las NAP). */
+  /**
+   * Pestana CLIENTES: los que cuelgan de este elemento (hoy, las NAP).
+   *
+   * El identificador interno sigue siendo 'soporte' a proposito: renombrarlo obliga a tocar
+   * el panel, la pagina del mapa, el ruteo y el estado, y no cambia nada de lo que el
+   * usuario ve. Lo que se arreglo es la ETIQUETA, que decia 'Soporte' —una palabra de
+   * sistema— cuando lo que muestra son los clientes de la NAP.
+   */
   @Input() esNap = false;
   @Input() soporte: MapaNapClientes | null = null;
   @Input() soporteLoading = false;
@@ -180,7 +187,7 @@ export class MapaPropertiesPanelComponent implements OnChanges {
     const prefix =
       tab === 'historial' ? 'Historial'
       : tab === 'equipamiento' ? 'Equipamiento'
-      : tab === 'soporte' ? 'Soporte'
+      : tab === 'soporte' ? 'Clientes'
       : tab === 'materiales' ? 'Materiales'
       : 'Información';
     const parts = [this.resolveTipoNombre(elemento), elemento.nombre?.trim() || 'Sin nombre'];

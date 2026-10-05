@@ -68,7 +68,7 @@
           [attr.aria-selected]="activeTab() === 'soporte'"
           (click)="setTab('soporte')"
         >
-          Soporte
+          Clientes
           <span class="tab-count" *ngIf="soporte?.ocupados">{{ soporte?.ocupados }}</span>
         </button>
         <button
@@ -119,7 +119,7 @@
             </section>
 
             <section class="panel-section" *ngIf="activeTab() === 'soporte'">
-              <!-- Soporte solo tiene sentido donde cuelgan clientes: hoy, las NAP. -->
+              <!-- Los clientes solo cuelgan de las NAP; en el resto no aplica. -->
               <ng-container *ngIf="esNap; else soporteNoAplica">
                 <div class="sop-head" *ngIf="soporte as s">
                   <div class="sop-chip" [title]="'Tipo de splitter de esta NAP'">
@@ -168,7 +168,7 @@
 
               <ng-template #soporteNoAplica>
                 <div class="sop-msg">
-                  Este elemento no tiene clientes colgados. El soporte por cliente se ve en las NAP.
+                  De este elemento no cuelgan clientes. Los clientes se ven en las NAP.
                 </div>
               </ng-template>
             </section>
