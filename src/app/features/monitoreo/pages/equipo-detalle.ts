@@ -43,6 +43,27 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       </div>
 
       <div class="row4">
+      @if (d.device_type === 'energia') {
+        <!-- BREAKER DE ENERGIA. CPU, memoria, temperatura y trafico son datos de SNMP:
+             este aparato no habla SNMP y esas tarjetas quedarian vacias para siempre. Un
+             panel vacio no es "sin datos todavia", es ruido. En su lugar va lo que el
+             breaker SI mide, leido por el lector local (tools/tuya_sidecar.py). -->
+        <div class="panel" style="cursor:pointer" (click)="openLog('voltage_v','Voltaje','#7b0061')"><div class="ph">Voltaje</div><div class="pb" style="text-align:center">
+          <div class="gauge" [style.color]="voltColor(ultVolt())">{{ ultVolt()!=null ? ultVolt()+' V' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="voltDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('current_a','Corriente','#00b9eb')"><div class="ph">Corriente</div><div class="pb" style="text-align:center">
+          <div class="gauge">{{ ultAmp()!=null ? ultAmp()+' A' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="ampDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('power_w','Consumo','#ea580c')"><div class="ph">Consumo</div><div class="pb" style="text-align:center">
+          <div class="gauge">{{ ultWatt()!=null ? ultWatt()+' W' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="wattDs()" [mini]="true"></app-line-chart></div></div></div>
+        <!-- El rele es la diferencia entre "se fue la luz" y "alguien abrio el breaker": el
+             medidor se alimenta del lado de la linea, asi que con el rele abierto sigue
+             contestando y lo dice. -->
+        <div class="panel" style="cursor:pointer" (click)="openLog('relay_on','Relé','#00ac4a')"><div class="ph">Relé</div><div class="pb" style="text-align:center">
+          <div class="gauge" [style.color]="ultRele()==null ? 'var(--muted)' : (ultRele() ? 'var(--green)' : 'var(--red)')" title="Cerrado = esta dejando pasar la corriente. Abierto = el breaker corto el circuito, pero el aparato sigue con tension y por eso puede avisarlo.">{{ ultRele()==null ? '—' : (ultRele() ? 'cerrado' : 'abierto') }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="releDs()" [mini]="true"></app-line-chart></div></div></div>
+      } @else {
         <div class="panel" style="cursor:pointer" (click)="openLog('cpu_percent','CPU','#dc2626')"><div class="ph">CPU</div><div class="pb" style="text-align:center">
           <div class="gauge" [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent!=null ? d.cpu_percent+'%' : '—' }}</div>
           <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="cpuDs()" [mini]="true"></app-line-chart></div></div></div>
@@ -65,8 +86,10 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
             <div class="gauge">{{ d.ping_ms!=null ? d.ping_ms+' ms' : 'timeout' }}</div>
             <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="pingDs()" [mini]="true"></app-line-chart></div></div></div>
         }
+      }
       </div>
 
+      @if (d.device_type !== 'energia') {
       <div class="panel" style="margin-top:14px">
         <div class="ph">Tráfico {{ trafIface() === 0 ? 'del equipo (suma de interfaces)' : 'de interfaz' }}
           <select class="inp" style="margin-left:auto;max-width:300px;font-size:12px;padding:5px 10px" [(ngModel)]="trafSel" (ngModelChange)="onTrafChange()">
@@ -113,6 +136,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
           }
         </tbody></table>
       </div>
+      }
 
       @if (showEdit()) {
         <div class="overlay on" (click)="showEdit.set(false)"></div>
@@ -134,7 +158,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
                 <div><label class="k" title="La marca se elige de la lista. Un vendor mal escrito deja al equipo sin CPU ni memoria.">Marca</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="showMarca.set(true)">{{ ef.vendor || '— Elegir marca —' }}</button></div>
                 <div><label class="k">Modelo</label><input class="inp" style="width:100%" [(ngModel)]="ef.model"></div>
               }
-              <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option></select></div>
+              <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
               <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="ef.zone"></div>
               <div><label class="k">IP de gestión</label><input class="inp" style="width:100%" [(ngModel)]="ef.ip_address"></div>
               <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="ef.snmp_version"><option value="v2c">v2c</option><option value="v3">v3</option></select></div>
@@ -159,6 +183,25 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
                 <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.ssh_user"></div>
                 <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="ef.ssh_pass" [placeholder]="ef.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
                 <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.ssh_port" placeholder="22"></div>
+
+                <!-- Puerto aparte del SSH: uno es donde se toca el timbre, el otro por donde se entra. -->
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Latido TCP (para detectar la caída rápido)</div>
+                <div style="grid-column:1/3">
+                  <label class="k" title="El NOC abre una conexión a este puerto cada 10 s y la cierra enseguida: no entra al equipo ni gasta una sesión. Sirve cualquier puerto que esté escuchando — Winbox, SSH, el que uses. Vacío = sin latido: el equipo se juzga por ping (ventana de 3 min) como hasta ahora.">Puerto del latido</label>
+                  <input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="vacío = sin latido (se juzga por ping)">
+                </div>
+              @if (ef.device_type === 'energia') {
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Breaker WiFi (Tuya / Smart Life)</div>
+                <div><label class="k" title="El Device ID que muestra el wizard de tinytuya. Es lo unico que necesita el NOC para saber que aparato es este. La local key NO se guarda en la base: vive solo en la maquina que lee.">ID de Tuya</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id" placeholder="id del aparato (no la clave)"></div>
+                <div><label class="k" title="La MAC no cambia nunca. Estos equipos toman IP por DHCP y vuelven de un corte con otra: la IP es por donde se le habla hoy, no quien es.">MAC</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="ef.mac" placeholder="30-48-7D-..."></div>
+                <div class="ayuda">
+                  Con el ID cargado, el lector local empieza a traer <b>voltaje, corriente y consumo</b> en la proxima vuelta,
+                  y esas lecturas tambien cuentan como latido. El puerto del latido para estos equipos es el <b>6668</b>.
+                </div>
+              }
+
               }
             </div>
             <div class="ph" style="border-top:1px solid var(--border);border-bottom:none">
@@ -289,6 +332,13 @@ export class EquipoDetalle implements OnDestroy {
   lab = signal<string[]>([]);
   cpuDs = signal<any[]>([]); memDs = signal<any[]>([]); tempDs = signal<any[]>([]); pingDs = signal<any[]>([]);
   trafLab = signal<string[]>([]); trafDs = signal<any[]>([]);
+  // Energia (breakers WiFi). El valor de "ahora" sale del ultimo punto de la serie: no hace
+  // falta ningun endpoint nuevo, kxt_metric_sample ya guarda estas medidas igual que el ping.
+  voltDs = signal<any[]>([]); ampDs = signal<any[]>([]); wattDs = signal<any[]>([]); releDs = signal<any[]>([]);
+  ultVolt = signal<number | null>(null);
+  ultAmp = signal<number | null>(null);
+  ultWatt = signal<number | null>(null);
+  ultRele = signal<boolean | null>(null);
   rxStat = signal(stats([])); txStat = signal(stats([]));
   inErrS = signal(stats([])); outErrS = signal(stats([]));
   inDiscS = signal(stats([])); outDiscS = signal(stats([]));
@@ -301,6 +351,10 @@ export class EquipoDetalle implements OnDestroy {
     this.api.devicePoll(this.id).subscribe({ next: () => this.refrescarVivo(), error: () => {} });
     this.api.devices().subscribe((ds) => {
       this.dev.set(ds.find((d) => d.id === this.id) || null);
+      // Las series de energia solo se piden si el equipo ES de energia, y eso recien se sabe
+      // aca: el loadCharts() de abajo corre ANTES de que llegue esta respuesta. Sin esta
+      // linea las tarjetas quedaban vacias hasta el primer auto-refresco, casi un minuto.
+      if (this.dev()?.device_type === 'energia') this.loadCharts();
       this.api.interfaces().subscribe((all) => {
         this.ifaces.set(all);
         // Default: la mejor interfaz UP con capacidad (el uplink), como en Zabbix.
@@ -362,6 +416,17 @@ export class EquipoDetalle implements OnDestroy {
     this.api.interfaces().subscribe((all) => this.ifaces.set(all));
   }
 
+  /**
+   * Color del voltaje. 120 V nominal: la norma admite +-10% (108-132). Fuera de 110-128 es
+   * para mirar; fuera de 105-132, para ir al nodo antes de que se queme una fuente.
+   */
+  voltColor(v: number | null) {
+    if (v == null) return 'var(--muted)';
+    if (v < 105 || v > 132) return 'var(--red)';
+    if (v < 110 || v > 128) return 'var(--amber)';
+    return 'var(--green)';
+  }
+
   private loadCharts() {
     const id = this.id, r = this.range();
     const pad = r !== 15;   // 'En vivo' (15) sin relleno; rangos fijos rellenan el eje (con spanGaps la línea no cae a 0).
@@ -370,6 +435,18 @@ export class EquipoDetalle implements OnDestroy {
     this.api.deviceMetric(id, 'memory_percent', r, 60, pad).subscribe((p) => this.memDs.set([areaDs('Mem', '#2563eb', p.map((x) => nv(x.v)))]));
     this.api.deviceMetric(id, 'temperature_celsius', r, 60, pad).subscribe((p) => this.tempDs.set([areaDs('Temp', '#d97706', p.map((x) => nv(x.v)))]));
     this.api.deviceMetric(id, 'ping_ms', r, 60, pad).subscribe((p) => this.pingDs.set([areaDs('Ping', '#16a34a', p.map((x) => nv(x.v)))]));
+    // Solo para los breakers: pedir estas cuatro series para un MikroTik seria pedir cuatro
+    // listas vacias en cada carga de pantalla.
+    if (this.dev()?.device_type === 'energia') {
+      const ult = (p: any[]) => {
+        const v = p.map((x) => nv(x.v)).filter((x) => x != null) as number[];
+        return v.length ? v[v.length - 1] : null;
+      };
+      this.api.deviceMetric(id, 'voltage_v', r, 60, pad).subscribe((p) => { this.lab.set(p.map((x) => x.t)); this.voltDs.set([areaDs('Voltaje', '#7b0061', p.map((x) => nv(x.v)))]); this.ultVolt.set(ult(p)); });
+      this.api.deviceMetric(id, 'current_a', r, 60, pad).subscribe((p) => { this.ampDs.set([areaDs('Corriente', '#00b9eb', p.map((x) => nv(x.v)))]); this.ultAmp.set(ult(p)); });
+      this.api.deviceMetric(id, 'power_w', r, 60, pad).subscribe((p) => { this.wattDs.set([areaDs('Consumo', '#ea580c', p.map((x) => nv(x.v)))]); this.ultWatt.set(ult(p)); });
+      this.api.deviceMetric(id, 'relay_on', r, 60, pad).subscribe((p) => { this.releDs.set([areaDs('Relé', '#00ac4a', p.map((x) => nv(x.v)))]); const u = ult(p); this.ultRele.set(u == null ? null : u === 1); });
+    }
     const st = (p: any[], k: string) => stats(p.map((x) => nv(x[k])).filter((v) => v != null) as number[]);
     const applyTraf = (p: any[]) => {
       const rx = p.map((x) => nv(x.rx)), tx = p.map((x) => nv(x.tx));
@@ -469,6 +546,10 @@ export class EquipoDetalle implements OnDestroy {
       this.api.deviceSsh(d.id).subscribe((r: any) => {
         this.ef.ssh_user = r?.ssh_user || '';
         this.ef.ssh_port = r?.ssh_port || 22;
+        // Sin "|| algo": null significa SIN latido, y es un valor valido que hay que poder dejar.
+        this.ef.latido_port = r?.latido_port ?? null;
+        this.ef.tuya_id = r?.tuya_id ?? '';
+        this.ef.mac = r?.mac ?? '';
         this.ef.ssh_pass_set = !!r?.ssh_pass_set;
       });
     }

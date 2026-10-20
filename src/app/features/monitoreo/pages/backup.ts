@@ -221,11 +221,53 @@ import { NocNotify } from '../services/noc-notify';
                 <textarea rows="3" readonly [value]="llave().publica || ''"></textarea></label>
               <div class="fld ancho" style="font-size:11.5px;color:var(--muted)">Huella: {{ llave().huella }}</div>
             }
+            <!--
+              LA LISTA, Y POR QUE SE PUEDE ELEGIR.
+              Antes esto era un solo boton que iba a los trece routers de una. Con uno
+              apagado o sin credenciales habia que repetir los trece para reintentar ese
+              uno, y como el interruptor de arriba es GLOBAL, hasta tenerlos todos no se
+              podia prender sin dejar sin respaldo a los que faltaban. Elegir convierte la
+              mudanza en algo que se avanza de a ratos.
+            -->
+            @if (llave().hay) {
+              <div class="fld ancho">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+                  <b style="font-size:12px">Equipos</b>
+                  <a style="font-size:11.5px;cursor:pointer" (click)="marcarTodos(true)">todos</a>
+                  <a style="font-size:11.5px;cursor:pointer" (click)="marcarTodos(false)">ninguno</a>
+                  <span style="font-size:11.5px;color:var(--muted)">{{ seleccion().length }} de {{ equipos().length }}</span>
+                </div>
+                <table style="width:100%;font-size:12px">
+                  @for (e of equipos(); track e.id) {
+                    <tr [style.opacity]="e.tieneClave ? 1 : 0.55">
+                      <td style="padding:2px 6px;width:22px">
+                        <input type="checkbox" [checked]="sel.has(e.id)" [disabled]="!e.tieneClave"
+                               (change)="alternar(e.id)">
+                      </td>
+                      <td style="padding:2px 6px"><b>{{ e.equipo }}</b></td>
+                      <td style="padding:2px 6px;color:var(--muted)">{{ e.host }}</td>
+                      <td style="padding:2px 6px">
+                        @if (!e.tieneClave) {
+                          <span style="color:var(--muted)" title="Sin usuario/contraseña SSH guardados en Equipos, el NOC no puede entrar a instalarle la llave.">sin credenciales</span>
+                        } @else if (estado()[e.id] === true) {
+                          <span style="color:#16a34a">✓ entra con llave</span>
+                        } @else if (estado()[e.id] === false) {
+                          <span style="color:#dc2626">✗ todavía no</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </table>
+              </div>
+            }
             <div class="cfgbtns" style="justify-content:flex-start;gap:8px">
               <button class="btn" [disabled]="llaveOcupada()" (click)="generarLlave()">
                 {{ llave().hay ? 'Generar una nueva' : 'Generar llave' }}</button>
+              <button class="btn" [disabled]="llaveOcupada() || !llave().hay" (click)="probarEquipos()"
+                      title="Entra con la llave y no toca nada. Es la pregunta que hay que contestar antes de prender el interruptor de arriba.">
+                Probar{{ seleccion().length ? ' (' + seleccion().length + ')' : ' todos' }}</button>
               <button class="btn go" [disabled]="llaveOcupada() || !llave().hay" (click)="prepararEquipos()">
-                {{ llaveOcupada() ? 'Trabajando…' : 'Preparar equipos' }}</button>
+                {{ llaveOcupada() ? 'Trabajando…' : (seleccion().length ? 'Preparar (' + seleccion().length + ')' : 'Preparar todos') }}</button>
             </div>
             @if (llaveMsg()) { <div class="fld ancho" style="font-size:12px">{{ llaveMsg() }}</div> }
             @if (prep().length) {
@@ -481,7 +523,27 @@ export class Backup implements OnInit, OnDestroy {
   llaveMsg = signal('');
   prep = signal<any[]>([]);
 
-  ngOnInit() { this.load(); this.cargarLlave(); this.timer = setInterval(() => this.reloadList(), 10000); }
+  /** Los MikroTik que se pueden preparar, y cuáles eligió el operador. */
+  equipos = signal<any[]>([]);
+  /** id -> true/false según la última prueba con llave. Sin entrada = no se probó. */
+  estado = signal<Record<number, boolean>>({});
+  sel = new Set<number>();
+  /** Copia en señal para que el template se entere: un Set mutado no dispara el render. */
+  seleccion = signal<number[]>([]);
+
+  alternar(id: number) {
+    if (this.sel.has(id)) this.sel.delete(id); else this.sel.add(id);
+    this.seleccion.set([...this.sel]);
+  }
+  marcarTodos(todos: boolean) {
+    this.sel.clear();
+    // Los que no tienen credenciales no se pueden preparar: marcarlos solo sirve para
+    // sumar fracasos y hacer esperar el timeout de cada uno.
+    if (todos) for (const e of this.equipos()) if (e.tieneClave) this.sel.add(e.id);
+    this.seleccion.set([...this.sel]);
+  }
+
+  ngOnInit() { this.load(); this.cargarLlave(); this.cargarEquipos(); this.timer = setInterval(() => this.reloadList(), 10000); }
   ngOnDestroy() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
 
   private load() {
@@ -492,6 +554,12 @@ export class Backup implements OnInit, OnDestroy {
   }
   private cargarLlave() {
     this.api.backupLlave().subscribe({ next: (r: any) => this.llave.set(r || { hay: false }), error: () => {} });
+  }
+  private cargarEquipos() {
+    this.api.backupLlaveEquipos().subscribe({
+      next: (r: any) => this.equipos.set(Array.isArray(r) ? r : []),
+      error: () => {},
+    });
   }
 
   /**
@@ -510,20 +578,52 @@ export class Backup implements OnInit, OnDestroy {
     });
   }
 
-  /** El NOC entra a cada MikroTik con la contraseña que todavía funciona e instala la llave. */
+  /**
+   * El NOC entra a cada MikroTik con la contraseña que todavía funciona e instala la llave.
+   * Sin selección va a todos, igual que antes.
+   */
   prepararEquipos() {
+    const ids = [...this.sel];
     this.llaveOcupada.set(true);
-    this.llaveMsg.set('Entrando a los equipos, esto tarda…');
+    this.llaveMsg.set('Entrando a ' + (ids.length ? ids.length + ' equipo(s)' : 'los equipos') + ', esto tarda…');
     this.prep.set([]);
-    this.api.backupLlavePreparar().subscribe({
-      next: (r: any) => {
-        this.prep.set(r?.items || []);
-        this.llaveMsg.set((r?.listos ?? 0) + ' listos, ' + (r?.fallados ?? 0) + ' con problema.'
-          + (r?.ok ? ' Ya podés prender el modo llave y guardar.' : ''));
-        this.llaveOcupada.set(false);
-      },
+    this.api.backupLlavePreparar(ids).subscribe({
+      next: (r: any) => this.recibir(r, true),
       error: (e) => { this.llaveMsg.set(e?.message || 'No se pudo preparar.'); this.llaveOcupada.set(false); },
     });
+  }
+
+  /** Entra con la llave y no toca nada: dice cuáles ya están listos de verdad. */
+  probarEquipos() {
+    const ids = [...this.sel];
+    this.llaveOcupada.set(true);
+    this.llaveMsg.set('Probando la llave…');
+    this.prep.set([]);
+    this.api.backupLlaveProbar(ids).subscribe({
+      next: (r: any) => this.recibir(r, false),
+      error: (e) => { this.llaveMsg.set(e?.message || 'No se pudo probar.'); this.llaveOcupada.set(false); },
+    });
+  }
+
+  /**
+   * Resultado de preparar o probar. El aviso de "ya podés prender el modo llave" solo sale
+   * cuando NO quedó ningún equipo sin verificar: el interruptor es global, y prenderlo con
+   * uno a medias deja ese router sin respaldo hasta que alguien lo note.
+   */
+  private recibir(r: any, escribio: boolean) {
+    const items: any[] = r?.items || [];
+    this.prep.set(items);
+    const est = { ...this.estado() };
+    for (const it of items) if (it?.id != null) est[it.id] = !!it.ok;
+    this.estado.set(est);
+
+    const faltan = this.equipos().filter((e) => e.tieneClave && est[e.id] !== true).length;
+    this.llaveMsg.set((r?.listos ?? 0) + ' listos, ' + (r?.fallados ?? 0) + ' con problema.'
+      + (faltan === 0
+          ? ' Todos entran con llave: ya podés prender el modo llave y guardar.'
+          : ' Faltan ' + faltan + ' — no prendas el modo llave todavía, se quedarían sin respaldo.')
+      + (escribio ? '' : ' (prueba, no se tocó nada)'));
+    this.llaveOcupada.set(false);
   }
 
   private reloadList() {

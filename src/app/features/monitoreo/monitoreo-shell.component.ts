@@ -135,6 +135,8 @@ import { NocNotifyHost } from './shared/noc-notify-host';
     .mon-scope .b-maint { background:#f3f4f6;color:var(--muted) }
     .mon-scope .b-olt { background:#e6f0ff;color:#1c56d6 }
     .mon-scope .b-borde { background:#eef2f7;color:#5b6472 }
+    /* Energia: naranja de la marca (--kx-orange / --kx-orange-soft de _tokens.scss). */
+    .mon-scope .b-energia { background:#fff1e9;color:#ea580c }
     .mon-scope .ubar { height:7px;border-radius:4px;background:#eef1f6;overflow:hidden;width:90px;display:inline-block;vertical-align:middle;margin-right:8px }
     .mon-scope .ubar i { display:block;height:100%;border-radius:4px }
 

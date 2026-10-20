@@ -282,7 +282,10 @@ export class NocApi {
   backupSaveCfg(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/backup/config/settings`, body).pipe(map(unwrap)); }
   backupLlave(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/llave`).pipe(map(unwrap)); }
   backupLlaveGenerar(confirmar: boolean): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/generar?confirmar=${confirmar}`, {}).pipe(map(unwrap)); }
-  backupLlavePreparar(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/preparar`, {}).pipe(map(unwrap)); }
+  backupLlaveEquipos(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/llave/equipos`).pipe(map(unwrap)); }
+  /** ids vacío = todos (comportamiento viejo del botón). */
+  backupLlavePreparar(ids: number[] = []): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/preparar`, { ids }).pipe(map(unwrap)); }
+  backupLlaveProbar(ids: number[] = []): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/probar`, { ids }).pipe(map(unwrap)); }
   backupVer(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/${id}/ver`).pipe(map(unwrap)); }
   backupDownload(id: number): Observable<Blob> { return this.http.get(`${API}/backup/config/${id}/download`, { responseType: 'blob' }); }
 }

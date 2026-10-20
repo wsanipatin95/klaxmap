@@ -20,6 +20,7 @@ import { opcionesMarca } from '../shared/marcas';
       <span class="chip" [class.on]="filter()==='core'" (click)="filter.set('core')">Core</span>
       <span class="chip" [class.on]="filter()==='borde'" (click)="filter.set('borde')">Borde</span>
       <span class="chip" [class.on]="filter()==='olt'" (click)="filter.set('olt')">OLT</span>
+      <span class="chip" [class.on]="filter()==='energia'" (click)="filter.set('energia')">Energía</span>
       <span class="chip" [class.on]="filter()==='down'" (click)="filter.set('down')">Down</span>
       <button class="btn ghost" style="margin-left:auto" (click)="sincronizar()" [disabled]="sincronizando()" title="Traer las OLT/equipos del ERP y enlazarlos en el NOC (erp_olt_id)"><i class="pi pi-sync" [class.gira]="sincronizando()"></i> {{ sincronizando() ? 'Sincronizando…' : 'Sincronizar ERP' }}</button>
       <button class="btn" (click)="nuevo()">+ Nuevo equipo</button>
@@ -44,7 +45,7 @@ import { opcionesMarca } from '../shared/marcas';
               <td><b>{{ d.name }}</b></td>
               <td>{{ d.vendor }}@if (d.device_type==='olt' && d.software_version) { <span class="fw" title="Firmware de la OLT. Es lo que decide que arbol de OIDs usa el NOC para leer sus ONUs.">{{ d.software_version }}</span> }</td>
               <td>{{ d.zone || '—' }}</td>
-              <td>@if (d.device_type==='core') { <span class="badge b-ack">CORE</span> } @else if (d.device_type==='olt') { <span class="badge b-olt">OLT</span> } @else if (d.device_type==='borde') { <span class="badge b-borde">BORDE</span> } @else { <span class="badge b-maint">{{ d.device_type }}</span> }</td>
+              <td>@if (d.device_type==='core') { <span class="badge b-ack">CORE</span> } @else if (d.device_type==='olt') { <span class="badge b-olt">OLT</span> } @else if (d.device_type==='borde') { <span class="badge b-borde">BORDE</span> } @else if (d.device_type==='energia') { <span class="badge b-energia">ENERGÍA</span> } @else { <span class="badge b-maint">{{ d.device_type }}</span> }</td>
               <td class="mono">{{ d.ip_address }}@if (d.device_type==='olt' && d.snmp_port && d.snmp_port !== 161) { <span class="puerto" title="Puerto SNMP publicado por NAT. Varias OLT comparten la IP publica del sitio y se distinguen por este puerto.">:{{ d.snmp_port }}</span> }</td>
               <td [innerHTML]="badge(d.status)"></td>
               <td>@if (d.status==='up' && d.snmp_enabled && d.cpu_percent!=null) { <b [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent }}%</b> } @else if (d.device_type==='olt') { <span class="no-aplica" title="La ZTE no publica su CPU en la OID estandar (hrProcessorLoad). Hay que cargar la OID del fabricante en el perfil del equipo; hasta entonces no hay dato que mostrar.">sin dato</span> } @else { <span style="color:var(--muted)" title="Requiere SNMP habilitado para leer CPU real">—</span> }</td>
@@ -106,7 +107,7 @@ import { opcionesMarca } from '../shared/marcas';
               <div><label class="k">Modelo</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="openPicker('model')">{{ f.model || '— Elegir modelo —' }}</button></div>
             }
             <div><label class="k">Tipo</label>
-              <select class="inp" style="width:100%" [(ngModel)]="f.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option></select></div>
+              <select class="inp" style="width:100%" [(ngModel)]="f.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
             <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="f.zone"></div>
             <div><label class="k">IP</label><input class="inp" style="width:100%" [(ngModel)]="f.ip_address"></div>
             <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
@@ -129,6 +130,33 @@ import { opcionesMarca } from '../shared/marcas';
               <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.ssh_user"></div>
               <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="f.ssh_pass" [placeholder]="f.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
               <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.ssh_port" placeholder="22"></div>
+
+              <!--
+                LATIDO. Puerto aparte del SSH a proposito: uno es "donde toco el timbre" y el
+                otro "por donde entro a trabajar", y en esta red ninguno esta en su puerto por
+                defecto. Vacio = sin latido, el equipo se sigue juzgando por ping/SNMP.
+              -->
+              <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Latido TCP (para detectar la caída rápido)</div>
+              <div style="grid-column:1/3">
+                <label class="k" title="El NOC abre una conexión a este puerto cada 10 s y la cierra enseguida: no entra al equipo ni gasta una sesión. Sirve cualquier puerto que esté escuchando — Winbox, SSH, el que uses. Vacío = sin latido: el equipo se juzga por ping (ventana de 3 min) como hasta ahora.">Puerto del latido</label>
+                <input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port" placeholder="vacío = sin latido (se juzga por ping)">
+              </div>
+              @if (f.device_type === 'energia') {
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Breaker WiFi (Tuya / Smart Life)</div>
+                <div><label class="k" title="El Device ID que muestra el wizard de tinytuya. Es lo unico que necesita el NOC para saber que aparato es este. La local key NO se guarda en la base: vive solo en la maquina que lee.">ID de Tuya</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="f.tuya_id" placeholder="id del aparato (no la clave)"></div>
+                <div><label class="k" title="La MAC no cambia nunca. Estos equipos toman IP por DHCP y vuelven de un corte con otra: la IP es por donde se le habla hoy, no quien es.">MAC</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="f.mac" placeholder="30-48-7D-..."></div>
+                <div class="ayuda">
+                  Con el ID cargado, el lector local empieza a traer <b>voltaje, corriente y consumo</b> en la proxima vuelta,
+                  y esas lecturas tambien cuentan como latido. El puerto del latido para estos equipos es el <b>6668</b>.
+                </div>
+              }
+              <div class="ayuda">
+                Con el latido puesto, este equipo se marca caído a los <b>40 s</b> en vez de los 3 minutos del ping.
+                Importa en los MikroTik de borde: las OLT salen NATeadas por ellos, así que cuando el borde muere
+                las OLT caen a los 40 s y el borde —solo con ping— recién a los 180 s. El culpable aparecía último.
+              </div>
             }
           </div>
           <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end">
@@ -280,7 +308,7 @@ export class Equipos implements OnDestroy {
   devices = signal<Device[]>([]);
   loaded = signal(false);
   q = '';
-  filter = signal<'all' | 'core' | 'borde' | 'olt' | 'down'>('all');
+  filter = signal<'all' | 'core' | 'borde' | 'olt' | 'energia' | 'down'>('all');
   showAdd = signal(false);
   testing = signal(false);
   testErr = signal('');
@@ -394,6 +422,7 @@ export class Equipos implements OnDestroy {
       if (this.filter() === 'core' && d.device_type !== 'core') return false;
       if (this.filter() === 'borde' && d.device_type !== 'borde') return false;
       if (this.filter() === 'olt' && d.device_type !== 'olt') return false;
+      if (this.filter() === 'energia' && d.device_type !== 'energia') return false;
       if (this.filter() === 'down' && d.status === 'up') return false;
       if (q && !(`${d.name} ${d.ip_address} ${d.zone}`.toLowerCase().includes(q))) return false;
       return true;
@@ -437,6 +466,10 @@ export class Equipos implements OnDestroy {
       this.api.deviceSsh(d.id).subscribe((r: any) => {
         this.f.ssh_user = r?.ssh_user || '';
         this.f.ssh_port = r?.ssh_port || 22;
+        // Sin "|| algo": null significa SIN latido, y es un valor valido que hay que poder dejar.
+        this.f.latido_port = r?.latido_port ?? null;
+        this.f.tuya_id = r?.tuya_id ?? '';
+        this.f.mac = r?.mac ?? '';
         this.f.ssh_pass_set = !!r?.ssh_pass_set;
       });
     }
