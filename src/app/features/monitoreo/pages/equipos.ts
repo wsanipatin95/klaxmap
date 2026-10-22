@@ -110,12 +110,18 @@ import { opcionesMarca } from '../shared/marcas';
               <select class="inp" style="width:100%" [(ngModel)]="f.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
             <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="f.zone"></div>
             <div><label class="k">IP</label><input class="inp" style="width:100%" [(ngModel)]="f.ip_address"></div>
-            <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
-            <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161" [title]="f.device_type === 'olt' ? 'Si la OLT está detrás de NAT, es el puerto publicado en el router de borde (ej. 10027), no el 161.' : ''"></div>
-            <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="f.snmp_version"><option value="v2c">v2c</option><option value="v1">v1</option><option value="v3">v3</option></select></div>
-            <div style="grid-column:1/3;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span>
-              <button type="button" class="btn ghost sm" style="margin-left:auto" (click)="probarSnmp()" [disabled]="probandoSnmp()"><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button></div>
+            @if (f.device_type === 'energia') {
+              <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port" placeholder="6668"></div>
+              <div><label class="k">MAC</label><input class="inp" style="width:100%" [(ngModel)]="f.mac" placeholder="30:48:7D:3A:F1:00"></div>
+              <div><label class="k">ID de Tuya</label><input class="inp" style="width:100%" [(ngModel)]="f.tuya_id"></div>
+            } @else {
+              <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
+              <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
+              <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="f.snmp_version"><option value="v2c">v2c</option><option value="v1">v1</option><option value="v3">v3</option></select></div>
+              <div style="grid-column:1/3;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <input type="checkbox" [(ngModel)]="f.snmp_enabled"> <span>Habilitar SNMP</span>
+                <button type="button" class="btn ghost sm" style="margin-left:auto" (click)="probarSnmp()" [disabled]="probandoSnmp()"><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button></div>
+            }
 
             @if (f.device_type === 'olt') {
               <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.telnet_user"></div>
@@ -125,38 +131,12 @@ import { opcionesMarca } from '../shared/marcas';
               <div><label class="k">Intervalo barrido (seg)</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_poll_seconds" placeholder="300"></div>
             }
 
-            @if (f.device_type !== 'olt') {
-              <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH (para respaldo de configuración)</div>
+            @if (f.device_type === 'core' || f.device_type === 'borde') {
+              <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH</div>
               <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="f.ssh_user"></div>
               <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="f.ssh_pass" [placeholder]="f.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
               <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.ssh_port" placeholder="22"></div>
-
-              <!--
-                LATIDO. Puerto aparte del SSH a proposito: uno es "donde toco el timbre" y el
-                otro "por donde entro a trabajar", y en esta red ninguno esta en su puerto por
-                defecto. Vacio = sin latido, el equipo se sigue juzgando por ping/SNMP.
-              -->
-              <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Latido TCP (para detectar la caída rápido)</div>
-              <div style="grid-column:1/3">
-                <label class="k" title="El NOC abre una conexión a este puerto cada 10 s y la cierra enseguida: no entra al equipo ni gasta una sesión. Sirve cualquier puerto que esté escuchando — Winbox, SSH, el que uses. Vacío = sin latido: el equipo se juzga por ping (ventana de 3 min) como hasta ahora.">Puerto del latido</label>
-                <input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port" placeholder="vacío = sin latido (se juzga por ping)">
-              </div>
-              @if (f.device_type === 'energia') {
-                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Breaker WiFi (Tuya / Smart Life)</div>
-                <div><label class="k" title="El Device ID que muestra el wizard de tinytuya. Es lo unico que necesita el NOC para saber que aparato es este. La local key NO se guarda en la base: vive solo en la maquina que lee.">ID de Tuya</label>
-                  <input class="inp" style="width:100%" [(ngModel)]="f.tuya_id" placeholder="id del aparato (no la clave)"></div>
-                <div><label class="k" title="La MAC no cambia nunca. Estos equipos toman IP por DHCP y vuelven de un corte con otra: la IP es por donde se le habla hoy, no quien es.">MAC</label>
-                  <input class="inp" style="width:100%" [(ngModel)]="f.mac" placeholder="30-48-7D-..."></div>
-                <div class="ayuda">
-                  Con el ID cargado, el lector local empieza a traer <b>voltaje, corriente y consumo</b> en la proxima vuelta,
-                  y esas lecturas tambien cuentan como latido. El puerto del latido para estos equipos es el <b>6668</b>.
-                </div>
-              }
-              <div class="ayuda">
-                Con el latido puesto, este equipo se marca caído a los <b>40 s</b> en vez de los 3 minutos del ping.
-                Importa en los MikroTik de borde: las OLT salen NATeadas por ellos, así que cuando el borde muere
-                las OLT caen a los 40 s y el borde —solo con ping— recién a los 180 s. El culpable aparecía último.
-              </div>
+              <div><label class="k">Puerto del latido</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port"></div>
             }
           </div>
           <div class="ph" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end">
@@ -496,8 +476,14 @@ export class Equipos implements OnDestroy {
   private esDuplicado(): boolean {
     const ip = (this.f.ip_address || '').trim();
     if (!ip) return false;
+    // Un breaker comparte la IP publica del nodo: lo que lo distingue es su puerto (6668, 6669...).
+    if (this.f.device_type === 'energia') {
+      const p = Number(this.f.latido_port) || 6668;
+      return this.devices().some((d: any) => d.device_type === 'energia' &&
+        (d.ip_address || '').trim() === ip && (Number(d.latido_port) || 6668) === p && d.id !== this.f.id);
+    }
     const port = Number(this.f.snmp_port) || 161;
-    return this.devices().some((d: any) =>
+    return this.devices().some((d: any) => d.device_type !== 'energia' &&
       (d.ip_address || '').trim() === ip && (Number(d.snmp_port) || 161) === port && d.id !== this.f.id);
   }
 
@@ -523,6 +509,7 @@ export class Equipos implements OnDestroy {
   }
 
   doSave() {
+    if (this.f.device_type === 'energia') { this.f.snmp_enabled = false; this.f.mon_temp = false; }
     // Con id -> edición (PUT); sin id -> alta (POST). Ambos escriben en ERP y NOC.
     const req = this.f.id
       ? this.api.updateDevice(this.f.id, this.f)

@@ -1,0 +1,658 @@
+import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { NocApi, Device, Iface, OltMarca } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
+import { TableSort } from '../shared/table-sort';
+import { opcionesMarca } from '../shared/marcas';
+import { LineChart } from '../shared/line-chart';
+import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } from '../shared/charts';
+
+@Component({
+  selector: 'app-equipo-detalle',
+  standalone: true,
+  imports: [LineChart, FormsModule],
+  styles: [`.lg{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px}`],
+  template: `
+    <a class="back" (click)="back()" style="cursor:pointer"><i class="pi pi-chevron-left"></i> Equipos</a>
+    @if (dev(); as d) {
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <h2 style="font-size:20px">{{ d.name }}</h2>
+        <span class="badge" [class.b-up]="d.status==='up'" [class.b-down]="d.status==='down'" [class.b-maint]="d.status!=='up'&&d.status!=='down'">{{ d.status.toUpperCase() }}</span>
+        @if (d.snmp_enabled) { <span class="badge b-maint">SNMP</span> }
+        <span class="en-vivo" style="margin-left:auto;font-size:12px"><span class="st"></span> En vivo · {{ countdown() }} s</span>
+        <button class="btn ghost" (click)="openEdit(d)"><i class="pi pi-pencil"></i> Editar equipo</button>
+      </div>
+
+      <div class="meta">
+        <div class="m"><div class="k">Vendor / Modelo</div><div class="v">{{ d.vendor }} / {{ d.model || '—' }}</div></div>
+        <div class="m"><div class="k">Zona</div><div class="v">{{ d.zone || '—' }}</div></div>
+        <div class="m"><div class="k">IP</div><div class="v mono">{{ d.ip_address }}</div></div>
+        <div class="m"><div class="k">Nombre SNMP</div><div class="v">{{ d.sys_name || '—' }}</div></div>
+        <div class="m"><div class="k">Uptime</div><div class="v">{{ upt(d.uptime_seconds) }}</div></div>
+        <div class="m"><div class="k">Último visto</div><div class="v" [title]="d.last_seen_at || 'nunca respondió'">{{ visto(d.last_seen_at) }}</div></div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <span class="aviso" style="font-size:12px;color:var(--muted)"><i class="pi pi-clock"></i> Histórico:</span>
+        <span class="segT">
+          @for (r of ranges; track r.min) {
+            <button [class.on]="range()===r.min" (click)="setRange(r.min)">{{ r.label }}</button>
+          }
+        </span>
+      </div>
+
+      <div class="row4">
+      @if (d.device_type === 'energia') {
+        <!-- BREAKER DE ENERGIA. CPU, memoria, temperatura y trafico son datos de SNMP:
+             este aparato no habla SNMP y esas tarjetas quedarian vacias para siempre. Un
+             panel vacio no es "sin datos todavia", es ruido. En su lugar va lo que el
+             breaker SI mide, leido por el lector local (tools/tuya_sidecar.py). -->
+        <div class="panel" style="cursor:pointer" (click)="openLog('voltage_v','Voltaje','#7b0061')"><div class="ph">Voltaje</div><div class="pb" style="text-align:center">
+          <div class="gauge" [style.color]="voltColor(ultVolt())">{{ ultVolt()!=null ? ultVolt()+' V' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="voltDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('current_a','Corriente','#00b9eb')"><div class="ph">Corriente</div><div class="pb" style="text-align:center">
+          <div class="gauge">{{ ultAmp()!=null ? ultAmp()+' A' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="ampDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('power_w','Consumo','#ea580c')"><div class="ph">Consumo</div><div class="pb" style="text-align:center">
+          <div class="gauge">{{ ultWatt()!=null ? ultWatt()+' W' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="wattDs()" [mini]="true"></app-line-chart></div></div></div>
+        <!-- El rele es la diferencia entre "se fue la luz" y "alguien abrio el breaker": el
+             medidor se alimenta del lado de la linea, asi que con el rele abierto sigue
+             contestando y lo dice. -->
+        <div class="panel" style="cursor:pointer" (click)="openLog('relay_on','Relé','#00ac4a')"><div class="ph">Relé</div><div class="pb" style="text-align:center">
+          <div class="gauge" [style.color]="ultRele()==null ? 'var(--muted)' : (ultRele() ? 'var(--green)' : 'var(--red)')" title="Cerrado = esta dejando pasar la corriente. Abierto = el breaker corto el circuito, pero el aparato sigue con tension y por eso puede avisarlo.">{{ ultRele()==null ? '—' : (ultRele() ? 'cerrado' : 'abierto') }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="releDs()" [mini]="true"></app-line-chart></div></div></div>
+      } @else {
+        <div class="panel" style="cursor:pointer" (click)="openLog('cpu_percent','CPU','#dc2626')"><div class="ph">CPU</div><div class="pb" style="text-align:center">
+          <div class="gauge" [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent!=null ? d.cpu_percent+'%' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="cpuDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('memory_percent','Memoria','#2563eb')"><div class="ph">Memoria</div><div class="pb" style="text-align:center">
+          <div class="gauge">{{ d.memory_percent!=null ? d.memory_percent+'%' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="memDs()" [mini]="true"></app-line-chart></div></div></div>
+        <div class="panel" style="cursor:pointer" (click)="openLog('temperature_celsius','Temperatura','#d97706')"><div class="ph">Temperatura</div><div class="pb" style="text-align:center">
+          <div class="gauge" style="color:var(--amber)">{{ d.temp_celsius!=null ? d.temp_celsius+'°C' : '—' }}</div>
+          <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="tempDs()" [mini]="true"></app-line-chart></div></div></div>
+        <!-- A las OLT no se les hace ping a proposito: la IP que figura es la del MikroTik de
+             borde, que contesta aunque la OLT este muerta. Mostrar un numero ahi es mentir
+             (antes decia "0 ms" con la OLT marcada caida). Su vida se decide por SNMP al
+             puerto real, con TCP al telnet como segunda opinion. -->
+        @if (d.device_type === 'olt') {
+          <div class="panel"><div class="ph">Ping</div><div class="pb" style="text-align:center">
+            <div class="gauge" style="color:var(--muted)" title="La IP publica es la del MikroTik de borde: contestaria el ping aunque la OLT este apagada. El estado de la OLT se mide por SNMP a su puerto, y si el SNMP calla se prueba TCP contra su telnet.">no aplica</div>
+            <div class="chart-sm"></div></div></div>
+        } @else {
+          <div class="panel" style="cursor:pointer" (click)="openLog('ping_ms','Ping','#16a34a')"><div class="ph">Ping</div><div class="pb" style="text-align:center">
+            <div class="gauge">{{ d.ping_ms!=null ? d.ping_ms+' ms' : 'timeout' }}</div>
+            <div class="chart-sm"><app-line-chart [labels]="lab()" [datasets]="pingDs()" [mini]="true"></app-line-chart></div></div></div>
+        }
+      }
+      </div>
+
+      @if (d.device_type !== 'energia') {
+      <div class="panel" style="margin-top:14px">
+        <div class="ph">Tráfico {{ trafIface() === 0 ? 'del equipo (suma de interfaces)' : 'de interfaz' }}
+          <select class="inp" style="margin-left:auto;max-width:300px;font-size:12px;padding:5px 10px" [(ngModel)]="trafSel" (ngModelChange)="onTrafChange()">
+            <option [ngValue]="0">Todo el equipo (suma)</option>
+            @for (f of myIfaces(); track f.id) { <option [ngValue]="f.id">{{ f.noc_alias || f.real_name }}</option> }
+          </select>
+        </div>
+        <div class="pb">
+          <div class="big" style="cursor:pointer" (click)="openTraf()"><app-line-chart [labels]="trafLab()" [datasets]="trafDs()" [fmt]="'gbps'"></app-line-chart></div>
+          @if (trafLab().length) {
+            <table class="zbx" style="margin-top:8px;width:100%"><thead><tr><th></th><th>last</th><th>min</th><th>avg</th><th>max</th></tr></thead><tbody>
+              <tr><td><span class="lg" style="background:#2a9d2a"></span>Bits recibidos</td><td><b>{{ g(rxStat().last) }}</b></td><td>{{ g(rxStat().min) }}</td><td>{{ g(rxStat().avg) }}</td><td>{{ g(rxStat().max) }}</td></tr>
+              <tr><td><span class="lg" style="background:#e8730c"></span>Bits enviados</td><td><b>{{ g(txStat().last) }}</b></td><td>{{ g(txStat().min) }}</td><td>{{ g(txStat().avg) }}</td><td>{{ g(txStat().max) }}</td></tr>
+              @if (trafIface() !== 0) {
+                <tr><td><span class="lg" style="background:#0b7a3b"></span>Errores de salida (pps)</td><td><b>{{ pk(outErrS().last) }}</b></td><td>{{ pk(outErrS().min) }}</td><td>{{ pk(outErrS().avg) }}</td><td>{{ pk(outErrS().max) }}</td></tr>
+                <tr><td><span class="lg" style="background:#c0392b"></span>Errores de entrada (pps)</td><td><b>{{ pk(inErrS().last) }}</b></td><td>{{ pk(inErrS().min) }}</td><td>{{ pk(inErrS().avg) }}</td><td>{{ pk(inErrS().max) }}</td></tr>
+                <tr><td><span class="lg" style="background:#e75f9c"></span>Descartes de salida (pps)</td><td><b>{{ pk(outDiscS().last) }}</b></td><td>{{ pk(outDiscS().min) }}</td><td>{{ pk(outDiscS().avg) }}</td><td>{{ pk(outDiscS().max) }}</td></tr>
+                <tr><td><span class="lg" style="background:#7c5cff"></span>Descartes de entrada (pps)</td><td><b>{{ pk(inDiscS().last) }}</b></td><td>{{ pk(inDiscS().min) }}</td><td>{{ pk(inDiscS().avg) }}</td><td>{{ pk(inDiscS().max) }}</td></tr>
+              }
+            </tbody></table>
+          } @else {
+            <div style="color:var(--muted);font-size:12.5px;padding:10px 0">Sin datos de tráfico en este rango. Verifica que el SNMP descubra interfaces (log del backend: ifaces=N) y espera 1–2 sondeos.</div>
+          }
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph">Interfaces del equipo (SNMP) <span class="mini">{{ myIfaces().length }} interfaces</span></div>
+        <table><thead><tr>
+          <th class="srt" (click)="ifSort.by('interfaz')">Interfaz{{ ifSort.arrow('interfaz') }}</th>
+          <th class="srt" (click)="ifSort.by('capacidad')">Capacidad{{ ifSort.arrow('capacidad') }}</th>
+          <th class="srt" (click)="ifSort.by('rx')">RX{{ ifSort.arrow('rx') }}</th>
+          <th class="srt" (click)="ifSort.by('tx')">TX{{ ifSort.arrow('tx') }}</th>
+          <th class="srt" (click)="ifSort.by('util')">Utilización{{ ifSort.arrow('util') }}</th>
+          <th class="srt" (click)="ifSort.by('estado')">Estado{{ ifSort.arrow('estado') }}</th>
+        </tr></thead><tbody>
+          @for (f of ifaceRows(); track f.id) {
+            <tr style="cursor:pointer" (click)="openIfaceLog(f)" title="Clic para ver el gráfico de tráfico de esta interfaz (estilo Zabbix)">
+              <td><b>{{ f.real_name }}</b></td><td>{{ cap(f.capacity_bps) }}</td><td>{{ bps(f.rx_bps) }}</td><td>{{ bps(f.tx_bps) }}</td>
+              <td>@if (f.status==='up') { <span class="ubar"><i [style.width.%]="f.util_percent" [style.background]="utilColor(f.util_percent)"></i></span>{{ f.util_percent }}% } @else { — }</td>
+              <td [innerHTML]="ifBadge(f.status)"></td></tr>
+          } @empty {
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin interfaces aún. Si el equipo tiene SNMP habilitado aparecerán en el próximo sondeo.</td></tr>
+          }
+        </tbody></table>
+      </div>
+      }
+
+      @if (showEdit()) {
+        <div class="overlay on" (click)="showEdit.set(false)"></div>
+        <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="showEdit.set(false)">
+          <div class="panel" style="width:580px;max-width:94vw" (click)="$event.stopPropagation()">
+            <div class="ph">Editar equipo · configuración</div>
+            <div class="pb" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="grid-column:1/3"><label class="k">Nombre NOC</label><input class="inp" style="width:100%" [(ngModel)]="ef.name"></div>
+              @if (ef.device_type === 'olt') {
+                <div style="grid-column:1/3"><label class="k">Tipo de OLT</label>
+                  <select class="inp" style="width:100%" [(ngModel)]="ef.id_red_olt_marca" (ngModelChange)="applyMarca($event)">
+                    <option [ngValue]="undefined">— Selecciona la marca —</option>
+                    @for (m of marcas(); track m.idRedOltMarca) {
+                      <option [ngValue]="m.idRedOltMarca">{{ m.marca }}</option>
+                    }
+                  </select>
+                </div>
+              } @else {
+                <div><label class="k" title="La marca se elige de la lista. Un vendor mal escrito deja al equipo sin CPU ni memoria.">Marca</label><button type="button" class="inp" style="width:100%;text-align:left;cursor:pointer" (click)="showMarca.set(true)">{{ ef.vendor || '— Elegir marca —' }}</button></div>
+                <div><label class="k">Modelo</label><input class="inp" style="width:100%" [(ngModel)]="ef.model"></div>
+              }
+              <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
+              <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="ef.zone"></div>
+              <div><label class="k">IP de gestión</label><input class="inp" style="width:100%" [(ngModel)]="ef.ip_address"></div>
+              <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="ef.snmp_version"><option value="v2c">v2c</option><option value="v3">v3</option></select></div>
+              <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="ef.snmp_community"></div>
+              <div><label class="k">Puerto SNMP</label><input class="inp" type="number" style="width:100%" [(ngModel)]="ef.snmp_port"></div>
+              <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.snmp_enabled"> <span>Habilitar SNMP</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.mon_temp"> <span>Monitorear temperatura</span></div>
+              <div style="grid-column:1/3;display:flex;justify-content:flex-end">
+                <button type="button" class="btn ghost sm" (click)="probarSnmp()" [disabled]="probandoSnmp()" title="Consulta sysName al equipo con esta IP, puerto, community y versión. Dice si contesta o no, sin esperar al próximo barrido."><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button>
+              </div>
+
+              @if (ef.device_type === 'olt') {
+                <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.telnet_user"></div>
+                <div><label class="k">Telnet clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="ef.telnet_pass" placeholder="(sin cambios)"></div>
+                <div><label class="k">Telnet puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.telnet_port" placeholder="23"></div>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.snmp_poll_enabled"> <span>Barrido SNMP automático</span></div>
+                <div><label class="k">Intervalo barrido (seg)</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.snmp_poll_seconds" placeholder="300"></div>
+              }
+
+              @if (ef.device_type !== 'olt') {
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH (para respaldo de configuración)</div>
+                <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.ssh_user"></div>
+                <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="ef.ssh_pass" [placeholder]="ef.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
+                <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.ssh_port" placeholder="22"></div>
+
+                <!-- Puerto aparte del SSH: uno es donde se toca el timbre, el otro por donde se entra. -->
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Latido TCP (para detectar la caída rápido)</div>
+                <div style="grid-column:1/3">
+                  <label class="k" title="El NOC abre una conexión a este puerto cada 10 s y la cierra enseguida: no entra al equipo ni gasta una sesión. Sirve cualquier puerto que esté escuchando — Winbox, SSH, el que uses. Vacío = sin latido: el equipo se juzga por ping (ventana de 3 min) como hasta ahora.">Puerto del latido</label>
+                  <input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="vacío = sin latido (se juzga por ping)">
+                </div>
+              @if (ef.device_type === 'energia') {
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Breaker WiFi (Tuya / Smart Life)</div>
+                <div><label class="k" title="El Device ID que muestra el wizard de tinytuya. Es lo unico que necesita el NOC para saber que aparato es este. La local key NO se guarda en la base: vive solo en la maquina que lee.">ID de Tuya</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id" placeholder="id del aparato (no la clave)"></div>
+                <div><label class="k" title="La MAC no cambia nunca. Estos equipos toman IP por DHCP y vuelven de un corte con otra: la IP es por donde se le habla hoy, no quien es.">MAC</label>
+                  <input class="inp" style="width:100%" [(ngModel)]="ef.mac" placeholder="30-48-7D-..."></div>
+                <div class="ayuda">
+                  Con el ID cargado, el lector local empieza a traer <b>voltaje, corriente y consumo</b> en la proxima vuelta,
+                  y esas lecturas tambien cuentan como latido. El puerto del latido para estos equipos es el <b>6668</b>.
+                </div>
+              }
+
+              }
+            </div>
+            <div class="ph" style="border-top:1px solid var(--border);border-bottom:none">
+              <button class="btn ghost" style="color:var(--red)" (click)="removeDevice()"><i class="pi pi-trash"></i> Eliminar equipo</button>
+              <span style="margin-left:auto;display:flex;gap:10px">
+                <button class="btn ghost" (click)="showEdit.set(false)">Cancelar</button>
+                <button class="btn" (click)="saveEdit()">Guardar cambios</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+      @if (showMarca()) {
+        <div class="overlay on" style="z-index:70" (click)="showMarca.set(false)"></div>
+        <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:71" (click)="showMarca.set(false)">
+          <div class="panel" style="width:340px;max-width:92vw" (click)="$event.stopPropagation()">
+            <div class="ph">Marca del equipo</div>
+            <div class="pb" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto">
+              @for (m of marcaOpts(); track m) {
+                <button type="button" class="btn ghost" [class.on]="m === ef.vendor" style="justify-content:flex-start" (click)="elegirMarca(m)">{{ m }}</button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+      @if (showLog()) {
+        <div class="overlay on" (click)="showLog.set(false)"></div>
+        <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60" (click)="showLog.set(false)">
+          <div class="panel" style="width:760px;max-width:95vw" (click)="$event.stopPropagation()">
+            <div class="ph">{{ logTitle() }} <button class="btn sm ghost" (click)="showLog.set(false)">×</button></div>
+            <div class="pb">
+              <div style="height:230px"><app-line-chart [labels]="logLab()" [datasets]="logDs()" [fmt]="logFmt()"></app-line-chart></div>
+              <h4 style="font-size:13px;margin:14px 0 8px">Registro histórico</h4>
+              <div style="max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:9px">
+                @for (l of logList(); track $index) {
+                  <div style="display:flex;gap:12px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;font-family:'Consolas',monospace">
+                    <span style="color:var(--muted)">{{ l.t }}</span><span>{{ l.v }}</span>
+                  </div>
+                } @empty {
+                  <div style="padding:14px;color:var(--muted)">Sin datos en este rango todavía. La recolección los irá llenando.</div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="empty"><span class="dlg-ic load"><i class="pi pi-spinner"></i></span><div>Cargando equipo…</div></div>
+    }
+
+    @if (testing()) {
+      <div class="overlay on" style="z-index:90"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91">
+        <div class="panel" style="width:380px;text-align:center">
+          <div class="pb" style="padding:32px 24px">
+            <div class="dlg-ic load"><i class="pi pi-spinner"></i></div>
+            <div style="font-weight:600;font-size:15px;line-height:1.7">Probando conexión Telnet<br>Espere Por Favor</div>
+          </div>
+        </div>
+      </div>
+    }
+    @if (saveErr()) {
+      <div class="overlay on" style="z-index:96" (click)="saveErr.set('')"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:97" (click)="saveErr.set('')">
+        <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
+          <div class="pb" style="padding:28px 24px">
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
+            <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">No se pudieron guardar los cambios</div>
+            <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ saveErr() }}</div>
+            <div style="display:flex;justify-content:center;margin-top:16px">
+              <button class="btn" (click)="saveErr.set('')">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+    @if (testErr()) {
+      <div class="overlay on" style="z-index:90" (click)="testErr.set('')"></div>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:91" (click)="testErr.set('')">
+        <div class="panel" style="width:440px;text-align:center" (click)="$event.stopPropagation()">
+          <div class="pb" style="padding:28px 24px">
+            <div class="dlg-ic warn"><i class="pi pi-exclamation-triangle"></i></div>
+            <div style="font-weight:600;font-size:14px;line-height:1.7;color:var(--red)">Sin conexión Telnet a la OLT</div>
+            <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px">{{ testErr() }}</div>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:16px">
+              <button class="btn ghost" (click)="testErr.set('')">Corregir</button>
+              <button class="btn" (click)="doSaveEdit()">Guardar igual</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  `,
+})
+export class EquipoDetalle implements OnDestroy {
+  private api = inject(NocApi);
+  private notify = inject(NocNotify);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private timer: any;
+  showBack = signal(this.route.snapshot.queryParamMap.get('back') === '1');
+  cpuColor = cpuColor; upt = fmtUptime; cap = fmtCap; bps = fmtBps; g = fmtG;
+
+  id = 0;
+  dev = signal<Device | null>(null);
+  showEdit = signal(false);
+  showMarca = signal(false);   // selector de marca (nunca se escribe a mano)
+  testing = signal(false);
+  testErr = signal('');
+  saveErr = signal('');   // error al guardar (NO es un fallo de Telnet)
+  ef: any = {};
+  marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
+  showLog = signal(false);
+  logTitle = signal('');
+  logLab = signal<string[]>([]);
+  logDs = signal<any[]>([]);
+  logList = signal<{ t: string; v: string }[]>([]);
+  logFmt = signal<'' | 'gbps'>('');
+  ifaces = signal<Iface[]>([]);
+  range = signal(15);
+  countdown = signal(60);   // refresco del detalle: 60s (igual al sondeo del colector)
+  ranges = [
+    { min: 15, label: 'En vivo' },
+    { min: 1440, label: '24h' }, { min: 2880, label: '2d' }, { min: 10080, label: '7d' },
+    { min: 43200, label: '30d' }, { min: 259200, label: '6m' }, { min: 525600, label: '1a' },
+  ];
+
+  lab = signal<string[]>([]);
+  cpuDs = signal<any[]>([]); memDs = signal<any[]>([]); tempDs = signal<any[]>([]); pingDs = signal<any[]>([]);
+  trafLab = signal<string[]>([]); trafDs = signal<any[]>([]);
+  // Energia (breakers WiFi). El valor de "ahora" sale del ultimo punto de la serie: no hace
+  // falta ningun endpoint nuevo, kxt_metric_sample ya guarda estas medidas igual que el ping.
+  voltDs = signal<any[]>([]); ampDs = signal<any[]>([]); wattDs = signal<any[]>([]); releDs = signal<any[]>([]);
+  ultVolt = signal<number | null>(null);
+  ultAmp = signal<number | null>(null);
+  ultWatt = signal<number | null>(null);
+  ultRele = signal<boolean | null>(null);
+  rxStat = signal(stats([])); txStat = signal(stats([]));
+  inErrS = signal(stats([])); outErrS = signal(stats([]));
+  inDiscS = signal(stats([])); outDiscS = signal(stats([]));
+  trafIface = signal<number>(0);   // 0 = suma del equipo; >0 = id de interfaz (estilo Zabbix)
+  trafSel = 0;
+
+  constructor() {
+    this.id = +this.route.snapshot.paramMap.get('id')!;
+    // Toma SNMP INMEDIATA al entrar (no esperamos al primer salto del contador).
+    this.api.devicePoll(this.id).subscribe({ next: () => this.refrescarVivo(), error: () => {} });
+    this.api.devices().subscribe((ds) => {
+      this.dev.set(ds.find((d) => d.id === this.id) || null);
+      // Las series de energia solo se piden si el equipo ES de energia, y eso recien se sabe
+      // aca: el loadCharts() de abajo corre ANTES de que llegue esta respuesta. Sin esta
+      // linea las tarjetas quedaban vacias hasta el primer auto-refresco, casi un minuto.
+      if (this.dev()?.device_type === 'energia') this.loadCharts();
+      this.api.interfaces().subscribe((all) => {
+        this.ifaces.set(all);
+        // Default: la mejor interfaz UP con capacidad (el uplink), como en Zabbix.
+        const best = this.bestIface(all.filter((f) => f.device_name === this.dev()?.name));
+        if (this.trafIface() === 0 && best) {
+          this.trafSel = best.id;
+          this.trafIface.set(best.id);
+          this.loadCharts();
+        }
+      });
+    });
+    this.loadCharts();
+    this.api.catalogoMarcas().subscribe((m) => this.marcas.set(m || []));
+    // Auto-refresco en vivo con cuenta regresiva de 1s (refresca gráficos + interfaces).
+    this.timer = setInterval(() => {
+      const c = this.countdown() - 1;
+      if (c <= 0) {
+        this.countdown.set(60);
+        // El contador FUERZA una toma SNMP real del equipo y recién ahí re-lee, así actualiza datos
+        // de verdad (no solo re-muestra lo cacheado). Si el sondeo falla, re-lee igual.
+        this.api.devicePoll(this.id).subscribe({ next: () => this.refrescarVivo(), error: () => this.refrescarVivo() });
+      } else this.countdown.set(c);
+    }, 1000);
+  }
+
+  ngOnDestroy(): void { clearInterval(this.timer); }
+
+  myIfaces(): Iface[] {
+    const name = this.dev()?.name;
+    return this.ifaces().filter((f) => f.device_name === name);
+  }
+
+  ifSort = new TableSort<Iface>({
+    interfaz: (f) => f.real_name,
+    capacidad: (f) => f.capacity_bps,
+    rx: (f) => f.rx_bps,
+    tx: (f) => f.tx_bps,
+    util: (f) => f.util_percent,
+    estado: (f) => f.status,
+  }, 'interfaz');
+
+  /**
+   * Interfaces del equipo, sin las que no tienen nombre.
+   *
+   * <p>Si el agente SNMP no devolvio ifName ni ifDescr, la fila no se puede identificar
+   * ni buscar: mostrarla solo ensucia. La fila sigue existiendo en la base —su id lo
+   * guardan los paneles del dashboard y el historico— pero no se lista.</p>
+   */
+  ifaceRows(): Iface[] {
+    return this.ifSort.apply(this.myIfaces().filter((f) => (f.real_name || f.noc_alias || '').trim()));
+  }
+
+  setRange(min: number) { this.range.set(min); this.loadCharts(); }
+
+  /** Re-lectura tras el sondeo forzado: detalle + interfaces + gráficos. */
+  private refrescarVivo() {
+    this.loadCharts();
+    this.api.devices().subscribe((ds) => this.dev.set(ds.find((d) => d.id === this.id) || null));
+    this.api.interfaces().subscribe((all) => this.ifaces.set(all));
+  }
+
+  /**
+   * Color del voltaje. 120 V nominal: la norma admite +-10% (108-132). Fuera de 110-128 es
+   * para mirar; fuera de 105-132, para ir al nodo antes de que se queme una fuente.
+   */
+  voltColor(v: number | null) {
+    if (v == null) return 'var(--muted)';
+    if (v < 105 || v > 132) return 'var(--red)';
+    if (v < 110 || v > 128) return 'var(--amber)';
+    return 'var(--green)';
+  }
+
+  private loadCharts() {
+    const id = this.id, r = this.range();
+    const pad = r !== 15;   // 'En vivo' (15) sin relleno; rangos fijos rellenan el eje (con spanGaps la línea no cae a 0).
+    const nv = (v: any) => (v == null ? null : +v);
+    this.api.deviceMetric(id, 'cpu_percent', r, 60, pad).subscribe((p) => { this.lab.set(p.map((x) => x.t)); this.cpuDs.set([areaDs('CPU', '#dc2626', p.map((x) => nv(x.v)))]); });
+    this.api.deviceMetric(id, 'memory_percent', r, 60, pad).subscribe((p) => this.memDs.set([areaDs('Mem', '#2563eb', p.map((x) => nv(x.v)))]));
+    this.api.deviceMetric(id, 'temperature_celsius', r, 60, pad).subscribe((p) => this.tempDs.set([areaDs('Temp', '#d97706', p.map((x) => nv(x.v)))]));
+    this.api.deviceMetric(id, 'ping_ms', r, 60, pad).subscribe((p) => this.pingDs.set([areaDs('Ping', '#16a34a', p.map((x) => nv(x.v)))]));
+    // Solo para los breakers: pedir estas cuatro series para un MikroTik seria pedir cuatro
+    // listas vacias en cada carga de pantalla.
+    if (this.dev()?.device_type === 'energia') {
+      const ult = (p: any[]) => {
+        const v = p.map((x) => nv(x.v)).filter((x) => x != null) as number[];
+        return v.length ? v[v.length - 1] : null;
+      };
+      this.api.deviceMetric(id, 'voltage_v', r, 60, pad).subscribe((p) => { this.lab.set(p.map((x) => x.t)); this.voltDs.set([areaDs('Voltaje', '#7b0061', p.map((x) => nv(x.v)))]); this.ultVolt.set(ult(p)); });
+      this.api.deviceMetric(id, 'current_a', r, 60, pad).subscribe((p) => { this.ampDs.set([areaDs('Corriente', '#00b9eb', p.map((x) => nv(x.v)))]); this.ultAmp.set(ult(p)); });
+      this.api.deviceMetric(id, 'power_w', r, 60, pad).subscribe((p) => { this.wattDs.set([areaDs('Consumo', '#ea580c', p.map((x) => nv(x.v)))]); this.ultWatt.set(ult(p)); });
+      this.api.deviceMetric(id, 'relay_on', r, 60, pad).subscribe((p) => { this.releDs.set([areaDs('Relé', '#00ac4a', p.map((x) => nv(x.v)))]); const u = ult(p); this.ultRele.set(u == null ? null : u === 1); });
+    }
+    const st = (p: any[], k: string) => stats(p.map((x) => nv(x[k])).filter((v) => v != null) as number[]);
+    const applyTraf = (p: any[]) => {
+      const rx = p.map((x) => nv(x.rx)), tx = p.map((x) => nv(x.tx));
+      this.trafLab.set(p.map((x) => x.t));
+      this.trafDs.set(zabbixDs(rx, tx));
+      this.rxStat.set(stats(rx.filter((v) => v != null) as number[]));
+      this.txStat.set(stats(tx.filter((v) => v != null) as number[]));
+      this.inErrS.set(st(p, 'in_err')); this.outErrS.set(st(p, 'out_err'));
+      this.inDiscS.set(st(p, 'in_disc')); this.outDiscS.set(st(p, 'out_disc'));
+    };
+    if (this.trafIface() === 0) this.api.deviceTraffic(id, r, 60, pad).subscribe(applyTraf);
+    else this.api.interfaceTraffic(this.trafIface(), r, 60, pad).subscribe(applyTraf);
+  }
+
+  /** Mejor interfaz para graficar por defecto: UP, con más capacidad (excluye loopback/bridges vacíos). */
+  private bestIface(list: Iface[]): Iface | null {
+    if (!list.length) return null;
+    const up = list.filter((f) => f.status === 'up' && !/^(lo|bridge)/i.test(f.real_name || ''));
+    const pool = up.length ? up : list;
+    // Arranca en la interfaz con MÁS tráfico real (uplink); si empatan en 0, la de mayor capacidad.
+    return [...pool].sort((a, b) =>
+      ((b.rx_bps + b.tx_bps) - (a.rx_bps + a.tx_bps)) || (b.capacity_bps - a.capacity_bps))[0];
+  }
+
+  onTrafChange() { this.trafIface.set(this.trafSel); this.loadCharts(); }
+  /** Abre el modal grande del tráfico actual (equipo o interfaz seleccionada). */
+  openTraf() {
+    if (this.trafIface() === 0) { this.openLog('traffic', 'Tráfico del equipo', '#2a9d2a'); return; }
+    const f = this.myIfaces().find((x) => x.id === this.trafIface());
+    if (f) this.openIfaceLog(f);
+  }
+
+  rangeLabel() { return this.ranges.find((r) => r.min === this.range())?.label || ''; }
+
+  /** Gráfico de tráfico de UNA interfaz (estilo Zabbix): RX área verde, TX línea roja, min/avg/máx. */
+  openIfaceLog(f: Iface) {
+    this.logTitle.set(`${f.noc_alias || f.real_name} — tráfico (${this.rangeLabel()})`);
+    this.showLog.set(true);
+    this.logFmt.set('gbps');
+    this.logLab.set([]); this.logDs.set([]); this.logList.set([]);
+    const pad = this.range() !== 15;
+    const nv = (v: any) => (v == null ? null : +v);
+    this.api.interfaceTraffic(f.id, this.range(), 120, pad).subscribe((p) => {
+      this.logLab.set(p.map((x) => x.t));
+      this.logDs.set(zabbixDs(p.map((x) => nv(x.rx)), p.map((x) => nv(x.tx))));
+      this.logList.set(p.slice().reverse().filter((x) => x.rx != null || x.tx != null)
+        .map((x) => ({ t: x.t, v: `RX ${(+x.rx! || 0).toFixed(2)} Gbps · TX ${(+x.tx! || 0).toFixed(2)} Gbps` })));
+    });
+  }
+
+  openLog(metric: string, label: string, color: string) {
+    this.logTitle.set(`${this.dev()?.name} · ${label} — histórico (${this.rangeLabel()})`);
+    this.showLog.set(true);
+    this.logFmt.set(metric === 'traffic' ? 'gbps' : '');
+    this.logLab.set([]); this.logDs.set([]); this.logList.set([]);
+    const pad = this.range() !== 15;
+    const nv = (v: any) => (v == null ? null : +v);
+    if (metric === 'traffic') {
+      this.api.deviceTraffic(this.id, this.range(), 120, pad).subscribe((p) => {
+        this.logLab.set(p.map((x) => x.t));
+        this.logDs.set(zabbixDs(p.map((x) => nv(x.rx)), p.map((x) => nv(x.tx))));
+        this.logList.set(p.slice().reverse().filter((x) => x.rx != null || x.tx != null)
+          .map((x) => ({ t: x.t, v: `RX ${(+x.rx! || 0).toFixed(2)} Gbps · TX ${(+x.tx! || 0).toFixed(2)} Gbps` })));
+      });
+    } else {
+      this.api.deviceMetric(this.id, metric, this.range(), 120, pad).subscribe((p) => {
+        this.logLab.set(p.map((x) => x.t));
+        this.logDs.set([areaDs(label, color, p.map((x) => nv(x.v)))]);
+        this.logList.set(p.slice().reverse().filter((x) => x.v != null).map((x) => ({ t: x.t, v: String(x.v) })));
+      });
+    }
+  }
+
+  openEdit(d: Device) {
+    this.ef = { ...d };
+    this.showEdit.set(true);
+    // Si es OLT, prefilea la config Telnet + barrido desde su fila en kxt_olt.
+    if (d.device_type === 'olt') {
+      this.api.zteOlts().subscribe((olts) => {
+        // Emparejar por NOMBRE (único), NO por host: varias OLT comparten IP y por host
+        // agarraba la fila equivocada -> los datos "no quedaban" al reabrir.
+        const o = olts.find((x) => x.name === d.name) || olts.find((x) => x.host === d.ip_address);
+        if (o) {
+          this.ef.telnet_user = o.telnetUser;
+          this.ef.telnet_port = o.telnetPort;
+          this.ef.snmp_poll_enabled = o.snmpPollEnabled;
+          this.ef.snmp_poll_seconds = o.snmpPollSeconds;
+          // La community que usa el MOTOR vive en kxt_olt; mostrar esa.
+          if (o.snmpCommunity) this.ef.snmp_community = o.snmpCommunity;
+          // Preselecciona el perfil del catálogo (Tipo de OLT) si ya está asignado.
+          this.ef.id_red_olt_marca = o.idRedOltMarca ?? undefined;
+          if (o.softwareVersion) this.ef.software_version = o.softwareVersion;
+        }
+      });
+    } else {
+      // MikroTik/core/borde: prefila credenciales SSH (para el módulo Backup).
+      this.api.deviceSsh(d.id).subscribe((r: any) => {
+        this.ef.ssh_user = r?.ssh_user || '';
+        this.ef.ssh_port = r?.ssh_port || 22;
+        // Sin "|| algo": null significa SIN latido, y es un valor valido que hay que poder dejar.
+        this.ef.latido_port = r?.latido_port ?? null;
+        this.ef.tuya_id = r?.tuya_id ?? '';
+        this.ef.mac = r?.mac ?? '';
+        this.ef.ssh_pass_set = !!r?.ssh_pass_set;
+      });
+    }
+  }
+
+  /**
+   * Marcas disponibles: la lista oficial mas lo que ya tenga el equipo, para no
+   * perder un vendor historico. Nunca hay campo libre: el vendor es la llave con
+   * la que el monitor decide que OIDs consultar.
+   */
+  marcaOpts() { return opcionesMarca([this.ef?.vendor, this.dev()?.vendor]); }
+  elegirMarca(m: string) { this.ef.vendor = m; this.showMarca.set(false); }
+
+  probandoSnmp = signal(false);
+  /**
+   * Prueba SNMP en vivo con lo que hay AHORA en el formulario (IP, puerto, community,
+   * version). Responde de una si el equipo contesta o no, en vez de guardar y esperar
+   * al proximo barrido para adivinar por que las tarjetas quedaron vacias.
+   */
+  probarSnmp() {
+    if (!this.ef.ip_address) { this.notify.error('Escribe la IP del equipo antes de probar SNMP.'); return; }
+    this.probandoSnmp.set(true);
+    this.api.testSnmp({ host: this.ef.ip_address, port: this.ef.snmp_port || 161,
+                        community: this.ef.snmp_community || 'public', version: this.ef.snmp_version || 'v2c' })
+      .subscribe({
+        next: (r: any) => {
+          this.probandoSnmp.set(false);
+          if (r?.ok) this.notify.ok((r.sysName ? r.sysName + '\n' : '') + 'El equipo responde por SNMP con estos datos.', 'SNMP OK');
+          else this.notify.error(r?.error || 'El equipo no respondio por SNMP.', 'SNMP sin respuesta');
+        },
+        error: (e: any) => { this.probandoSnmp.set(false); this.notify.error(e?.message || 'No se pudo ejecutar la prueba SNMP.'); },
+      });
+  }
+
+  /** Al elegir la marca del ERP, guarda su id y refleja el nombre en vendor (llave del motor). */
+  applyMarca(id: any) {
+    const m = this.marcas().find((x) => x.idRedOltMarca === id);
+    if (!m) return;
+    this.ef.vendor = m.marca;
+  }
+  saveEdit() {
+    // Si es OLT y se ingresaron credenciales Telnet, validar la conexión antes de guardar.
+    if (!this.ef.id && this.ef.device_type === 'olt' && this.ef.telnet_user) {   // detalle = siempre EDICION -> no se prueba Telnet (solo al AGREGAR)
+      this.testing.set(true); this.testErr.set('');
+      this.api.testTelnet({ host: this.ef.ip_address, port: this.ef.telnet_port || 23, user: this.ef.telnet_user, pass: this.ef.telnet_pass })
+        .subscribe({
+          next: (r: any) => {
+            this.testing.set(false);
+            if (r?.ok) this.doSaveEdit();
+            else this.testErr.set(r?.error || 'No se pudo conectar por Telnet a la OLT.');
+          },
+          error: () => { this.testing.set(false); this.testErr.set('No se pudo probar la conexión Telnet.'); },
+        });
+    } else {
+      this.doSaveEdit();
+    }
+  }
+
+  doSaveEdit() {
+    this.saveErr.set('');
+    this.api.updateDevice(this.id, this.ef).subscribe({
+      next: () => {
+        this.showEdit.set(false); this.testErr.set('');
+        this.api.devices().subscribe((ds) => this.dev.set(ds.find((x) => x.id === this.id) || null));
+      },
+      // Antes el error no se capturaba: el guardado fallaba en silencio y solo quedaba
+      // rastro en la consola del navegador.
+      error: (e: any) => {
+        this.testErr.set('');
+        this.saveErr.set(e?.message || 'No se pudieron guardar los cambios.');
+      },
+    });
+  }
+  back() { this.router.navigate(['/app/monitoreo/equipos']); }
+  removeDevice() {
+    if (!confirm('¿Eliminar este equipo y todos sus datos históricos?')) return;
+    this.api.deleteDevice(this.id).subscribe(() => this.router.navigate(['/app/monitoreo/equipos']));
+  }
+
+  /** Formatea paquetes/seg (errores/descartes) estilo Zabbix. */
+  pk(v: number): string {
+    if (v == null || v < 0.005) return '0';
+    return v < 10 ? v.toFixed(2) : Math.round(v).toString();
+  }
+  utilColor(u: number) { return u >= 90 ? '#dc2626' : u >= 80 ? '#d97706' : '#16a34a'; }
+  /**
+   * Cuanto hace que el equipo respondio, por ping o por SNMP.
+   *
+   * <p>Antes esto se deducia del estado ("up" -> "hace instantes"), que no es lo mismo:
+   * un equipo puede estar caido AHORA y haber respondido hace cinco minutos, y eso es
+   * justo lo que uno necesita saber cuando algo se cae.</p>
+   */
+  visto(iso: string | null | undefined): string {
+    if (!iso) return 'nunca respondió';
+    const seg = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (isNaN(seg)) return '—';
+    if (seg < 90) return 'hace instantes';
+    const min = Math.round(seg / 60);
+    if (min < 60) return 'hace ' + min + ' min';
+    const h = Math.round(min / 60);
+    if (h < 48) return 'hace ' + h + ' h';
+    return 'hace ' + Math.round(h / 24) + ' días';
+  }
+
+  ifBadge(s: string) { return s === 'up' ? '<span class="badge b-up">UP</span>' : s === 'down' ? '<span class="badge b-down">DOWN</span>' : '<span class="badge b-maint">UNKNOWN</span>'; }
+}

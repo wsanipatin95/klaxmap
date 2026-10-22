@@ -19,7 +19,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <h2 style="font-size:20px">{{ d.name }}</h2>
         <span class="badge" [class.b-up]="d.status==='up'" [class.b-down]="d.status==='down'" [class.b-maint]="d.status!=='up'&&d.status!=='down'">{{ d.status.toUpperCase() }}</span>
-        @if (d.snmp_enabled) { <span class="badge b-maint">SNMP</span> }
+        @if (d.snmp_enabled && d.device_type !== 'energia') { <span class="badge b-maint">SNMP</span> }
         <span class="en-vivo" style="margin-left:auto;font-size:12px"><span class="st"></span> En vivo · {{ countdown() }} s</span>
         <button class="btn ghost" (click)="openEdit(d)"><i class="pi pi-pencil"></i> Editar equipo</button>
       </div>
@@ -28,8 +28,13 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
         <div class="m"><div class="k">Vendor / Modelo</div><div class="v">{{ d.vendor }} / {{ d.model || '—' }}</div></div>
         <div class="m"><div class="k">Zona</div><div class="v">{{ d.zone || '—' }}</div></div>
         <div class="m"><div class="k">IP</div><div class="v mono">{{ d.ip_address }}</div></div>
-        <div class="m"><div class="k">Nombre SNMP</div><div class="v">{{ d.sys_name || '—' }}</div></div>
-        <div class="m"><div class="k">Uptime</div><div class="v">{{ upt(d.uptime_seconds) }}</div></div>
+        @if (d.device_type === 'energia') {
+          <div class="m"><div class="k">Puerto</div><div class="v mono">{{ $any(d).latido_port || '—' }}</div></div>
+          <div class="m"><div class="k">MAC</div><div class="v mono">{{ $any(d).mac || '—' }}</div></div>
+        } @else {
+          <div class="m"><div class="k">Nombre SNMP</div><div class="v">{{ d.sys_name || '—' }}</div></div>
+          <div class="m"><div class="k">Uptime</div><div class="v">{{ upt(d.uptime_seconds) }}</div></div>
+        }
         <div class="m"><div class="k">Último visto</div><div class="v" [title]="d.last_seen_at || 'nunca respondió'">{{ visto(d.last_seen_at) }}</div></div>
       </div>
 
@@ -161,14 +166,20 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
               <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
               <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="ef.zone"></div>
               <div><label class="k">IP de gestión</label><input class="inp" style="width:100%" [(ngModel)]="ef.ip_address"></div>
-              <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="ef.snmp_version"><option value="v2c">v2c</option><option value="v3">v3</option></select></div>
-              <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="ef.snmp_community"></div>
-              <div><label class="k">Puerto SNMP</label><input class="inp" type="number" style="width:100%" [(ngModel)]="ef.snmp_port"></div>
-              <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.snmp_enabled"> <span>Habilitar SNMP</span></div>
-              <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.mon_temp"> <span>Monitorear temperatura</span></div>
-              <div style="grid-column:1/3;display:flex;justify-content:flex-end">
-                <button type="button" class="btn ghost sm" (click)="probarSnmp()" [disabled]="probandoSnmp()" title="Consulta sysName al equipo con esta IP, puerto, community y versión. Dice si contesta o no, sin esperar al próximo barrido."><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button>
-              </div>
+              @if (ef.device_type === 'energia') {
+                <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="6668"></div>
+                <div><label class="k">MAC</label><input class="inp" style="width:100%" [(ngModel)]="ef.mac" placeholder="30:48:7D:3A:F1:00"></div>
+                <div style="grid-column:1/3"><label class="k">ID de Tuya</label><input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id"></div>
+              } @else {
+                <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="ef.snmp_version"><option value="v2c">v2c</option><option value="v3">v3</option></select></div>
+                <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="ef.snmp_community"></div>
+                <div><label class="k">Puerto SNMP</label><input class="inp" type="number" style="width:100%" [(ngModel)]="ef.snmp_port"></div>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.snmp_enabled"> <span>Habilitar SNMP</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:20px"><input type="checkbox" [(ngModel)]="ef.mon_temp"> <span>Monitorear temperatura</span></div>
+                <div style="grid-column:1/3;display:flex;justify-content:flex-end">
+                  <button type="button" class="btn ghost sm" (click)="probarSnmp()" [disabled]="probandoSnmp()"><i class="pi pi-bolt"></i> {{ probandoSnmp() ? 'Probando…' : 'Probar SNMP' }}</button>
+                </div>
+              }
 
               @if (ef.device_type === 'olt') {
                 <div><label class="k">Telnet usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.telnet_user"></div>
@@ -178,30 +189,12 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
                 <div><label class="k">Intervalo barrido (seg)</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.snmp_poll_seconds" placeholder="300"></div>
               }
 
-              @if (ef.device_type !== 'olt') {
-                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH (para respaldo de configuración)</div>
+              @if (ef.device_type === 'core' || ef.device_type === 'borde') {
+                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Acceso SSH</div>
                 <div><label class="k">SSH usuario</label><input class="inp" style="width:100%" [(ngModel)]="ef.ssh_user"></div>
                 <div><label class="k">SSH clave</label><input type="password" class="inp" style="width:100%" [(ngModel)]="ef.ssh_pass" [placeholder]="ef.ssh_pass_set ? '•••••• (guardada)' : ''"></div>
                 <div><label class="k">SSH puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.ssh_port" placeholder="22"></div>
-
-                <!-- Puerto aparte del SSH: uno es donde se toca el timbre, el otro por donde se entra. -->
-                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Latido TCP (para detectar la caída rápido)</div>
-                <div style="grid-column:1/3">
-                  <label class="k" title="El NOC abre una conexión a este puerto cada 10 s y la cierra enseguida: no entra al equipo ni gasta una sesión. Sirve cualquier puerto que esté escuchando — Winbox, SSH, el que uses. Vacío = sin latido: el equipo se juzga por ping (ventana de 3 min) como hasta ahora.">Puerto del latido</label>
-                  <input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="vacío = sin latido (se juzga por ping)">
-                </div>
-              @if (ef.device_type === 'energia') {
-                <div style="grid-column:1/3;font-weight:700;color:var(--muted);font-size:12px;border-top:1px dashed var(--border);padding-top:10px">Breaker WiFi (Tuya / Smart Life)</div>
-                <div><label class="k" title="El Device ID que muestra el wizard de tinytuya. Es lo unico que necesita el NOC para saber que aparato es este. La local key NO se guarda en la base: vive solo en la maquina que lee.">ID de Tuya</label>
-                  <input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id" placeholder="id del aparato (no la clave)"></div>
-                <div><label class="k" title="La MAC no cambia nunca. Estos equipos toman IP por DHCP y vuelven de un corte con otra: la IP es por donde se le habla hoy, no quien es.">MAC</label>
-                  <input class="inp" style="width:100%" [(ngModel)]="ef.mac" placeholder="30-48-7D-..."></div>
-                <div class="ayuda">
-                  Con el ID cargado, el lector local empieza a traer <b>voltaje, corriente y consumo</b> en la proxima vuelta,
-                  y esas lecturas tambien cuentan como latido. El puerto del latido para estos equipos es el <b>6668</b>.
-                </div>
-              }
-
+                <div><label class="k">Puerto del latido</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port"></div>
               }
             </div>
             <div class="ph" style="border-top:1px solid var(--border);border-bottom:none">
@@ -610,6 +603,7 @@ export class EquipoDetalle implements OnDestroy {
 
   doSaveEdit() {
     this.saveErr.set('');
+    if (this.ef.device_type === 'energia') { this.ef.snmp_enabled = false; this.ef.mon_temp = false; }
     this.api.updateDevice(this.id, this.ef).subscribe({
       next: () => {
         this.showEdit.set(false); this.testErr.set('');
