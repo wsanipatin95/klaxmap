@@ -1,12 +1,15 @@
 import { Component, signal, inject, effect, HostListener, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NocApi } from '../services/noc-api';
+import { Router } from '@angular/router';
+import { NocApi, Sucursal } from '../services/noc-api';
 
 interface TopoNode {
   id: number; name: string; device_type: string; ip_address: string; status: string;
   zone: string; cidr: string; gateway: string; vlan: number | null; mgmt_iface: string;
   topo_x: number | null; topo_y: number | null; x: number; y: number;
+  sucursal_id?: number | null; clientes?: number | null; voltaje?: number | null; rele?: number | null;
 }
+interface Aviso { key: string; sucId: number | null; nombre: string; equipos: string[]; ids: number[]; clientes: number; desde: string; }
 interface TopoLink {
   id: number; src_id: number; dst_id: number; label: string; capacity: string;
   src_port_label: string | null; src_port_role: string | null;
@@ -119,6 +122,114 @@ interface Caida { id: number; name: string; desde: string; }
     .sw input:checked + span { background:#2563eb; }
     .sw input:checked + span::after { transform:translateX(15px); }
     .sw input:focus-visible + span { box-shadow:0 0 0 3px rgba(37,99,235,.25); }
+
+    /* Selector de sucursal del panel: el .inp global le metia padding vertical y cortaba el texto. */
+    .suc-sel { height:32px; min-width:160px; padding:0 30px 0 10px; line-height:30px; font-size:13px; font-weight:600;
+      color:var(--c-ink); background:#fff; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; box-sizing:border-box; }
+    .suc-sel:focus { outline:none; border-color:#7b0061; box-shadow:0 0 0 3px rgba(123,0,97,.12); }
+
+    /* ---- Tabla de puertos compacta (sin scroll horizontal) ---- */
+    .ptab { width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px; }
+    .ptab th { text-align:left; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#94a3b8; padding:6px 5px; border-bottom:1px solid #eef2f6; }
+    .ptab td { padding:4px 5px; border-bottom:1px solid #f4f7fa; vertical-align:middle; }
+    .ptab .pn { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ptab .pn b { font-size:12.5px; color:var(--c-ink); }
+    .ptab .og { margin-left:5px; font-size:9.5px; color:#94a3b8; }
+    .ptab .okg { margin-left:5px; font-size:10px; font-weight:700; color:#15803d; }
+    .ptab input, .ptab select { width:100%; height:28px; border:1px solid #e2e8f0; border-radius:7px; padding:0 7px; font-size:12px; background:#fff; color:#334155; min-width:0; }
+    .ptab input:focus, .ptab select:focus { outline:none; border-color:#7b0061; box-shadow:0 0 0 2px rgba(123,0,97,.1); }
+    .ptab .acc { white-space:nowrap; text-align:right; }
+    .ib { width:28px; height:28px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px; margin-left:3px; }
+    .ib:hover { border-color:#94a3b8; }
+    .ib.ok { background:#7b0061; border-color:#7b0061; color:#fff; }
+    .ib.aqui { background:#2563eb; border-color:#2563eb; color:#fff; }
+    .ib.del:hover { border-color:#fca5a5; color:#dc2626; }
+
+    /* ---- Pestañas de sucursal ---- */
+    .tabs { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:0 0 10px; }
+    .tab { display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border-radius:9px; border:1px solid #e2e8f0;
+      background:#fff; color:#334155; font-size:13px; font-weight:600; cursor:pointer; }
+    .tab:hover { border-color:#c4b5c0; }
+    .tab .n { font-size:11.5px; font-weight:600; color:#64748b; background:#f1f5f9; border-radius:999px; padding:1px 7px; }
+    .tab .bad { font-size:11.5px; font-weight:700; color:#fff; background:var(--c-down); border-radius:999px; padding:1px 7px; }
+    .tab.on { background:#7b0061; border-color:#7b0061; color:#fff; }
+    .tab.on .n { background:rgba(255,255,255,.18); color:#fff; }
+    .tab.alarma:not(.on) { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+    .tab.sin:not(.on) { border-style:dashed; color:#92400e; }
+    .tab.mas { width:32px; padding:0; justify-content:center; color:#64748b; }
+    .hud-note.caida .eqs li.ir { cursor:pointer; border-radius:6px; padding:1px 4px; margin:0 -4px; }
+    .hud-note.caida .eqs li.ir:hover { background:#fee2e2; }
+    .hud-note.caida .eqs .s { color:#b45309; font-size:11px; white-space:nowrap; }
+    /* ---- (vista de tarjetas retirada) ---- */
+    .seg { display:inline-flex; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; height:30px; }
+    .seg button { border:none; background:#fff; color:var(--c-mute); font-size:12.5px; font-weight:500; padding:0 12px; cursor:pointer; }
+    .seg button + button { border-left:1px solid #e2e8f0; }
+    .seg button.on { background:#7b0061; color:#fff; }
+    .btn.tv-on { background:#0b2239; color:#fff; border-color:#0b2239; }
+    .sv { display:flex; flex-direction:column; gap:10px; height:calc(100vh - 92px); }
+    .sv-bar { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .sv-bar .sp { flex:1; }
+    .sv-stale { background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600; }
+    .sv-avisos { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+    .sv-aviso { display:inline-flex; align-items:center; gap:8px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b;
+      border-radius:10px; padding:7px 12px; font-size:12.5px; cursor:pointer; box-shadow:0 2px 8px rgba(220,38,38,.12); }
+    .sv-aviso:hover { background:#fee2e2; }
+    .sv-aviso .h { color:#b91c1c; font-size:11px; font-variant-numeric:tabular-nums; }
+    .sv-grid { flex:1; min-height:0; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:12px; overflow:auto; }
+    .sv-grid.uno { grid-template-columns:1fr; }
+    .sv-grid.con-sin { grid-auto-rows:auto; }
+    @media (max-width: 900px) { .sv-grid { grid-template-columns:1fr; grid-auto-rows:auto; } }
+    .suc { background:#fff; border:1px solid #e2e8f0; border-top:4px solid var(--c-ok); border-radius:12px; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+    .suc.bad { border-color:#fecaca; border-top-color:var(--c-down); box-shadow:0 0 0 2px rgba(220,38,38,.12); }
+    .suc.vacia { border-top-color:#cbd5e1; }
+    .suc.sin { border-top-color:#f59e0b; grid-column:1 / -1; }
+    .suc header { display:flex; align-items:center; gap:9px; padding:10px 14px; border-bottom:1px solid #f1f5f9; cursor:pointer; }
+    .suc header h3 { margin:0; font-size:15px; font-weight:700; color:var(--c-ink); }
+    .suc header .cnt { font-size:12.5px; color:var(--c-mute); font-variant-numeric:tabular-nums; }
+    .suc header .sp { flex:1; }
+    .suc .bdg { border-radius:999px; padding:2px 9px; font-size:11.5px; font-weight:700; }
+    .suc .bdg.down { background:#fee2e2; color:#b91c1c; }
+    .suc .bdg.ok { background:#dcfce7; color:#15803d; }
+    .suc .bdg.warn { background:#fef3c7; color:#92400e; }
+    .suc .bdg.mute { background:#f1f5f9; color:#64748b; }
+    .suc .mini { border:1px solid #e2e8f0; background:#fff; border-radius:7px; height:26px; padding:0 9px; font-size:11.5px; color:#475569; cursor:pointer; }
+    .suc .mini:hover { border-color:#7b0061; color:#7b0061; }
+    .suc .body { padding:8px 14px 12px; overflow:auto; scrollbar-width:thin; }
+    .tier { display:grid; grid-template-columns:62px minmax(0,1fr); gap:8px; align-items:start; padding:5px 0; }
+    .tier + .tier { border-top:1px dashed #eef2f6; }
+    .tier .tl { font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#94a3b8; padding-top:7px; }
+    .tier .eqs { display:flex; flex-wrap:wrap; gap:6px; }
+    .eq { display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; min-width:0; max-width:240px; text-align:left;
+      border:1px solid #d1fadf; background:#f6fef9; border-radius:8px; padding:5px 9px 5px 20px; position:relative; cursor:pointer; }
+    .eq::before { content:''; position:absolute; left:8px; top:11px; width:7px; height:7px; border-radius:50%; background:var(--c-ok); }
+    .eq .nm { font-size:12px; font-weight:600; color:var(--c-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    .eq .sub { font-size:10.5px; color:var(--c-mute); white-space:nowrap; }
+    .eq.down { border-color:#fecaca; background:#fef2f2; }
+    .eq.down::before { background:var(--c-down); animation:pulse 1.6s ease-out infinite; }
+    .eq.down .nm { color:#991b1b; }
+    .eq.idle { border-color:#e2e8f0; background:#f8fafc; }
+    .eq.idle::before { background:var(--c-idle); }
+    .eq.hl { box-shadow:0 0 0 3px rgba(123,0,97,.35); }
+    .eq select { margin-top:4px; height:24px; font-size:11px; border:1px solid #cbd5e1; border-radius:6px; }
+    .vacio { color:#94a3b8; font-size:12.5px; padding:14px 0; }
+
+    /* ---- Dialogo "Nueva sucursal" (en vez del prompt del navegador) ---- */
+    .md-bg { position:fixed; inset:0; z-index:6000; background:rgba(11,34,57,.35); display:flex; align-items:center; justify-content:center; }
+    .md { width:min(380px, 92vw); background:#fff; border-radius:14px; box-shadow:0 24px 60px rgba(11,34,57,.28); overflow:hidden; }
+    .md-h { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid #eef2f6; }
+    .md-h .ic { width:30px; height:30px; border-radius:9px; background:#f6e6f2; color:#7b0061; display:inline-flex; align-items:center; justify-content:center; }
+    .md-h b { font-size:14px; color:var(--c-ink); }
+    .md-h .x { margin-left:auto; border:none; background:none; color:#94a3b8; cursor:pointer; font-size:13px; width:26px; height:26px; border-radius:7px; }
+    .md-h .x:hover { background:#f1f5f9; color:var(--c-ink); }
+    .md-b { padding:14px 16px 6px; }
+    .md-b label { display:block; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#64748b; margin-bottom:5px; }
+    .md-b input { width:100%; height:36px; border:1px solid #cbd5e1; border-radius:9px; padding:0 11px; font-size:13.5px; outline:none; }
+    .md-b input:focus { border-color:#7b0061; box-shadow:0 0 0 3px rgba(123,0,97,.12); }
+    .md-b .err { margin-top:7px; color:#b91c1c; font-size:12px; }
+    .md-f { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px 14px; }
+    .md-f .ok { background:#7b0061; color:#fff; border:1px solid #7b0061; border-radius:9px; height:34px; padding:0 16px; font-weight:600; cursor:pointer; }
+    .md-f .ok:disabled { opacity:.55; cursor:default; }
+    .md-f .no { background:#fff; color:#475569; border:1px solid #e2e8f0; border-radius:9px; height:34px; padding:0 14px; cursor:pointer; }
   `],
   template: `
     <div class="wrap" [class.full]="fullscreen()">
@@ -126,6 +237,10 @@ interface Caida { id: number; name: string; desde: string; }
       <button class="ham" (click)="toggleFull()" title="Menú (Esc para salir)"><i class="pi pi-bars"></i></button>
       <h2><i class="pi pi-sitemap"></i> Topología de Red</h2>
       <span class="toolbar" style="margin-left:auto;position:relative">
+        <button class="btn ghost" (click)="agregarEquipo(sucIdSel())"><i class="pi pi-plus"></i> Equipo</button>
+        <button class="btn ghost" [class.tv-on]="tv()" (click)="toggleTv()"
+                [title]="tv() ? 'Modo TV activo: rota las sucursales y se queda en las que tengan caídas' : 'Modo TV: rotar sucursales'">
+          <i class="pi pi-desktop"></i> TV</button>
         <button class="btn ghost" (click)="importar()" title="Traer o actualizar equipos del ERP"><i class="pi pi-download"></i> Importar</button>
         <span class="autochip" [class.viejo]="datosViejos()"
               [title]="datosViejos() ? 'La pantalla dejó de recibir datos: lo que se ve es la última lectura buena, no el estado de ahora.' : 'El estado se refresca solo. El tiempo es desde la última lectura con datos.'">
@@ -198,6 +313,28 @@ interface Caida { id: number; name: string; desde: string; }
       </span>
     </div>
 
+    <div class="tabs">
+      <button class="tab" [class.on]="sucSel() === 'todas'" (click)="elegirSuc('todas')">
+        Todas <span class="n">{{ nodes().length }}</span>
+        @if (downCount()) { <span class="bad">{{ downCount() }}</span> }
+      </button>
+      @for (s of sucursales(); track s.id) {
+        @let lista = equiposDe(s.id);
+        @let caidos = caidosEn(lista);
+        <button class="tab" [class.on]="sucSel() === s.id" [class.alarma]="caidos > 0" (click)="elegirSuc(s.id)">
+          {{ s.nombre }} <span class="n">{{ lista.length }}</span>
+          @if (caidos) { <span class="bad">{{ caidos }}</span> }
+        </button>
+      }
+      @if (sinSucursal().length) {
+        <button class="tab sin" [class.on]="sucSel() === 'sin'" (click)="elegirSuc('sin')"
+                title="Equipos que todavía no tienen sucursal: ábrelos y asígnales una">
+          Sin sucursal <span class="n">{{ sinSucursal().length }}</span>
+        </button>
+      }
+      <button class="tab mas" (click)="nuevaSucursal()" title="Agregar una sucursal"><i class="pi pi-plus"></i></button>
+    </div>
+
     <div class="canvas-outer">
       <div class="hud">
         <span class="chip">Total <b>{{ nodes().length }}</b></span>
@@ -225,7 +362,10 @@ interface Caida { id: number; name: string; desde: string; }
           </div>
           <ul class="eqs">
             @for (c of caidas(); track c.id) {
-              <li><span class="n" [title]="c.name">{{ c.name }}</span><span class="h">{{ c.desde }}</span></li>
+              <li class="ir" (click)="irACaida(c.id)" title="Ir a la sucursal">
+                <span class="n" [title]="c.name">{{ c.name }}</span>
+                <span class="s">{{ sucursalDe(c.id) }}{{ clientesDe(c.id) ? ' · ' + clientesDe(c.id) + ' clientes' : '' }}</span>
+                <span class="h">{{ c.desde }}</span></li>
             }
           </ul>
           @if (audioBloqueado() && alarm().on) {
@@ -259,9 +399,16 @@ interface Caida { id: number; name: string; desde: string; }
             </symbol>
           </defs>
 
+          @for (b of bandas(); track b.label) {
+            <rect x="16" [attr.y]="b.y" [attr.width]="W - 32" [attr.height]="b.h" rx="14"
+                  [attr.fill]="b.caidos ? '#fff5f5' : '#ffffff'" [attr.stroke]="b.caidos ? '#fecaca' : '#e2e8f0'" stroke-width="1.2"
+                  style="cursor:pointer" (click)="b.id !== null ? elegirSuc(b.id) : elegirSuc('sin')"></rect>
+            <text x="34" [attr.y]="b.y + 24" font-size="14" font-weight="700" [attr.fill]="b.caidos ? '#b91c1c' : '#0b2239'">{{ b.label }}</text>
+            <text x="34" [attr.y]="b.y + 40" font-size="11" fill="#64748b">{{ b.total - b.caidos }}/{{ b.total }} online{{ b.caidos ? ' · ' + b.caidos + ' caído(s)' : '' }}</text>
+          }
           @for (l of links(); track l.id) {
-            @if (nodeById(l.src_id); as a) {
-              @if (nodeById(l.dst_id); as b) {
+            @if (visById(l.src_id); as a) {
+              @if (visById(l.dst_id); as b) {
                 <line [attr.x1]="cx(a)" [attr.y1]="cy(a)" [attr.x2]="cx(b)" [attr.y2]="cy(b)"
                       [attr.stroke]="linkColor(a,b)" stroke-width="2.4" stroke-dasharray="7 5"
                       style="cursor:pointer;pointer-events:stroke" (click)="delLink(l)"><title>{{ portInfo(l) }}</title></line>
@@ -276,8 +423,11 @@ interface Caida { id: number; name: string; desde: string; }
               }
             }
           }
-          @for (n of nodes(); track n.id) {
+          @for (n of visibles(); track n.id) {
             <g [attr.transform]="'translate(' + n.x + ',' + n.y + ')'" [style.cursor]="connectMode() ? 'pointer' : 'grab'" (mousedown)="onNodeDown($event, n)">
+              @if (resaltados().has(n.id)) {
+                <rect x="-5" y="-5" [attr.width]="NW + 10" height="74" rx="15" fill="none" stroke="#7b0061" stroke-width="3" stroke-dasharray="6 4"></rect>
+              }
               <rect [attr.width]="NW" height="64" rx="12" fill="#ffffff" [attr.stroke]="stroke(n)" [attr.stroke-width]="connectFrom() === n.id ? 3.5 : 1.6"></rect>
               <use [attr.href]="'#topo-ic-' + tipoDe(n)" x="13" y="11" width="15" height="15" [attr.fill]="stroke(n)"></use>
               <text x="34" y="22" font-size="12" font-weight="600" fill="#0b2239" [attr.textLength]="nameLen(n)" lengthAdjust="spacingAndGlyphs">{{ n.name }}</text>
@@ -297,36 +447,69 @@ interface Caida { id: number; name: string; desde: string; }
         <button class="btn sm ghost" (click)="zoomReset()" title="Restablecer"><i class="pi pi-refresh"></i></button>
       </div>
     </div>
+    @if (sucDlg()) {
+      <div class="md-bg" (click)="cerrarSucDlg()">
+        <div class="md" (click)="$event.stopPropagation()">
+          <div class="md-h">
+            <span class="ic"><i class="pi pi-building"></i></span>
+            <b>Nueva sucursal</b>
+            <button class="x" (click)="cerrarSucDlg()" title="Cerrar"><i class="pi pi-times"></i></button>
+          </div>
+          <div class="md-b">
+            <label>Nombre</label>
+            <input #sucInp [(ngModel)]="sucNombre" placeholder="Ej. Tulcán" maxlength="60"
+                   (keydown.enter)="guardarSucursal()" (keydown.escape)="cerrarSucDlg()" autofocus>
+            @if (sucErr()) { <div class="err">{{ sucErr() }}</div> }
+          </div>
+          <div class="md-f">
+            <button class="no" (click)="cerrarSucDlg()">Cancelar</button>
+            <button class="ok" [disabled]="!sucNombre.trim() || sucGuardando()" (click)="guardarSucursal()">
+              {{ sucGuardando() ? 'Guardando…' : 'Crear sucursal' }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
 
     @if (panel(); as d) {
       <div class="overlay on" style="z-index:80" (click)="panel.set(null)"></div>
       <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:81" (click)="panel.set(null)">
-        <div class="panel" style="width:min(760px,96vw);max-height:86vh;overflow:auto;border-radius:16px" (click)="$event.stopPropagation()">
-          <div class="ph">{{ d.name }} · <span style="color:var(--muted);font-weight:400">{{ d.device_type }} · {{ d.ip_address || 'sin IP' }}</span></div>
+        <div class="panel" style="width:min(860px,96vw);max-height:86vh;overflow-y:auto;overflow-x:hidden;border-radius:16px;scrollbar-width:thin" (click)="$event.stopPropagation()">
+          <div class="ph" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span>{{ d.name }} · <span style="color:var(--muted);font-weight:400">{{ d.device_type }} · {{ d.ip_address || 'sin IP' }}</span></span>
+            <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:500">
+              Sucursal
+              <select class="suc-sel" [ngModel]="d.sucursal_id ?? null" (ngModelChange)="asignar(d, $event)">
+                <option [ngValue]="null">— Sin sucursal —</option>
+                @for (s of sucursales(); track s.id) { <option [ngValue]="s.id">{{ s.nombre }}</option> }
+              </select>
+            </span>
+          </div>
           <div class="pb">
-            <table class="zbx" style="width:100%">
+            <table class="ptab">
+              <colgroup><col style="width:24%"><col style="width:92px"><col style="width:26%"><col style="width:62px"><col><col style="width:70px"></colgroup>
               <thead><tr><th>Puerto</th><th>Rol</th><th>IP</th><th>VLAN</th><th>Descripción</th><th></th></tr></thead>
               <tbody>
                 @for (p of ports(); track p.id) {
                   <tr>
-                    <td><b style="font-size:12.5px">{{ p.label }}</b> <span style="font-size:9.5px;color:var(--muted)">· {{ p.origin }}</span></td>
+                    <td class="pn" [title]="p.label + ' · ' + p.origin"><b>{{ p.label }}</b>@if (guardadoPort() === p.id) { <span class="okg"><i class="pi pi-check"></i> guardado</span> } @else if (p.origin === 'snmp') { <span class="og">snmp</span> }</td>
                     <td>
-                      <select class="inp" [(ngModel)]="p.role">
+                      <select [(ngModel)]="p.role" (ngModelChange)="savePort(p)">
                         <option value="lan">LAN</option><option value="wan">WAN</option><option value="uplink">Uplink</option>
                         <option value="trunk">Trunk</option><option value="access">Access</option><option value="mgmt">Mgmt</option>
                       </select>
                     </td>
-                    <td><input class="inp" style="width:110px" [(ngModel)]="p.ip"></td>
-                    <td><input class="inp" type="number" style="width:66px" [(ngModel)]="p.vlan"></td>
-                    <td><input class="inp" style="width:150px" [(ngModel)]="p.descr"></td>
-                    <td style="white-space:nowrap">
-                      <button class="btn sm" (click)="savePort(p)">Guardar</button>
-                      <button class="btn sm ghost" (click)="connectPort(p)"><i class="pi pi-link"></i> {{ linkFrom() && linkFrom()!.deviceId !== d.id ? 'Conectar aquí' : 'Conectar' }}</button>
-                      <button class="btn sm ghost" (click)="delPort(p)" title="Borrar puerto"><i class="pi pi-trash"></i></button>
+                    <td><input [(ngModel)]="p.ip" placeholder="—" (change)="savePort(p)" (keydown.enter)="$any($event.target).blur()"></td>
+                    <td><input type="number" [(ngModel)]="p.vlan" placeholder="—" (change)="savePort(p)" (keydown.enter)="$any($event.target).blur()"></td>
+                    <td><input [(ngModel)]="p.descr" placeholder="—" (change)="savePort(p)" (keydown.enter)="$any($event.target).blur()"></td>
+                    <td class="acc">
+                      <button class="ib" [class.aqui]="linkFrom() && linkFrom()!.deviceId !== d.id" (click)="connectPort(p)"
+                              [title]="linkFrom() && linkFrom()!.deviceId !== d.id ? 'Conectar aquí' : 'Conectar desde este puerto'"><i class="pi pi-link"></i></button>
+                      <button class="ib del" (click)="delPort(p)" title="Borrar puerto"><i class="pi pi-trash"></i></button>
                     </td>
                   </tr>
                 }
-                @if (!ports().length) { <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">Sin puertos aún. Se traen solos por SNMP; agregá los que falten.</td></tr> }
+                @if (!ports().length) { <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">Sin puertos aún. Se traen solos por SNMP; agrega los que falten.</td></tr> }
               </tbody>
             </table>
             <div style="display:flex;gap:8px;align-items:center;margin-top:12px;border-top:1px dashed var(--border);padding-top:12px;flex-wrap:wrap">
@@ -352,6 +535,171 @@ interface Caida { id: number; name: string; desde: string; }
 })
 export class Topologia implements OnInit, OnDestroy {
   private api = inject(NocApi);
+  private router = inject(Router);
+
+  // =====================================================================
+  //  VISTA POR SUCURSAL
+  //  La sucursal de cada equipo la asigna una persona (no se deduce del nombre).
+  //  Los avisos de caida se agrupan por sucursal y llevan directo a ella.
+  // =====================================================================
+  sucursales = signal<Sucursal[]>([]);
+  /** Pestaña elegida: 'todas', una sucursal (id) o 'sin' (equipos sin sucursal). */
+  sucSel = signal<number | 'todas' | 'sin'>(this.leerSuc());
+  tv = signal(false);
+  resaltados = signal<Set<number>>(new Set());
+  /** En "Todas": un recuadro por sucursal, con sus equipos adentro. */
+  bandas = signal<{ id: number | null; label: string; y: number; h: number; total: number; caidos: number }[]>([]);
+  private readonly ORDEN_TIER = ['core', 'borde', 'olt', 'energia', 'otro'];
+  private tvTimer: any = null;
+  private tvPausaHasta = 0;
+  private tvIdx = 0;
+
+  private leerSuc(): number | 'todas' | 'sin' {
+    try {
+      const v = localStorage.getItem('topo.suc');
+      if (!v || v === 'todas') return 'todas';
+      if (v === 'sin') return 'sin';
+      return Number(v) || 'todas';
+    } catch { return 'todas'; }
+  }
+  sucIdSel(): number | null { const v = this.sucSel(); return typeof v === 'number' ? v : null; }
+  elegirSuc(v: number | 'todas' | 'sin', usuario = true) {
+    this.sucSel.set(v);
+    try { localStorage.setItem('topo.suc', String(v)); } catch { /* sin storage */ }
+    if (usuario) this.pausarTv();
+    this.relayout();
+  }
+
+  esDownN(n: TopoNode) { return (n.status || '').toLowerCase() === 'down'; }
+  private tierDe(n: TopoNode): string {
+    if ((n.device_type || '').toLowerCase() === 'energia') return 'energia';
+    const t = this.tipoDe(n);
+    return t === 'servidor' ? 'otro' : t;
+  }
+  equiposDe(sucId: number | null): TopoNode[] { return this.nodes().filter((n) => (n.sucursal_id ?? null) === sucId); }
+  sinSucursal(): TopoNode[] {
+    const ids = new Set(this.sucursales().map((s) => s.id));
+    return this.nodes().filter((n) => n.sucursal_id == null || !ids.has(n.sucursal_id));
+  }
+  caidosEn(lista: TopoNode[]): number { return lista.filter((n) => this.esDownN(n)).length; }
+
+  /** Equipos de la pestaña elegida. Los enlaces se dibujan solo entre equipos visibles. */
+  visibles(): TopoNode[] {
+    const v = this.sucSel();
+    if (v === 'todas') return this.nodes();
+    if (v === 'sin') return this.sinSucursal();
+    return this.equiposDe(v);
+  }
+  visById(id: number) { return this.visibles().find((n) => n.id === id) || null; }
+
+  sucursalDe(id: number): string {
+    const n = this.nodeById(id);
+    return this.sucursales().find((s) => s.id === n?.sucursal_id)?.nombre || 'Sin sucursal';
+  }
+  clientesDe(id: number): number {
+    const n = this.nodeById(id);
+    return n && (n.device_type || '').toLowerCase() === 'olt' ? (n.clientes || 0) : 0;
+  }
+  /** Clic en un equipo caido del aviso: va a su sucursal y lo marca. */
+  irACaida(id: number) {
+    const n = this.nodeById(id);
+    const suc = n?.sucursal_id;
+    this.elegirSuc(suc != null && this.sucursales().some((s) => s.id === suc) ? suc : 'sin');
+    this.resaltados.set(new Set([id]));
+    setTimeout(() => this.resaltados.set(new Set()), 12000);
+  }
+
+  /**
+   * Acomoda la pestaña elegida. En una sucursal se respetan las posiciones que se
+   * arrastraron a mano; en "Todas" cada sucursal va en su recuadro, ordenada por nivel.
+   */
+  private relayout() {
+    const vis = this.visibles();
+    if (this.sucSel() === 'todas') this.layoutBandas(vis);
+    else { this.bandas.set([]); this.layout(vis); }
+    this.nodes.set([...this.nodes()]);
+  }
+  private layoutBandas(vis: TopoNode[]) {
+    const perRow = Math.max(1, Math.floor((this.W - 100) / (this.NW + 24)));
+    const rowH = 64 + 22;
+    const grupos: { id: number | null; label: string; eqs: TopoNode[] }[] =
+      this.sucursales().map((s) => ({ id: s.id, label: s.nombre, eqs: vis.filter((n) => n.sucursal_id === s.id) }));
+    const sin = this.sinSucursal();
+    if (sin.length) grupos.push({ id: null, label: 'Sin sucursal', eqs: sin });
+    const bandas: { id: number | null; label: string; y: number; h: number; total: number; caidos: number }[] = [];
+    let y = 62;   // debajo de los contadores de arriba
+    for (const g of grupos) {
+      if (!g.eqs.length) continue;
+      const top = y;
+      let fila = y + 56;
+      for (const t of this.ORDEN_TIER) {
+        const arr = g.eqs.filter((n) => this.tierDe(n) === t);
+        if (!arr.length) continue;
+        arr.forEach((n, i) => { n.x = 40 + (i % perRow) * (this.NW + 24); n.y = fila + Math.floor(i / perRow) * rowH; });
+        fila += Math.ceil(arr.length / perRow) * rowH;
+      }
+      const h = fila - top + 6;
+      bandas.push({ id: g.id, label: g.label, y: top, h, total: g.eqs.length, caidos: this.caidosEn(g.eqs) });
+      y = top + h + 22;
+    }
+    this.bandas.set(bandas);
+    this.H = Math.max(1000, y + 40);
+  }
+
+  abrirEquipo(n: TopoNode) { this.router.navigate(['/app/monitoreo/equipos', n.id]); }
+  agregarEquipo(sucId: number | null) {
+    this.router.navigate(['/app/monitoreo/equipos'], { queryParams: { nuevo: 1, sucursal: sucId || undefined } });
+  }
+  asignar(n: TopoNode, valor: any) {
+    const suc = valor === null || valor === '' || valor === undefined ? null : Number(valor);
+    this.api.asignarSucursal(n.id, suc).subscribe({
+      next: () => {
+        n.sucursal_id = suc;
+        this.note.set(n.name + (suc ? ' → ' + (this.sucursales().find((s) => s.id === suc)?.nombre || '') : ' sin sucursal'));
+        this.relayout();
+      },
+      error: (e: any) => this.note.set(e?.message || 'No se pudo asignar la sucursal.'),
+    });
+  }
+  sucDlg = signal(false);
+  sucErr = signal('');
+  sucGuardando = signal(false);
+  sucNombre = '';
+  nuevaSucursal() {
+    this.sucNombre = ''; this.sucErr.set(''); this.sucDlg.set(true);
+    setTimeout(() => (document.querySelector('.md-b input') as HTMLInputElement | null)?.focus());
+  }
+  cerrarSucDlg() { if (!this.sucGuardando()) this.sucDlg.set(false); }
+  guardarSucursal() {
+    const nombre = this.sucNombre.trim();
+    if (!nombre || this.sucGuardando()) return;
+    if (this.sucursales().some((s) => s.nombre.trim().toLowerCase() === nombre.toLowerCase())) {
+      this.sucErr.set('Ya existe una sucursal con ese nombre.'); return;
+    }
+    this.sucGuardando.set(true); this.sucErr.set('');
+    this.api.crearSucursal(nombre).subscribe({
+      next: () => { this.sucGuardando.set(false); this.sucDlg.set(false); this.note.set('Sucursal ' + nombre + ' creada.'); this.load(); },
+      error: (e: any) => { this.sucGuardando.set(false); this.sucErr.set(e?.message || 'No se pudo crear la sucursal.'); },
+    });
+  }
+
+  /**
+   * MODO TV. Cada 15 s pasa a la siguiente pestaña. Si hay sucursales con equipos
+   * caidos, rota SOLO entre esas. Si alguien toca la pantalla se pausa 60 s.
+   */
+  toggleTv() {
+    this.tv.update((v) => !v);
+    if (this.tvTimer) { clearInterval(this.tvTimer); this.tvTimer = null; }
+    if (this.tv()) { this.tvPausaHasta = 0; this.rotarTv(); this.tvTimer = setInterval(() => this.rotarTv(), 15000); }
+  }
+  pausarTv() { if (this.tv()) this.tvPausaHasta = Date.now() + 60000; }
+  private rotarTv() {
+    if (!this.tv() || Date.now() < this.tvPausaHasta) return;
+    const conCaidas = this.sucursales().filter((s) => this.caidosEn(this.equiposDe(s.id)) > 0).map((s) => s.id);
+    const ciclo: (number | 'todas')[] = conCaidas.length ? conCaidas : ['todas', ...this.sucursales().map((s) => s.id)];
+    this.tvIdx = (this.tvIdx + 1) % ciclo.length;
+    this.elegirSuc(ciclo[this.tvIdx], false);
+  }
   @ViewChild('svg') svgRef!: ElementRef<SVGSVGElement>;
 
   nodes = signal<TopoNode[]>([]);
@@ -415,6 +763,7 @@ export class Topologia implements OnInit, OnDestroy {
   private relojTimer: any;
   ngOnDestroy() {
     if (this.timer) clearInterval(this.timer);
+    if (this.tvTimer) clearInterval(this.tvTimer);
     if (this.relojTimer) clearInterval(this.relojTimer);
     this.pararRepeticion(); this.ponerTitulo(0);
   }
@@ -435,8 +784,9 @@ export class Topologia implements OnInit, OnDestroy {
     this.api.topologia().subscribe({
       next: (r: any) => {
         const nodes: TopoNode[] = (r?.nodes || []).map((n: any) => ({ ...n, vlan: n.vlan ?? null, x: 0, y: 0 }));
-        this.layout(nodes);
+        this.sucursales.set(r?.sucursales || []);
         this.nodes.set(nodes);
+        this.relayout();
         this.links.set(r?.links || []);
         this.evaluarCaidas(nodes);
         this.ultimaOk.set(Date.now());
@@ -690,7 +1040,8 @@ export class Topologia implements OnInit, OnDestroy {
     const n = this.downNode; const moved = this.moved;
     this.dragId = null; this.downNode = null; this.moved = false;
     if (!n) return;
-    if (moved) this.api.topoSavePos(n.id, Math.round(n.x), Math.round(n.y)).subscribe();
+    // En "Todas" el acomodo es automatico por sucursal: arrastrar ahi no se guarda.
+    if (moved) { if (this.sucSel() !== 'todas') this.api.topoSavePos(n.id, Math.round(n.x), Math.round(n.y)).subscribe(); }
     else this.openDevice(n);
   }
 
@@ -704,7 +1055,14 @@ export class Topologia implements OnInit, OnDestroy {
 
   openDevice(n: TopoNode) { this.panel.set(n); this.loadPorts(n.id); }
   loadPorts(id: number) { this.api.topoPorts(id).subscribe((p: any) => this.ports.set((p || []).map((x: any) => ({ ...x, vlan: x.vlan ?? null })))); }
-  savePort(p: Port) { this.api.topoEditPort(p.id, { label: p.label, role: p.role, ip: p.ip, vlan: p.vlan, descr: p.descr }).subscribe(() => this.note.set('Puerto ' + p.label + ' guardado.')); }
+  /** Se guarda solo: al cambiar el rol, o al salir de un campo que se edito. */
+  guardadoPort = signal<number | null>(null);
+  savePort(p: Port) {
+    this.api.topoEditPort(p.id, { label: p.label, role: p.role, ip: p.ip, vlan: p.vlan, descr: p.descr }).subscribe({
+      next: () => { this.guardadoPort.set(p.id); setTimeout(() => { if (this.guardadoPort() === p.id) this.guardadoPort.set(null); }, 1800); },
+      error: (e: any) => this.note.set(e?.message || 'No se pudo guardar el puerto ' + p.label + '.'),
+    });
+  }
   addPort() {
     const d = this.panel(); if (!d || !this.npLabel.trim()) return;
     this.api.topoAddPort({ device_id: d.id, label: this.npLabel.trim(), role: this.npRole }).subscribe(() => { this.npLabel = ''; this.loadPorts(d.id); });

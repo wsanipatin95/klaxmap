@@ -24,6 +24,10 @@ export class MapaAccesosApi {
     return this.http.post<ApiEnvelope<MapaAcceso>>(`${this.baseUrl}/guardar`, req);
   }
 
+  cambiarActivo(id: number, activo: boolean) {
+    return this.http.patch<ApiEnvelope<unknown>>(`${this.baseUrl}/${id}/activo`, { activo });
+  }
+
   eliminar(id: number) {
     return this.http.delete<ApiEnvelope<unknown>>(`${this.baseUrl}/${id}`);
   }

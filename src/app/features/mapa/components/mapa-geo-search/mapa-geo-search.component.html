@@ -1,4 +1,8 @@
 <section class="geo-search-inline" aria-label="Búsqueda geográfica">
+  <div class="geo-search-row">
+  <button type="button" class="geo-search-menu" (click)="abrirMenu()" aria-label="Menú" title="Menú">
+    <i class="pi pi-bars"></i>
+  </button>
   <form
     class="geo-search-form"
     [class.has-clear]="hasValue"
@@ -38,6 +42,7 @@
       ×
     </button>
   </form>
+  </div>
 
   <div class="geo-search-panel" *ngIf="showPanel">
     <div class="geo-search-state" *ngIf="loading">

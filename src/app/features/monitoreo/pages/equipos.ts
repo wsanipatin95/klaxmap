@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AccesoService } from '../../../core/services/acceso.service';
-import { NocApi, Device, OltMarca, OltPerfil } from '../services/noc-api';
+import { NocApi, Device, OltMarca, OltPerfil, Sucursal } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
 import { cpuColor } from '../shared/charts';
 import { TableSort } from '../shared/table-sort';
@@ -109,6 +109,11 @@ import { opcionesMarca } from '../shared/marcas';
             <div><label class="k">Tipo</label>
               <select class="inp" style="width:100%" [(ngModel)]="f.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
             <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="f.zone"></div>
+            <div><label class="k">Sucursal</label>
+              <select class="inp" style="width:100%" [(ngModel)]="f.sucursal_id">
+                <option [ngValue]="null">— Sin sucursal —</option>
+                @for (s of sucursales(); track s.id) { <option [ngValue]="s.id">{{ s.nombre }}</option> }
+              </select></div>
             <div><label class="k">IP</label><input class="inp" style="width:100%" [(ngModel)]="f.ip_address"></div>
             @if (f.device_type === 'energia') {
               <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port" placeholder="6668"></div>
@@ -319,8 +324,22 @@ export class Equipos implements OnDestroy {
   openPicker(which: 'vendor' | 'model') { this.pickerCustom = ''; this.picker.set(which); }
   choosePicker(v: string) { if (!v || !String(v).trim()) return; if (this.picker() === 'vendor') this.f.vendor = v; else this.f.model = v; this.picker.set(null); }
 
+  sucursales = signal<Sucursal[]>([]);
+
   constructor() {
     this.load();
+    this.api.sucursales().subscribe((s) => this.sucursales.set(s || []));
+    // Atajo desde la Topologia: /equipos?nuevo=1&sucursal=ID abre el alta con la sucursal puesta.
+    const q = this.route.snapshot.queryParamMap;
+    if (q.get('nuevo')) {
+      setTimeout(() => {
+        this.nuevo();
+        const suc = Number(q.get('sucursal'));
+        if (suc) this.f.sucursal_id = suc;
+        // Se limpia la URL: si no, recargar la pagina volveria a abrir el alta.
+        this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+      });
+    }
     this.api.catalogoMarcas().subscribe((m) => this.marcas.set(m || []));
     this.api.oltPerfiles().subscribe((p) => this.perfiles.set(p || []));
     // Auto-refresco cada 15s (la pantalla se mantiene viva).
@@ -467,7 +486,7 @@ export class Equipos implements OnDestroy {
   }
 
   nuevo() {
-    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300 };
+    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300, sucursal_id: null };
     this.testErr.set(''); this.dupErr.set(false); this.saveErr.set('');
     this.showAdd.set(true);
   }

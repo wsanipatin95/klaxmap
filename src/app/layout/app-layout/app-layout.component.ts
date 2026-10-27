@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
@@ -7,6 +7,8 @@ import { NavbarComponent } from '../navbar/navbar.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { MapaChromeService } from '../../core/services/mapa-chrome.service';
 import { SidebarService } from '../../core/services/sidebar.service';
+import { AuthRepository } from '../../features/seg/data-access/auth.repository';
+import { SessionStore } from '../../features/seg/store/session.store';
 
 @Component({
   selector: 'app-layout',
@@ -25,6 +27,11 @@ export class AppLayoutComponent {
   readonly isMobileVisible = this.sidebarService.isMobileVisible;
   readonly isMapaRouteActive = this.mapaChromeService.isMapaRouteActive;
   readonly mapaChromeHidden = this.mapaChromeService.hidden;
+  readonly mapaMenuOpen = this.mapaChromeService.menuOpen;
+
+  private readonly authRepo = inject(AuthRepository);
+  private readonly sessionStore = inject(SessionStore);
+  readonly userName = computed(() => this.sessionStore.user()?.username ?? 'Usuario');
 
   constructor() {
     this.mapaChromeService.syncRoute(this.router.url);
@@ -51,10 +58,30 @@ export class AppLayoutComponent {
     this.mapaChromeService.show();
   }
 
+  closeMapaMenu() {
+    this.mapaChromeService.closeMenu();
+  }
+
+  /** Al elegir una pantalla se cierra el menu (aunque sea el mismo mapa). */
+  onMapaMenuNavClick(ev: MouseEvent) {
+    const t = ev.target as HTMLElement | null;
+    if (t?.closest('a')) this.closeMapaMenu();
+  }
+
+  logout() {
+    this.mapaChromeService.closeMenu();
+    this.authRepo.logout();
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * Escape en el mapa SOLO cierra el menu. Antes sacaba la barra superior entera: se
+   * cerraba un dialogo con Esc y aparecia el navbar sin forma de volver a esconderlo.
+   */
   @HostListener('window:keydown.escape')
   onEscapeKey() {
-    if (this.isMapaRouteActive() && this.mapaChromeHidden()) {
-      this.showMapaChrome();
+    if (this.isMapaRouteActive() && this.mapaMenuOpen()) {
+      this.closeMapaMenu();
     }
   }
 
@@ -65,6 +92,8 @@ export class AppLayoutComponent {
    */
   @HostListener('document:click', ['$event'])
   onDocumentClick(ev: MouseEvent) {
+    // En el mapa no hay sidebar fija: su menu es el de la hamburguesa y se maneja aparte.
+    if (this.isMapaRouteActive() && this.mapaChromeHidden()) return;
     if (this.sidebarService.isMobile() || this.isCollapsed()) return;
     const target = ev.target as HTMLElement | null;
     if (!target) return;

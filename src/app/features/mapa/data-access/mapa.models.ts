@@ -69,6 +69,8 @@ export interface MapaAcceso {
   abiertoAhora?: boolean;
   /** Cuantos nodos la usan (para no borrarla a ciegas). */
   nodos?: number;
+  /** false = ficha retirada (se hizo otra para el nodo): no se ofrece al asignar. */
+  activo?: boolean;
 }
 
 export interface MapaNodo {

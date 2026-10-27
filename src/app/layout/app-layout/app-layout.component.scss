@@ -24,3 +24,89 @@
   background: #020617;
   overflow: hidden;
 }
+
+/* ---- Menu del mapa (hamburguesa al lado del buscador) ---- */
+.mapa-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 1190;
+}
+
+.mapa-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 16rem;
+  max-width: 86vw;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 8px 0 28px rgba(15, 23, 42, 0.18);
+  z-index: 1200;
+}
+
+.mapa-menu-head {
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.mapa-menu-logo { font-weight: 800; font-size: 1.1rem; letter-spacing: 0.04em; color: #1a1526; }
+
+.mapa-menu-x {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #8a8296;
+  cursor: pointer;
+}
+
+.mapa-menu-x:hover { color: #1a1526; }
+
+.mapa-menu-nav {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.mapa-menu-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.mapa-menu-user {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.mapa-menu-salir {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mapa-menu-salir:hover { background: #fee2e2; }

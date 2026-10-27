@@ -21,6 +21,27 @@
     </div>
   }
 
+  <!-- MAPA: sin barra superior. La navegacion y el Salir van en el menu de la
+       hamburguesa que esta al lado del buscador del mapa. -->
+  @if (isMapaRouteActive() && mapaChromeHidden() && mapaMenuOpen()) {
+    <div class="mapa-menu-overlay" (click)="closeMapaMenu()"></div>
+    <aside class="mapa-menu">
+      <div class="mapa-menu-head">
+        <span class="mapa-menu-logo">KLAX</span>
+        <button type="button" class="mapa-menu-x" (click)="closeMapaMenu()" aria-label="Cerrar menú">×</button>
+      </div>
+      <div class="mapa-menu-nav" (click)="onMapaMenuNavClick($event)">
+        <app-sidebar [expandido]="true" />
+      </div>
+      <div class="mapa-menu-foot">
+        <span class="mapa-menu-user"><i class="pi pi-user"></i> {{ userName() }}</span>
+        <button type="button" class="mapa-menu-salir" (click)="logout()">
+          <i class="pi pi-sign-out"></i> Salir
+        </button>
+      </div>
+    </aside>
+  }
+
   <div
     class="layout-main-container"
     [class.sidebar-collapsed]="(!isMapaRouteActive() || !mapaChromeHidden()) && isCollapsed()"

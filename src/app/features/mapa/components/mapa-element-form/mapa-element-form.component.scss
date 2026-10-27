@@ -62,7 +62,7 @@ input {
 }
 
 textarea {
-  min-height: 4.8rem;
+  min-height: 2.6rem;
   resize: vertical;
 }
 
@@ -120,18 +120,16 @@ textarea:disabled {
   padding-bottom: 0.48rem;
 }
 
-/* Dos columnas FIJAS dejaban media fila vacia cuando solo hay un grupo (el caso
-   "SIN AGRUPACION"), y encima apretaban el grupo a la mitad del ancho. Con auto-fit,
-   un grupo solo ocupa todo el ancho y las opciones de adentro caben a dos por fila. */
+/* Un grupo por fila a todo el ancho: adentro las opciones van de a tres. */
 .tipo-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
   align-items: start;
 }
 
 .tipo-group {
-  padding: 0.55rem;
+  padding: 0.4rem;
   border: 1px solid #d8dee6;
   border-radius: 0.75rem;
   background: #f8fafc;
@@ -139,7 +137,7 @@ textarea:disabled {
 }
 
 .tipo-group-title {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.3rem;
   font-size: 0.68rem;
   font-weight: 800;
   color: #475569;
@@ -148,24 +146,23 @@ textarea:disabled {
   line-height: 1.1;
 }
 
-/* Las opciones iban de a UNA por fila: con 10-15 tipos el modal se iba todo en scroll.
-   A dos por fila cuando hay ancho, y a una sola si el grupo quedo angosto. */
+/* Tres por fila: con 10-15 tipos a dos por fila el modal se iba en scroll. */
 .tipo-options {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: 0.42rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
 }
 
 .tipo-option {
   display: grid;
-  grid-template-columns: auto 1.9rem minmax(0, 1fr);
+  grid-template-columns: auto 1.4rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.3rem;
   min-width: 0;
-  min-height: 2.65rem;
-  padding: 0.12rem 0.28rem;
+  min-height: 1.95rem;
+  padding: 0.08rem 0.3rem;
   border: 1px solid #d8dee6;
-  border-radius: 0.68rem;
+  border-radius: 0.5rem;
   background: #ffffff;
   cursor: pointer;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -191,13 +188,13 @@ textarea:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  min-width: 1.9rem;
+  width: 1.4rem;
+  min-width: 1.4rem;
 }
 
 .tipo-option-name {
   color: #334155;
-  font-size: 0.73rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.15;
   word-break: break-word;
@@ -215,8 +212,8 @@ textarea:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 1.3rem;
+  height: 1.3rem;
   color: var(--preview-text);
 }
 
@@ -445,6 +442,12 @@ textarea:disabled {
   }
 }
 
+@media (max-width: 560px) {
+  .tipo-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .top-row {
     grid-template-columns: 1fr;
@@ -487,26 +490,28 @@ textarea:disabled {
 
 .sitio-body .lbl {
   display: block;
-  margin: 0.55rem 0 0.2rem;
-  font-size: 0.68rem;
+  margin: 0.45rem 0 0.15rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  color: #8a93a3;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
 .sitio-body .inp {
   border: 1px solid #d8dee6;
-  border-radius: 0.5rem;
-  padding: 0.35rem 0.55rem;
-  font-size: 0.82rem;
+  border-radius: 0.45rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
   color: #334155;
   background: #fff;
   min-width: 0;
 }
 
 .sitio-body .inp.full { width: 100%; }
-.sitio-body textarea.inp { min-height: 2.8rem; resize: vertical; font-family: inherit; }
+/* El componente le pone 2.25rem de alto a TODOS los input: aca se bajan. */
+.sitio-body input.inp, .sitio-body select.inp { height: 1.85rem; }
+.sitio-body textarea.inp { min-height: 2.6rem; resize: vertical; font-family: inherit; }
 
 /*
   OJO: este componente aplica `input { width:100%; height:2.25rem; padding; border }`
@@ -532,8 +537,8 @@ textarea:disabled {
   justify-content: flex-start;
   gap: 0.5rem;
   margin: 0;
-  padding: 0.3rem 0;
-  font-size: 0.82rem;
+  padding: 0.15rem 0;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #334155;
   cursor: pointer;
@@ -545,13 +550,31 @@ textarea:disabled {
 /* Los "Hay ..." van juntos arriba, no desparramados entre sus sub-campos. */
 .chk-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.1rem 1rem;
-  margin: 0.2rem 0 0.4rem;
-  padding: 0.4rem 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 0.8rem;
+  margin: 0.1rem 0 0.2rem;
+  padding: 0.25rem 0.55rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.6rem;
   background: #f8fafc;
+}
+
+/* Filas fijas del Equipamiento. Cada fila es su propia grilla: nada se reacomoda. */
+.srow {
+  display: grid;
+  gap: 0 0.6rem;
+  align-items: start;
+  margin-top: 0.15rem;
+}
+.srow > * { min-width: 0; }
+.srow.s2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.srow.s4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.srow.s5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.srow .c2 { grid-column: span 2; }
+
+@media (max-width: 640px) {
+  .srow.s4, .srow.s5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .sitio-sub {
@@ -589,8 +612,8 @@ textarea:disabled {
 .clave-ver:hover { background: #f1f5f9; color: #1e293b; }
 
 .acceso-info {
-  margin: 0.3rem 0 0.2rem;
-  padding: 0.45rem 0.6rem;
+  margin: 0.25rem 0 0.1rem;
+  padding: 0.3rem 0.55rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.55rem;
   background: #f8fafc;

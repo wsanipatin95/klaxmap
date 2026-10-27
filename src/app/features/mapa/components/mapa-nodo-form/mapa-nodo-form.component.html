@@ -142,9 +142,9 @@
     <label>Ficha de acceso</label>
     <select
       [(ngModel)]="form.idGeoAccesoFk"
-      title="Quién abre y en qué horario. Se administra en Accesos, y varios nodos pueden compartir la misma ficha.">
+      title="Quién abre y en qué horario. Se administra en Accesos. Cada ficha es de un solo nodo.">
       <option [ngValue]="null">Sin ficha de acceso</option>
-      <option *ngFor="let a of accesos()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}</option>
+      <option *ngFor="let a of accesosDisponibles()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}{{ a.activo === false ? ' (inhabilitada)' : '' }}</option>
     </select>
 
     <div class="acceso-info" *ngIf="accesoElegido() as a">

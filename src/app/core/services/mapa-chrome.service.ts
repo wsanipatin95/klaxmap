@@ -6,12 +6,18 @@ import { Injectable, signal } from '@angular/core';
 export class MapaChromeService {
   readonly isMapaRouteActive = signal(false);
   readonly hidden = signal(false);
+  /** Menu lateral del mapa (hamburguesa al lado del buscador). */
+  readonly menuOpen = signal(false);
 
   syncRoute(url: string) {
     const isMapa = this.isMapaRoute(url);
     this.isMapaRouteActive.set(isMapa);
     this.hidden.set(isMapa);
+    this.menuOpen.set(false);
   }
+
+  toggleMenu() { this.menuOpen.update((v) => !v); }
+  closeMenu() { this.menuOpen.set(false); }
 
   toggle() {
     if (!this.isMapaRouteActive()) {

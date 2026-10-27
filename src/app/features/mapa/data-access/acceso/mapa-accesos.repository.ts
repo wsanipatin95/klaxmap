@@ -20,6 +20,10 @@ export class MapaAccesosRepository {
     return this.api.guardar(req).pipe(map((r) => unwrapWithMsg<MapaAcceso>(r)));
   }
 
+  cambiarActivo(id: number, activo: boolean) {
+    return this.api.cambiarActivo(id, activo).pipe(map((r) => unwrapWithMsg<unknown>(r)));
+  }
+
   eliminar(id: number) {
     return this.api.eliminar(id).pipe(map((r) => unwrapWithMsg<unknown>(r)));
   }

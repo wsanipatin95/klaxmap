@@ -1,0 +1,75 @@
+<section class="geo-search-inline" aria-label="Búsqueda geográfica">
+  <form
+    class="geo-search-form"
+    [class.has-clear]="hasValue"
+    (submit)="submitSearch($event)"
+  >
+    <input
+      type="text"
+      class="geo-search-input"
+      [ngModel]="draftValue"
+      (ngModelChange)="onDraftChange($event)"
+      (keydown)="onKeydown($event)"
+      name="geoSearch"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Buscar dirección o coordenadas GPS"
+    />
+
+    <button
+      type="submit"
+      class="geo-search-submit"
+      [disabled]="loading"
+      aria-label="Buscar"
+    >
+      <span *ngIf="!loading">Ir</span>
+      <span *ngIf="loading">...</span>
+    </button>
+
+    <button
+      *ngIf="hasValue"
+      type="button"
+      class="geo-search-clear"
+      [disabled]="loading && !draftValue"
+      (click)="clear()"
+      aria-label="Limpiar búsqueda"
+      title="Limpiar"
+    >
+      ×
+    </button>
+  </form>
+
+  <div class="geo-search-panel" *ngIf="showPanel">
+    <div class="geo-search-state" *ngIf="loading">
+      Buscando ubicación...
+    </div>
+
+    <div class="geo-search-state geo-search-state--error" *ngIf="!loading && errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <div class="geo-search-state" *ngIf="showEmptyState">
+      No se encontraron coincidencias.
+    </div>
+
+    <div class="geo-search-results" *ngIf="!loading && results.length">
+      <button
+        type="button"
+        class="geo-search-result"
+        *ngFor="let item of results"
+        (click)="selectResult(item)"
+      >
+        <span class="geo-search-result-main">
+          <span class="geo-search-result-label">{{ item.label }}</span>
+          <span class="geo-search-result-subtitle" *ngIf="item.subtitle">
+            {{ item.subtitle }}
+          </span>
+        </span>
+
+        <span class="geo-search-result-tag" [class.is-coordinate]="item.source === 'coordinates'">
+          {{ item.source === 'coordinates' ? 'GPS' : 'DIR' }}
+        </span>
+      </button>
+    </div>
+  </div>
+</section>

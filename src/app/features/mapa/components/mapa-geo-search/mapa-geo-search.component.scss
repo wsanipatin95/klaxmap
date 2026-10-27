@@ -11,6 +11,30 @@
   background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 }
 
+.geo-search-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.22rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.geo-search-menu {
+  width: 1.95rem;
+  height: 1.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.56rem;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.geo-search-menu:hover { border-color: #7b0061; color: #7b0061; }
+
 .geo-search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -1,0 +1,348 @@
+export type MapaGeomTipo = 'point' | 'linestring' | 'polygon';
+
+export type MapaMetadataPrimitive = string | number | boolean | null;
+export type MapaMetadataValue =
+  | MapaMetadataPrimitive
+  | MapaMetadataValue[]
+  | { [key: string]: MapaMetadataValue };
+export type MapaMetadata = Record<string, MapaMetadataValue>;
+
+export interface MapaGeoJsonPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
+export interface MapaGeoJsonLineString {
+  type: 'LineString';
+  coordinates: [number, number][];
+}
+
+export interface MapaGeoJsonPolygon {
+  type: 'Polygon';
+  coordinates: [number, number][][];
+}
+
+export interface MapaGeoJsonMultiLineString {
+  type: 'MultiLineString';
+  coordinates: [number, number][][];
+}
+
+export interface MapaGeoJsonMultiPolygon {
+  type: 'MultiPolygon';
+  coordinates: [number, number][][][];
+}
+
+export type MapaGeoJsonGeometry =
+  | MapaGeoJsonPoint
+  | MapaGeoJsonLineString
+  | MapaGeoJsonPolygon
+  | MapaGeoJsonMultiLineString
+  | MapaGeoJsonMultiPolygon;
+
+export type MapaGeometryPayload =
+  | MapaGeoJsonGeometry
+  | string
+  | ({ wkt: string } & Record<string, MapaMetadataValue | undefined>);
+
+// ── Repositorio de accesos a sitios: quien abre y en que horario se puede entrar ──
+export interface MapaAccesoHorario {
+  id?: number | null;
+  /** ISO: 1=lunes … 7=domingo */
+  dia: number;
+  /** "08:00" */
+  desde: string;
+  /** "17:00". Si es menor que desde, el tramo cruza medianoche. */
+  hasta: string;
+}
+
+export interface MapaAcceso {
+  idGeoAcceso?: number | null;
+  nombre: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  tipoLlave?: string | null;
+  referencia?: string | null;
+  avisoHoras?: number | null;
+  notas?: string | null;
+  horarios: MapaAccesoHorario[];
+  /** Calculado en el servidor. Sin horarios cargados va true. */
+  abiertoAhora?: boolean;
+  /** Cuantos nodos la usan (para no borrarla a ciegas). */
+  nodos?: number;
+}
+
+export interface MapaNodo {
+  idRedNodo: number;
+  idRedNodoPadreFk?: number | null;
+  codigo?: string | null;
+  nodo: string;
+  descripcion?: string | null;
+  tipoNodo: 'carpeta' | 'zona' | 'sitio' | 'nodo_fisico';
+  orden: number;
+  visible: boolean;
+  pathCache?: string | null;
+  nivel: number;
+  atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
+  usuGen?: number | null;
+  fecGen?: string | null;
+  usuFin?: number | null;
+  fecFin?: string | null;
+}
+
+export interface MapaTipoElemento {
+  idGeoTipoElemento: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  icono?: string | null;
+  iconoFuente?: string | null;
+  iconoClase?: string | null;
+  shapeBase?: string | null;
+  colorFill?: string | null;
+  colorStroke?: string | null;
+  colorTexto?: string | null;
+  strokeWidth: number;
+  zIndex: number;
+  tamanoIcono?: number | null;
+  geometriaPermitida: 'point' | 'linestring' | 'polygon' | 'mixed';
+  snapping: boolean;
+  conectable: boolean;
+  maxPuertosDefault: number;
+  permiteImportAuto: boolean;
+  requiereRevision: boolean;
+  prioridadClasificacion: number;
+  activo: boolean;
+  atributos?: MapaMetadata | null;
+  agrupacion?: string | null;
+}
+
+export interface MapaElemento {
+  idGeoElemento: number;
+  idRedNodoFk: number;
+  idGeoTipoElementoFk: number;
+  idGeoImportLoteFk?: number | null;
+
+  codigo?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+  etiqueta?: string | null;
+  observacion?: string | null;
+
+  estado: string;
+  visible: boolean;
+
+  origen: string;
+  origenRef?: string | null;
+  styleUrl?: string | null;
+
+  kmlExtendedData?: MapaMetadata | null;
+  atributos?: MapaMetadata | null;
+  /** Ficha de acceso al sitio (catalogo compartido). */
+  idGeoAccesoFk?: number | null;
+
+  geomTipo: MapaGeomTipo;
+  geometria?: MapaGeometryPayload | null;
+  wkt?: string | null;
+  latLon?: string | null;
+  bbox?: string | null;
+  longitudM?: number;
+  areaM2?: number;
+  ordenDibujo?: number;
+
+  usuGen?: number | null;
+  fecGen?: string | null;
+  usuFin?: number | null;
+  fecFin?: string | null;
+
+  // enriquecidos desde el backend
+  tipoCodigo?: string | null;
+  tipoNombre?: string | null;
+  tipoActivo?: boolean | null;
+  geometriaPermitida?: 'point' | 'linestring' | 'polygon' | 'mixed' | null;
+
+  iconoFuente?: string | null;
+  icono?: string | null;
+  iconoClase?: string | null;
+  shapeBase?: string | null;
+  colorFill?: string | null;
+  colorStroke?: string | null;
+  colorTexto?: string | null;
+  strokeWidth?: number | null;
+  zIndex?: number | null;
+  tamanoIcono?: number | null;
+}
+
+export interface MapaImportLoteResumen {
+  idGeoImportLote: number;
+  nombreArchivo: string;
+  extension: string;
+  tamanoBytes?: number | null;
+  hashArchivo?: string | null;
+  estado: string;
+  totalNodos: number;
+  totalElementos: number;
+  totalOk: number;
+  totalError: number;
+  detalle?: string | null;
+  fechaImportacion?: string | null;
+  erroresReales?: number;
+  advertenciasReales?: number;
+}
+
+export interface MapaImportResult {
+  idGeoImportLote: number;
+  estado: string;
+  totalNodos: number;
+  totalElementos: number;
+  totalOk: number;
+  totalError: number;
+}
+
+export interface MapaNodoSaveRequest {
+  idRedNodoPadreFk?: number | null;
+  codigo?: string | null;
+  nodo: string;
+  descripcion?: string | null;
+  tipoNodo: 'carpeta' | 'zona' | 'sitio' | 'nodo_fisico';
+  orden?: number;
+  visible?: boolean;
+  atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
+}
+
+export interface MapaTipoElementoSaveRequest {
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  icono?: string | null;
+  iconoFuente?: string | null;
+  iconoClase?: string | null;
+  shapeBase?: string | null;
+  colorFill?: string | null;
+  colorStroke?: string | null;
+  colorTexto?: string | null;
+  strokeWidth?: number;
+  zIndex?: number;
+  tamanoIcono?: number | null;
+  geometriaPermitida: 'point' | 'linestring' | 'polygon' | 'mixed';
+  snapping?: boolean;
+  conectable?: boolean;
+  maxPuertosDefault?: number;
+  permiteImportAuto?: boolean;
+  requiereRevision?: boolean;
+  prioridadClasificacion?: number;
+  activo?: boolean;
+  atributos?: MapaMetadata | null;
+}
+
+export interface MapaElementoSaveRequest {
+  idRedNodoFk: number;
+  idGeoTipoElementoFk: number;
+  codigo?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+  etiqueta?: string | null;
+  observacion?: string | null;
+  estado?: string;
+  visible?: boolean;
+  origen?: string;
+  origenRef?: string | null;
+  styleUrl?: string | null;
+  kmlExtendedData?: MapaMetadata | null;
+  atributos?: MapaMetadata | null;
+  idGeoAccesoFk?: number | null;
+  wkt: string;
+  latLon?: string | null;
+  ordenDibujo?: number;
+}
+
+export interface MapaPatchRequest {
+  id: number;
+  cambios: Record<string, unknown>;
+}
+
+export interface MapaExportRequest {
+  q?: string | null;
+  idRedNodoFk?: number | null;
+  idGeoTipoElementoFk?: number | null;
+  visible?: boolean | null;
+  nombreDocumento?: string | null;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  totalElements: number;
+  number: number;
+  size: number;
+}
+
+export interface ListOrPageOptions {
+  q?: string;
+  page?: number;
+  size?: number;
+  all?: boolean;
+  includeDeleted?: boolean;
+  onlyDeleted?: boolean;
+}
+
+export interface MapaElementoGeometriaRequest {
+  id: number;
+  wkt: string;
+}
+
+export interface MapaGeometryEditedEvent {
+  idGeoElemento: number;
+  wkt: string;
+  geomTipo: MapaGeomTipo;
+}
+
+export interface MapaLegendItem {
+  idGeoTipoElemento: number;
+  nombre: string;
+  colorStroke?: string | null;
+  colorFill?: string | null;
+  iconoFuente?: string | null;
+  geometriaPermitida: 'point' | 'linestring' | 'polygon' | 'mixed';
+  visible: boolean;
+}
+
+// ── Clientes asignados a una NAP (modal de KlaxMap al clickear la caja/splitter) ──
+export interface MapaNapCliente {
+  puerto?: number | null;
+  idContrato?: number | null;
+  cliente?: string | null;
+  documento?: string | null;
+  estado?: string | null;
+}
+
+// ── Material que los tecnicos dejaron en una caja (pestana "Materiales"). Solo vista. ──
+export interface MapaMaterialCaja {
+  idSopMater?: number | null;
+  idOrden?: number | null;
+  codigo?: string | null;
+  articulo?: string | null;
+  cantidad?: number | null;
+  serie?: string | null;
+  fecha?: string | null;
+  adicional?: boolean;
+}
+
+export interface MapaMaterialesCaja {
+  idGeoElemento: number;
+  ordenes: number;
+  lineas: number;
+  resumen: MapaMaterialCaja[];
+  detalle: MapaMaterialCaja[];
+}
+
+export interface MapaNapClientes {
+  idGeoElemento: number;
+  idRedEquipo?: number | null;
+  splitter: string; // "1/8" | "1/16"
+  bloqueado: boolean; // true si el splitter ya fue elegido (set-once); requiere desbloqueo con privilegio para cambiarlo
+  total: number;
+  ocupados: number;
+  disponibles: number;
+  clientes: MapaNapCliente[];
+}

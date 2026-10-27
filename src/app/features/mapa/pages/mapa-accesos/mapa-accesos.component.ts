@@ -119,6 +119,17 @@ export class MapaAccesosComponent {
       });
   }
 
+  /** Inhabilitar no la saca de los nodos que la usan: solo deja de ofrecerse al asignar. */
+  cambiarActivo(a: MapaAcceso) {
+    if (!a.idGeoAcceso) return;
+    const activar = a.activo === false;
+    if (!activar && !confirm(`¿Inhabilitar el acceso "${a.nombre}"? Ya no se ofrecerá al asignar.`)) return;
+    this.repo.cambiarActivo(a.idGeoAcceso, activar).subscribe({
+      next: () => this.cargar(),
+      error: (e) => this.error.set(e?.message || 'No se pudo cambiar el estado'),
+    });
+  }
+
   eliminar(a: MapaAcceso) {
     if (!a.idGeoAcceso) return;
     if (!confirm(`¿Eliminar el acceso "${a.nombre}"?`)) return;

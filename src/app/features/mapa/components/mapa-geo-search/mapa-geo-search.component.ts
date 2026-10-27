@@ -6,7 +6,9 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  inject,
 } from '@angular/core';
+import { MapaChromeService } from '../../../../core/services/mapa-chrome.service';
 import { FormsModule } from '@angular/forms';
 
 import { MapaGeoSearchResult } from '../../models/mapa-geo-search.models';
@@ -30,6 +32,13 @@ export class MapaGeoSearchComponent implements OnChanges {
   @Output() resultSelected = new EventEmitter<MapaGeoSearchResult>();
 
   draftValue = '';
+
+  private readonly chrome = inject(MapaChromeService);
+
+  /** La hamburguesa del mapa: abre el menu de la app (navegacion + Salir). */
+  abrirMenu() {
+    this.chrome.toggleMenu();
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {

@@ -1,4 +1,4 @@
-import { Component, effect, inject, computed, signal } from '@angular/core';
+import { Component, effect, inject, computed, signal, input, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { SidebarService, MenuItem } from '../../core/services/sidebar.service';
@@ -19,7 +19,12 @@ export class SidebarComponent {
     this.sessionStore.hasCompanyPrivilege('ram_red_red')
   );
 
-  isCollapsed = this.sidebarService.isCollapsed;
+  /**
+   * true = se usa dentro del menu de la hamburguesa del mapa: siempre con nombres,
+   * sin tocar el estado colapsado de la sidebar normal.
+   */
+  expandido = input(false);
+  isCollapsed = computed(() => !this.expandido() && this.sidebarService.isCollapsed());
   isMobileVisible = this.sidebarService.isMobileVisible;
   isMobile = this.sidebarService.isMobile;
   menuItems = signal<MenuItem[]>([]);
@@ -41,7 +46,7 @@ export class SidebarComponent {
 
       const built = this.buildOrgMenu();
       this.menuItems.set(built);
-      this.sidebarService.setCollapsed(true);
+      if (!untracked(this.expandido)) this.sidebarService.setCollapsed(true);
     });
   }
 

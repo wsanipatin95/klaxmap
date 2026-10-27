@@ -160,10 +160,10 @@
               class="inp"
               [(ngModel)]="form.idGeoAccesoFk"
               [ngModelOptions]="{ standalone: true }"
-              title="Quién abre y en qué horario. Es un catálogo compartido: varios puntos pueden usar la misma ficha."
+              title="Quién abre y en qué horario. Cada ficha es de un solo sitio."
             >
-              <option [ngValue]="null">Sin ficha de acceso</option>
-              <option *ngFor="let a of accesos()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}</option>
+              <option [ngValue]="null">{{ accesosDisponibles().length ? 'Sin ficha de acceso' : 'Sin ficha (no hay libres: crea una con + Nueva)' }}</option>
+              <option *ngFor="let a of accesosDisponibles()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}{{ a.activo === false ? ' (inhabilitada)' : '' }}</option>
             </select>
             <button type="button" class="acceso-btn"
                     title="Crear una ficha de acceso aquí mismo"
@@ -173,9 +173,6 @@
                     (click)="recargarAccesos()">↻</button>
           </div>
 
-          <p class="acceso-vacio" *ngIf="!accesos().length">
-            Todavía no hay fichas de acceso. Dale a <b>+ Nueva</b> y créala sin salir de aquí.
-          </p>
 
           <div class="acceso-info" *ngIf="accesoElegido() as a">
             <div><b>{{ a.contacto || 'Sin contacto' }}</b><span *ngIf="a.telefono"> · {{ a.telefono }}</span></div>
@@ -217,97 +214,75 @@
             </label>
           </div>
 
-          <div class="sitio-sub" *ngIf="form.sitio.candado">
-            <div class="sitio-row">
-              <div class="sitio-col">
-                <label class="lbl">Clave del candado</label>
-                <div class="clave-box">
-                  <input
-                    class="inp"
-                    [type]="claveVisible ? 'text' : 'password'"
-                    autocomplete="off"
-                    [(ngModel)]="form.sitio.candadoClave"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Clave o combinación" />
-                  <button
-                    type="button"
-                    class="clave-ver"
-                    [title]="claveVisible ? 'Ocultar la clave' : 'Ver la clave'"
-                    (click)="claveVisible = !claveVisible"
-                  >{{ claveVisible ? 'Ocultar' : 'Ver' }}</button>
-                </div>
+          <!-- Filas FIJAS: cada una siempre en el mismo lugar, pase lo que pase con los checks. -->
+          <div class="srow s2" *ngIf="form.sitio.candado">
+            <div>
+              <label class="lbl">Clave del candado</label>
+              <div class="clave-box">
+                <input class="inp" [type]="claveVisible ? 'text' : 'password'" autocomplete="off"
+                       [(ngModel)]="form.sitio.candadoClave" [ngModelOptions]="{ standalone: true }" placeholder="Clave o combinación" />
+                <button type="button" class="clave-ver" (click)="claveVisible = !claveVisible">{{ claveVisible ? 'Ocultar' : 'Ver' }}</button>
               </div>
-              <div class="sitio-col">
-                <label class="lbl">Nota del candado</label>
-                <input class="inp full" [(ngModel)]="form.sitio.candadoNota"
-                       [ngModelOptions]="{ standalone: true }"
-                       placeholder="Ej. el de la reja, no el del poste" />
-              </div>
+            </div>
+            <div>
+              <label class="lbl">Nota del candado</label>
+              <input class="inp full" [(ngModel)]="form.sitio.candadoNota" [ngModelOptions]="{ standalone: true }" />
             </div>
           </div>
 
-          <div class="sitio-sub" *ngIf="form.sitio.generador">
-            <div class="sitio-row">
-              <div class="sitio-col corta">
+          <div class="srow s5" *ngIf="form.sitio.generador || form.sitio.baterias || form.sitio.ups">
+            <ng-container *ngIf="form.sitio.generador">
+              <div>
                 <label class="lbl">Generadores</label>
-                <input class="inp full" type="number" min="0"
-                       [(ngModel)]="form.sitio.generadorCantidad" [ngModelOptions]="{ standalone: true }" />
+                <input class="inp full" type="number" min="0" [(ngModel)]="form.sitio.generadorCantidad" [ngModelOptions]="{ standalone: true }" />
               </div>
-              <div class="sitio-col">
+              <div>
                 <label class="lbl">Marca / modelo</label>
                 <input class="inp full" [(ngModel)]="form.sitio.generadorMarca" [ngModelOptions]="{ standalone: true }" />
               </div>
-            </div>
-          </div>
-
-          <div class="sitio-sub" *ngIf="form.sitio.baterias">
-            <div class="sitio-row">
-              <div class="sitio-col corta">
+            </ng-container>
+            <ng-container *ngIf="form.sitio.baterias">
+              <div>
                 <label class="lbl">Baterías</label>
-                <input class="inp full" type="number" min="0"
-                       [(ngModel)]="form.sitio.bateriasCantidad" [ngModelOptions]="{ standalone: true }" />
+                <input class="inp full" type="number" min="0" [(ngModel)]="form.sitio.bateriasCantidad" [ngModelOptions]="{ standalone: true }" />
               </div>
-              <div class="sitio-col corta">
+              <div>
                 <label class="lbl">Capacidad (Ah)</label>
-                <input class="inp full" type="number" min="0"
-                       [(ngModel)]="form.sitio.bateriasAh" [ngModelOptions]="{ standalone: true }" />
+                <input class="inp full" type="number" min="0" [(ngModel)]="form.sitio.bateriasAh" [ngModelOptions]="{ standalone: true }" />
               </div>
+            </ng-container>
+            <div *ngIf="form.sitio.ups">
+              <label class="lbl">Autonomía UPS (min)</label>
+              <input class="inp full" type="number" min="0" [(ngModel)]="form.sitio.upsAutonomiaMin" [ngModelOptions]="{ standalone: true }" />
             </div>
           </div>
 
-          <div class="sitio-sub" *ngIf="form.sitio.ups">
-            <div class="sitio-row">
-              <div class="sitio-col corta">
-                <label class="lbl">Autonomía (min)</label>
-                <input class="inp full" type="number" min="0"
-                       [(ngModel)]="form.sitio.upsAutonomiaMin" [ngModelOptions]="{ standalone: true }" />
-              </div>
+          <div class="srow s4">
+            <div class="c2">
+              <label class="lbl">Medidor eléctrico</label>
+              <input class="inp full" [(ngModel)]="form.sitio.medidor" [ngModelOptions]="{ standalone: true }" placeholder="Número o de quién cuelga" />
             </div>
-          </div>
-
-          <label class="lbl">Medidor eléctrico</label>
-          <input class="inp full" [(ngModel)]="form.sitio.medidor" [ngModelOptions]="{ standalone: true }"
-                 placeholder="Número o de quién cuelga" />
-
-          <label class="lbl">Cómo se llega</label>
-          <textarea class="inp full" [(ngModel)]="form.sitio.acceso" [ngModelOptions]="{ standalone: true }"
-                    title="Referencia puntual de ESTE punto. Lo general del sitio va en la ficha de acceso."
-                    placeholder="Ej. en el poste de la esquina, lado norte"></textarea>
-
-          <div class="sitio-row">
-            <div class="sitio-col corta">
+            <div>
               <label class="lbl">Último mantenimiento</label>
-              <input class="inp full" type="date" [(ngModel)]="form.sitio.mantenimientoFecha"
-                     [ngModelOptions]="{ standalone: true }" />
+              <input class="inp full" type="date" [(ngModel)]="form.sitio.mantenimientoFecha" [ngModelOptions]="{ standalone: true }" />
             </div>
-            <div class="sitio-col">
+            <div>
               <label class="lbl">Lo hizo</label>
               <input class="inp full" [(ngModel)]="form.sitio.mantenimientoPor" [ngModelOptions]="{ standalone: true }" />
             </div>
           </div>
 
-          <label class="lbl">Notas</label>
-          <textarea class="inp full" [(ngModel)]="form.sitio.notas" [ngModelOptions]="{ standalone: true }"></textarea>
+          <div class="srow s2">
+            <div>
+              <label class="lbl">Cómo se llega</label>
+              <textarea class="inp full" rows="2" [(ngModel)]="form.sitio.acceso" [ngModelOptions]="{ standalone: true }"
+                        placeholder="Ej. poste de la esquina, lado norte"></textarea>
+            </div>
+            <div>
+              <label class="lbl">Notas</label>
+              <textarea class="inp full" rows="2" [(ngModel)]="form.sitio.notas" [ngModelOptions]="{ standalone: true }"></textarea>
+            </div>
+          </div>
         </div>
 
     <p class="success" *ngIf="successMessage as ok">{{ ok }}</p>

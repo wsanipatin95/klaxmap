@@ -1,0 +1,36 @@
+<div
+  class="layout-wrapper"
+  [class.layout-wrapper--mapa]="isMapaRouteActive()"
+  [class.layout-wrapper--mapa-chrome-hidden]="isMapaRouteActive() && mapaChromeHidden()"
+>
+  @if (!isMapaRouteActive() || !mapaChromeHidden()) {
+    <app-navbar />
+  }
+
+  @if ((!isMapaRouteActive() || !mapaChromeHidden()) && isMobileVisible()) {
+    <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
+  }
+
+  @if (!isMapaRouteActive() || !mapaChromeHidden()) {
+    <div
+      class="layout-sidebar"
+      [class.sidebar-collapsed]="isCollapsed()"
+      [class.sidebar-visible]="isMobileVisible()"
+    >
+      <app-sidebar />
+    </div>
+  }
+
+  <div
+    class="layout-main-container"
+    [class.sidebar-collapsed]="(!isMapaRouteActive() || !mapaChromeHidden()) && isCollapsed()"
+    [class.layout-main-container--mapa]="isMapaRouteActive() && mapaChromeHidden()"
+  >
+    <div
+      class="main-content"
+      [class.main-content--mapa]="isMapaRouteActive() && mapaChromeHidden()"
+    >
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

@@ -168,6 +168,21 @@ export class MapaElementFormComponent implements OnChanges {
 
   /** Fichas de acceso del catalogo. Si no cargan, el resto del formulario sigue sirviendo. */
   readonly accesos = signal<MapaAcceso[]>([]);
+
+  /**
+   * Una ficha de acceso es de UN solo sitio. En la lista van las ACTIVAS que nadie usa,
+   * mas la que este sitio ya tiene guardada (y la elegida ahora, aunque no se haya
+   * guardado todavia). Las fichas de otros nodos no aparecen.
+   */
+  accesosDisponibles(): MapaAcceso[] {
+    const propia = this.initialForm?.idGeoAccesoFk ?? null;
+    const elegida = this.form.idGeoAccesoFk ?? null;
+    // La ficha del nodo al que pertenece este punto tambien es "suya": el nodo y su
+    // pin en el mapa son el mismo sitio.
+    const delNodo = this.nodos.find((n) => n.idRedNodo === this.form.idRedNodoFk)?.idGeoAccesoFk ?? null;
+    return this.accesos().filter((a) =>
+      (!a.nodos && a.activo !== false) || a.idGeoAcceso === propia || a.idGeoAcceso === elegida || a.idGeoAcceso === delNodo);
+  }
   claveVisible = false;
 
   private readonly repo = inject(MapaElementosRepository);
@@ -561,6 +576,9 @@ export class MapaElementFormComponent implements OnChanges {
     this.actionBusy.set(true);
     this.error = null;
     this.successMessage = null;
+    // Ficha de acceso antes y despues: si se reemplazo, se ofrece retirar la vieja.
+    const fichaAnterior = this.initialForm.idGeoAccesoFk ?? null;
+    const fichaNueva = this.form.idGeoAccesoFk ?? null;
 
     this.repo.editar(payload).subscribe({
       next: (resp) => {
@@ -569,12 +587,30 @@ export class MapaElementFormComponent implements OnChanges {
         this.successMessage = 'Los cambios se guardaron correctamente.';
         this.markSaved(resp.data);
         this.saved.emit(resp.data);
+        this.ofrecerRetirarFicha(fichaAnterior, fichaNueva);
       },
       error: (err) => {
         this.actionBusy.set(false);
         this.successMessage = null;
         this.error = err?.message || 'No se pudieron guardar los cambios.';
       },
+    });
+  }
+
+  /**
+   * Se cambio la ficha de acceso de este punto. Si la vieja ya no la usa nadie mas,
+   * se pregunta si se inhabilita: es el caso de "cambio quien abre, se hizo una ficha
+   * nueva". No se borra; queda de historia y se puede reactivar en Accesos.
+   */
+  private ofrecerRetirarFicha(anterior: number | null, nueva: number | null) {
+    if (anterior == null || anterior === nueva) return;
+    const vieja = this.accesos().find((a) => a.idGeoAcceso === anterior);
+    if (!vieja || vieja.activo === false) return;
+    if ((vieja.nodos ?? 0) > 1) return;   // la sigue usando otro nodo
+    if (!confirm(`Este punto ya no usa la ficha "${vieja.nombre}". ¿Inhabilitarla?`)) return;
+    this.accesosRepo.cambiarActivo(anterior, false).subscribe({
+      next: () => this.recargarAccesos(),
+      error: (e) => { this.error = e?.message || 'No se pudo inhabilitar la ficha anterior.'; },
     });
   }
 

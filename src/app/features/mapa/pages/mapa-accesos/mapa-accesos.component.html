@@ -29,9 +29,10 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let a of accesos()">
+      <tr *ngFor="let a of accesos()" [class.inactiva]="a.activo === false">
         <td>
           <b>{{ a.nombre }}</b>
+          <span class="pill off" *ngIf="a.activo === false">inhabilitada</span>
           <span class="pill" [class.on]="a.abiertoAhora"
                 [title]="a.abiertoAhora ? 'Según el horario cargado, ahora se puede entrar' : 'Según el horario cargado, ahora no se puede entrar'">
             {{ a.abiertoAhora ? 'abierto' : 'cerrado' }}
@@ -46,6 +47,7 @@
         <td class="num" [title]="'Nodos que usan esta ficha'">{{ a.nodos || 0 }}</td>
         <td class="acciones">
           <button type="button" class="btn xs" (click)="abrir(a)">Editar</button>
+          <button type="button" class="btn xs" (click)="cambiarActivo(a)">{{ a.activo === false ? 'Activar' : 'Inhabilitar' }}</button>
           <button type="button" class="btn xs del" (click)="eliminar(a)">Eliminar</button>
         </td>
       </tr>

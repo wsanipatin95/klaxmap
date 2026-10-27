@@ -97,3 +97,6 @@ textarea.inp { min-height: 3.2rem; resize: vertical; font-family: inherit; }
 .dia-tramos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tramo { display: flex; align-items: center; gap: 4px; }
 .tramo .a { font-size: 12px; color: var(--mut); }
+
+.acc-tab tr.inactiva td { opacity: 0.55; }
+.pill.off { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }

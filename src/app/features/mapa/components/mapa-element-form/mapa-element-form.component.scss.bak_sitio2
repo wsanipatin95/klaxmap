@@ -1,0 +1,707 @@
+:host {
+  display: block;
+}
+
+.element-form-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.element-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.55rem 0.75rem;
+}
+
+.top-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.98fr);
+  align-items: start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.field-node,
+.field-name {
+  min-width: 0;
+}
+
+label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  line-height: 1.15;
+}
+
+input,
+textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.58rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.58rem;
+  background: #ffffff;
+  color: #334155;
+  outline: none;
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+input {
+  height: 2.25rem;
+}
+
+textarea {
+  min-height: 2.6rem;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #b02365;
+  box-shadow: 0 0 0 3px rgba(176, 35, 101, 0.12);
+}
+
+input:disabled,
+textarea:disabled {
+  background: #f8fafc;
+  color: #475569;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+:host ::ng-deep .node-select {
+  width: 100%;
+}
+
+:host ::ng-deep .node-select .p-select {
+  width: 100%;
+  min-height: 2.25rem;
+  border-radius: 0.58rem;
+  border-color: #cbd5e1;
+}
+
+:host ::ng-deep .node-select .p-select:not(.p-disabled):hover {
+  border-color: #b8c4d6;
+}
+
+:host ::ng-deep .node-select .p-select-label {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.74rem;
+  color: #334155;
+}
+
+:host ::ng-deep .node-select .p-select-dropdown {
+  width: 2.15rem;
+}
+
+:host ::ng-deep .node-select .p-select-clear-icon {
+  right: 2.35rem;
+}
+
+:host ::ng-deep .node-select .p-select-filter {
+  font-size: 0.74rem;
+}
+
+:host ::ng-deep .node-select .p-select-panel .p-select-items .p-select-item {
+  font-size: 0.74rem;
+  padding-top: 0.48rem;
+  padding-bottom: 0.48rem;
+}
+
+/* Un grupo por fila a todo el ancho: adentro las opciones van de a tres. */
+.tipo-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  align-items: start;
+}
+
+.tipo-group {
+  padding: 0.4rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.tipo-group-title {
+  margin-bottom: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+/* Tres por fila: con 10-15 tipos a dos por fila el modal se iba en scroll. */
+.tipo-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.tipo-option {
+  display: grid;
+  grid-template-columns: auto 1.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  min-height: 1.95rem;
+  padding: 0.08rem 0.3rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.tipo-option:hover {
+  border-color: #c78ab0;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.07);
+}
+
+.tipo-option.active {
+  border-color: #b02365;
+  background: #fff7fb;
+  box-shadow: 0 0 0 2px rgba(176, 35, 101, 0.08);
+}
+
+.tipo-option input[type='radio'] {
+  margin: 0;
+  accent-color: #7b0061;
+}
+
+.tipo-option-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  min-width: 1.4rem;
+}
+
+.tipo-option-name {
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.tipo-preview-shape {
+  --preview-stroke: #7b0061;
+  --preview-fill: #f3aad6;
+  --preview-text: #7b0061;
+  --preview-size: 14px;
+  --preview-stroke-width: 1;
+  --preview-stroke-width-px: 1px;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  color: var(--preview-text);
+}
+
+.tipo-preview-shape.is-point {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  border: var(--preview-stroke-width-px) solid var(--preview-stroke);
+  background: var(--preview-fill);
+}
+
+.tipo-preview-shape.is-line {
+  width: 1.55rem;
+  height: 0;
+  border-top: var(--preview-stroke-width-px) solid var(--preview-stroke);
+  border-radius: 999px;
+}
+
+.tipo-preview-shape.is-polygon {
+  width: 1.05rem;
+  height: 0.82rem;
+  border-radius: 0.2rem;
+  border: var(--preview-stroke-width-px) solid var(--preview-stroke);
+  background: var(--preview-fill);
+}
+
+.tipo-preview-shape.is-icon-host {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.tipo-preview-shape.is-triangle::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 0.45rem solid transparent;
+  border-right: 0.45rem solid transparent;
+  border-bottom: 0.82rem solid var(--preview-fill);
+  filter: drop-shadow(0 0 0 var(--preview-stroke));
+}
+
+.tipo-preview-shape.is-target::before {
+  content: '';
+  width: 0.88rem;
+  height: 0.88rem;
+  border-radius: 999px;
+  border: var(--preview-stroke-width-px) solid var(--preview-stroke);
+  background:
+    radial-gradient(circle at center, var(--preview-stroke) 0 18%, transparent 19% 100%),
+    var(--preview-fill);
+}
+
+.tipo-preview-shape.is-donut::before {
+  content: '';
+  width: 0.88rem;
+  height: 0.88rem;
+  border-radius: 999px;
+  border: 0.24rem solid var(--preview-stroke);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.tipo-preview-material,
+.tipo-preview-class {
+  font-size: var(--preview-size);
+  line-height: 1;
+  color: var(--preview-text);
+}
+
+.tipo-preview-image {
+  width: var(--preview-size);
+  height: var(--preview-size);
+  object-fit: contain;
+}
+
+.empty-state {
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.72rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.field-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.field-error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.success {
+  margin: 0;
+  padding: 0.62rem 0.72rem;
+  border-radius: 0.62rem;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.72rem;
+}
+
+.error {
+  margin: 0;
+  padding: 0.62rem 0.72rem;
+  border-radius: 0.62rem;
+  background: #fff1f2;
+  color: #b42318;
+  border: 1px solid #fecdd3;
+  font-size: 0.72rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.1rem;
+  flex-wrap: wrap;
+}
+
+.actions-left,
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ghost-btn,
+.save-btn,
+.state-btn {
+  min-height: 2.1rem;
+  padding: 0 0.82rem;
+  border-radius: 0.58rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.ghost-btn:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.save-btn {
+  border: 1px solid #7b0061;
+  background: #7b0061;
+  color: #ffffff;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #921f54;
+  border-color: #921f54;
+}
+
+.state-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+.state-btn--delete {
+  color: #b42318;
+}
+
+.state-btn--delete:hover:not(:disabled) {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.state-btn--restore {
+  color: #0f5b8d;
+}
+
+.state-btn--restore:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.ghost-btn:disabled,
+.save-btn:disabled,
+.state-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.readonly-copy-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.readonly-copy-row input[readonly] {
+  background: #f8fafc;
+  cursor: text;
+  flex: 1 1 auto;
+}
+
+.copy-btn {
+  white-space: nowrap;
+  min-width: 5.9rem;
+  color: #0f5b8d;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+@media (max-width: 900px) {
+  .tipo-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .tipo-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .top-row {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions-left,
+  .actions-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .readonly-copy-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .copy-btn {
+    width: 100%;
+  }
+}
+/* ---- Equipamiento y acceso del punto (plegable) ---- */
+
+
+
+
+
+
+
+
+
+/* Contenido de la pestaña Equipamiento. Ya no hay plegable: la pestaña manda. */
+.sitio-body {
+  padding: 0.2rem 0.1rem 0.4rem;
+}
+
+.sitio-body .lbl {
+  display: block;
+  margin: 0.4rem 0 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #8a93a3;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sitio-body .inp {
+  border: 1px solid #d8dee6;
+  border-radius: 0.45rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  color: #334155;
+  background: #fff;
+  min-width: 0;
+}
+
+.sitio-body .inp.full { width: 100%; }
+/* El componente le pone 2.25rem de alto a TODOS los input: aca se bajan. */
+.sitio-body input.inp, .sitio-body select.inp { height: 1.85rem; }
+.sitio-body textarea.inp { min-height: 2.6rem; resize: vertical; font-family: inherit; }
+
+/*
+  OJO: este componente aplica `input { width:100%; height:2.25rem; padding; border }`
+  a TODOS los inputs. Un checkbox con eso se convierte en un cuadrote con borde y el
+  texto se va al otro extremo de la fila — que es exactamente como se veia. Hay que
+  devolverle su tamano explicitamente.
+*/
+.sitio-body input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0.2rem;
+  accent-color: #7b0061;
+  cursor: pointer;
+}
+
+.sitio-body .chk {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.15rem 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sitio-body .chk:hover { color: #1e293b; }
+
+/* Los "Hay ..." van juntos arriba, no desparramados entre sus sub-campos. */
+.chk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 0.8rem;
+  margin: 0.1rem 0 0.2rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+}
+
+/* Grilla de 4: cada equipo marcado suma sus campos sin abrir bloques propios. */
+.sitio-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 0.55rem;
+  align-items: end;
+}
+.sitio-grid > * { min-width: 0; }
+.sitio-grid .c2 { grid-column: span 2; }
+
+@media (max-width: 640px) {
+  .sitio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.sitio-sub {
+  margin: 0.1rem 0 0.4rem 1.3rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid #e2e8f0;
+}
+
+.sitio-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.sitio-row .chk { margin: 0; }
+.sitio-col { min-width: 0; }
+.sitio-col.corta { max-width: 9rem; }
+
+.clave-box { display: flex; gap: 0.3rem; align-items: stretch; }
+.clave-box .inp { flex: 1; min-width: 0; }
+
+.clave-ver {
+  flex: none;
+  padding: 0 0.55rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clave-ver:hover { background: #f1f5f9; color: #1e293b; }
+
+.acceso-info {
+  margin: 0.25rem 0 0.1rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.55rem;
+  background: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.acceso-info .tenue { color: #64748b; }
+
+
+/* Selector de ficha + atajos. Las fichas se crean en otra pantalla, asi que el
+   formulario tiene que dar la puerta y la forma de refrescar sin cerrarse. */
+.acceso-pick {
+  display: flex;
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.acceso-pick select {
+  flex: 1;
+  min-width: 0;
+}
+
+.acceso-btn {
+  flex: none;
+  padding: 0 0.6rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acceso-btn:hover { background: #f1f5f9; color: #1e293b; }
+
+.acceso-vacio {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #8a93a3;
+  line-height: 1.4;
+}
+
+
+/* Alta de ficha de acceso, encima del modal del elemento. z-index alto a proposito:
+   tiene que quedar sobre el modal que ya esta abierto. */
+.acc-nuevo-ov {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+
+.acc-nuevo-md {
+  width: min(40rem, 94vw);
+  max-height: 88vh;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.acc-nuevo-head {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e6eaf0;
+  font-size: 0.9rem;
+}
+
+.acc-nuevo-head .x {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: #8a8296;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.acc-nuevo-head .x:hover { color: #1a1526; }
+
+.acc-nuevo-body {
+  padding: 4px 14px 14px;
+  overflow: auto;
+}

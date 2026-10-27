@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NocApi, Device, Iface, OltMarca } from '../services/noc-api';
+import { NocApi, Device, Iface, OltMarca, Sucursal } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
 import { TableSort } from '../shared/table-sort';
 import { opcionesMarca } from '../shared/marcas';
@@ -165,6 +165,11 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
               }
               <div><label class="k">Tipo</label><select class="inp" style="width:100%" [(ngModel)]="ef.device_type"><option value="borde">Borde</option><option value="core">Core</option><option value="olt">OLT</option><option value="energia">Energía</option></select></div>
               <div><label class="k">Zona</label><input class="inp" style="width:100%" [(ngModel)]="ef.zone"></div>
+              <div><label class="k">Sucursal</label>
+              <select class="inp" style="width:100%" [(ngModel)]="ef.sucursal_id">
+                <option [ngValue]="null">— Sin sucursal —</option>
+                @for (s of sucursales(); track s.id) { <option [ngValue]="s.id">{{ s.nombre }}</option> }
+              </select></div>
               <div><label class="k">IP de gestión</label><input class="inp" style="width:100%" [(ngModel)]="ef.ip_address"></div>
               @if (ef.device_type === 'energia') {
                 <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="6668"></div>
@@ -306,7 +311,8 @@ export class EquipoDetalle implements OnDestroy {
   testErr = signal('');
   saveErr = signal('');   // error al guardar (NO es un fallo de Telnet)
   ef: any = {};
-  marcas = signal<OltMarca[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
+  marcas = signal<OltMarca[]>([]);
+  sucursales = signal<Sucursal[]>([]);   // marcas del ERP (kxt_red_olt_marca) para "Tipo de OLT"
   showLog = signal(false);
   logTitle = signal('');
   logLab = signal<string[]>([]);
@@ -514,7 +520,8 @@ export class EquipoDetalle implements OnDestroy {
   }
 
   openEdit(d: Device) {
-    this.ef = { ...d };
+    this.ef = { ...d, sucursal_id: (d as any).sucursal_id ?? null };
+    if (!this.sucursales().length) this.api.sucursales().subscribe((s) => this.sucursales.set(s || []));
     this.showEdit.set(true);
     // Si es OLT, prefilea la config Telnet + barrido desde su fila en kxt_olt.
     if (d.device_type === 'olt') {

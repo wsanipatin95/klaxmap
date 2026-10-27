@@ -42,7 +42,11 @@ export interface Device {
   wan_gbps: number | null;
   sys_name: string | null;
   uptime_seconds: number | null;
+  /** Sucursal asignada a mano (Cayambe, Otavalo...). Null = sin asignar. */
+  sucursal_id?: number | null;
 }
+
+export interface Sucursal { id: number; nombre: string; orden: number; }
 
 export interface Iface {
   id: number;
@@ -116,6 +120,11 @@ export class NocApi {
   deleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/devices/${id}`).pipe(map(unwrap)); }
 
   // ---- Topologia de Red ----
+  sucursales(): Observable<Sucursal[]> { return this.http.get<ApiEnvelope<Sucursal[]>>(`${API}/sucursales`).pipe(map(unwrap)); }
+  crearSucursal(nombre: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/sucursales`, { nombre }).pipe(map(unwrap)); }
+  asignarSucursal(deviceId: number, sucursalId: number | null): Observable<any> {
+    return this.http.put<ApiEnvelope<any>>(`${API}/sucursales/asignar`, { device_id: deviceId, sucursal_id: sucursalId }).pipe(map(unwrap));
+  }
   topologia(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia`).pipe(map(unwrap)); }
   topoAddLink(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/links`, body).pipe(map(unwrap)); }
   topoDelLink(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/links/${id}`).pipe(map(unwrap)); }

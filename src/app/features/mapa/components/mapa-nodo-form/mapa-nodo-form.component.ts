@@ -35,6 +35,18 @@ export class MapaNodoFormComponent implements OnChanges {
    */
   readonly accesos = signal<MapaAcceso[]>([]);
 
+  /**
+   * Una ficha de acceso es de UN solo sitio. En la lista van las ACTIVAS que nadie usa,
+   * mas la que este sitio ya tiene guardada (y la elegida ahora, aunque no se haya
+   * guardado todavia). Las fichas de otros nodos no aparecen.
+   */
+  accesosDisponibles(): MapaAcceso[] {
+    const propia = this.nodo?.idGeoAccesoFk ?? null;
+    const elegida = this.form.idGeoAccesoFk ?? null;
+    return this.accesos().filter((a) =>
+      (!a.nodos && a.activo !== false) || a.idGeoAcceso === propia || a.idGeoAcceso === elegida);
+  }
+
   /** La clave del candado arranca tapada; se destapa a proposito. */
   claveVisible = false;
 
