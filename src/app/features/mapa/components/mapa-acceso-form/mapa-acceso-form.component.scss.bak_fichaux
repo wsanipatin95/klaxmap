@@ -1,0 +1,78 @@
+:host { display: block; --pri: #7c0061; --ink: #1a1526; --mut: #8a8296; --line: #e6eaf0; }
+
+.af { color: var(--ink); }
+
+.af label {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mut);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* Tamano propio: el formulario del elemento le pone width/height/border a TODO input,
+   y sin esto los campos de aqui heredan ese estilo y se ven de otro mundo. */
+.af .inp {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  height: auto;
+  color: var(--ink);
+  background: #fff;
+}
+
+.af textarea.inp { min-height: 3rem; resize: vertical; }
+.af .inp.hora { width: 7.5rem; }
+
+.g2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 10px; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+.btn:hover { background: #f5f7fa; color: var(--ink); }
+.btn.pri { background: var(--pri); border-color: var(--pri); color: #fff; }
+.btn.pri:hover { filter: brightness(1.08); }
+.btn.pri[disabled] { opacity: .6; cursor: default; }
+.btn.xs { padding: 3px 8px; font-size: 11.5px; }
+
+.x {
+  border: none; background: transparent; font-size: 20px; line-height: 1;
+  color: var(--mut); cursor: pointer; padding: 0 4px;
+}
+.x:hover { color: var(--ink); }
+.x.sm { font-size: 15px; }
+
+.tenue { color: var(--mut); font-size: 12px; font-weight: 400; }
+
+.hor-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 16px 0 8px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.dia { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 8px; padding: 3px 0; }
+.dia-n { font-size: 12px; font-weight: 800; color: #475569; padding-top: 7px; }
+.dia-tramos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tramo { display: flex; align-items: center; gap: 4px; }
+.tramo .a { font-size: 12px; color: var(--mut); }
+
+.af-error { margin-top: 10px; font-size: 12.5px; color: #b91c1c; }
+
+.af-foot {
+  display: flex; justify-content: flex-end; gap: 6px;
+  margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line);
+}

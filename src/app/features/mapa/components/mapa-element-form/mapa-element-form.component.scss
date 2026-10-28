@@ -708,3 +708,13 @@ textarea:disabled {
   padding: 4px 14px 14px;
   overflow: auto;
 }
+
+/* Ficha de acceso nueva, dentro de la pestaña Equipamiento. */
+.acc-inline { display: flex; flex-direction: column; gap: 10px; }
+.acc-inline-head { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #eef2f6; }
+.acc-inline-head b { font-size: 14px; color: #0f172a; }
+.acc-volver {
+  height: 30px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;
+  color: #475569; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.acc-volver:hover { border-color: #7b0061; color: #7b0061; }

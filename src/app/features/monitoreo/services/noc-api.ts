@@ -44,6 +44,8 @@ export interface Device {
   uptime_seconds: number | null;
   /** Sucursal asignada a mano (Cayambe, Otavalo...). Null = sin asignar. */
   sucursal_id?: number | null;
+  /** Breaker: 'red' (luz normal, avisa si se apaga) | 'generador' (avisa si se enciende). */
+  energia_rol?: 'red' | 'generador' | null;
 }
 
 export interface Sucursal { id: number; nombre: string; orden: number; }
@@ -65,12 +67,19 @@ export interface Iface {
 export interface Alert {
   id: number;
   severity: string;
+  level?: string;
+  category?: string;
   status: string;
   device_name: string;
   iface: string;
   description: string;
-  started: string;
+  started: string;        // 'DD/MM HH:MI'
+  started_at?: string;    // fecha completa (para ordenar)
+  ended?: string | null;
+  resolved_at?: string | null;
   duration: string;
+  segundos?: number;
+  es_equipo?: boolean;
 }
 
 export interface Point { t: string; v?: number; rx?: number; tx?: number; in_err?: number; out_err?: number; in_disc?: number; out_disc?: number; }
@@ -131,6 +140,7 @@ export class NocApi {
   topoSavePos(id: number, x: number, y: number): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/pos`, { x, y }).pipe(map(unwrap)); }
   topoSaveNet(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/net`, body).pipe(map(unwrap)); }
   topoPorts(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/ports`).pipe(map(unwrap)); }
+  topoRefrescarPorts(id: number): Observable<{ ports: any[]; snmp_ok: boolean; ultima_lectura: string | null }> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/ports/refrescar`, {}).pipe(map(unwrap)); }
   topoAddPort(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/ports`, body).pipe(map(unwrap)); }
   topoEditPort(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`, body).pipe(map(unwrap)); }
   topoDelPort(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`).pipe(map(unwrap)); }
@@ -165,7 +175,7 @@ export class NocApi {
   catalogoComandos(marca: number): Observable<CatComando[]> { return this.http.get<ApiEnvelope<CatComando[]>>(`${API}/zte/catalogo?marca=${marca}`).pipe(map(unwrap)); }
   guardarComando(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/catalogo/comando`, body).pipe(map(unwrap)); }
   interfaces(): Observable<Iface[]> { return this.http.get<ApiEnvelope<Iface[]>>(`${API}/interfaces`).pipe(map(unwrap)); }
-  alerts(): Observable<Alert[]> { return this.http.get<ApiEnvelope<Alert[]>>(`${API}/alerts`).pipe(map(unwrap)); }
+  alerts(horas = 24, grupo: 'red' | 'clientes' | 'todo' = 'red'): Observable<Alert[]> { return this.http.get<ApiEnvelope<Alert[]>>(`${API}/alerts?horas=${horas}&grupo=${grupo}`).pipe(map(unwrap)); }
   dashboardTraffic(points = 24): Observable<Point[]> { return this.http.get<ApiEnvelope<Point[]>>(`${API}/dashboard/traffic?points=${points}`).pipe(map(unwrap)); }
   deviceMetric(id: number, metric: string, rangeMin = 60, buckets = 60, pad = true): Observable<Point[]> {
     return this.http.get<ApiEnvelope<Point[]>>(`${API}/devices/${id}/metrics?metric=${metric}&rangeMin=${rangeMin}&buckets=${buckets}&pad=${pad}`).pipe(map(unwrap));

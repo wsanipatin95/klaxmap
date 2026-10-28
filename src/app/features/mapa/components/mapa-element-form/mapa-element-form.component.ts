@@ -159,11 +159,12 @@ export class MapaElementFormComponent implements OnChanges {
 
   private accesosRepo = inject(MapaAccesosRepository);
 
+  /** true = la lista de fichas no se pudo leer (sin conexion, error del servidor). */
+  readonly accesosError = signal(false);
+  private reintentosAcceso = 0;
+
   constructor() {
-    this.accesosRepo.listar().subscribe({
-      next: (lista) => this.accesos.set(lista ?? []),
-      error: () => this.accesos.set([]),
-    });
+    this.recargarAccesos();
   }
 
   /** Fichas de acceso del catalogo. Si no cargan, el resto del formulario sigue sirviendo. */
@@ -205,6 +206,10 @@ export class MapaElementFormComponent implements OnChanges {
     if (changes['elemento']) {
       this.syncCurrentElemento(this.elemento);
       this.resetFromElemento(this.currentElemento());
+      // La lista de fichas se cargaba UNA vez y el formulario se reusa entre nodos: el
+      // conteo de quien usa cada ficha quedaba viejo, y la ficha recien asignada a otro
+      // nodo seguia ofreciendose como libre. Se relee cada vez que se abre otro punto.
+      if (!changes['elemento'].firstChange) this.recargarAccesos();
       return;
     }
 
@@ -314,9 +319,15 @@ export class MapaElementFormComponent implements OnChanges {
    * el formulario —perdiendo los cambios— solo para que aparezca la que acabas de crear.
    */
   recargarAccesos() {
+    // Si falla NO se muestra "no hay libres": eso hacia creer que no habia fichas cuando
+    // en realidad no se pudo preguntar. Se dice que fallo y el boton ↻ reintenta.
     this.accesosRepo.listar().subscribe({
-      next: (lista) => this.accesos.set(lista ?? []),
-      error: () => {},
+      next: (lista) => { this.accesos.set(lista ?? []); this.accesosError.set(false); this.reintentosAcceso = 0; },
+      error: () => {
+        this.accesosError.set(true);
+        // Reintenta solo, sin boton: un corte de red pasajero no tiene que dejar la lista vacia.
+        if (this.reintentosAcceso++ < 5) setTimeout(() => this.recargarAccesos(), 5000);
+      },
     });
   }
 
@@ -588,6 +599,7 @@ export class MapaElementFormComponent implements OnChanges {
         this.markSaved(resp.data);
         this.saved.emit(resp.data);
         this.ofrecerRetirarFicha(fichaAnterior, fichaNueva);
+        if (fichaAnterior !== fichaNueva) this.recargarAccesos();   // los conteos cambiaron
       },
       error: (err) => {
         this.actionBusy.set(false);

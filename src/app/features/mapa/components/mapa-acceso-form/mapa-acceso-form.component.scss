@@ -1,78 +1,82 @@
-:host { display: block; --pri: #7c0061; --ink: #1a1526; --mut: #8a8296; --line: #e6eaf0; }
+:host { display: block; --pri: #7b0061; --ink: #0f172a; --mut: #64748b; --line: #e2e8f0; }
 
-.af { color: var(--ink); }
+.af { color: var(--ink); display: flex; flex-direction: column; min-height: 0; }
+.af-body { display: flex; flex-direction: column; gap: 8px; }
 
+.campo { min-width: 0; }
 .af label {
-  display: block;
-  margin: 10px 0 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mut);
-  text-transform: uppercase;
-  letter-spacing: .3px;
+  display: block; margin: 0 0 3px; font-size: 10px; font-weight: 700;
+  color: var(--mut); text-transform: uppercase; letter-spacing: .04em;
 }
 
-/* Tamano propio: el formulario del elemento le pone width/height/border a TODO input,
-   y sin esto los campos de aqui heredan ese estilo y se ven de otro mundo. */
+/* Tamano propio: el formulario del elemento le pone estilo a TODO input. */
 .af .inp {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.3;
-  height: auto;
-  color: var(--ink);
-  background: #fff;
+  width: 100%; box-sizing: border-box; height: 30px;
+  border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 9px;
+  font: inherit; font-size: 12.5px; color: var(--ink); background: #fff; outline: none;
 }
+.af textarea.inp { height: auto; min-height: 54px; padding: 7px 10px; resize: vertical; line-height: 1.4; }
+.af .inp:focus { border-color: var(--pri); box-shadow: 0 0 0 3px rgba(123, 0, 97, .12); }
+.af .inp.hora { width: 78px; height: 26px; padding: 0 4px; font-size: 12px; }
 
-.af textarea.inp { min-height: 3rem; resize: vertical; }
-.af .inp.hora { width: 7.5rem; }
+.g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
+.g3 .c3 { grid-column: 1 / -1; }
 
-.g2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 10px; }
+/* ---- Horario ---- */
+.hor { border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; padding: 8px 10px; }
+.hor-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.hor-head .t { font-size: 13px; font-weight: 700; }
+.hor-head .sp { flex: 1; }
+.tenue { color: var(--mut); font-size: 11.5px; }
+.chip {
+  border: 1px solid #d8b4cf; background: #fff; color: var(--pri); border-radius: 999px;
+  height: 26px; padding: 0 10px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+.chip:hover { background: #fbf0f8; }
+.chip.ghost { border-color: var(--line); color: var(--mut); }
 
+.dias { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 8px; }
+.dia {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) 24px; align-items: center; gap: 5px;
+  background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 3px 5px; min-height: 32px;
+}
+.dia.vacio { background: #fbfcfd; }
+.dia-n { font-size: 12px; font-weight: 800; color: #334155; }
+.dia-tramos { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tramo { display: flex; align-items: center; gap: 4px; }
+.tramo .a { color: var(--mut); font-size: 12px; }
+.libre { font-size: 11.5px; color: #94a3b8; }
+
+.ib {
+  width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--line); background: #fff;
+  color: var(--mut); cursor: pointer; font-size: 15px; line-height: 1; display: inline-flex;
+  align-items: center; justify-content: center; padding: 0; flex: none;
+}
+.ib:hover { border-color: #fca5a5; color: #dc2626; }
+.ib.mas { color: var(--pri); border-color: #d8b4cf; }
+.ib.mas:hover { background: #fbf0f8; color: var(--pri); border-color: var(--pri); }
+
+/* ---- Pie fijo: los botones siempre a la vista, sin tener que bajar ---- */
+.af-foot {
+  position: sticky; bottom: 0; z-index: 1;
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; padding: 10px 0 2px; background: #fff; border-top: 1px solid var(--line);
+}
+.af-foot .sp { flex: 1; }
+.af-error { font-size: 12.5px; color: #b91c1c; }
 .btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
+  height: 32px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 0 14px;
+  font-size: 13px; font-weight: 600; color: #475569; cursor: pointer;
 }
 .btn:hover { background: #f5f7fa; color: var(--ink); }
 .btn.pri { background: var(--pri); border-color: var(--pri); color: #fff; }
 .btn.pri:hover { filter: brightness(1.08); }
 .btn.pri[disabled] { opacity: .6; cursor: default; }
-.btn.xs { padding: 3px 8px; font-size: 11.5px; }
 
-.x {
-  border: none; background: transparent; font-size: 20px; line-height: 1;
-  color: var(--mut); cursor: pointer; padding: 0 4px;
+@media (max-width: 760px) {
+  .g3, .dias { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.x:hover { color: var(--ink); }
-.x.sm { font-size: 15px; }
-
-.tenue { color: var(--mut); font-size: 12px; font-weight: 400; }
-
-.hor-head {
-  display: flex; align-items: baseline; gap: 10px;
-  margin: 16px 0 8px; padding-top: 12px; border-top: 1px solid var(--line);
-  font-size: 13px;
-}
-
-.dia { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 8px; padding: 3px 0; }
-.dia-n { font-size: 12px; font-weight: 800; color: #475569; padding-top: 7px; }
-.dia-tramos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.tramo { display: flex; align-items: center; gap: 4px; }
-.tramo .a { font-size: 12px; color: var(--mut); }
-
-.af-error { margin-top: 10px; font-size: 12.5px; color: #b91c1c; }
-
-.af-foot {
-  display: flex; justify-content: flex-end; gap: 6px;
-  margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line);
+@media (max-width: 560px) {
+  .g2, .g3, .dias { grid-template-columns: 1fr; }
 }

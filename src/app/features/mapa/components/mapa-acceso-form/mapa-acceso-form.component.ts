@@ -59,6 +59,14 @@ export class MapaAccesoFormComponent {
     this.modelo.horarios = (this.modelo.horarios ?? []).filter((x) => x !== h);
   }
 
+  /** Atajo: el mismo horario para varios dias (reemplaza lo que tuvieran esos dias). */
+  preset(dias: number[], desde: string, hasta: string) {
+    const resto = (this.modelo.horarios ?? []).filter((h) => !dias.includes(h.dia));
+    this.modelo.horarios = [...resto, ...dias.map((dia) => ({ dia, desde, hasta }))];
+  }
+
+  limpiarHorario() { this.modelo.horarios = []; }
+
   tramosDe(dia: number): MapaAccesoHorario[] {
     return (this.modelo.horarios ?? []).filter((h) => h.dia === dia);
   }

@@ -1,0 +1,300 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+
+// Base relativa del back de Monitoreo (unificación KLAX). En dev la resuelve el
+// proxy (/api/monitoreo -> NOC), en prod nginx. Coincide con env.apiBases.monitoreo.
+// El interceptor de klaxmap adjunta el JWT del ERP a estas llamadas.
+export const API = '/api/monitoreo';
+
+/** Envelope estándar del backend (estándar KLAX). */
+export interface ApiEnvelope<T> { codigo: number; mensaje: string; data: T; }
+
+/** Desempaqueta el envelope: devuelve data o lanza si codigo !== 0. */
+function unwrap<T>(r: ApiEnvelope<T>): T {
+  if (r == null || r.codigo !== 0) throw new Error((r && r.mensaje) || 'Error del servidor');
+  return r.data;
+}
+
+export interface Device {
+  id: number;
+  name: string;
+  vendor: string;
+  model: string;
+  device_type: string;
+  zone: string;
+  ip_address: string;
+  snmp_version: string;
+  snmp_community: string;
+  snmp_port: number;
+  snmp_enabled: boolean;
+  mon_temp: boolean;
+  /** Solo OLT: firmware real (decide el arbol de OIDs) y perfil del catalogo multimarca. */
+  software_version?: string | null;
+  id_olt_perfil?: number | null;
+  /** Ultima vez que el equipo respondio, por ping o por SNMP. Null = nunca. */
+  last_seen_at?: string | null;
+  status: string;
+  cpu_percent: number | null;
+  memory_percent: number | null;
+  ping_ms: number | null;
+  temp_celsius: number | null;
+  wan_gbps: number | null;
+  sys_name: string | null;
+  uptime_seconds: number | null;
+  /** Sucursal asignada a mano (Cayambe, Otavalo...). Null = sin asignar. */
+  sucursal_id?: number | null;
+}
+
+export interface Sucursal { id: number; nombre: string; orden: number; }
+
+export interface Iface {
+  id: number;
+  device_name: string;
+  real_name: string;
+  noc_alias: string;
+  usage_type: string;
+  capacity_bps: number;
+  status: string;
+  util_percent: number;
+  rx_bps: number;
+  tx_bps: number;
+  errors: number;
+}
+
+export interface Alert {
+  id: number;
+  severity: string;
+  status: string;
+  device_name: string;
+  iface: string;
+  description: string;
+  started: string;
+  duration: string;
+}
+
+export interface Point { t: string; v?: number; rx?: number; tx?: number; in_err?: number; out_err?: number; in_disc?: number; out_disc?: number; }
+
+export interface ZteOltRow {
+  id: number; name: string; host: string; telnetPort: number; telnetUser: string;
+  snmpCommunity: string; vendor: string; model: string; softwareVersion: string;
+  ponPorts: string; enabled: boolean;
+  snmpPollEnabled: boolean; snmpPollSeconds: number; lastSnmpAt: string | null;
+  tempMaxC: number | null; tempHotSlot: number | null; lastSystemAt: string | null;
+  idOltPerfil: number | null;
+  idRedOltMarca: number | null;
+}
+
+/** Perfil del catálogo multimarca (marca · modelo · firmware) para el combo "Tipo de OLT". */
+export interface OltPerfil {
+  id: number; nombre: string; vendor: string; modelo: string | null;
+  firmware: string | null; estado: string; cli_estilo: string | null;
+}
+
+/** Marca de OLT del ERP (kxt_red_olt_marca). Llave del catálogo de comandos. */
+export interface OltMarca { idRedOltMarca: number; marca: string; }
+
+/** Comando del catálogo (copia local NOC) para una marca. */
+export interface CatComando { metric_key: string; script: string | null; comando: string; parser_key: string | null; confirmado: boolean; }
+
+export interface OnuRow {
+  id: number; oltId: number; shelf: number; slot: number; port: number; onuId: number;
+  rawIndex: string; serial: string | null; clientName: string | null; clientIp: string | null;
+  description: string | null; distanceM: number | null; phaseState: string; adminState: string | null;
+  contratoEstado?: string | null; contratoEstadoId?: number | null;
+  onuRxDbm: number | null; onuTxDbm: number | null; oltRxDbm: number | null; oltTxDbm: number | null;
+  onuInRateBps: number | null; onuOutRateBps: number | null; onuInTotalBytes: number | null; onuOutTotalBytes: number | null;
+  lastCause: string | null; offlineHistory: string | null; lastSeenAt: string | null; updatedAt: string | null;
+  serviceState: string | null; serviceStateSince: string | null;
+}
+
+@Injectable({ providedIn: 'root' })
+export class NocApi {
+  private http = inject(HttpClient);
+
+  devices(): Observable<Device[]> { return this.http.get<ApiEnvelope<Device[]>>(`${API}/devices`).pipe(map(unwrap)); }
+  createDevice(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices`, body).pipe(map(unwrap)); }
+  updateDevice(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/devices/${id}`, body).pipe(map(unwrap)); }
+  deviceSsh(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/devices/${id}/ssh`).pipe(map(unwrap)); }
+  devicePoll(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/devices/${id}/poll`, {}).pipe(map(unwrap)); }
+  deleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/devices/${id}`).pipe(map(unwrap)); }
+
+  // ---- Topologia de Red ----
+  sucursales(): Observable<Sucursal[]> { return this.http.get<ApiEnvelope<Sucursal[]>>(`${API}/sucursales`).pipe(map(unwrap)); }
+  crearSucursal(nombre: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/sucursales`, { nombre }).pipe(map(unwrap)); }
+  asignarSucursal(deviceId: number, sucursalId: number | null): Observable<any> {
+    return this.http.put<ApiEnvelope<any>>(`${API}/sucursales/asignar`, { device_id: deviceId, sucursal_id: sucursalId }).pipe(map(unwrap));
+  }
+  topologia(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia`).pipe(map(unwrap)); }
+  topoAddLink(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/links`, body).pipe(map(unwrap)); }
+  topoDelLink(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/links/${id}`).pipe(map(unwrap)); }
+  topoSavePos(id: number, x: number, y: number): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/pos`, { x, y }).pipe(map(unwrap)); }
+  topoSaveNet(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/net`, body).pipe(map(unwrap)); }
+  topoPorts(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/topologia/nodes/${id}/ports`).pipe(map(unwrap)); }
+  topoAddPort(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/topologia/ports`, body).pipe(map(unwrap)); }
+  topoEditPort(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`, body).pipe(map(unwrap)); }
+  topoDelPort(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/topologia/ports/${id}`).pipe(map(unwrap)); }
+  /** Sincroniza el catalogo de OLT/equipos del ERP hacia el NOC (llena erp_olt_id). */
+  syncCheck(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/devices/sync-check`).pipe(map(unwrap)); }
+
+  // ---- ACS (TR-069): router del cliente, por contrato ----
+  acsStatus(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}`).pipe(map(unwrap)); }
+  acsTareas(contrato: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/tareas`).pipe(map(unwrap)); }
+  acsReboot(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/reboot`, {}).pipe(map(unwrap)); }
+  acsWifiNombre(contrato: string, ssid: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/nombre`, { ssid }).pipe(map(unwrap)); }
+  acsWifiClave(contrato: string, password: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/clave`, { password }).pipe(map(unwrap)); }
+  acsWifiCanal(contrato: string, channel: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/canal`, { channel }).pipe(map(unwrap)); }
+  acsWifiOptimizar(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/wifi/optimizar`, {}).pipe(map(unwrap)); }
+  acsLeerHosts(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts/leer`, {}).pipe(map(unwrap)); }
+  acsHosts(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/hosts`).pipe(map(unwrap)); }
+  acsRefresh(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/refresh`, {}).pipe(map(unwrap)); }
+  acsParametros(contrato: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/parametros`).pipe(map(unwrap)); }
+  acsConfig(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/config`).pipe(map(unwrap)); }
+  acsSaveConfig(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/acs/config`, body).pipe(map(unwrap)); }
+  acsPushMgmt(contrato: string, body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/push-mgmt`, body).pipe(map(unwrap)); }
+  acsConnReq(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/connreq`, {}).pipe(map(unwrap)); }
+  acsDescubrir(contrato: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/descubrir`, {}).pipe(map(unwrap)); }
+  acsArbol(contrato: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/acs/cpe/${encodeURIComponent(contrato)}/arbol`).pipe(map(unwrap)); }
+  acsDeleteDevice(id: number): Observable<any> { return this.http.delete<ApiEnvelope<any>>(`${API}/acs/devices/${id}`).pipe(map(unwrap)); }
+  acsDevices(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/acs/devices`).pipe(map(unwrap)); }
+  acsAsignarContrato(id: number, contrato: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/acs/devices/${id}/contrato`, { contrato }).pipe(map(unwrap)); }
+  /** Catálogo multimarca: perfiles de OLT (Tipo de OLT) para el combo del formulario. */
+  oltPerfiles(): Observable<OltPerfil[]> { return this.http.get<ApiEnvelope<OltPerfil[]>>(`${API}/devices/olt-perfiles`).pipe(map(unwrap)); }
+  // ---- Catálogo de comandos (escritura dual ERP + NOC) ----
+  catalogoMarcas(): Observable<OltMarca[]> { return this.http.get<ApiEnvelope<OltMarca[]>>(`${API}/zte/catalogo/marcas`).pipe(map(unwrap)); }
+  catalogoComandos(marca: number): Observable<CatComando[]> { return this.http.get<ApiEnvelope<CatComando[]>>(`${API}/zte/catalogo?marca=${marca}`).pipe(map(unwrap)); }
+  guardarComando(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/catalogo/comando`, body).pipe(map(unwrap)); }
+  interfaces(): Observable<Iface[]> { return this.http.get<ApiEnvelope<Iface[]>>(`${API}/interfaces`).pipe(map(unwrap)); }
+  alerts(): Observable<Alert[]> { return this.http.get<ApiEnvelope<Alert[]>>(`${API}/alerts`).pipe(map(unwrap)); }
+  dashboardTraffic(points = 24): Observable<Point[]> { return this.http.get<ApiEnvelope<Point[]>>(`${API}/dashboard/traffic?points=${points}`).pipe(map(unwrap)); }
+  deviceMetric(id: number, metric: string, rangeMin = 60, buckets = 60, pad = true): Observable<Point[]> {
+    return this.http.get<ApiEnvelope<Point[]>>(`${API}/devices/${id}/metrics?metric=${metric}&rangeMin=${rangeMin}&buckets=${buckets}&pad=${pad}`).pipe(map(unwrap));
+  }
+  deviceTraffic(id: number, rangeMin = 60, buckets = 60, pad = true): Observable<Point[]> {
+    return this.http.get<ApiEnvelope<Point[]>>(`${API}/devices/${id}/traffic?rangeMin=${rangeMin}&buckets=${buckets}&pad=${pad}`).pipe(map(unwrap));
+  }
+  cpuCores(id: number, rangeMin = 15, buckets = 60): Observable<{ labels: string[]; series: { name: string; data: (number | null)[] }[] }> {
+    return this.http.get<ApiEnvelope<any>>(`${API}/devices/${id}/cpu-cores?rangeMin=${rangeMin}&buckets=${buckets}`).pipe(map(unwrap));
+  }
+  interfaceTraffic(id: number, rangeMin = 60, buckets = 60, pad = true): Observable<Point[]> {
+    return this.http.get<ApiEnvelope<Point[]>>(`${API}/interfaces/${id}/traffic?rangeMin=${rangeMin}&buckets=${buckets}&pad=${pad}`).pipe(map(unwrap));
+  }
+
+  // ---- ZTE ONU (clientes) ----
+  zteOlts(): Observable<ZteOltRow[]> { return this.http.get<ApiEnvelope<ZteOltRow[]>>(`${API}/zte/olts`).pipe(map(unwrap)); }
+  zteCreateOlt(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts`, body).pipe(map(unwrap)); }
+  zteOnus(): Observable<OnuRow[]> { return this.http.get<ApiEnvelope<OnuRow[]>>(`${API}/zte/onus`).pipe(map(unwrap)); }
+  zteOnusOfOlt(id: number): Observable<OnuRow[]> { return this.http.get<ApiEnvelope<OnuRow[]>>(`${API}/zte/olts/${id}/onus`).pipe(map(unwrap)); }
+  zteCollect(id: number, port: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/collect?port=${port}`, {}).pipe(map(unwrap)); }
+  zteDiscoverCards(id: number): Observable<ZteOltRow> { return this.http.post<ApiEnvelope<ZteOltRow>>(`${API}/zte/olts/${id}/discover-cards`, {}).pipe(map(unwrap)); }
+  zteOltSystem(id: number): Observable<ZteOltRow> { return this.http.post<ApiEnvelope<ZteOltRow>>(`${API}/zte/olts/${id}/system`, {}).pipe(map(unwrap)); }
+  zteVerificacion(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/verificacion`).pipe(map(unwrap)); }
+  zteCollectFull(id: number, port: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/collect-full?port=${port}`, {}).pipe(map(unwrap)); }
+  zteCollectSnmp(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/collect-snmp`, {}).pipe(map(unwrap)); }
+  zteSnmpStatus(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/snmp-status`).pipe(map(unwrap)); }
+  zteEnrich(id: number, force = false): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/enrich?force=${force}`, {}).pipe(map(unwrap)); }
+  zteEnrichStatus(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/enrich-status`).pipe(map(unwrap)); }
+  zteTopConsumo(id: number, limit = 50): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/top-consumo?limit=${limit}`).pipe(map(unwrap)); }
+  zteOnuAlerts(iface: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/onus/alerts?iface=${encodeURIComponent(iface)}`).pipe(map(unwrap)); }
+  zteOltPorts(id: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/ports`).pipe(map(unwrap)); }
+  ztePortHistory(id: number, port: string, hours = 6): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/ports/history?port=${encodeURIComponent(port)}&hours=${hours}`).pipe(map(unwrap)); }
+
+  testTelnet(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/diag/test-telnet`, body).pipe(map(unwrap)); }
+  testSnmp(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/diag/test-snmp`, body).pipe(map(unwrap)); }
+
+  // ---- Configuración (módulo Tiempos) ----
+  settings(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/settings`).pipe(map(unwrap)); }
+  updateSetting(key: string, value: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/settings/${key}`, { value }).pipe(map(unwrap)); }
+  notifyTest(channel?: string, type?: string, text?: string): Observable<any[]> {
+    return this.http.post<ApiEnvelope<any[]>>(`${API}/notify/test`, { channel, type, text }).pipe(map(unwrap));
+  }
+  notifyHistory(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/notify/history`).pipe(map(unwrap)); }
+  notifyDeviceAlerts(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/notify/device-alerts`).pipe(map(unwrap)); }
+  notifyUpdateDeviceAlert(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/notify/device-alerts/${id}`, body).pipe(map(unwrap)); }
+  zteRefresh(id: number, onuId: number, port: string): Observable<OnuRow> { return this.http.post<ApiEnvelope<OnuRow>>(`${API}/zte/olts/${id}/onus/${onuId}/refresh?port=${port}`, {}).pipe(map(unwrap)); }
+  /** Refresco SNMP DIRIGIDO a UNA ONU (potencia + consumo), sin telnet. */
+  zteOnuSnmpRefresh(id: number): Observable<OnuRow> { return this.http.post<ApiEnvelope<OnuRow>>(`${API}/zte/onus/${id}/snmp-refresh`, {}).pipe(map(unwrap)); }
+  zteOnuHistory(id: number, metric = 'onu_rx_optical_power_dbm', mins = 10080, pad = false, buckets = 120): Observable<Point[]> {
+    return this.http.get<ApiEnvelope<Point[]>>(`${API}/zte/onus/${id}/history?metric=${metric}&mins=${mins}&pad=${pad}&buckets=${buckets}`).pipe(map(unwrap));
+  }
+
+  // ---- Alerta temprana (inicio) ----
+  overview(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/overview`).pipe(map(unwrap)); }
+  transiciones(minutes = 60): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/overview/transiciones?minutes=${minutes}`).pipe(map(unwrap)); }
+
+  // ---- Seguridad (reputación IP en listas negras / RBL) ----
+  secRbl(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/security/rbl`).pipe(map(unwrap)); }
+  secCheck(ip: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/security/rbl/check?ip=${encodeURIComponent(ip)}`, {}).pipe(map(unwrap)); }
+  secSweep(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/security/rbl/sweep`, {}).pipe(map(unwrap)); }
+
+  // ---- Tráfico por app (NetFlow) ----
+  flowOverview(hours = 6, dir = 'd'): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/overview?hours=${hours}&dir=${dir}`).pipe(map(unwrap)); }
+  flowStatus(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/status`).pipe(map(unwrap)); }
+  flowTopClients(hours = 6, limit = 50): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/flow/top-clients?hours=${hours}&limit=${limit}`).pipe(map(unwrap)); }
+  flowApps(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/flow/apps`).pipe(map(unwrap)); }
+
+  // ---- Configurar OLT ----
+  oltcTemplates(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/olt-config/templates`).pipe(map(unwrap)); }
+  /** Estado de los interruptores del modulo: CLI global + escritura, con el motivo si no se puede enviar. */
+  oltcEstado(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/olt-config/estado`).pipe(map(unwrap)); }
+  oltcPreview(code: string, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/preview`, { code, params }).pipe(map(unwrap)); }
+  oltcExecute(code: string, oltId: number, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/execute`, { code, oltId, params }).pipe(map(unwrap)); }
+  oltcUpdateBody(code: string, body: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/olt-config/templates/${code}`, { body }).pipe(map(unwrap)); }
+  oltcLogs(oltId?: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/olt-config/logs${oltId ? '?oltId=' + oltId : ''}`).pipe(map(unwrap)); }
+
+  // ---- Soporte ----
+  supSearch(q: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/search?q=${encodeURIComponent(q)}`).pipe(map(unwrap)); }
+  supCreateTicket(body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/tickets`, body).pipe(map(unwrap)); }
+  supTickets(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/tickets`).pipe(map(unwrap)); }
+  supTicket(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/tickets/${id}`).pipe(map(unwrap)); }
+  supAction(id: number, action: string, usuario?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/tickets/${id}/action`, { action, usuario }).pipe(map(unwrap)); }
+  supLog(id: number, accion: string, resultado: string, usuario?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/tickets/${id}/log`, { accion, resultado, usuario }).pipe(map(unwrap)); }
+  supUpdateTicket(id: number, body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/support/tickets/${id}`, body).pipe(map(unwrap)); }
+  supCreateOrder(id: number, body: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/tickets/${id}/order`, body).pipe(map(unwrap)); }
+  supOrders(): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/orders`).pipe(map(unwrap)); }
+  supOrder(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/orders/${id}`).pipe(map(unwrap)); }
+  supInbox(estado?: number | null, area?: number | null, mio?: number | null, limit = 200): Observable<any[]> {
+    let u = `${API}/support/inbox?limit=${limit}`;
+    if (estado != null) u += `&estado=${estado}`;
+    if (area != null) u += `&area=${area}`;
+    if (mio != null) u += `&mio=${mio}`;
+    return this.http.get<ApiEnvelope<any[]>>(u).pipe(map(unwrap));
+  }
+  supContrato(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/contrato/${id}`).pipe(map(unwrap)); }
+  supOnuAlertas(onuId: number, limit = 30): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/support/onu-alertas/${onuId}?limit=${limit}`).pipe(map(unwrap)); }
+  flowClientDaily(ip: string, hours = 24): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/flow/client-daily?ip=${encodeURIComponent(ip)}&hours=${hours}`).pipe(map(unwrap)); }
+
+  // --- Diagnóstico SNMP (laboratorio). Requiere noc.diag.enabled=true en el NOC. Devuelven texto crudo. ---
+  diagSnmpGet(ip: string, community: string, oid: string, port = 161): Observable<string> {
+    return this.http.get(`${API}/diag/snmpget?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&oid=${encodeURIComponent(oid)}&port=${port}`, { responseType: 'text' });
+  }
+  diagSnmpWalk(ip: string, community: string, oid: string, port = 161, limit = 40): Observable<string> {
+    return this.http.get(`${API}/diag/snmpwalk?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&oid=${encodeURIComponent(oid)}&port=${port}&limit=${limit}`, { responseType: 'text' });
+  }
+  diagScanColumns(ip: string, community: string, base: string, from = 1, to = 30, samples = 3, port = 161, pauseMs = 250): Observable<string> {
+    return this.http.get(`${API}/diag/scan-columns?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&base=${encodeURIComponent(base)}&from=${from}&to=${to}&samples=${samples}&port=${port}&pauseMs=${pauseMs}`, { responseType: 'text' });
+  }
+  supTomar(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/tomar`, {}).pipe(map(unwrap)); }
+  supEstado(id: number, estado: number, nota?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/estado`, { estado, nota }).pipe(map(unwrap)); }
+  supNota(id: number, nota: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/nota`, { nota }).pipe(map(unwrap)); }
+  supInboxResumen(area?: number | null): Observable<any[]> {
+    const u = area != null ? `${API}/support/inbox/resumen?area=${area}` : `${API}/support/inbox/resumen`;
+    return this.http.get<ApiEnvelope<any[]>>(u).pipe(map(unwrap));
+  }
+  supInboxTimeline(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/${id}/timeline`).pipe(map(unwrap)); }
+  supInboxCatalogos(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/catalogos`).pipe(map(unwrap)); }
+  supInboxDiag(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/support/inbox/diag`).pipe(map(unwrap)); }
+
+  // --- Respaldos de configuración de equipos (OLT ZTE + MikroTik core/borde) ---
+  backupState(limit = 200): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config?limit=${limit}`).pipe(map(unwrap)); }
+  backupRun(): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/run`, {}).pipe(map(unwrap)); }
+  backupSaveCfg(body: any): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/backup/config/settings`, body).pipe(map(unwrap)); }
+  backupLlave(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/llave`).pipe(map(unwrap)); }
+  backupLlaveGenerar(confirmar: boolean): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/generar?confirmar=${confirmar}`, {}).pipe(map(unwrap)); }
+  backupLlaveEquipos(): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/llave/equipos`).pipe(map(unwrap)); }
+  /** ids vacío = todos (comportamiento viejo del botón). */
+  backupLlavePreparar(ids: number[] = []): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/preparar`, { ids }).pipe(map(unwrap)); }
+  backupLlaveProbar(ids: number[] = []): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/backup/config/llave/probar`, { ids }).pipe(map(unwrap)); }
+  backupVer(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/backup/config/${id}/ver`).pipe(map(unwrap)); }
+  backupDownload(id: number): Observable<Blob> { return this.http.get(`${API}/backup/config/${id}/download`, { responseType: 'blob' }); }
+}

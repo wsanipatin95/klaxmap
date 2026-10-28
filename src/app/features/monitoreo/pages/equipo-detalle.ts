@@ -18,7 +18,7 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
     @if (dev(); as d) {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <h2 style="font-size:20px">{{ d.name }}</h2>
-        <span class="badge" [class.b-up]="d.status==='up'" [class.b-down]="d.status==='down'" [class.b-maint]="d.status!=='up'&&d.status!=='down'">{{ d.status.toUpperCase() }}</span>
+        <span class="badge" [class.b-up]="d.status==='up'" [class.b-down]="d.status==='down'" [class.b-gen]="d.status==='encendido'" [class.b-maint]="d.status!=='up'&&d.status!=='down'&&d.status!=='encendido'">{{ d.status==='encendido' ? 'GENERADOR ON' : d.status==='standby' ? 'EN ESPERA' : d.status.toUpperCase() }}</span>
         @if (d.snmp_enabled && d.device_type !== 'energia') { <span class="badge b-maint">SNMP</span> }
         <span class="en-vivo" style="margin-left:auto;font-size:12px"><span class="st"></span> En vivo · {{ countdown() }} s</span>
         <button class="btn ghost" (click)="openEdit(d)"><i class="pi pi-pencil"></i> Editar equipo</button>
@@ -174,7 +174,12 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
               @if (ef.device_type === 'energia') {
                 <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="ef.latido_port" placeholder="6668"></div>
                 <div><label class="k">MAC</label><input class="inp" style="width:100%" [(ngModel)]="ef.mac" placeholder="30:48:7D:3A:F1:00"></div>
-                <div style="grid-column:1/3"><label class="k">ID de Tuya</label><input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id"></div>
+                <div><label class="k">ID de Tuya</label><input class="inp" style="width:100%" [(ngModel)]="ef.tuya_id"></div>
+                <div><label class="k">Uso</label>
+                <select class="inp" style="width:100%" [(ngModel)]="ef.energia_rol">
+                  <option value="red">Luz normal · avisa si se apaga</option>
+                  <option value="generador">Generador · avisa si se enciende</option>
+                </select></div>
               } @else {
                 <div><label class="k">Versión SNMP</label><select class="inp" style="width:100%" [(ngModel)]="ef.snmp_version"><option value="v2c">v2c</option><option value="v3">v3</option></select></div>
                 <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="ef.snmp_community"></div>
@@ -520,7 +525,7 @@ export class EquipoDetalle implements OnDestroy {
   }
 
   openEdit(d: Device) {
-    this.ef = { ...d, sucursal_id: (d as any).sucursal_id ?? null };
+    this.ef = { ...d, sucursal_id: (d as any).sucursal_id ?? null, energia_rol: (d as any).energia_rol || 'red' };
     if (!this.sucursales().length) this.api.sucursales().subscribe((s) => this.sucursales.set(s || []));
     this.showEdit.set(true);
     // Si es OLT, prefilea la config Telnet + barrido desde su fila en kxt_olt.

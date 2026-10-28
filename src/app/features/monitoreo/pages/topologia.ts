@@ -7,7 +7,7 @@ interface TopoNode {
   id: number; name: string; device_type: string; ip_address: string; status: string;
   zone: string; cidr: string; gateway: string; vlan: number | null; mgmt_iface: string;
   topo_x: number | null; topo_y: number | null; x: number; y: number;
-  sucursal_id?: number | null; clientes?: number | null; voltaje?: number | null; rele?: number | null;
+  sucursal_id?: number | null; clientes?: number | null; voltaje?: number | null; rele?: number | null; energia_rol?: string | null;
 }
 interface Aviso { key: string; sucId: number | null; nombre: string; equipos: string[]; ids: number[]; clientes: number; desde: string; }
 interface TopoLink {
@@ -142,6 +142,10 @@ interface Caida { id: number; name: string; desde: string; }
     .ib { width:28px; height:28px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px; margin-left:3px; }
     .ib:hover { border-color:#94a3b8; }
     .ib.ok { background:#7b0061; border-color:#7b0061; color:#fff; }
+    .snmp-st { font-size:12px; padding:6px 10px; border-radius:8px; margin-bottom:6px; }
+    .snmp-st.lee { background:#f1f5f9; color:#475569; }
+    .snmp-st.mal { background:#fff7ed; color:#b45309; border:1px solid #fed7aa; }
+    .ib.unido { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
     .ib.aqui { background:#2563eb; border-color:#2563eb; color:#fff; }
     .ib.del:hover { border-color:#fca5a5; color:#dc2626; }
 
@@ -355,7 +359,7 @@ interface Caida { id: number; name: string; desde: string; }
         <div class="hud-note caida" [class.silenciada]="silenciado()">
           <div class="cab">
             <span class="pulse"></span>
-            <span class="lbl">{{ caidas().length === 1 ? 'Equipo caído' : caidas().length + ' equipos caídos' }}</span>
+            <span class="lbl">{{ tituloCaidas() }}</span>
             <span class="sp"></span>
             @if (alarm().on && !silenciado()) { <button class="btn sm ghost" (click)="silenciar()" title="Silenciar la alarma"><i class="pi pi-volume-off"></i></button> }
             <button class="btn sm ghost" (click)="descartarCaidas()">Descartar</button>
@@ -432,7 +436,7 @@ interface Caida { id: number; name: string; desde: string; }
               <use [attr.href]="'#topo-ic-' + tipoDe(n)" x="13" y="11" width="15" height="15" [attr.fill]="stroke(n)"></use>
               <text x="34" y="22" font-size="12" font-weight="600" fill="#0b2239" [attr.textLength]="nameLen(n)" lengthAdjust="spacingAndGlyphs">{{ n.name }}</text>
               <text x="13" y="38" font-size="10.5" fill="#5b6b7b">{{ n.ip_address || 'sin IP' }}</text>
-              <rect x="13" y="45" [attr.width]="statusText(n) === 'Online' ? 58 : 54" height="14" rx="7" [attr.fill]="chipFill(n)"></rect>
+              <rect x="13" y="45" [attr.width]="statusText(n).length * 5.6 + 22" height="14" rx="7" [attr.fill]="chipFill(n)"></rect>
               <circle cx="22" cy="52" r="3.2" [attr.fill]="stroke(n)"></circle>
               <text x="29" y="55" font-size="9.5" font-weight="700" [attr.fill]="stroke(n)">{{ statusText(n) }}</text>
               <text [attr.x]="NW - 13" y="55" font-size="9" fill="#9aa8b6" text-anchor="end">{{ n.device_type }}</text>
@@ -486,6 +490,12 @@ interface Caida { id: number; name: string; desde: string; }
             </span>
           </div>
           <div class="pb">
+            @if (snmpEstado() === 'leyendo') {
+              <div class="snmp-st lee"><i class="pi pi-spin pi-spinner"></i> Leyendo el equipo por SNMP…</div>
+            } @else if (snmpEstado() === 'sin-respuesta') {
+              <div class="snmp-st mal"><i class="pi pi-exclamation-triangle"></i>
+                El equipo no contesta SNMP{{ snmpUltima() ? ' — última lectura ' + snmpUltima() : ' — nunca se leyó' }}. Se muestran los puertos guardados.</div>
+            }
             <table class="ptab">
               <colgroup><col style="width:24%"><col style="width:92px"><col style="width:26%"><col style="width:62px"><col><col style="width:70px"></colgroup>
               <thead><tr><th>Puerto</th><th>Rol</th><th>IP</th><th>VLAN</th><th>Descripción</th><th></th></tr></thead>
@@ -503,13 +513,15 @@ interface Caida { id: number; name: string; desde: string; }
                     <td><input type="number" [(ngModel)]="p.vlan" placeholder="—" (change)="savePort(p)" (keydown.enter)="$any($event.target).blur()"></td>
                     <td><input [(ngModel)]="p.descr" placeholder="—" (change)="savePort(p)" (keydown.enter)="$any($event.target).blur()"></td>
                     <td class="acc">
-                      <button class="ib" [class.aqui]="linkFrom() && linkFrom()!.deviceId !== d.id" (click)="connectPort(p)"
-                              [title]="linkFrom() && linkFrom()!.deviceId !== d.id ? 'Conectar aquí' : 'Conectar desde este puerto'"><i class="pi pi-link"></i></button>
+                      @let dest = destinoDe(d.id, p.label);
+                      <button class="ib" [class.aqui]="linkFrom() && linkFrom()!.deviceId !== d.id" [class.unido]="!!dest" (click)="connectPort(p)"
+                              [title]="linkFrom() && linkFrom()!.deviceId !== d.id ? 'Conectar aquí'
+                                       : dest ? 'Conectado a ' + dest : 'Conectar desde este puerto'"><i class="pi pi-link"></i></button>
                       <button class="ib del" (click)="delPort(p)" title="Borrar puerto"><i class="pi pi-trash"></i></button>
                     </td>
                   </tr>
                 }
-                @if (!ports().length) { <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">Sin puertos aún. Se traen solos por SNMP; agrega los que falten.</td></tr> }
+                @if (!ports().length) { <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">{{ cargandoPorts() || snmpEstado() === 'leyendo' ? 'Cargando puertos…' : 'Sin puertos aún. Se traen solos por SNMP; agrega los que falten.' }}</td></tr> }
               </tbody>
             </table>
             <div style="display:flex;gap:8px;align-items:center;margin-top:12px;border-top:1px dashed var(--border);padding-top:12px;flex-wrap:wrap">
@@ -858,7 +870,18 @@ export class Topologia implements OnInit, OnDestroy {
     if (t === 'core' || t === 'olt' || t === 'servidor') return t;
     return 'otro';
   }
-  private esDown(n: TopoNode) { return (n.status || '').toLowerCase() === 'down'; }
+  tituloCaidas(): string {
+    const lista = this.caidas();
+    const gen = lista.filter((c) => (this.nodeById(c.id)?.status || '').toLowerCase() === 'encendido').length;
+    const caidos = lista.length - gen;
+    const partes: string[] = [];
+    if (caidos) partes.push(caidos === 1 ? 'Equipo caído' : caidos + ' equipos caídos');
+    if (gen) partes.push(gen === 1 ? 'Generador encendido' : gen + ' generadores encendidos');
+    return partes.join(' · ');
+  }
+
+  /** Para la alarma: un equipo caido, o un generador que arranco (se fue la luz). */
+  private esDown(n: TopoNode) { const s = (n.status || '').toLowerCase(); return s === 'down' || s === 'encendido'; }
 
   private evaluarCaidas(nodes: TopoNode[]) {
     const cfg = this.alarm();
@@ -998,9 +1021,19 @@ export class Topologia implements OnInit, OnDestroy {
     return w > max ? max : null;                // solo limita si se pasaria del ancho
   }
   pillW(label: string | null) { return (label || '').length * 6 + 12; }
-  statusText(n: TopoNode) { const s = (n.status || '').toLowerCase(); return s === 'up' ? 'Online' : s === 'down' ? 'Caído' : '?'; }
-  stroke(n: TopoNode) { const s = (n.status || '').toLowerCase(); return s === 'up' ? '#16a34a' : s === 'down' ? '#dc2626' : '#94a3b8'; }
-  chipFill(n: TopoNode) { const s = (n.status || '').toLowerCase(); return s === 'up' ? '#e8f7ee' : s === 'down' ? '#fdecec' : '#eef1f4'; }
+  // Breaker de generador: 'standby' (apagado, lo normal) en gris; 'encendido' (se fue la luz) en ambar.
+  statusText(n: TopoNode) {
+    const s = (n.status || '').toLowerCase();
+    return s === 'up' ? 'Online' : s === 'down' ? 'Caído' : s === 'encendido' ? 'Encendido' : s === 'standby' ? 'En espera' : '?';
+  }
+  stroke(n: TopoNode) {
+    const s = (n.status || '').toLowerCase();
+    return s === 'up' ? '#16a34a' : s === 'down' ? '#dc2626' : s === 'encendido' ? '#d97706' : '#94a3b8';
+  }
+  chipFill(n: TopoNode) {
+    const s = (n.status || '').toLowerCase();
+    return s === 'up' ? '#e8f7ee' : s === 'down' ? '#fdecec' : s === 'encendido' ? '#fef3c7' : '#eef1f4';
+  }
   linkColor(a: TopoNode, b: TopoNode) {
     const down = (a.status || '').toLowerCase() === 'down' || (b.status || '').toLowerCase() === 'down';
     return down ? '#dc2626' : '#16a34a';
@@ -1053,8 +1086,38 @@ export class Topologia implements OnInit, OnDestroy {
       : 'Elegí el puerto de ' + n.name + ' y tocá "Conectar".');
   }
 
-  openDevice(n: TopoNode) { this.panel.set(n); this.loadPorts(n.id); }
-  loadPorts(id: number) { this.api.topoPorts(id).subscribe((p: any) => this.ports.set((p || []).map((x: any) => ({ ...x, vlan: x.vlan ?? null })))); }
+  /** Estado de la lectura SNMP en vivo del panel: '' | 'leyendo' | 'ok' | 'sin-respuesta'. */
+  snmpEstado = signal<'' | 'leyendo' | 'ok' | 'sin-respuesta'>('');
+  snmpUltima = signal<string | null>(null);
+  cargandoPorts = signal(false);
+
+  openDevice(n: TopoNode) {
+    this.panel.set(n);
+    this.ports.set([]);            // nunca mostrar los puertos del equipo abierto antes
+    this.loadPorts(n.id, true);
+  }
+
+  /** Primero lo guardado (al instante); despues, si se pide, la lectura SNMP en vivo. */
+  loadPorts(id: number, refrescar = false) {
+    const norm = (p: any) => (p || []).map((x: any) => ({ ...x, vlan: x.vlan ?? null }));
+    const sigue = () => this.panel()?.id === id;   // si ya abriste otro equipo, se descarta
+    this.cargandoPorts.set(true);
+    this.api.topoPorts(id).subscribe({
+      next: (p: any) => { if (sigue()) { this.ports.set(norm(p)); this.cargandoPorts.set(false); } },
+      error: () => { if (sigue()) this.cargandoPorts.set(false); },
+    });
+    if (!refrescar) return;
+    this.snmpEstado.set('leyendo'); this.snmpUltima.set(null);
+    this.api.topoRefrescarPorts(id).subscribe({
+      next: (r) => {
+        if (!sigue()) return;
+        this.ports.set(norm(r?.ports));
+        this.snmpEstado.set(r?.snmp_ok ? 'ok' : 'sin-respuesta');
+        this.snmpUltima.set(r?.ultima_lectura ?? null);
+      },
+      error: () => { if (sigue()) this.snmpEstado.set('sin-respuesta'); },
+    });
+  }
   /** Se guarda solo: al cambiar el rol, o al salir de un campo que se edito. */
   guardadoPort = signal<number | null>(null);
   savePort(p: Port) {
@@ -1072,6 +1135,17 @@ export class Topologia implements OnInit, OnDestroy {
     const d = this.panel();
     this.api.topoDelPort(p.id).subscribe(() => { if (d) this.loadPorts(d.id); });
   }
+  /** "INNO-SPAB-OLT-ZTE-01 · xgei_1/19/1" si ese puerto ya tiene enlace; si no, null. */
+  destinoDe(deviceId: number, label: string): string | null {
+    const nombre = (id: number) => this.nodes().find((n) => n.id === id)?.name ?? ('equipo #' + id);
+    const out: string[] = [];
+    for (const l of this.links()) {
+      if (l.src_id === deviceId && l.src_port_label === label) out.push(nombre(l.dst_id) + (l.dst_port_label ? ' · ' + l.dst_port_label : ''));
+      else if (l.dst_id === deviceId && l.dst_port_label === label) out.push(nombre(l.src_id) + (l.src_port_label ? ' · ' + l.src_port_label : ''));
+    }
+    return out.length ? out.join(', ') : null;
+  }
+
   connectPort(p: Port) {
     const d = this.panel(); if (!d) return;
     const from = this.linkFrom();

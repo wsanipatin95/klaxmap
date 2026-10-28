@@ -154,23 +154,32 @@
     </div>
 
     <div class="sitio-body" *ngIf="seccion === 'sitio'">
+      @if (creandoAcceso()) {
+        <!-- La ficha nueva se arma AQUI MISMO, dentro de la pestaña: antes se abria un modal
+             encima del modal, que quedaba cortado y con doble scroll. -->
+        <div class="acc-inline">
+          <div class="acc-inline-head">
+            <button type="button" class="acc-volver" (click)="creandoAcceso.set(false)"><i class="pi pi-arrow-left"></i> Volver</button>
+            <b>Nueva ficha de acceso</b>
+          </div>
+          <app-mapa-acceso-form [acceso]="null" (guardado)="accesoCreado($event)" (cancelado)="creandoAcceso.set(false)" />
+        </div>
+      } @else {
           <label class="lbl">Ficha de acceso</label>
           <div class="acceso-pick">
             <select
               class="inp"
               [(ngModel)]="form.idGeoAccesoFk"
               [ngModelOptions]="{ standalone: true }"
+              (focus)="accesosError() && recargarAccesos()"
               title="Quién abre y en qué horario. Cada ficha es de un solo sitio."
             >
-              <option [ngValue]="null">{{ accesosDisponibles().length ? 'Sin ficha de acceso' : 'Sin ficha (no hay libres: crea una con + Nueva)' }}</option>
-              <option *ngFor="let a of accesosDisponibles()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}{{ a.activo === false ? ' (inhabilitada)' : '' }}</option>
+              <option [ngValue]="null">{{ accesosError() ? 'No se pudieron cargar las fichas (reintentando…)' : accesosDisponibles().length ? 'Sin ficha de acceso' : 'Sin ficha (no hay libres: crea una con + Nueva)' }}</option>
+              <option *ngFor="let a of accesosDisponibles()" [ngValue]="a.idGeoAcceso">{{ a.nombre }}{{ a.activo === false ? ' (inhabilitada)' : '' }}{{ (a.nodos ?? 0) > 1 ? ' (repetida en otro sitio)' : '' }}</option>
             </select>
             <button type="button" class="acceso-btn"
                     title="Crear una ficha de acceso aquí mismo"
                     (click)="nuevoAcceso()">+ Nueva</button>
-            <button type="button" class="acceso-btn"
-                    title="Volver a leer la lista, por si acabas de crear una"
-                    (click)="recargarAccesos()">↻</button>
           </div>
 
 
@@ -283,6 +292,7 @@
               <textarea class="inp full" rows="2" [(ngModel)]="form.sitio.notas" [ngModelOptions]="{ standalone: true }"></textarea>
             </div>
           </div>
+    }
         </div>
 
     <p class="success" *ngIf="successMessage as ok">{{ ok }}</p>
@@ -329,19 +339,4 @@
   de Accesos (componente compartido), no una copia: dos editores separados terminan
   desincronizados.
 -->
-<div class="acc-nuevo-ov" *ngIf="creandoAcceso()" (click)="creandoAcceso.set(false)">
-  <div class="acc-nuevo-md" (click)="$event.stopPropagation()">
-    <div class="acc-nuevo-head">
-      <b>Nueva ficha de acceso</b>
-      <button type="button" class="x" (click)="creandoAcceso.set(false)" title="Cerrar">×</button>
-    </div>
-    <div class="acc-nuevo-body">
-      <app-mapa-acceso-form
-        [acceso]="null"
-        (guardado)="accesoCreado($event)"
-        (cancelado)="creandoAcceso.set(false)" />
-    </div>
-  </div>
-</div>
-
 <app-mapa-confirm-dialog #confirmDialog></app-mapa-confirm-dialog>

@@ -1,63 +1,73 @@
 <div class="af">
-  <label>Nombre</label>
-  <input class="inp" [(ngModel)]="modelo.nombre" placeholder="Ej. Antena Cangahua · portón principal" />
-
-  <div class="g2">
-    <div>
-      <label>Quién abre</label>
-      <input class="inp" [(ngModel)]="modelo.contacto" placeholder="Nombre" />
-    </div>
-    <div>
-      <label>Teléfono</label>
-      <input class="inp" [(ngModel)]="modelo.telefono" placeholder="09…" />
-    </div>
-  </div>
-
-  <div class="g2">
-    <div>
-      <label>Tipo de llave</label>
-      <input class="inp" [(ngModel)]="modelo.tipoLlave" placeholder="Conserje, guardia 24h, llave en oficina…" />
-    </div>
-    <div>
-      <label>Avisar antes (horas)</label>
-      <input class="inp" type="number" min="0" [(ngModel)]="modelo.avisoHoras"
-             title="Cuántas horas antes hay que avisar para que abran. Vacío o 0 = se cae nomás." />
-    </div>
-  </div>
-
-  <label>Cómo se llega / dónde se pide</label>
-  <textarea class="inp" [(ngModel)]="modelo.referencia"
-            placeholder="Ej. tras la cancha, portón verde. La llave se pide en la tienda de la esquina."></textarea>
-
-  <div class="hor-head">
-    <b>Cuándo se puede entrar</b>
-    <span class="tenue" title="Sin ningún tramo cargado se asume que se puede entrar siempre">
-      sin tramos = sin restricción
-    </span>
-  </div>
-
-  <div class="dia" *ngFor="let d of DIAS">
-    <div class="dia-n">{{ d.corto }}</div>
-    <div class="dia-tramos">
-      <div class="tramo" *ngFor="let h of tramosDe(d.n)">
-        <input class="inp hora" type="time" [(ngModel)]="h.desde" />
-        <span class="a">a</span>
-        <input class="inp hora" type="time" [(ngModel)]="h.hasta" />
-        <button type="button" class="x sm" (click)="quitarTramo(h)" title="Quitar este tramo">×</button>
+  <div class="af-body">
+    <div class="g3">
+      <div class="campo">
+        <label>Nombre de la ficha</label>
+        <input class="inp" [(ngModel)]="modelo.nombre" placeholder="Ej. Antena Cangahua" />
       </div>
-      <button type="button" class="btn xs" (click)="agregarTramo(d.n)">+ tramo</button>
+      <div class="campo">
+        <label>Quién abre</label>
+        <input class="inp" [(ngModel)]="modelo.contacto" placeholder="Nombre del contacto" />
+      </div>
+      <div class="campo">
+        <label>Teléfono</label>
+        <input class="inp" [(ngModel)]="modelo.telefono" placeholder="09…" />
+      </div>
+      <div class="campo">
+        <label>Tipo de llave</label>
+        <input class="inp" [(ngModel)]="modelo.tipoLlave" placeholder="Conserje, guardia 24 h…" />
+      </div>
+      <div class="campo">
+        <label>Avisar antes (horas)</label>
+        <input class="inp" type="number" min="0" [(ngModel)]="modelo.avisoHoras" placeholder="0" />
+      </div>
+      <div class="campo">
+        <label>Notas</label>
+        <input class="inp" [(ngModel)]="modelo.notas" placeholder="Opcional" />
+      </div>
+      <div class="campo c3">
+        <label>Cómo se llega / dónde se pide la llave</label>
+        <input class="inp" [(ngModel)]="modelo.referencia"
+               placeholder="Ej. tras la cancha, portón verde. La llave se pide en la tienda de la esquina." />
+      </div>
     </div>
+
+    <div class="hor">
+      <div class="hor-head">
+        <span class="t">Horario de ingreso</span>
+        <span class="tenue">{{ (modelo.horarios ?? []).length ? (modelo.horarios ?? []).length + ' tramo(s)' : 'Sin tramos: se puede entrar siempre' }}</span>
+        <span class="sp"></span>
+        <button type="button" class="chip" (click)="preset([1,2,3,4,5], '08:00', '17:00')">Lun–Vie 8–17</button>
+        <button type="button" class="chip" (click)="preset([1,2,3,4,5,6], '08:00', '17:00')">Lun–Sáb 8–17</button>
+        <button type="button" class="chip" (click)="preset([1,2,3,4,5,6,7], '08:00', '18:00')">Todos 8–18</button>
+        <button type="button" class="chip ghost" (click)="limpiarHorario()" *ngIf="(modelo.horarios ?? []).length">Limpiar</button>
+      </div>
+
+      <div class="dias">
+        <div class="dia" *ngFor="let d of DIAS" [class.vacio]="!tramosDe(d.n).length">
+          <span class="dia-n">{{ d.corto }}</span>
+          <div class="dia-tramos">
+            <div class="tramo" *ngFor="let h of tramosDe(d.n)">
+              <input class="inp hora" type="time" [(ngModel)]="h.desde" />
+              <span class="a">–</span>
+              <input class="inp hora" type="time" [(ngModel)]="h.hasta" />
+              <button type="button" class="ib" (click)="quitarTramo(h)" title="Quitar este tramo">×</button>
+            </div>
+            <span class="libre" *ngIf="!tramosDe(d.n).length">sin horario</span>
+          </div>
+          <button type="button" class="ib mas" (click)="agregarTramo(d.n)" title="Agregar un tramo a {{ d.corto }}">+</button>
+        </div>
+      </div>
+    </div>
+
   </div>
-
-  <label>Notas</label>
-  <textarea class="inp" [(ngModel)]="modelo.notas"></textarea>
-
-  <div class="af-error" *ngIf="error()">{{ error() }}</div>
 
   <div class="af-foot">
+    <span class="af-error" *ngIf="error()">{{ error() }}</span>
+    <span class="sp"></span>
     <button type="button" class="btn" (click)="cancelado.emit()">Cancelar</button>
     <button type="button" class="btn pri" [disabled]="saving()" (click)="guardar()">
-      {{ saving() ? 'Guardando…' : 'Guardar' }}
+      {{ saving() ? 'Guardando…' : 'Guardar ficha' }}
     </button>
   </div>
 </div>

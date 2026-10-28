@@ -119,6 +119,11 @@ import { opcionesMarca } from '../shared/marcas';
               <div><label class="k">Puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.latido_port" placeholder="6668"></div>
               <div><label class="k">MAC</label><input class="inp" style="width:100%" [(ngModel)]="f.mac" placeholder="30:48:7D:3A:F1:00"></div>
               <div><label class="k">ID de Tuya</label><input class="inp" style="width:100%" [(ngModel)]="f.tuya_id"></div>
+              <div><label class="k">Uso</label>
+                <select class="inp" style="width:100%" [(ngModel)]="f.energia_rol">
+                  <option value="red">Luz normal · avisa si se apaga</option>
+                  <option value="generador">Generador · avisa si se enciende</option>
+                </select></div>
             } @else {
               <div><label class="k">Community SNMP</label><input class="inp" style="width:100%" [(ngModel)]="f.snmp_community"></div>
               <div><label class="k">SNMP puerto</label><input type="number" class="inp" style="width:100%" [(ngModel)]="f.snmp_port" placeholder="161"></div>
@@ -434,6 +439,9 @@ export class Equipos implements OnDestroy {
   badge(s: string): string {
     if (s === 'up') return '<span class="badge b-up">UP</span>';
     if (s === 'down') return '<span class="badge b-down">DOWN</span>';
+    // Breaker de generador: 'encendido' es el aviso (se fue la luz); 'standby' es lo normal.
+    if (s === 'encendido') return '<span class="badge b-gen">GENERADOR ON</span>';
+    if (s === 'standby') return '<span class="badge b-maint">EN ESPERA</span>';
     return '<span class="badge b-maint">UNKNOWN</span>';
   }
 
@@ -486,7 +494,7 @@ export class Equipos implements OnDestroy {
   }
 
   nuevo() {
-    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300, sucursal_id: null };
+    this.f = { device_type: 'borde', snmp_community: 'public', snmp_version: 'v2c', snmp_enabled: true, snmp_poll_enabled: true, snmp_poll_seconds: 300, sucursal_id: null, energia_rol: 'red' };
     this.testErr.set(''); this.dupErr.set(false); this.saveErr.set('');
     this.showAdd.set(true);
   }
