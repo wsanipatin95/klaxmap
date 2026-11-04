@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
 
 /**
- * Configuración de NOTIFICACIONES (Telegram / correo / WhatsApp).
+ * Configuración de NOTIFICACIONES (Telegram / correo / WhatsApp / teléfono).
  * Lee y guarda los settings notify_* (config en vivo) y permite PROBAR cada canal.
  */
 @Component({
@@ -108,6 +108,18 @@ import { NocApi } from '../services/noc-api';
       </div>
     </div>
 
+    <!-- Telefono (app de monitoreo) -->
+    <div class="panel">
+      <div class="ph"><i class="pi pi-mobile" style="margin-right:7px"></i>Teléfono (app de monitoreo)
+        <button class="btn sm ghost" style="margin-left:auto" (click)="test('push')">Probar</button>
+      </div>
+      <div class="pb grid compact">
+        <div class="fld wide"><label>URL de omnicanal</label><input class="inp" [(ngModel)]="cfg['notify_push_url']" placeholder="http://localhost:8087/api/erp/public/push/avisar-tokens"></div>
+        <div class="fld"><label>Token de servicio</label><input class="inp" type="password" [(ngModel)]="cfg['notify_push_token']"></div>
+        <div class="fld wide mut" style="font-size:12px">Siempre encendido: le llega a todos los que tengan sesión abierta en la app de monitoreo. Esto se configura una sola vez. En la app, la campanita de Alertas manda una prueba.</div>
+      </div>
+    </div>
+
     <!-- Mensaje configurable -->
     <div class="panel" style="grid-column:1 / -1">
       <div class="ph msg"><span class="t"><i class="pi pi-pencil"></i> Mensaje a enviar</span></div>
@@ -134,6 +146,7 @@ import { NocApi } from '../services/noc-api';
             <option value="telegram">Telegram</option>
             <option value="email">Correo</option>
             <option value="whatsapp">WhatsApp</option>
+            <option value="push">Teléfono</option>
           </select>
           <button class="btn" (click)="runTest()">Enviar</button>
         </div>
