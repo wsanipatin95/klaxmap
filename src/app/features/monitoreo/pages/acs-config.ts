@@ -108,6 +108,37 @@ import { NocNotify } from '../services/noc-notify';
               </div>
               <label class="chk"><input type="checkbox" [(ngModel)]="cfg.write_enabled"> Escritura habilitada (reboot / WiFi)</label>
               <label class="chk"><input type="checkbox" [(ngModel)]="cfg.wifi_optimize_enabled"> Optimización WiFi automática (nocturna, 03:15)</label>
+
+              <div class="msec" style="margin-top:14px">Permisos (privilegios del ERP, separados por coma; vacío = cualquier usuario)</div>
+              <div class="grid2">
+                <div title="Configurar el ACS, asignar o eliminar routers, empujar la URL de gestión."><label class="lbl">Administrar el ACS</label>
+                  <input class="inp" [(ngModel)]="cfg.privilegio_admin" placeholder="ej. NOC_ACS_ADMIN"></div>
+                <div title="Reiniciar y cambiar nombre, clave o canal WiFi. Incluye a los técnicos desde la app."><label class="lbl">Escribir en routers</label>
+                  <input class="inp" [(ngModel)]="cfg.privilegio_escritura" placeholder="ej. NOC_ACS_ESCRIBIR, SOP_ONU"></div>
+              </div>
+
+              <div class="msec" style="margin-top:14px">Sesión y Connection Request</div>
+              <label class="chk" title="Routers que no devuelven la cookie: se emparejan por su IP pública si es la única en ese momento. Solo permite LECTURAS; las escrituras nunca van por este camino.">
+                <input type="checkbox" [(ngModel)]="cfg.correlacion_ip_debil"> Emparejar por IP a los routers sin cookie (solo lecturas)</label>
+              <div class="grid2">
+                <div title="Vacío = cualquier puerto menos los de servicios (22, 5432, 8085...)."><label class="lbl">Puertos permitidos del Connection Request</label>
+                  <input class="inp" [(ngModel)]="cfg.connreq_puertos" placeholder="ej. 7547, 30005, 58000"></div>
+                <div title="Redes (CIDR) a las que el ACS nunca le pega, por ejemplo la del propio servidor."><label class="lbl">Redes bloqueadas</label>
+                  <input class="inp" [(ngModel)]="cfg.connreq_redes_bloqueadas" placeholder="ej. 172.10.10.0/24"></div>
+              </div>
+              <div class="grid2">
+                <div title="IPs de proxies desde las que se cree el X-Forwarded-For (loopback ya cuenta)."><label class="lbl">Proxies confiables</label>
+                  <input class="inp" [(ngModel)]="cfg.proxies_confiables" placeholder="ej. 10.0.0.5"></div>
+                <div title="Cuánto puede esperar en cola una clave WiFi nueva antes de vencerse (va cifrada)."><label class="lbl">Clave WiFi en cola, máximo (s)</label>
+                  <input class="inp" type="number" min="60" [(ngModel)]="cfg.secret_ttl_seconds"></div>
+              </div>
+
+              <div class="msec" style="margin-top:14px">Depuración</div>
+              <div title="IPs o ids de router cuyo diálogo CWMP completo (cabeceras + SOAP, sin claves) se escribe en el log del NOC. Es temporal: vaciar al terminar.">
+                <label class="lbl">Depurar diálogo CWMP de (IP o id, separados por coma)</label>
+                <input class="inp" [(ngModel)]="cfg.debug_ip" placeholder="vacío = apagado · ej. 186.209.212.55">
+                @if (cfg.debug_ip) { <div class="mut" style="margin-top:4px">Activo. En el servidor: <span class="mono">journalctl -u klaxnoc -f | grep -A30 "CWMP DEBUG"</span>. Vaciar al terminar.</div> }
+              </div>
               <div class="actions">
                 <button class="btn pri" (click)="save()">Guardar configuración</button>
                 @if (msg()) { <span class="ok-msg">{{ msg() }}</span> }
