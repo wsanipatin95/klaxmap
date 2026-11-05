@@ -90,7 +90,9 @@ import { NocNotify } from '../services/noc-notify';
                 <div><label class="lbl">Usuario ACS (va en el router)</label>
                   <input class="inp" [(ngModel)]="cfg.auth_username" placeholder="ej. inno-acs (vacío = abierto)"></div>
                 <div><label class="lbl">Clave ACS (va en el router)</label>
-                  <input class="inp" [(ngModel)]="cfg.auth_password" placeholder="clave para los routers"></div>
+                  <!-- El NOC ya no devuelve la clave: llega ******** si hay una guardada. Si se deja asi, se conserva. -->
+                  <input class="inp" type="password" autocomplete="new-password" [(ngModel)]="cfg.auth_password"
+                         [placeholder]="cfg.auth_password_configurada ? 'guardada (escribe una nueva para cambiarla)' : 'clave para los routers'"></div>
               </div>
               <div class="grid2">
                 <div><label class="lbl">Intervalo Inform (s)</label>
@@ -178,7 +180,6 @@ import { NocNotify } from '../services/noc-notify';
               <div class="msec">WiFi</div>
               <div class="wifinow">
                 <div><span>Nombre (SSID)</span><b>{{ d.ssid || '—' }}</b></div>
-                <div><span>Clave</span><b class="mono">{{ d.wifiPassword || '—' }}</b></div>
                 <div><span>Canal</span><b>{{ d.wifiChannel || '—' }}</b></div>
                 <div><span>Dispositivos conectados</span><b class="link" (click)="toggleHosts(d)">{{ d.connectedHosts == null ? '—' : d.connectedHosts }} <span class="mut">{{ hostsOpen() ? '▲' : '▼' }}</span></b></div>
               </div>
