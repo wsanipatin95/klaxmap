@@ -49,7 +49,7 @@ import { opcionesMarca } from '../shared/marcas';
               <td class="mono">{{ d.ip_address }}@if (d.device_type==='olt' && d.snmp_port && d.snmp_port !== 161) { <span class="puerto" title="Puerto SNMP publicado por NAT. Varias OLT comparten la IP publica del sitio y se distinguen por este puerto.">:{{ d.snmp_port }}</span> }</td>
               <td [innerHTML]="badge(d.status)"></td>
               <td>@if (d.status==='up' && d.snmp_enabled && d.cpu_percent!=null) { <b [style.color]="cpuColor(d.cpu_percent)">{{ d.cpu_percent }}%</b> } @else if (d.device_type==='olt') { <span class="no-aplica" title="La ZTE no publica su CPU en la OID estandar (hrProcessorLoad). Hay que cargar la OID del fabricante en el perfil del equipo; hasta entonces no hay dato que mostrar.">sin dato</span> } @else { <span style="color:var(--muted)" title="Requiere SNMP habilitado para leer CPU real">—</span> }</td>
-              <td>@if (d.device_type==='olt') { <span class="no-aplica" title="La OLT esta detras de NAT: al ping responde el router de borde del sitio, no la OLT. Su estado se decide con un saludo TCP a su puerto de telnet cada 10 s.">no aplica</span> } @else if (d.ping_ms!=null) { {{ d.ping_ms }} ms } @else { <span style="color:var(--red)">timeout</span> }</td>
+              <td>@if (d.device_type==='olt') { <span class="no-aplica" title="La OLT esta detras de NAT: al ping responde el router de borde del sitio, no la OLT. Su estado se decide con un saludo TCP a su puerto de telnet cada 10 s.">no aplica</span> } @else if (d.device_type==='energia') { <span [style.color]="latidoColor(d.status)" [style.font-weight]="600" title="Los breakers no se pingean: su IP es la publica del nodo y responderia aunque el breaker este apagado. Esto es el LATIDO a su puerto y sus lecturas (rele, voltaje): verde = responde, rojo = sin respuesta.">{{ latidoTexto(d.status) }}</span> } @else if (d.ping_ms!=null) { {{ d.ping_ms }} ms } @else { <span style="color:var(--red)">timeout</span> }</td>
               @if (esSupervisor()) {
                 <td style="text-align:right;white-space:nowrap" (click)="$event.stopPropagation()">
                   <button class="btn ghost sm" title="Editar equipo" (click)="editar(d)"><i class="pi pi-pencil"></i></button>
@@ -435,6 +435,23 @@ export class Equipos implements OnDestroy {
 
   /** Lista filtrada + ordenada por la cabecera elegida. */
   rows(): Device[] { return this.sort.apply(this.view()); }
+
+  /**
+   * Columna PING de un equipo de energia. No hay ping (su IP es la del nodo): se muestra si el
+   * breaker responde a su latido/lecturas, con el mismo color que su estado, para que la fila
+   * se lea igual que las demas: verde cuando esta bien y cambia de color cuando no.
+   */
+  latidoTexto(s: string): string {
+    if (s === 'up' || s === 'standby' || s === 'encendido') return 'responde';
+    if (s === 'down') return 'sin respuesta';
+    return '—';
+  }
+  latidoColor(s: string): string {
+    if (s === 'up' || s === 'standby') return 'var(--green, #16a34a)';
+    if (s === 'encendido') return 'var(--amber, #d97706)';
+    if (s === 'down') return 'var(--red)';
+    return 'var(--muted)';
+  }
 
   badge(s: string): string {
     if (s === 'up') return '<span class="badge b-up">UP</span>';

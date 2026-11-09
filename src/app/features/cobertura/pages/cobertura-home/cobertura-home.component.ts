@@ -9,7 +9,7 @@ import { CoberturaApi } from '../../data-access/cobertura.api';
 import type { CoberturaNap, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaLpuPon, CoberturaZona } from '../../data-access/cobertura.models';
 
 type ZonaMetric = 'total' | 'activos' | 'cortados' | 'otros';
-import type { MapaNapClientes } from 'src/app/features/mapa/data-access/mapa.models';
+import type { MapaNapCliente, MapaNapClientes } from 'src/app/features/mapa/data-access/mapa.models';
 
 const NAP_CAP = 1500;
 const CONEX_CAP = 250;
@@ -230,7 +230,30 @@ class HeatOverlay {
                   }
                 </ul>
               } @else {
-                <div class="cob-empty">Sin clientes en esta NAP.</div>
+                <div class="cob-empty">
+                  @if (sinGeo().length) { Sin clientes georreferenciados en esta NAP. }
+                  @else { Sin clientes en esta NAP. }
+                </div>
+              }
+
+              <!-- Clientes que SI estan en un puerto de la NAP (lo que ve el mapa) pero que cobertura
+                   no tiene georreferenciados. Antes la NAP decia "1/8 ocupado" y la lista salia vacia,
+                   porque la lista solo miraba la tabla de cobertura (clientes con GPS atados a la NAP). -->
+              @if (sinGeo().length) {
+                <div class="cob-sec" title="Estan asignados a un puerto de esta NAP, pero no tienen ubicacion en el modulo de cobertura. No se dibujan en el mapa ni cuentan en las capas.">
+                  En puertos de la NAP, sin georreferenciar · {{ sinGeo().length }}
+                </div>
+                <ul class="cob-list">
+                  @for (c of sinGeo(); track (c.idContrato ?? c.puerto ?? $index)) {
+                    <li class="cob-card" title="Sin ubicacion en cobertura: confirmalo desde la ficha del cliente para que aparezca en el mapa">
+                      <div class="cob-card-top">
+                        <span class="cob-card-name">{{ c.cliente || c.documento || ('#' + c.idContrato) }}</span>
+                        <span class="cob-badge" [class]="estadoClase(c.estado)">{{ c.estado || 's/estado' }}</span>
+                      </div>
+                      <div class="cob-card-sub">Pto {{ c.puerto ?? '—' }} · Doc {{ c.documento || '—' }} · <span class="cob-cal cal-0">sin GPS</span></div>
+                    </li>
+                  }
+                </ul>
               }
             </div>
           </aside>
@@ -417,6 +440,18 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   readonly panelOpen = signal(false);
   readonly titulo = signal('NAP');
   readonly napCli = signal<MapaNapClientes | null>(null);
+
+  /**
+   * Clientes en un PUERTO de la NAP (misma fuente que la ficha del mapa) que NO estan en la
+   * lista de cobertura. Explica el "1/8 ocupado" con lista vacia: son dos relaciones distintas
+   * (puerto asignado vs. cliente georreferenciado) y aca se muestran las dos.
+   */
+  sinGeo(): MapaNapCliente[] {
+    const d = this.napCli();
+    if (!d?.clientes?.length) return [];
+    const geo = new Set(this.cliGeo().map((c) => c.idConContratoFk));
+    return d.clientes.filter((c) => c.idContrato == null || !geo.has(c.idContrato));
+  }
   readonly cliGeo = signal<CoberturaClienteGeo[]>([]);
   readonly cliSel = signal<number | null>(null);   // cliente resaltado desde la lista
   readonly loadingCli = signal(false);
