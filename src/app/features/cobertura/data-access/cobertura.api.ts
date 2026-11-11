@@ -4,7 +4,7 @@ import { map } from 'rxjs/operators';
 import { ENVIRONMENT } from 'src/app/core/config/environment.token';
 import { unwrapOrThrow } from 'src/app/core/api/api-envelope';
 import type { ApiEnvelope } from 'src/app/core/api/api-envelope';
-import type { CoberturaNap, CoberturaNapClientes, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaLpuPon, CoberturaZona } from './cobertura.models';
+import type { CoberturaNap, CoberturaNapClientes, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaNapPonCarga, CoberturaLpuPon, CoberturaZona } from './cobertura.models';
 
 /**
  * Cliente HTTP de la vista de Cobertura. Reusa endpoints existentes:
@@ -51,6 +51,13 @@ export class CoberturaApi {
     return this.http
       .get<ApiEnvelope<CoberturaNapClientes>>(`${this.base}/mapa/elemento/${idGeoElemento}/clientes`)
       .pipe(map((r) => unwrapOrThrow<CoberturaNapClientes>(r)));
+  }
+
+  /** PON de cada caja con la carga real del PON (filtro de ventas "Clientes por PON"). */
+  napsPon() {
+    return this.http
+      .get<ApiEnvelope<CoberturaNapPonCarga[]>>(`${this.base}/red/cobertura/naps-pon`)
+      .pipe(map((r) => unwrapOrThrow<CoberturaNapPonCarga[]>(r)));
   }
 
   // ---- Confirmador de PON (wizard) ----

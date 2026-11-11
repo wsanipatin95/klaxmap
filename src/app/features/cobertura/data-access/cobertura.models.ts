@@ -80,6 +80,21 @@ export interface CoberturaLpuPon {
   napCodigo?: string | null;
 }
 
+/** PON del que cuelga una caja, con la carga REAL del PON (kxv_red_nap_pon_real). */
+export interface CoberturaNapPonCarga {
+  idGeoElementoFk: number;
+  nivelNap?: number | null;
+  idRedOlt?: number | null;
+  oltNombre?: string | null;
+  lpu?: number | null;
+  pon: number;
+  fuente?: 'MANUAL' | 'CLIENTES' | string | null;
+  clientesNap?: number | null;   // clientes de ESTA caja en ese PON
+  clientesPon: number;           // clientes de TODO el PON (activos + cortados)
+  activosPon?: number | null;
+  cortadosPon?: number | null;
+}
+
 /** Amarre confirmado NAP <-> (OLT, tarjeta, PON) — kxt_red_nap_pon. */
 export interface CoberturaNapPon {
   idRedNapPon?: number | null;

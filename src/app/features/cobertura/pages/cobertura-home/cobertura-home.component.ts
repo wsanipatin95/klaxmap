@@ -11,7 +11,8 @@ import type { CoberturaNap, CoberturaClienteGeo, CoberturaElementoMeta, Cobertur
 type ZonaMetric = 'total' | 'activos' | 'cortados' | 'otros';
 import type { MapaNapCliente, MapaNapClientes } from 'src/app/features/mapa/data-access/mapa.models';
 
-const NAP_CAP = 1500;
+const NAP_CAP = 1500;     // tope de iconos (de cerca)
+const DOT_CAP = 3500;     // tope de cajas en pantalla (alcanza para todas las NAP)
 const CONEX_CAP = 250;
 const LABEL_ZOOM = 14;   // desde este zoom se muestran los nombres fijos
 const LABEL_CAP = 200;   // maximo de etiquetas fijas a la vez
@@ -95,59 +96,119 @@ class HeatOverlay {
   encapsulation: ViewEncapsulation.None,
   template: `
     <div class="flex flex-col h-[calc(100vh-4rem)] p-2 gap-2 bg-slate-100">
-      <div class="flex items-center gap-2 bg-white rounded-lg shadow-sm px-3 py-2">
-        <h2 class="font-semibold text-slate-700 text-sm">Cobertura de clientes</h2>
-        <span class="text-[11px] text-slate-400">NAP 1er/2do nivel &middot; clic para ver sus clientes y conexiones</span>
-        <div class="ml-auto flex items-center gap-2">
-          <label class="flex items-center gap-1 text-[11px] text-slate-500">
-            <input type="checkbox" class="accent-blue-600" [checked]="verNombres()" (change)="onToggleNombres()" /> Nombres
-          </label>
-          <button class="cob-toggle" [class.cob-toggle-on]="heatOn()" (click)="toggleHeat()" title="Mapa de calor de clientes"><i class="pi pi-chart-bar"></i> Mapa de calor</button>
-          <button class="cob-toggle" [class.cob-toggle-on]="satOn()" (click)="toggleSat()" title="Cambiar vista del mapa"><i class="pi" [class.pi-map]="satOn()" [class.pi-globe]="!satOn()"></i> {{ satOn() ? 'Calles' : 'Satélite' }}</button>
-          <button class="cob-toggle" [class.cob-toggle-on]="zonasOn()" (click)="toggleZonas()" title="Zonas (barrios) coloreadas por métrica"><i class="pi pi-th-large"></i> Zonas</button>
+      <!-- Barra de la pantalla de ventas: titulo · filtros (lo que manda) · vista del mapa · exportar -->
+      <div class="cob-bar">
+        <div class="cob-bar-title">
+          <h2>Cobertura de clientes</h2>
+          <span>{{ n(naps().length) }} cajas NAP</span>
+        </div>
+
+        <div class="cob-bar-group" role="group" aria-label="Filtros">
+          <div class="cob-field">
+            <span class="cob-field-lbl">Nivel</span>
+            <div class="cob-seg" role="radiogroup" aria-label="Nivel de la caja">
+              <button type="button" [class.on]="nivelF() === 0" (click)="setNivel(0)">Todos</button>
+              <button type="button" [class.on]="nivelF() === 1" (click)="setNivel(1)" title="Cuelga directo del PON de la OLT">@if (iconoNivel(1); as u) { <img class="cob-ic" [src]="u" alt=""> } @else { <i class="cob-dot n1"></i> }1er nivel</button>
+              <button type="button" [class.on]="nivelF() === 2" (click)="setNivel(2)" title="Cuelga de una caja de 1er nivel">@if (iconoNivel(2); as u) { <img class="cob-ic" [src]="u" alt=""> } @else { <i class="cob-dot n2"></i> }2do nivel</button>
+            </div>
+          </div>
+
+          <div class="cob-field">
+            <span class="cob-field-lbl" [title]="modoCaja() ? 'Clientes atados a la caja de 2do nivel (splitter 1/8 o 1/16).' : 'Clientes del puerto PON del que sale la caja (activos + cortados, de todos los contratos).'">
+              {{ modoCaja() ? 'Clientes en la caja' : 'Clientes en el PON' }}
+            </span>
+            <div class="cob-dd" #cliDd>
+              <button type="button" class="cob-dd-btn" [class.open]="ddOpen()" [class.has]="cantSel().length > 0" (click)="ddOpen.set(!ddOpen())"
+                      aria-haspopup="listbox" [attr.aria-expanded]="ddOpen()">
+                <span class="cob-dd-txt">{{ cliResumen() }}</span>
+                @if (cantSel().length > 1) { <span class="cob-dd-badge">{{ cantSel().length }}</span> }
+                <i class="pi pi-chevron-down"></i>
+              </button>
+              @if (ddOpen()) {
+                <div class="cob-dd-panel" role="listbox" aria-multiselectable="true">
+                  <div class="cob-dd-head">
+                    <div>
+                      <div class="cob-dd-ttl">{{ modoCaja() ? 'Clientes en la caja' : 'Clientes en el PON' }}</div>
+                      <div class="cob-dd-sub">{{ modoCaja() ? 'Cajas de 2do nivel · splitter 1/8 o 1/16' : 'Cantidad exacta · puedes marcar varias' }}</div>
+                    </div>
+                    <button type="button" class="cob-dd-link" (click)="cantSel.set([]); repintarFiltro()" [disabled]="!cantSel().length">Limpiar</button>
+                  </div>
+
+                  @if (opcionCero(); as z) {
+                    <button type="button" class="cob-dd-zero" [class.sel]="cliMarcado(0)" (click)="toggleCli(0)" role="option" [attr.aria-selected]="cliMarcado(0)">
+                      <span class="cob-dd-chk"><i class="pi pi-check"></i></span>
+                      <span class="cob-dd-zero-t"><b>Sin clientes</b><small>Zona libre para vender</small></span>
+                      <span class="cob-dd-n">{{ n(z.cajas) }}</span>
+                    </button>
+                  }
+
+                  @if (rangos().length > 1) {
+                    <div class="cob-dd-rangos">
+                      @for (r of rangos(); track r.lbl) {
+                        <button type="button" class="cob-dd-rango" [class.on]="rangoOn(r)" (click)="toggleRango(r)" [title]="n(r.cajas) + ' cajas'">{{ r.lbl }}</button>
+                      }
+                    </div>
+                  }
+
+                  <div class="cob-dd-grid">
+                    @for (o of opcionesNum(); track o.v) {
+                      <button type="button" class="cob-dd-tile" [class.sel]="cliMarcado(o.v)" (click)="toggleCli(o.v)" role="option" [attr.aria-selected]="cliMarcado(o.v)"
+                              [title]="o.lbl + ' · ' + n(o.cajas) + ' cajas'">
+                        <span class="cob-dd-tile-v">{{ modoCaja() && o.v >= 8 ? '8+' : o.v }}</span>
+                        <span class="cob-dd-tile-c">{{ n(o.cajas) }} {{ o.cajas === 1 ? 'caja' : 'cajas' }}</span>
+                      </button>
+                    } @empty {
+                      <div class="cob-dd-empty">Cargando cantidades…</div>
+                    }
+                  </div>
+
+                  <div class="cob-dd-foot">
+                    <span><b>{{ n(napsFiltradas().length) }}</b> cajas en el mapa</span>
+                    <button type="button" class="cob-dd-ok" (click)="ddOpen.set(false)">Listo</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="cob-result" [class.on]="filtroCajasActivo()" title="Cajas que cumplen el filtro en todo el mapa">
+            <span class="cob-result-n">{{ n(napsFiltradas().length) }}</span>
+            <span class="cob-result-lbl">cajas</span>
+            @if (nivelF() === 0) { <span class="cob-result-sub">{{ n(cajasNivel().n1) }} 1er · {{ n(cajasNivel().n2) }} 2do</span> }
+            @if (filtroCajasActivo()) {
+              <button type="button" class="cob-result-x" (click)="limpiarFiltro()" title="Quitar filtros" aria-label="Quitar filtros"><i class="pi pi-times"></i></button>
+            }
+          </div>
+        </div>
+
+        <div class="cob-bar-group cob-bar-end">
+          <div class="cob-field">
+          <span class="cob-field-lbl">Mapa</span>
+          <div class="cob-tools" role="group" aria-label="Vista del mapa">
+            <button type="button" [class.on]="verNombres()" (click)="onToggleNombres()" title="Mostrar los nombres de las cajas"><i class="pi pi-tag"></i><span>Nombres</span></button>
+            <button type="button" [class.on]="satOn()" (click)="toggleSat()" title="Cambiar entre calles y satélite"><i class="pi" [class.pi-map]="satOn()" [class.pi-globe]="!satOn()"></i><span>{{ satOn() ? 'Calles' : 'Satélite' }}</span></button>
+            <button type="button" [class.on]="zonasOn()" (click)="toggleZonas()" title="Barrios coloreados por cantidad de clientes"><i class="pi pi-th-large"></i><span>Zonas</span></button>
+          </div>
+          </div>
           @if (zonasOn()) {
-            <select class="cob-sel" (change)="onZonaMetric($event)">
-              <option value="total" [selected]="zonaMetric() === 'total'">Total clientes</option>
-              <option value="activos" [selected]="zonaMetric() === 'activos'">Activos</option>
-              <option value="cortados" [selected]="zonaMetric() === 'cortados'">Cortados/Susp.</option>
-              <option value="otros" [selected]="zonaMetric() === 'otros'">Bajas</option>
-            </select>
+            <div class="cob-select">
+              <select (change)="onZonaMetric($event)" aria-label="Métrica de zonas">
+                <option value="total" [selected]="zonaMetric() === 'total'">Total clientes</option>
+                <option value="activos" [selected]="zonaMetric() === 'activos'">Activos</option>
+                <option value="cortados" [selected]="zonaMetric() === 'cortados'">Cortados/Susp.</option>
+                <option value="otros" [selected]="zonaMetric() === 'otros'">Bajas</option>
+              </select>
+              <i class="pi pi-chevron-down"></i>
+            </div>
           }
-          <label class="text-[11px] text-slate-500">Radio (m)</label>
-          <select class="cob-sel" (change)="onRadio($event)">
-            <option [selected]="radio() === 500" value="500">500</option>
-            <option [selected]="radio() === 600" value="600">600</option>
-            <option [selected]="radio() === 800" value="800">800</option>
-            <option [selected]="radio() === 1000" value="1000">1000</option>
-          </select>
-          <button class="cob-btn" (click)="recargar()" [disabled]="loading()">{{ loading() ? 'Cargando…' : '↻ Recargar' }}</button>
-          <button class="cob-btn" (click)="descargarExcel()" title="Descargar a Excel los clientes visibles según las capas activas"><i class="pi pi-download"></i> Excel</button>
-          <span class="text-[11px] text-slate-500">{{ naps().length }} NAP</span>
+          <button type="button" class="cob-primary" (click)="descargarExcel()" title="Descargar a Excel los clientes de las cajas que cumplen el filtro">
+            <i class="pi pi-file-excel"></i><span>Exportar</span>
+          </button>
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 bg-white rounded-lg shadow-sm px-3 py-1.5 flex-wrap">
-        <span class="text-[11px] font-semibold text-slate-500 mr-1">Capas de conexión:</span>
-        @for (q of [3, 2, 1, 0]; track q) {
-          <button class="cob-lg" [class.off]="!verCal()[q]" (click)="toggleCal(q)" [title]="'Mostrar/ocultar: ' + calMeta(q).lbl">
-            <span class="cob-lg-dot" [style.background]="calMeta(q).fill"></span>
-            {{ calMeta(q).lbl }} <b>{{ n(conteo().porCal[q]) }}</b>
-          </button>
-        }
-        <span class="mx-1 text-slate-300">|</span>
-        <span class="text-[11px] font-semibold text-slate-500">Estado:</span>
-        @for (g of [1, 2, 3]; track g) {
-          <button class="cob-lg" [class.off]="!verEstado()[g]" (click)="toggleEstado(g)" [title]="'Mostrar/ocultar: ' + estMeta(g).lbl">
-            <span class="cob-lg-dot is-est" [style.background]="estMeta(g).fill"></span>
-            {{ estMeta(g).lbl }} <b>{{ n(conteo().porEst[g]) }}</b>
-          </button>
-        }
-        <span class="mx-1 text-slate-300">|</span>
-        <span class="text-[11px] text-slate-600" title="Clientes que quedan con el filtro actual, sobre el total cargado dentro del radio">
-          En pantalla: <b class="text-slate-900">{{ n(conteo().visibles) }}</b>
-          <span class="text-slate-400">de {{ n(conteo().total) }}</span>
-        </span>
-      </div>
+      <!-- La fila de "Capas de conexión" y los contadores por calidad/estado se quitaron: esta pantalla
+           es para VENTAS (mapa de calor + cajas con cupo). Las conexiones de una caja se ven al hacerle clic. -->
 
       @if (error()) {
         <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-1.5">{{ error() }}</div>
@@ -320,6 +381,118 @@ class HeatOverlay {
     `:host{display:block;height:100%;width:100%;}
      .cob-map{background:#eef2f7;}
      .cob-sel{border:1px solid #cbd5e1;border-radius:.375rem;padding:.15rem .4rem;font-size:.75rem;color:#475569;background:#fff;}
+     /* ---- Barra superior (una sola fila) ---- */
+     .cob-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:.5rem 1rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+              padding:.5rem .75rem;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+     .cob-bar-title{display:flex;flex-direction:column;justify-content:flex-end;min-width:0;height:44px;padding-right:1rem;border-right:1px solid #e2e8f0;}
+     .cob-bar-title h2{margin:0;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25;white-space:nowrap;}
+     .cob-bar-title span{font-size:11px;color:#94a3b8;white-space:nowrap;line-height:1.5;}
+     .cob-bar-group{display:flex;align-items:flex-end;gap:.6rem;}
+     .cob-bar-end{margin-left:auto;}
+     .cob-field{display:flex;flex-direction:column;gap:2px;}
+     .cob-field-lbl{font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;padding-left:1px;line-height:12px;white-space:nowrap;}
+     .cob-seg{display:inline-flex;height:30px;padding:2px;background:#f1f5f9;border-radius:7px;gap:2px;}
+     .cob-seg button{display:inline-flex;align-items:center;gap:.35rem;border:0;background:transparent;padding:0 .65rem;font-size:12px;font-weight:600;color:#64748b;
+                     border-radius:5px;cursor:pointer;transition:background .15s,color .15s,box-shadow .15s;white-space:nowrap;}
+     .cob-seg button:hover{color:#0f172a;}
+     .cob-seg button.on{background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.14);}
+     .cob-dot{display:inline-block;width:8px;height:8px;border-radius:50%;}
+     .cob-dot.n1{background:#7b0061;} .cob-dot.n2{background:#0d9488;}
+     .cob-ic{width:14px;height:14px;object-fit:contain;}
+     .cob-dd{position:relative;}
+     .cob-dd-btn{display:inline-flex;align-items:center;gap:.4rem;height:30px;min-width:11.5rem;max-width:16rem;padding:0 .6rem 0 .65rem;border:1px solid #e2e8f0;
+                 border-radius:7px;background:#fff;font-size:12px;font-weight:500;color:#0f172a;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+     .cob-dd-btn:hover{border-color:#cbd5e1;}
+     .cob-dd-btn.open,.cob-dd-btn:focus-visible{outline:none;border-color:#7b0061;box-shadow:0 0 0 3px rgba(123,0,97,.15);}
+     .cob-dd-btn.has{border-color:#e9a8d8;background:#fdf2f8;}
+     .cob-dd-txt{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+     .cob-dd-badge{font-size:10px;font-weight:700;color:#fff;background:#7b0061;border-radius:999px;padding:0 .4rem;line-height:16px;}
+     .cob-dd-btn i{font-size:9px;color:#94a3b8;transition:transform .15s;}
+     .cob-dd-btn.open i{transform:rotate(180deg);}
+     .cob-dd-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:1200;width:19rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+                   box-shadow:0 16px 40px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.06);overflow:hidden;animation:cobDd .12s ease-out;}
+     @keyframes cobDd{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+     .cob-dd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;padding:.7rem .8rem .55rem;}
+     .cob-dd-ttl{font-size:13px;font-weight:700;color:#0f172a;}
+     .cob-dd-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+     .cob-dd-link{border:0;background:transparent;color:#7b0061;font-size:11.5px;font-weight:600;cursor:pointer;padding:.15rem .35rem;border-radius:5px;}
+     .cob-dd-link:hover:not(:disabled){background:#fdf2f8;}
+     .cob-dd-link:disabled{color:#cbd5e1;cursor:default;}
+     .cob-dd-zero{display:flex;align-items:center;gap:.6rem;width:calc(100% - 1.2rem);margin:0 .6rem .55rem;padding:.5rem .6rem;border:1px solid #bbf7d0;
+                  border-radius:9px;background:#f0fdf4;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
+     .cob-dd-zero:hover{border-color:#86efac;}
+     .cob-dd-zero.sel{background:#dcfce7;border-color:#16a34a;}
+     .cob-dd-zero-t{flex:1;display:flex;flex-direction:column;line-height:1.2;}
+     .cob-dd-zero-t b{font-size:12.5px;color:#14532d;}
+     .cob-dd-zero-t small{font-size:10.5px;color:#16a34a;}
+     .cob-dd-chk{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1.5px solid #86efac;border-radius:4px;background:#fff;}
+     .cob-dd-chk i{font-size:9px;color:#fff;opacity:0;}
+     .cob-dd-zero.sel .cob-dd-chk{background:#16a34a;border-color:#16a34a;}
+     .cob-dd-zero.sel .cob-dd-chk i{opacity:1;}
+     .cob-dd-n{font-size:11px;font-weight:700;color:#166534;background:#fff;border-radius:999px;padding:0 .5rem;line-height:18px;font-variant-numeric:tabular-nums;}
+     .cob-dd-rangos{display:flex;gap:.3rem;padding:0 .6rem .5rem;flex-wrap:wrap;}
+     .cob-dd-rango{flex:1;min-width:0;height:24px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;font-size:11px;font-weight:600;color:#475569;
+                   cursor:pointer;white-space:nowrap;transition:all .15s;}
+     .cob-dd-rango:hover{border-color:#cbd5e1;color:#0f172a;}
+     .cob-dd-rango.on{background:#7b0061;border-color:#7b0061;color:#fff;}
+     .cob-dd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;max-height:248px;overflow-y:auto;padding:.1rem .6rem .6rem;
+                  scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent;overscroll-behavior:contain;}
+     .cob-dd-grid::-webkit-scrollbar{width:6px;}
+     .cob-dd-grid::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px;}
+     .cob-dd-grid::-webkit-scrollbar-button{display:none;height:0;}
+     .cob-dd-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:44px;border:1px solid #e2e8f0;border-radius:8px;
+                  background:#fff;cursor:pointer;transition:border-color .12s,background .12s,transform .12s;}
+     .cob-dd-tile:hover{border-color:#e9a8d8;background:#fdf7fb;}
+     .cob-dd-tile:active{transform:scale(.97);}
+     .cob-dd-tile-v{font-size:14px;font-weight:700;color:#0f172a;line-height:1;font-variant-numeric:tabular-nums;}
+     .cob-dd-tile-c{font-size:9.5px;color:#94a3b8;white-space:nowrap;}
+     .cob-dd-tile.sel{background:#7b0061;border-color:#7b0061;}
+     .cob-dd-tile.sel .cob-dd-tile-v{color:#fff;}
+     .cob-dd-tile.sel .cob-dd-tile-c{color:#f5d0ec;}
+     .cob-dd-tile:focus-visible,.cob-dd-rango:focus-visible,.cob-dd-zero:focus-visible,.cob-dd-ok:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(123,0,97,.2);}
+     .cob-dd-empty{grid-column:1/-1;padding:.8rem;font-size:12px;color:#94a3b8;text-align:center;}
+     .cob-dd-foot{display:flex;align-items:center;justify-content:space-between;padding:.5rem .6rem .5rem .8rem;border-top:1px solid #f1f5f9;background:#f8fafc;
+                  font-size:11.5px;color:#64748b;}
+     .cob-dd-foot b{color:#0f172a;font-variant-numeric:tabular-nums;}
+     .cob-dd-ok{height:26px;padding:0 .8rem;border:0;border-radius:6px;background:#7b0061;color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;}
+     .cob-dd-ok:hover{background:#5f004b;}
+     .cob-select{position:relative;display:inline-flex;align-items:center;}
+     .cob-select select{appearance:none;-webkit-appearance:none;height:30px;min-width:10.5rem;padding:0 1.8rem 0 .65rem;border:1px solid #e2e8f0;border-radius:7px;
+                        background:#fff;font-size:12px;font-weight:500;color:#0f172a;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+     .cob-select select:hover{border-color:#cbd5e1;}
+     .cob-select i{position:absolute;right:.6rem;font-size:9px;color:#94a3b8;pointer-events:none;}
+     .cob-seg button:focus-visible,.cob-select select:focus-visible,.cob-tools button:focus-visible,.cob-primary:focus-visible,.cob-result-x:focus-visible{
+                        outline:none;box-shadow:0 0 0 3px rgba(123,0,97,.18);border-color:#7b0061;}
+     .cob-result{display:inline-flex;align-items:baseline;gap:.35rem;height:30px;line-height:28px;padding:0 .3rem 0 .7rem;border:1px solid #e2e8f0;border-radius:7px;
+                 background:#f8fafc;white-space:nowrap;transition:background .15s,border-color .15s;}
+     .cob-result.on{background:#fdf2f8;border-color:#f5c2e7;}
+     .cob-result-n{font-size:15px;font-weight:800;color:#0f172a;font-variant-numeric:tabular-nums;}
+     .cob-result.on .cob-result-n{color:#7b0061;}
+     .cob-result-lbl{font-size:12px;font-weight:600;color:#475569;}
+     .cob-result-sub{font-size:11px;color:#94a3b8;padding-left:.35rem;border-left:1px solid #e2e8f0;margin-left:.1rem;}
+     .cob-result-x{align-self:center;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:0;border-radius:5px;
+                   background:transparent;color:#a21caf;cursor:pointer;}
+     .cob-result-x:hover{background:#fae8ff;}
+     .cob-result-x i{font-size:9px;}
+     .cob-result:not(.on){padding-right:.7rem;}
+     .cob-tools{display:inline-flex;height:30px;border:1px solid #e2e8f0;border-radius:7px;overflow:hidden;background:#fff;}
+     .cob-tools button{display:inline-flex;align-items:center;gap:.35rem;border:0;border-right:1px solid #e2e8f0;background:#fff;padding:0 .6rem;font-size:12px;
+                       font-weight:500;color:#475569;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+     .cob-tools button:last-child{border-right:0;}
+     .cob-tools button:hover{background:#f8fafc;color:#0f172a;}
+     .cob-tools button.on{background:#fdf2f8;color:#7b0061;font-weight:600;}
+     .cob-tools i{font-size:12px;}
+     .cob-primary{display:inline-flex;align-items:center;gap:.4rem;height:30px;padding:0 .85rem;border:1px solid #7b0061;border-radius:7px;background:#7b0061;
+                  color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,box-shadow .15s;}
+     .cob-primary:hover{background:#5f004b;box-shadow:0 2px 6px rgba(123,0,97,.25);}
+     .cob-primary i{font-size:12px;}
+     @media (max-width: 1480px){ .cob-tools span{display:none;} .cob-tools button{padding:0 .7rem;} }
+     @media (max-width: 1180px){ .cob-bar-title span{display:none;} .cob-result-sub{display:none;} }
+     @media (max-width: 900px){ .cob-bar{flex-wrap:wrap;} .cob-bar-group{flex-wrap:wrap;} .cob-bar-end{margin-left:0;} .cob-bar-title{border-right:0;height:auto;} }
+     .cob-cajas{font-size:11px;color:#64748b;border:1px solid #e2e8f0;border-radius:999px;padding:.1rem .55rem;background:#f8fafc;white-space:nowrap;}
+     .cob-cajas b{color:#0f172a;}
+     .cob-cajas-on{border-color:#7b0061;background:#fdf2f8;color:#7b0061;}
+     .cob-cajas-on b{color:#7b0061;}
      .cob-btn{font-size:.75rem;padding:.25rem .6rem;border-radius:.375rem;border:1px solid #2563eb;background:#2563eb;color:#fff;cursor:pointer;}
      .cob-btn:disabled{opacity:.5;cursor:default;}
      .cob-toggle{font-size:.75rem;padding:.25rem .6rem;border-radius:.375rem;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;}
@@ -432,6 +605,238 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
   readonly naps = signal<CoberturaNap[]>([]);
+
+  /**
+   * Filtro de cajas para VENTAS (nivel + cantidad de clientes). El mapa de calor y las capas
+   * de clientes siguen mostrando TODO (sirven para ver donde hay y donde no hay clientes);
+   * lo que se filtra son las cajas y sus conexiones, y el contador dice cuantas cumplen.
+   */
+  readonly nivelF = signal<0 | 1 | 2>(0);
+  /**
+   * Cantidades elegidas (multiselección). Vacio = todas las cajas.
+   *  - 1er nivel / Todos: N = la caja cuelga de un PON con EXACTAMENTE N clientes; 0 = caja sin clientes.
+   *  - 2do nivel: N = la CAJA tiene exactamente N clientes (splitter 1/8 o 1/16): 0..7 y 8 = "8 o más".
+   */
+  readonly cantSel = signal<number[]>([]);
+  readonly ddOpen = signal(false);
+  @ViewChild('cliDd') private cliDd?: ElementRef<HTMLElement>;
+  /** En 2do nivel se cuenta por caja, no por PON. */
+  readonly modoCaja = computed(() => this.nivelF() === 2);
+  private static readonly CAJA_TOPE = 8;
+  /**
+   * Clientes REALES por puerto PON ("olt|tarjeta|pon" -> cantidad) y PON de cada caja.
+   * Vienen de klaxapi (kxv_red_nap_pon_real): el conteo es de TODOS los contratos
+   * (activos + cortados) y el PON de la caja sale del amarre manual o de los clientes
+   * atados a ella en campo / ERP. Antes se deducia de los clientes con GPS y quedaba corto.
+   */
+  private ponCount = new Map<string, number>();
+  private ponsPorNap = new Map<number, Set<string>>();
+  /** De donde salio el PON de cada caja: MANUAL / CLIENTES (confirmado) o HIJAS / MADRE / GPS (deducido). */
+  private ponFuente = new Map<number, string>();
+  /** Cantidades que existen de verdad, con cuantos PON tienen cada una (para el combo). */
+  readonly cliOpciones = signal<{ n: number; pon: number }[]>([]);
+  private static ponKey(olt?: string | null, lpu?: number | null, pon?: number | null): string | null {
+    if (!olt || pon == null) return null;
+    return olt + '|' + (lpu ?? 0) + '|' + pon;
+  }
+  private cargarNapPon(): void {
+    this.api.napsPon().subscribe({
+      next: (rows) => {
+        const pc = new Map<string, number>();
+        const pn = new Map<number, Set<string>>();
+        const pf = new Map<number, string>();
+        for (const r of rows ?? []) {
+          const k = CoberturaHomeComponent.ponKey(r.oltNombre, r.lpu, r.pon);
+          if (!k) continue;
+          if (r.fuente) pf.set(r.idGeoElementoFk, String(r.fuente));
+          pc.set(k, r.clientesPon ?? 0);
+          const set = pn.get(r.idGeoElementoFk) ?? new Set<string>();
+          set.add(k);
+          pn.set(r.idGeoElementoFk, set);
+        }
+        const porCant = new Map<number, number>();
+        for (const c of pc.values()) if (c > 0) porCant.set(c, (porCant.get(c) ?? 0) + 1);
+        // De menor a mayor: primero los PON con mas cupo (lo que busca ventas).
+        this.cliOpciones.set([...porCant.entries()].sort((a, b) => a[0] - b[0]).map(([n, pon]) => ({ n, pon })));
+        this.ponCount = pc;
+        this.ponsPorNap = pn;
+        this.ponFuente = pf;
+        this.filtroTick.set(this.filtroTick() + 1);
+        if (!this.modoCaja()) this.cantSel.set(this.cantSel().filter((v) => v === 0 || porCant.has(v)));
+        this.pintar();
+        this.pintarGlobal();
+      },
+      error: () => { this.cliOpciones.set([]); },
+    });
+  }
+
+  /** Texto corto de la fuente del PON para el tooltip. */
+  private fuenteTexto(napId: number): string {
+    switch (this.ponFuente.get(napId)) {
+      case 'MANUAL': return 'confirmado';
+      case 'CLIENTES': return 'por sus clientes';
+      case 'HIJAS': return 'deducido de sus cajas hijas';
+      case 'MADRE': return 'deducido de su caja madre';
+      case 'GPS': return 'deducido por clientes cercanos';
+      case 'GRUPO': return 'deducido de su grupo';
+      default: return '';
+    }
+  }
+
+  /** Clientes del PON menos cargado de la caja (null si no se conoce su PON). Para el tooltip. */
+  ponMin(napId: number): number | null {
+    const pons = this.ponsPorNap.get(napId);
+    if (!pons?.size) return null;
+    let min: number | null = null;
+    for (const k of pons) { const c = this.ponCount.get(k) ?? 0; if (min == null || c < min) min = c; }
+    return min;
+  }
+  /** true si ALGUN PON del que cuelga la caja tiene exactamente n clientes. */
+  private ponTiene(napId: number, n: number): boolean {
+    const pons = this.ponsPorNap.get(napId);
+    if (!pons?.size) return false;
+    for (const k of pons) if ((this.ponCount.get(k) ?? 0) === n) return true;
+    return false;
+  }
+  /** Contador tonto para que napsFiltradas() se recalcule al cambiar ponCount/ponsPorNap (son Map comunes). */
+  private readonly filtroTick = signal(0);
+  readonly filtroCajasActivo = computed(() => this.nivelF() !== 0 || this.cantSel().length > 0);
+
+  /** true si la caja cumple la cantidad v (segun el modo). */
+  private cumple(nap: CoberturaNap, v: number, caja: boolean): boolean {
+    const tot = nap.totalClientes ?? 0;
+    if (caja) return v >= CoberturaHomeComponent.CAJA_TOPE ? tot >= v : tot === v;
+    if (v === 0) return tot === 0;
+    return this.ponTiene(nap.idGeoElemento, v);
+  }
+  /** Opciones del combo con cuantas cajas (del nivel elegido) tiene cada una. Solo las que existen. */
+  readonly opcionesCli = computed(() => {
+    const niv = this.nivelF(), caja = this.modoCaja();
+    this.filtroTick();
+    const cuenta = new Map<number, number>();
+    const suma = (v: number) => cuenta.set(v, (cuenta.get(v) ?? 0) + 1);
+    for (const nap of this.naps()) {
+      if (niv !== 0 && (nap.nivelNap ?? 0) !== niv) continue;
+      const tot = nap.totalClientes ?? 0;
+      if (caja) { suma(Math.min(tot, CoberturaHomeComponent.CAJA_TOPE)); continue; }
+      if (tot === 0) suma(0);
+      const pons = this.ponsPorNap.get(nap.idGeoElemento);
+      if (!pons?.size) continue;
+      const vistos = new Set<number>();
+      for (const k of pons) { const c = this.ponCount.get(k) ?? 0; if (c > 0 && !vistos.has(c)) { vistos.add(c); suma(c); } }
+    }
+    const tope = CoberturaHomeComponent.CAJA_TOPE;
+    return [...cuenta.entries()].sort((a, b) => a[0] - b[0]).map(([v, cajas]) => ({
+      v, cajas,
+      lbl: v === 0 ? 'Sin clientes · para vender'
+         : caja && v >= tope ? tope + ' o más clientes'
+         : v + (v === 1 ? ' cliente' : ' clientes'),
+    }));
+  });
+  readonly cliResumen = computed(() => {
+    const sel = this.cantSel();
+    if (!sel.length) return 'Todas las cajas';
+    const tope = CoberturaHomeComponent.CAJA_TOPE, caja = this.modoCaja();
+    const t = (v: number) => v === 0 ? 'Sin clientes' : caja && v >= tope ? tope + '+' : String(v);
+    if (sel.length === 1) return sel[0] === 0 ? 'Sin clientes' : t(sel[0]) + (sel[0] === 1 ? ' cliente' : ' clientes');
+    if (sel.length > 3) return sel.length + ' cantidades elegidas';
+    return [...sel].sort((a, b) => a - b).map(t).join(', ') + ' clientes';
+  });
+  readonly opcionCero = computed(() => this.opcionesCli().find((o) => o.v === 0) ?? null);
+  readonly opcionesNum = computed(() => this.opcionesCli().filter((o) => o.v > 0));
+  /** Atajos por tramos de 16 (un PON admite 64): marcan de una todas las cantidades del tramo. Solo en modo PON. */
+  readonly rangos = computed(() => {
+    if (this.modoCaja()) return [];
+    const tramos: [number, number][] = [[1, 16], [17, 32], [33, 48], [49, 64], [65, 9999]];
+    const nums = this.opcionesNum();
+    return tramos.map(([a, b]) => {
+      const vs = nums.filter((o) => o.v >= a && o.v <= b);
+      return { lbl: b > 64 ? a + '+' : a + '–' + b, vs: vs.map((o) => o.v), cajas: vs.reduce((t, o) => t + o.cajas, 0) };
+    }).filter((r) => r.vs.length);
+  });
+  rangoOn(r: { vs: number[] }): boolean {
+    const sel = this.cantSel();
+    return r.vs.length > 0 && r.vs.every((v) => sel.includes(v));
+  }
+  toggleRango(r: { vs: number[] }): void {
+    const sel = this.cantSel();
+    this.cantSel.set(this.rangoOn(r) ? sel.filter((v) => !r.vs.includes(v)) : [...new Set([...sel, ...r.vs])]);
+    this.repintarFiltro();
+  }
+  cliMarcado(v: number): boolean { return this.cantSel().includes(v); }
+  toggleCli(v: number): void {
+    const sel = this.cantSel();
+    this.cantSel.set(sel.includes(v) ? sel.filter((x) => x !== v) : [...sel, v]);
+    this.repintarFiltro();
+  }
+  /** Cierra el combo al hacer clic fuera o con Escape. */
+  private readonly cerrarDd = (e: Event) => {
+    if (!this.ddOpen()) return;
+    if (e instanceof KeyboardEvent) { if (e.key === 'Escape') this.ddOpen.set(false); return; }
+    if (this.cliDd && !this.cliDd.nativeElement.contains(e.target as Node)) this.ddOpen.set(false);
+  };
+  /** El contador es de cajas de 1er nivel (las de 2do cuelgan de una de 1er y no se suman), salvo que se filtre 2do nivel. */
+  /** Cajas que cumplen el filtro, separadas por nivel (para "Todos"). */
+  readonly cajasNivel = computed(() => {
+    let n1 = 0, n2 = 0;
+    for (const nap of this.napsFiltradas()) {
+      if (nap.nivelNap === 1) n1++;
+      else if (nap.nivelNap === 2) n2++;
+    }
+    return { n1, n2 };
+  });
+  readonly cajasContador = computed(() => {
+    const niv = this.nivelF() === 2 ? 2 : 1;
+    return this.napsFiltradas().filter((nap) => (nap.nivelNap ?? 0) === niv).length;
+  });
+  readonly napsFiltradas = computed(() => {
+    const niv = this.nivelF(), sel = this.cantSel(), caja = this.modoCaja();
+    this.filtroTick();   // se recalcula cuando llegan los clientes (y con ellos los PON)
+    return this.naps().filter((nap) => {
+      if (niv !== 0 && (nap.nivelNap ?? 0) !== niv) return false;
+      if (!sel.length) return true;
+      // La cantidad manda (exacta, no acumulada); con varias elegidas basta cumplir una.
+      return sel.some((v) => this.cumple(nap, v, caja));
+    });
+  });
+
+  setNivel(n: 0 | 1 | 2): void {
+    if (this.nivelF() === n) return;
+    // Al pasar a/desde 2do nivel las cantidades cambian de significado (caja vs PON): se limpian.
+    if ((n === 2) !== this.modoCaja()) this.cantSel.set([]);
+    this.nivelF.set(n);
+    this.repintarFiltro();
+  }
+  limpiarFiltro(): void {
+    this.nivelF.set(0);
+    this.cantSel.set([]);
+    this.ddOpen.set(false);
+    this.repintarFiltro();
+  }
+  onNivel(ev: Event): void {
+    this.nivelF.set((Number((ev.target as HTMLSelectElement).value) || 0) as 0 | 1 | 2);
+    this.repintarFiltro();
+  }
+  /**
+   * Al elegir un filtro, el mapa se mueve para mostrar TODAS las cajas que lo cumplen.
+   * El mapa solo dibuja lo que esta en pantalla (por rendimiento), asi que sin esto las cajas
+   * del filtro que estaban en otra zona no se veian y parecia que el filtro no funcionaba.
+   */
+  private encuadrarFiltro(): void {
+    if (!this.map || !this.filtroCajasActivo()) return;
+    const pts: L.LatLngTuple[] = [];
+    for (const nap of this.napsFiltradas()) if (nap.lat != null && nap.lng != null) pts.push([nap.lat, nap.lng]);
+    if (!pts.length) return;
+    try { this.map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 16, animate: true }); } catch { /* */ }
+  }
+
+  repintarFiltro(): void {
+    // Si la caja seleccionada quedo fuera del filtro, se cierra su panel.
+    if (this.napSel && !this.napsFiltradas().some((x) => x.idGeoElemento === this.napSel!.idGeoElemento)) this.cerrar();
+    this.pintar();
+    this.pintarGlobal();
+    this.encuadrarFiltro();   // moveend vuelve a pintar con la nueva vista
+  }
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly radio = signal(500);
@@ -538,18 +943,18 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Descarga a Excel (.xlsx) los clientes que pasan las CAPAS ACTIVAS (calidad + estado) — lo mismo
-   * que se está pintando en el mapa. Una fila por cliente con su estado, NAP, OLT/PON/ONU y distancia.
+   * Descarga a Excel (.xlsx) los clientes de las cajas que cumplen el filtro (nivel + clientes).
+   * Una fila por cliente con su estado, NAP, OLT/PON/ONU y distancia.
    */
   descargarExcel(): void {
-    const vis = this.verCal(), visEst = this.verEstado();
+    const cajas = new Set(this.napsFiltradas().map((x) => x.idGeoElemento));
     const rows: Record<string, string | number>[] = [];
     for (const [napId, clientes] of this.cliPorNap) {
+      if (!cajas.has(napId)) continue;
       const etiqueta = this.etiquetaNap(napId);
       for (const c of clientes) {
         const q = c.calidad ?? 2;
         const g = c.estadoGrupo ?? 3;
-        if (!vis[q] || !visEst[g]) continue;   // respeta las capas encendidas
         rows.push({
           'Cliente': (c.clienteNombre && c.clienteNombre.trim()) || '',
           'Documento': c.documento ?? '',
@@ -672,7 +1077,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     if (!this.filtroActivo()) return;   // ninguna capa encendida -> nada que pintar
     const vis = this.verCal(), visEst = this.verEstado();
     const view = this.map.getBounds().pad(0.2);   // solo lo visible (+margen) para no relentizar
-    const napById = new Map<number, CoberturaNap>(this.naps().map((n) => [n.idGeoElemento, n]));
+    const napById = new Map<number, CoberturaNap>(this.napsFiltradas().map((n) => [n.idGeoElemento, n]));
     const CAP = 8000;
     let k = 0;
     for (const [napId, clientes] of this.cliPorNap) {
@@ -860,6 +1265,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
 
   private map?: L.Map;
   private capa = L.layerGroup();
+  private ro: ResizeObserver | null = null;
   private capaSel = L.layerGroup();
   private capaHi = L.layerGroup();     // resaltado del cliente elegido en la lista
   private capaGlobal = L.layerGroup();
@@ -892,12 +1298,21 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     this.map.on('moveend zoomend', () => this.scheduleRender());
     this.map.on('click', (e: L.LeafletMouseEvent) => this.clicEnMapa(e));
     setTimeout(() => this.map?.invalidateSize(), 150);
+    // El contenedor cambia de tamaño (barra que se acomoda, menu lateral): Leaflet necesita saberlo o deja franjas grises.
+    this.ro = new ResizeObserver(() => this.map?.invalidateSize({ pan: false }));
+    this.ro.observe(this.mapEl.nativeElement);
+    document.addEventListener('mousedown', this.cerrarDd, true);
+    document.addEventListener('keydown', this.cerrarDd, true);
+    // Sin mapa de calor: la pantalla muestra las cajas (filtradas por nivel y cupo del PON) y nada mas.
     this.cargar();
     this.api.listarOlts().subscribe({ next: (o) => this.olts.set(o ?? []), error: () => {} });
   }
 
   ngOnDestroy(): void {
     if (this.frame != null) cancelAnimationFrame(this.frame);
+    this.ro?.disconnect();
+    document.removeEventListener('mousedown', this.cerrarDd, true);
+    document.removeEventListener('keydown', this.cerrarDd, true);
     this.heat.detach();
     this.map?.remove();
   }
@@ -935,6 +1350,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       error: () => { /* fallback de nombre */ },
     });
 
+    this.cargarNapPon();
     this.setCli(new Map());
     this.heatPts = [];
     this.api.listarClientesGeo(r).subscribe({
@@ -1026,12 +1442,22 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private napIcon(nap: CoberturaNap): L.Icon | L.DivIcon {
+  /** Icono real del nivel (para la leyenda de la barra). */
+  iconoNivel(n: number): string | null {
+    return this.iconByNivel.get(n) ?? null;
+  }
+
+  /** Tamaño del icono segun el zoom: de lejos chico para que no se amontonen, de cerca el normal. */
+  private tamIcono(zoom: number): number {
+    return zoom >= 15 ? 26 : zoom >= 14 ? 22 : zoom >= 13 ? 18 : zoom >= 12 ? 15 : 12;
+  }
+
+  private napIcon(nap: CoberturaNap, t = 26): L.Icon | L.DivIcon {
     // 1) icono real propio; 2) icono real de su nivel (para las que base-elemento no trajo)
     const propio = this.meta.get(nap.idGeoElemento)?.icono;
     const url = (propio && /^https?:\/\//i.test(propio)) ? propio : this.iconByNivel.get(nap.nivelNap ?? 0);
     if (url) {
-      return L.icon({ iconUrl: url, iconSize: [26, 26], iconAnchor: [13, 26], tooltipAnchor: [0, -22] });
+      return L.icon({ iconUrl: url, iconSize: [t, t], iconAnchor: [t / 2, t], tooltipAnchor: [0, -t + 4] });
     }
     // 3) ultimo recurso (si NINGUNA NAP trajo icono): pin de color por nivel
     const c = nap.nivelNap === 1 ? '#2563eb' : '#0891b2';
@@ -1039,7 +1465,9 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       '<svg width="22" height="28" viewBox="0 0 22 28" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M11 0C5 0 0 4.9 0 11c0 7.7 11 17 11 17s11-9.3 11-17C22 4.9 17 0 11 0z" fill="' + c + '" stroke="#ffffff" stroke-width="1.5"/>' +
       '<circle cx="11" cy="11" r="4.2" fill="#ffffff"/></svg>';
-    return L.divIcon({ html, className: 'cob-nappin', iconSize: [22, 28], iconAnchor: [11, 28], tooltipAnchor: [0, -24] });
+    const w = Math.round(t * 22 / 26), h = Math.round(t * 28 / 26);
+    return L.divIcon({ html: html.replace('width="22" height="28"', 'width="' + w + '" height="' + h + '"'), className: 'cob-nappin',
+                       iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4] });
   }
 
   private pintar(): void {
@@ -1049,21 +1477,25 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     const view = this.map.getBounds().pad(0.15);
     const zoom = this.map.getZoom();
     const showLabels = this.verNombres() && zoom >= LABEL_ZOOM;
+    const t = this.tamIcono(zoom);
+    const cap = DOT_CAP;
     let n = 0;
     let labels = 0;
-    for (const nap of this.naps()) {
-      if (n >= NAP_CAP) break;
+    for (const nap of this.napsFiltradas()) {
+      if (n >= cap) break;
       if (nap.lat == null || nap.lng == null) continue;
       const ll: L.LatLngTuple = [nap.lat, nap.lng];
       if (!view.contains(ll)) continue;
       n++;
       const nombre = this.nombreCorto(nap);
-      const m = L.marker(ll, { icon: this.napIcon(nap) });
+      // 1er nivel un poco mas grande y encima: es la caja que se vende primero
+      const m = L.marker(ll, { icon: this.napIcon(nap, nap.nivelNap === 1 ? t + 2 : t), zIndexOffset: nap.nivelNap === 1 ? 500 : 0 });
       if (showLabels && labels < LABEL_CAP) {
         m.bindTooltip(nombre, { permanent: true, direction: 'top', className: 'cob-lbl-perm' });
         labels++;
       } else {
-        m.bindTooltip(nombre + ' · ' + nap.totalClientes + ' cli.', { direction: 'top', className: 'cob-lbl' });
+        const pm = this.ponMin(nap.idGeoElemento);
+        m.bindTooltip(nombre + ' · ' + nap.totalClientes + ' cli.' + (pm == null ? ' · PON sin amarrar' : ' · PON con ' + pm + ' cli. · ' + this.fuenteTexto(nap.idGeoElemento)), { direction: 'top', className: 'cob-lbl' });
       }
       m.on('click', () => this.seleccionar(nap));
       m.addTo(this.capa);
