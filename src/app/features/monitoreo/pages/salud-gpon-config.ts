@@ -45,6 +45,50 @@ import { NocNotify } from '../services/noc-notify';
               }
             </tbody>
           </table>
+          <div class="sec aviso" style="margin-top:22px"><i class="pi pi-bolt"></i> Energía · breakers WiFi</div>
+          <table class="lvl">
+            <thead><tr><th>Aviso</th><th>Activo</th><th>Gravedad</th><th>Valores</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><b>Lectura del breaker</b></td>
+                <td></td><td></td>
+                <td>Cada <input class="inp" type="number" min="10" max="3600" [(ngModel)]="map['energia_lectura_cada'].settingValue"> <span class="u">seg</span></td>
+                <td><button class="btn sm" (click)="saveEnergia(['energia_lectura_cada'])">Guardar</button></td>
+              </tr>
+              <tr>
+                <td><b>Breaker sin respuesta</b></td>
+                <td></td><td></td>
+                <td>Marcar caído tras <input class="inp" type="number" min="30" [(ngModel)]="map['device_down_after_seconds'].settingValue"> <span class="u">seg · aplica a todos los equipos</span></td>
+                <td><button class="btn sm" (click)="saveEnergia(['device_down_after_seconds'])">Guardar</button></td>
+              </tr>
+              <tr>
+                <td><b>Relé abierto</b> <span class="u">el breaker cortó la energía</span></td>
+                <td><input type="checkbox" [checked]="on('energia_alerta_rele')" (change)="set('energia_alerta_rele', $any($event.target).checked)"></td>
+                <td><select class="inp" [(ngModel)]="map['energia_sev_rele'].settingValue"><option value="crit">Crítica</option><option value="warn">Aviso</option></select></td>
+                <td></td>
+                <td><button class="btn sm" (click)="saveEnergia(['energia_alerta_rele', 'energia_sev_rele'])">Guardar</button></td>
+              </tr>
+              <tr>
+                <td><b>Voltaje fuera de rango</b></td>
+                <td><input type="checkbox" [checked]="on('energia_alerta_voltaje')" (change)="set('energia_alerta_voltaje', $any($event.target).checked)"></td>
+                <td><select class="inp" [(ngModel)]="map['energia_sev_voltaje'].settingValue"><option value="crit">Crítica</option><option value="warn">Aviso</option></select></td>
+                <td class="vals">
+                  Mín. <input class="inp" type="number" step="1" [(ngModel)]="map['energia_volt_min'].settingValue"> <span class="u">V</span>
+                  Máx. <input class="inp" type="number" step="1" [(ngModel)]="map['energia_volt_max'].settingValue"> <span class="u">V</span>
+                  Margen para cerrar <input class="inp" type="number" step="0.5" min="0" [(ngModel)]="map['energia_histeresis_v'].settingValue"> <span class="u">V</span>
+                </td>
+                <td><button class="btn sm" (click)="saveEnergia(['energia_alerta_voltaje', 'energia_sev_voltaje', 'energia_volt_min', 'energia_volt_max', 'energia_histeresis_v'])">Guardar</button></td>
+              </tr>
+              <tr>
+                <td><b>Falla del breaker</b> <span class="u">código que reporta el medidor</span></td>
+                <td><input type="checkbox" [checked]="on('energia_alerta_falla')" (change)="set('energia_alerta_falla', $any($event.target).checked)"></td>
+                <td><select class="inp" [(ngModel)]="map['energia_sev_falla'].settingValue"><option value="crit">Crítica</option><option value="warn">Aviso</option></select></td>
+                <td></td>
+                <td><button class="btn sm" (click)="saveEnergia(['energia_alerta_falla', 'energia_sev_falla'])">Guardar</button></td>
+              </tr>
+            </tbody>
+          </table>
+
           <div class="sec aviso" style="margin-top:22px"><i class="pi pi-bell"></i> Reglas de notificación</div>
           <table class="lvl">
             <thead><tr><th>Regla</th><th>Valor</th><th></th></tr></thead>
@@ -71,6 +115,9 @@ import { NocNotify } from '../services/noc-notify';
     table.lvl th { text-align:left; }
     table.lvl td { padding:8px 6px; }
     table.lvl input.inp { width:100px; }
+    table.lvl select.inp { width:110px; }
+    table.lvl td.vals input.inp { width:80px; margin-right:2px; }
+    table.lvl td.vals .u { margin-right:12px; }
     .u { color:var(--muted); font-weight:400; font-size:11px; }
   `],
 })
@@ -107,11 +154,40 @@ export class SaludGponConfig {
         // Asegura que las claves esperadas existan (evita errores si falta alguna migración).
         ['gpon_rx_warn', 'gpon_rx_weak', 'gpon_rx_crit',
          ...this.equipoGroups.flatMap((g) => g.keys),
-         ...this.notifyRules.map((r) => r.key)].forEach((k) => { if (!this.map[k]) this.map[k] = { settingKey: k, settingValue: '', unit: '' }; });
+         ...this.notifyRules.map((r) => r.key), ...this.energiaKeys].forEach((k) => { if (!this.map[k]) this.map[k] = { settingKey: k, settingValue: '', unit: '' }; });
         this.loaded.set(true);
       },
       error: () => this.loaded.set(true),
     });
+  }
+
+  /** Ajustes de los breakers WiFi (V127 del NOC + el umbral de caída general). */
+  energiaKeys = ['energia_lectura_cada', 'device_down_after_seconds', 'energia_alerta_rele', 'energia_sev_rele',
+                 'energia_alerta_voltaje', 'energia_sev_voltaje', 'energia_volt_min', 'energia_volt_max',
+                 'energia_histeresis_v', 'energia_alerta_falla', 'energia_sev_falla'];
+
+  on(k: string): boolean {
+    const v = String(this.map[k]?.settingValue ?? '1').trim().toLowerCase();
+    return v === '1' || v === 'true' || v === 'si' || v === 'sí' || v === 'on';
+  }
+
+  set(k: string, activo: boolean) { this.map[k].settingValue = activo ? '1' : '0'; }
+
+  /** Valida antes de guardar: un rango al revés o un margen mayor que el rango dejaría la alerta sin sentido. */
+  saveEnergia(keys: string[]) {
+    const n = (k: string) => Number(this.map[k]?.settingValue);
+    if (keys.includes('energia_lectura_cada') && !(n('energia_lectura_cada') >= 10 && n('energia_lectura_cada') <= 3600)) {
+      this.notify.error('La lectura debe ser entre 10 y 3600 segundos.'); return;
+    }
+    if (keys.includes('device_down_after_seconds') && !(n('device_down_after_seconds') >= 30)) {
+      this.notify.error('El tiempo para marcar caído debe ser de al menos 30 segundos.'); return;
+    }
+    if (keys.includes('energia_volt_min')) {
+      const min = n('energia_volt_min'), max = n('energia_volt_max'), m = n('energia_histeresis_v');
+      if (!(min > 0 && max > min)) { this.notify.error('El voltaje máximo tiene que ser mayor que el mínimo.'); return; }
+      if (!(m >= 0 && m * 2 < max - min)) { this.notify.error('El margen tiene que ser menor que la mitad del rango.'); return; }
+    }
+    this.saveGroup(keys);
   }
 
   saveGroup(keys: string[]) {

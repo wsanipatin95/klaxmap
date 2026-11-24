@@ -330,7 +330,7 @@ class HeatOverlay {
             <button type="button" [class.on]="satOn()" (click)="toggleSat()" title="Cambiar entre calles y satélite"><i class="pi" [class.pi-map]="satOn()" [class.pi-globe]="!satOn()"></i><span>{{ satOn() ? 'Calles' : 'Satélite' }}</span></button>
             <button type="button" [class.on]="zonasOn()" (click)="toggleZonas()" title="Barrios coloreados por cantidad de clientes"><i class="pi pi-th-large"></i><span>Zonas</span></button>
             <button type="button" [class.on]="calorCajas()" (click)="toggleCalorCajas()" title="Pintar cada caja según lo llena que está"><i class="pi" [class.pi-spinner]="capacidadCargando()" [class.pi-spin]="capacidadCargando()" [class.pi-palette]="!capacidadCargando()"></i><span>Calor</span></button>
-            <button type="button" [class.on]="vistaTabla()" (click)="vistaTabla.set(!vistaTabla())" title="Ver las cajas del filtro en una tabla"><i class="pi" [class.pi-table]="!vistaTabla()" [class.pi-map]="vistaTabla()"></i><span>{{ vistaTabla() ? 'Mapa' : 'Tabla' }}</span></button>
+            <button type="button" [class.on]="vistaTabla()" (click)="toggleTabla()" title="Ver las cajas del filtro en una tabla"><i class="pi" [class.pi-table]="!vistaTabla()" [class.pi-map]="vistaTabla()"></i><span>{{ vistaTabla() ? 'Mapa' : 'Tabla' }}</span></button>
           </div>
           @if (calorError()) { <div class="cob-ubic-nota cob-ubic-err"><i class="pi pi-exclamation-circle"></i><span>{{ calorError() }}</span></div> }
           </div>
@@ -388,11 +388,10 @@ class HeatOverlay {
                       <td [title]="f.barrio">{{ f.barrio }}</td>
                       <td class="mono" [title]="f.pon">{{ f.pon }}</td>
                       <td class="num">{{ f.clientes }}</td>
-                      @if (calorCajas()) {
-                        <td class="num" [title]="f.ocupTitle">
-                          <span class="cob-ocup"><span class="cob-ocup-bar"><i [style.width.%]="f.ocup == null ? 0 : (f.ocup > 1 ? 100 : f.ocup * 100)" [style.background]="f.ocupColor"></i></span><b [style.color]="f.ocupColor">{{ f.ocupTxt }}</b></span>
-                        </td>
-                      }
+                      <td class="num" [title]="f.ocupTitle">
+                        @if (capacidadCargando()) { <span class="u">…</span> }
+                        @else { <span class="cob-ocup"><span class="cob-ocup-bar"><i [style.width.%]="f.ocup == null ? 0 : (f.ocup > 1 ? 100 : f.ocup * 100)" [style.background]="f.ocupColor"></i></span><b [style.color]="f.ocupColor">{{ f.ocupTxt }}</b></span> }
+                      </td>
                       <td class="num">{{ f.clientesPon ?? '—' }}</td>
                       @if (movTipo() !== '') { <td class="num b">{{ f.mov }}</td> }
                     </tr>
@@ -1193,6 +1192,13 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
 
   // ---- Vista en tabla ----
   readonly vistaTabla = signal(false);
+
+  /** Abre/cierra la tabla. Al abrirla trae la capacidad de las cajas para el semaforo de ocupacion. */
+  toggleTabla(): void {
+    const abrir = !this.vistaTabla();
+    this.vistaTabla.set(abrir);
+    if (abrir && !this.capacidad.size) this.cargarCapacidad();
+  }
   readonly tablaQ = signal('');
   readonly tablaPag = signal(1);
   readonly tablaOrd = signal<{ k: string; dir: 1 | -1 }>({ k: 'caja', dir: 1 });
@@ -1202,7 +1208,8 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       { k: 'parroquia', lbl: 'Parroquia' }, { k: 'barrio', lbl: 'Barrio' }, { k: 'pon', lbl: 'OLT · PON' },
       { k: 'clientes', lbl: 'Clientes caja', num: true },
     ];
-    if (this.calorCajas()) c.push({ k: 'ocup', lbl: 'Ocupación', num: true });
+    // La ocupacion va SIEMPRE en la tabla (el semaforo de cada caja), haya o no calor en el mapa.
+    c.push({ k: 'ocup', lbl: 'Ocupación', num: true });
     c.push({ k: 'clientesPon', lbl: 'Clientes PON', num: true });
     if (this.movTipo() !== '') c.push({ k: 'mov', lbl: this.movTipo() === 'venta' ? 'Ventas' : 'Bajas', num: true });
     return c;
@@ -1244,7 +1251,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   /** Anchos fijos (%) para que la tabla entre completa en una sola vista, sin barra horizontal. */
   anchoCol(k: string): number {
     const mov = this.movTipo() !== '';
-    const cal = this.calorCajas();
+    const cal = true;   // la columna de ocupacion esta siempre
     const w: Record<string, number> = { caja: 9, nivel: 5, provincia: 10, canton: cal && mov ? 9 : 11, parroquia: cal && mov ? 11 : 13,
                                          barrio: mov ? (cal ? 12 : 14) : (cal ? 14 : 18),
                                          pon: cal ? 14 : 18, clientes: 8, ocup: 8, clientesPon: 8, mov: 6 };
