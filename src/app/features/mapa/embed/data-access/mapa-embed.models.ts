@@ -132,3 +132,25 @@ export interface MapaOtaCrearResponse {
 
 /** tipoCodigo de NAP elegibles para crear OT-A. */
 export const OTA_TIPOS_ELEGIBLES = ['NAP_PROYECTADA', 'NAP_1ER_NIVEL', 'NAP_2DO_NIVEL'];
+
+/** Puerto de una NAP: ocupado o libre y, si está ocupado, el estado del contrato (sin datos del cliente). */
+export interface MapaCajaPuerto {
+  puerto: number;
+  ocupado: boolean;
+  idEstado?: string | null;
+  estado?: string | null;
+}
+
+/** Ocupación de una NAP para el mapa del vendedor (GET /api/erp/crm/cajas/{id}/puertos). */
+export interface MapaCajaPuertos {
+  idGeoElemento: number;
+  etiqueta?: string | null;
+  nivel?: number | null;
+  olt?: string | null;
+  pon?: string | number | null;
+  total: number;
+  ocupados: number;
+  libres: number;
+  sinPuerto: number;
+  puertos: MapaCajaPuerto[];
+}

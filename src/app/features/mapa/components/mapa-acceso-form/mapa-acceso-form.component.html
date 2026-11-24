@@ -35,12 +35,12 @@
     <div class="hor">
       <div class="hor-head">
         <span class="t">Horario de ingreso</span>
-        <span class="tenue">{{ (modelo.horarios ?? []).length ? (modelo.horarios ?? []).length + ' tramo(s)' : 'Sin tramos: se puede entrar siempre' }}</span>
+        <span class="tenue">{{ modelo.horarios.length ? modelo.horarios.length + ' tramo(s)' : 'Sin tramos: se puede entrar siempre' }}</span>
         <span class="sp"></span>
         <button type="button" class="chip" (click)="preset([1,2,3,4,5], '08:00', '17:00')">Lun–Vie 8–17</button>
         <button type="button" class="chip" (click)="preset([1,2,3,4,5,6], '08:00', '17:00')">Lun–Sáb 8–17</button>
         <button type="button" class="chip" (click)="preset([1,2,3,4,5,6,7], '08:00', '18:00')">Todos 8–18</button>
-        <button type="button" class="chip ghost" (click)="limpiarHorario()" *ngIf="(modelo.horarios ?? []).length">Limpiar</button>
+        <button type="button" class="chip ghost" (click)="limpiarHorario()" *ngIf="modelo.horarios.length">Limpiar</button>
       </div>
 
       <div class="dias">

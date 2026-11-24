@@ -48,7 +48,7 @@ export const METLABEL: Record<string, string> = {
         @if (metric === 'olt_ports_consumo') {
           @if (portRows().length) {
             <table style="width:100%">
-              <thead><tr><th>#</th><th>Puerto PON</th><th>Descarga</th><th>Subida</th><th>Actualizado</th></tr></thead>
+              <thead><tr><th>#</th><th>Puerto PON</th><th>Descarga</th><th>Subida</th><th title="Potencia que emite el laser del PON (SNMP, cada 5 min)">Láser TX</th><th>Actualizado</th></tr></thead>
               <tbody>
                 @for (p of portRows(); track $index) {
                   <tr>
@@ -56,6 +56,7 @@ export const METLABEL: Record<string, string> = {
                     <td class="mono">{{ p.port_name }}</td>
                     <td><b>{{ bps(p.tx_bps) }}</b></td>
                     <td>{{ bps(p.rx_bps) }}</td>
+                    <td class="mono">{{ p.tx_dbm == null ? '—' : ((p.tx_dbm > 0 ? '+' : '') + p.tx_dbm.toFixed(2) + ' dBm') }}</td>
                     <td style="color:var(--muted)">{{ p.last_at || '—' }}</td>
                   </tr>
                 }

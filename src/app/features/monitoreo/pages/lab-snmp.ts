@@ -63,6 +63,8 @@ import { NocApi } from '../services/noc-api';
           <button class="b" [disabled]="!sel() || busy()" (click)="probar()">1 · Probar conexión</button>
           <button class="b pri" [disabled]="!sel() || busy()" (click)="buscarTrafico()">2 · Buscar tráfico por ONU</button>
           <button class="b" [disabled]="!sel() || busy()" (click)="ifmib()">3 · Ver octetos IF-MIB</button>
+          <button class="b pri" [disabled]="!sel() || busy()" (click)="validarContador()"
+                  title="Compara la columna (la del OID manual, o la candidata de descarga) contra el trafico real de cada PON. Tarda ~40 s.">4 · Validar contador de descarga</button>
         </div>
 
         <div class="adv">
@@ -247,6 +249,23 @@ export class LabSnmp implements OnDestroy {
     this.api.diagScanColumns(o.ip_address, o.snmp_community || 'public', this.oidManual.trim(), 1, 30, 3, o.snmp_port || 161, 250).subscribe({
       next: (t) => { this.append(t + '\n'); this.busy.set(false); },
       error: (e) => { this.append(this.errText(e)); this.busy.set(false); },
+    });
+  }
+
+  /** Columna candidata de descarga por ONU (C300 V1). Se puede probar otra poniendo el OID manual. */
+  private readonly candidataDescarga = '1.3.6.1.4.1.3902.1015.1010.5.5.1.17';
+
+  validarContador() {
+    const o = this.sel(); if (!o) return;
+    const oid = this.oidManual.trim() || this.candidataDescarga;
+    this.busy.set(true);
+    this.append('\n===== VALIDAR CONTADOR ' + oid + ' (dos fotos con 30 s de diferencia, espera…) =====\n');
+    this.api.validarContador(o.name, oid, 30).subscribe({
+      next: (t) => { this.append(t + '\n'); this.busy.set(false); },
+      error: (e) => {
+        this.append(e?.status === 504 ? '\nEl servidor corto la espera (504). Vuelve a intentar: la validacion tarda unos 40 s.\n' : this.errText(e));
+        this.busy.set(false);
+      },
     });
   }
 

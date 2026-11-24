@@ -272,6 +272,30 @@
         </div>
       </dl>
 
+      <div class="pto-panel" *ngIf="puertosCargando() || puertos()">
+        <div class="pto-cargando" *ngIf="puertosCargando()">Consultando puertos…</div>
+        <ng-container *ngIf="puertos() as p">
+          <div class="pto-resumen">
+            <div><strong class="pto-num-libre">{{ p.libres }}</strong><span>libres</span></div>
+            <div><strong>{{ p.ocupados }}</strong><span>clientes</span></div>
+            <div><strong>{{ p.total }}</strong><span>puertos</span></div>
+          </div>
+          <div class="pto-grid">
+            <div *ngFor="let pt of p.puertos" class="pto" [ngClass]="claseDePuerto(pt)"
+                 [title]="pt.ocupado ? ('Puerto ' + pt.puerto + ' · ' + (pt.estado || 'ocupado')) : ('Puerto ' + pt.puerto + ' · libre')">
+              {{ pt.puerto }}
+            </div>
+          </div>
+          <div class="pto-leyenda">
+            <span><i class="pto-dot pto-libre"></i>Libre</span>
+            <span><i class="pto-dot pto-activo"></i>Cliente activo</span>
+            <span><i class="pto-dot pto-otro"></i>Cortado / otro</span>
+          </div>
+          <div class="pto-extra" *ngIf="p.sinPuerto > 0">{{ p.sinPuerto }} cliente(s) sin puerto asignado</div>
+          <div class="pto-extra" *ngIf="p.olt">OLT {{ p.olt }}<span *ngIf="p.pon"> · PON {{ p.pon }}</span></div>
+        </ng-container>
+      </div>
+
       <p *ngIf="selected()?.descripcion">{{ selected()?.descripcion }}</p>
 
       <footer>

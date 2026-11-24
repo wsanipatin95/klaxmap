@@ -22,6 +22,7 @@ import { unwrapOrThrow } from 'src/app/core/api/api-envelope';
 import { SessionStore } from 'src/app/features/seg/store/session.store';
 import { MapaElementosApi } from '../../../data-access/elemento/mapa-elementos.api';
 import type { MapaElemento, MapaElementoSaveRequest, MapaGeomTipo, MapaTipoElemento } from '../../../data-access/mapa.models';
+import type { MapaCajaPuerto, MapaCajaPuertos } from '../../data-access/mapa-embed.models';
 import { MAPA_BASEMAP_OPTIONS, type BasemapKey } from '../../../models/mapa-basemap.models';
 import { MapaCrudFacade } from '../../../application/mapa-crud.facade';
 import { MapaCreateElementDialogComponent } from '../../../components/mapa-create-element-dialog/mapa-create-element-dialog.component';
@@ -107,6 +108,9 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
   readonly items = signal<MapaElementoCercano[]>([]);
   readonly selected = signal<MapaElementoCercano | null>(null);
   readonly infoOpen = signal(false);
+  /** Ocupación por puerto de la NAP abierta (modo vendedor). */
+  readonly puertos = signal<MapaCajaPuertos | null>(null);
+  readonly puertosCargando = signal(false);
   readonly otaModalOpen = signal(false);
   readonly otaClave = signal('');
   readonly otaBusy = signal(false);
@@ -320,7 +324,10 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
 
   focusItem(item: MapaElementoCercano, openInfo = false) {
     this.selected.set(item);
-    if (openInfo) this.infoOpen.set(true);
+    if (openInfo) {
+      this.infoOpen.set(true);
+      this.cargarPuertos(item);
+    }
 
     this.messaging.elementViewed(item);
     this.drawItems(false);
@@ -337,6 +344,30 @@ export class MapaEmbedViewerComponent implements OnInit, AfterViewInit, OnDestro
     if (typeof anyLayer.getLatLng === 'function') {
       this.map.setView(anyLayer.getLatLng(), Math.max(this.map.getZoom(), 17));
     }
+  }
+
+  /** Solo NAP activas de 1er/2do nivel tienen puertos: se piden al abrir su ficha. */
+  private cargarPuertos(item: MapaElementoCercano) {
+    this.puertos.set(null);
+    const nivel = (item.tipoCodigo ?? '').toUpperCase();
+    if (nivel !== 'NAP_1ER_NIVEL' && nivel !== 'NAP_2DO_NIVEL') return;
+    this.puertosCargando.set(true);
+    this.embedApi
+      .puertosCaja(item.idGeoElemento, this.context())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => {
+          this.puertosCargando.set(false);
+          if (r?.codigo === 0 && r.data && this.selected()?.idGeoElemento === item.idGeoElemento) this.puertos.set(r.data);
+        },
+        error: () => this.puertosCargando.set(false),
+      });
+  }
+
+  /** Color del puerto: libre verde, activo morado, otro estado (cortado/suspendido/pendiente) naranja. */
+  claseDePuerto(p: MapaCajaPuerto): string {
+    if (!p.ocupado) return 'pto-libre';
+    return (p.idEstado ?? '').toLowerCase() === 'a' ? 'pto-activo' : 'pto-otro';
   }
 
   openInfo(item: MapaElementoCercano) {

@@ -62,10 +62,16 @@ export interface Iface {
   rx_bps: number;
   tx_bps: number;
   errors: number;
+  /** Puertos PON de OLT: potencia que emite el laser (dBm) y trafico del colector PON. */
+  laser_dbm?: number | null;
+  pon_rx_bps?: number | null;
+  pon_tx_bps?: number | null;
 }
 
 export interface Alert {
   id: number;
+  /** Clientes: RX antes de la alerta (ultima buena), con la que se abrio, y la de ahora. */
+  rx_antes?: number | null; rx_alerta?: number | null; rx_ahora?: number | null; fase_ahora?: string | null;
   severity: string;
   level?: string;
   category?: string;
@@ -206,6 +212,8 @@ export class NocApi {
   zteEnrichStatus(id: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/zte/olts/${id}/enrich-status`).pipe(map(unwrap)); }
   zteTopConsumo(id: number, limit = 50): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/top-consumo?limit=${limit}`).pipe(map(unwrap)); }
   zteOnuAlerts(iface: string): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/onus/alerts?iface=${encodeURIComponent(iface)}`).pipe(map(unwrap)); }
+  /** Lectura SNMP inmediata del tráfico y láser de los puertos PON. */
+  ztePortsCollect(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/zte/olts/${id}/ports/collect`, {}).pipe(map(unwrap)); }
   zteOltPorts(id: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/ports`).pipe(map(unwrap)); }
   ztePortHistory(id: number, port: string, hours = 6): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/zte/olts/${id}/ports/history?port=${encodeURIComponent(port)}&hours=${hours}`).pipe(map(unwrap)); }
 
@@ -250,6 +258,14 @@ export class NocApi {
   oltcPreview(code: string, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/preview`, { code, params }).pipe(map(unwrap)); }
   oltcExecute(code: string, oltId: number, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/execute`, { code, oltId, params }).pipe(map(unwrap)); }
   oltcUpdateBody(code: string, body: string): Observable<any> { return this.http.put<ApiEnvelope<any>>(`${API}/olt-config/templates/${code}`, { body }).pipe(map(unwrap)); }
+  /** Botonera de soporte: botones de la ONU segun el firmware de su OLT. */
+  oltcBotonera(onuId: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/olt-config/botonera/${onuId}`).pipe(map(unwrap)); }
+  /** Botones de la OLT. modulo='olt' (Configurar OLT) o 'cliente' (Omni / legacy). */
+  oltcBotoneraOlt(oltId: number, modulo?: string): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/olt-config/botonera/olt/${oltId}${modulo ? '?modulo=' + modulo : ''}`).pipe(map(unwrap)); }
+  /** Tarjetas de la OLT con temperatura leida en vivo por SNMP. */
+  oltcTarjetas(oltId: number): Observable<any> { return this.http.get<ApiEnvelope<any>>(`${API}/olt-config/olt/${oltId}/tarjetas`).pipe(map(unwrap)); }
+  oltcBotonPreview(accion: string, onuId: number | null, oltId: number | null, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/boton/preview`, { accion, onuId, oltId, params }).pipe(map(unwrap)); }
+  oltcBotonEjecutar(accion: string, onuId: number | null, oltId: number | null, params: any): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/olt-config/boton/ejecutar`, { accion, onuId, oltId, params }).pipe(map(unwrap)); }
   oltcLogs(oltId?: number): Observable<any[]> { return this.http.get<ApiEnvelope<any[]>>(`${API}/olt-config/logs${oltId ? '?oltId=' + oltId : ''}`).pipe(map(unwrap)); }
 
   // ---- Soporte ----
@@ -283,6 +299,13 @@ export class NocApi {
   }
   diagScanColumns(ip: string, community: string, base: string, from = 1, to = 30, samples = 3, port = 161, pauseMs = 250): Observable<string> {
     return this.http.get(`${API}/diag/scan-columns?ip=${encodeURIComponent(ip)}&community=${encodeURIComponent(community)}&base=${encodeURIComponent(base)}&from=${from}&to=${to}&samples=${samples}&port=${port}&pauseMs=${pauseMs}`, { responseType: 'text' });
+  }
+  /**
+   * Valida si una columna SNMP es la descarga/subida por ONU comparando la suma de sus deltas por
+   * PON contra ifHCOut/InOctets del PON (solo lectura; la community sale del inventario del NOC).
+   */
+  validarContador(nombre: string, oid: string, espera = 30): Observable<string> {
+    return this.http.get(`${API}/zte/olt/validar-contador?nombre=${encodeURIComponent(nombre)}&oid=${encodeURIComponent(oid)}&espera=${espera}`, { responseType: 'text' });
   }
   supTomar(id: number): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/tomar`, {}).pipe(map(unwrap)); }
   supEstado(id: number, estado: number, nota?: string): Observable<any> { return this.http.post<ApiEnvelope<any>>(`${API}/support/inbox/${id}/estado`, { estado, nota }).pipe(map(unwrap)); }

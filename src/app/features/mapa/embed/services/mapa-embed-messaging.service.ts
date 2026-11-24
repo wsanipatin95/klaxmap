@@ -21,16 +21,17 @@ export class MapaEmbedMessagingService {
 
   post(type: KlaxMapMessageType, payload: unknown = null) {
     if (typeof window === 'undefined') return;
-    if (!window.parent || window.parent === window) return;
+    const msg = { type, payload, timestamp: new Date().toISOString() };
 
-    window.parent.postMessage(
-      {
-        type,
-        payload,
-        timestamp: new Date().toISOString(),
-      },
-      this.store.postMessageOrigin() || '*'
-    );
+    // App movil (Flutter WebView): canal nativo 'KlaxCrm' en lugar de window.parent.
+    const canal = (window as unknown as { KlaxCrm?: { postMessage: (m: string) => void } }).KlaxCrm;
+    if (canal?.postMessage) {
+      canal.postMessage(JSON.stringify(msg));
+      return;
+    }
+
+    if (!window.parent || window.parent === window) return;
+    window.parent.postMessage(msg, this.store.postMessageOrigin() || '*');
   }
 
   ready(mode: MapaEmbedMode, context: MapaEmbedContext | null) {

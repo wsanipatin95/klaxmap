@@ -93,6 +93,7 @@ export class SidebarComponent {
           { label: 'Tráfico por app', icon: 'pi pi-chart-line', route: '/app/monitoreo/trafico-apps' },
           { label: 'Seguridad IP', icon: 'pi pi-shield', route: '/app/monitoreo/seguridad' },
           { label: 'Soporte', icon: 'pi pi-wrench', route: '/app/monitoreo/soporte' },
+          { label: 'Configurar OLT', icon: 'pi pi-th-large', route: '/app/monitoreo/configurar-olt' },
           { label: 'Configurar ACS', icon: 'pi pi-wifi', route: '/app/monitoreo/configurar-acs' },
           { label: 'Configuración', icon: 'pi pi-sliders-h', route: '/app/monitoreo/configuracion' },
           { label: 'Lab SNMP', icon: 'pi pi-search', route: '/app/monitoreo/lab-snmp' },

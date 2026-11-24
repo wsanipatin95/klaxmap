@@ -13,6 +13,7 @@ import type {
   MapaElementosCercanosResponse,
   MapaOtaCrearRequest,
   MapaOtaCrearResponse,
+  MapaCajaPuertos,
 } from './mapa-embed.models';
 
 const PUBLIC = new HttpContext().set(SKIP_AUTH, true).set(SKIP_TENANT, true);
@@ -62,6 +63,13 @@ export class MapaEmbedApi {
         headers: this.headersFromContext(params.ctx),
       }
     );
+  }
+
+  /** Ocupación por puerto de una NAP (sin datos de clientes): modo vendedor, servicio del CRM de klaxapi. */
+  puertosCaja(idGeoElemento: number, ctx?: MapaEmbedContext | null) {
+    return this.http.get<ApiEnvelope<MapaCajaPuertos>>(`${this.erpBaseUrl}/crm/cajas/${idGeoElemento}/puertos`, {
+      headers: this.headersFromContext(ctx),
+    });
   }
 
   crearOta(payload: MapaOtaCrearRequest, ctx?: MapaEmbedContext | null) {

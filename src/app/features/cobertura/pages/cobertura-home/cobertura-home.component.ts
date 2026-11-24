@@ -6,7 +6,7 @@ import * as L from 'leaflet';
 import * as XLSX from 'xlsx';
 
 import { CoberturaApi } from '../../data-access/cobertura.api';
-import type { CoberturaNap, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaLpuPon, CoberturaZona } from '../../data-access/cobertura.models';
+import type { CoberturaNap, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaLpuPon, CoberturaZona, CoberturaNapUbicacion, CoberturaContratoFecha } from '../../data-access/cobertura.models';
 
 type ZonaMetric = 'total' | 'activos' | 'cortados' | 'otros';
 import type { MapaNapCliente, MapaNapClientes } from 'src/app/features/mapa/data-access/mapa.models';
@@ -114,6 +114,115 @@ class HeatOverlay {
           </div>
 
           <div class="cob-field">
+            <span class="cob-field-lbl">Ubicación</span>
+            <div class="cob-dd" #ubicDd>
+              <button type="button" class="cob-dd-btn cob-dd-ubic" [class.open]="ddUbic()" [class.has]="hayUbic()" (click)="ddUbic.set(!ddUbic())"
+                      aria-haspopup="dialog" [attr.aria-expanded]="ddUbic()">
+                <i class="pi pi-map-marker cob-dd-pin"></i>
+                <span class="cob-dd-txt" [title]="ubicRuta()">{{ ubicResumen() }}</span>
+                <i class="pi pi-chevron-down"></i>
+              </button>
+              @if (ddUbic()) {
+                <div class="cob-dd-panel cob-ubic-panel" role="dialog" aria-label="Filtrar por ubicación">
+                  <div class="cob-dd-head">
+                    <div>
+                      <div class="cob-dd-ttl">Ubicación</div>
+                      <div class="cob-dd-sub">Puedes marcar varias en cada paso · el número son cajas</div>
+                    </div>
+                    <button type="button" class="cob-dd-link" (click)="limpiarUbic()" [disabled]="!hayUbic()">Limpiar</button>
+                  </div>
+                  <div class="cob-ubic-steps">
+                    @for (st of ubicPasos(); track st.k; let i = $index) {
+                      <div class="cob-ubic-step" [class.off]="st.off" [class.done]="st.sel.length > 0">
+                        <span class="cob-ubic-dot">{{ i + 1 }}</span>
+                        <div class="cob-ubic-body">
+                          <span class="cob-ubic-lbl">{{ st.lbl }}
+                            @if (st.sel.length) { <b class="cob-ubic-cnt">{{ st.sel.length }}</b>
+                              <button type="button" class="cob-ubic-todas" (click)="limpiarPaso(st.k)">Quitar</button> }
+                          </span>
+                          @if (st.off) {
+                            <div class="cob-ubic-vacio">Elige {{ st.padre }} primero</div>
+                          } @else {
+                            <div class="cob-ubic-lista" role="listbox" aria-multiselectable="true" [attr.aria-label]="st.lbl">
+                              @for (o of st.ops; track o.id) {
+                                <button type="button" class="cob-ubic-op" [class.sel]="st.sel.includes(o.id)" (click)="toggleUbic(st.k, o.id)"
+                                        role="option" [attr.aria-selected]="st.sel.includes(o.id)">
+                                  <span class="cob-dd-chk"><i class="pi pi-check"></i></span>
+                                  <span class="cob-ubic-nom">{{ o.nombre }}</span>
+                                  <span class="cob-ubic-n">{{ n(o.n) }}</span>
+                                </button>
+                              } @empty { <div class="cob-ubic-vacio">Sin opciones</div> }
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  <div class="cob-dd-foot">
+                    <span><b>{{ n(napsFiltradas().length) }}</b> cajas en el mapa</span>
+                    <button type="button" class="cob-dd-ok" (click)="ddUbic.set(false)">Listo</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="cob-field">
+            <span class="cob-field-lbl">Movimiento</span>
+            <div class="cob-dd" #movDd>
+              <button type="button" class="cob-dd-btn cob-dd-mov" [class.open]="ddMov()" [class.has]="movTipo() !== ''" (click)="ddMov.set(!ddMov())"
+                      aria-haspopup="dialog" [attr.aria-expanded]="ddMov()">
+                <i class="pi cob-dd-pin" [class.pi-chart-line]="movTipo() !== 'baja'" [class.pi-sign-out]="movTipo() === 'baja'"></i>
+                <span class="cob-dd-txt">{{ movResumen() }}</span>
+                <i class="pi pi-chevron-down"></i>
+              </button>
+              @if (ddMov()) {
+                <div class="cob-dd-panel cob-mov-panel" role="dialog" aria-label="Ventas y desinstalaciones">
+                  <div class="cob-dd-head">
+                    <div>
+                      <div class="cob-dd-ttl">Ventas y desinstalaciones</div>
+                      <div class="cob-dd-sub">Venta = fecha de instalación · Desinstalación = cliente que ya no está activo, cortado ni para retener</div>
+                    </div>
+                    <button type="button" class="cob-dd-link" (click)="limpiarMov()" [disabled]="movTipo() === ''">Limpiar</button>
+                  </div>
+                  <div class="cob-mov-body">
+                    <div class="cob-seg cob-mov-tipo" role="radiogroup" aria-label="Tipo">
+                      <button type="button" [class.on]="movTipo() === ''" (click)="setMovTipo('')">Ninguno</button>
+                      <button type="button" [class.on]="movTipo() === 'venta'" (click)="setMovTipo('venta')">Ventas</button>
+                      <button type="button" [class.on]="movTipo() === 'baja'" (click)="setMovTipo('baja')">Desinstalaciones</button>
+                    </div>
+                    @if (movTipo() !== '') {
+                      @if (fechasError()) { <div class="cob-ubic-nota cob-ubic-err"><i class="pi pi-exclamation-circle"></i><span>{{ fechasError() }}</span></div> }
+                      <span class="cob-ubic-lbl">Año</span>
+                      <div class="cob-mov-anios">
+                        @for (a of movAniosOps(); track a.anio) {
+                          <button type="button" class="cob-mov-anio" [class.on]="movAnios().includes(a.anio)" (click)="toggleAnio(a.anio)">
+                            <b>{{ a.anio }}</b><small>{{ n(a.n) }}</small>
+                          </button>
+                        } @empty { <span class="cob-ubic-vacio">{{ fechasCargando() ? 'Cargando fechas…' : 'Sin fechas' }}</span> }
+                      </div>
+                      <span class="cob-ubic-lbl">Rango de fechas</span>
+                      <div class="cob-mov-rango">
+                        <input type="date" [value]="movDesde()" (change)="setMovFecha('desde', $event)" aria-label="Desde">
+                        <span>a</span>
+                        <input type="date" [value]="movHasta()" (change)="setMovFecha('hasta', $event)" aria-label="Hasta">
+                      </div>
+                      @if (movTipo() === 'baja' && movStats().sinFecha > 0) {
+                        <div class="cob-ubic-nota"><i class="pi pi-info-circle"></i>
+                          <span>{{ n(movStats().sinFecha) }} desinstalados no tienen fecha de baja registrada: salen solo sin filtro de año ni rango.</span></div>
+                      }
+                    }
+                  </div>
+                  <div class="cob-dd-foot">
+                    <span>@if (movTipo() !== '') { <b>{{ n(movStats().clientes) }}</b> {{ movTipo() === 'venta' ? 'ventas' : 'desinstalaciones' }} · } <b>{{ n(napsFiltradas().length) }}</b> cajas</span>
+                    <button type="button" class="cob-dd-ok" (click)="ddMov.set(false)">Listo</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="cob-field">
             <span class="cob-field-lbl" [title]="modoCaja() ? 'Clientes atados a la caja de 2do nivel (splitter 1/8 o 1/16).' : 'Clientes del puerto PON del que sale la caja (activos + cortados, de todos los contratos).'">
               {{ modoCaja() ? 'Clientes en la caja' : 'Clientes en el PON' }}
             </span>
@@ -137,7 +246,14 @@ class HeatOverlay {
                   @if (opcionCero(); as z) {
                     <button type="button" class="cob-dd-zero" [class.sel]="cliMarcado(0)" (click)="toggleCli(0)" role="option" [attr.aria-selected]="cliMarcado(0)">
                       <span class="cob-dd-chk"><i class="pi pi-check"></i></span>
-                      <span class="cob-dd-zero-t"><b>Sin clientes</b><small>Zona libre para vender</small></span>
+                      <span class="cob-dd-zero-t"><b>Sin clientes</b><small>Zona libre para vender</small>
+                        @if (nivelF() === 0) {
+                          <small class="cob-dd-zero-niv">
+                            @if (iconoNivel(1); as u) { <img [src]="u" alt=""> } @else { <i class="cob-dot n1"></i> }{{ n(z.c1) }} de 1er
+                            · @if (iconoNivel(2); as u) { <img [src]="u" alt=""> } @else { <i class="cob-dot n2"></i> }{{ n(z.c2) }} de 2do
+                          </small>
+                        }
+                      </span>
                       <span class="cob-dd-n">{{ n(z.cajas) }}</span>
                     </button>
                   }
@@ -156,12 +272,36 @@ class HeatOverlay {
                               [title]="o.lbl + ' · ' + n(o.cajas) + ' cajas'">
                         <span class="cob-dd-tile-v">{{ modoCaja() && o.v >= 8 ? '8+' : o.v }}</span>
                         <span class="cob-dd-tile-c">{{ n(o.cajas) }} {{ o.cajas === 1 ? 'caja' : 'cajas' }}</span>
+                        @if (nivelF() === 0) {
+                          <span class="cob-dd-tile-niv" [title]="n(o.c1) + ' de 1er nivel · ' + n(o.c2) + ' de 2do nivel'">
+                            <span>@if (iconoNivel(1); as u) { <img [src]="u" alt=""> } @else { <i class="cob-dot n1"></i> }{{ n(o.c1) }}</span>
+                            <span>@if (iconoNivel(2); as u) { <img [src]="u" alt=""> } @else { <i class="cob-dot n2"></i> }{{ n(o.c2) }}</span>
+                          </span>
+                        }
                       </button>
                     } @empty {
                       <div class="cob-dd-empty">Cargando cantidades…</div>
                     }
                   </div>
 
+                  @if (nivelF() === 0) {
+                    <div class="cob-dd-niv">
+                      <div class="cob-dd-niv-row">
+                        @if (iconoNivel(1); as u) { <img class="cob-ic" [src]="u" alt=""> } @else { <i class="cob-dot n1"></i> }
+                        <span class="cob-dd-niv-lbl">1er nivel</span>
+                        <span><b>{{ n(resumenNivel().c1) }}</b> cajas</span>
+                        <span class="cob-dd-niv-sep">·</span>
+                        <span><b>{{ n(resumenNivel().k1) }}</b> clientes</span>
+                      </div>
+                      <div class="cob-dd-niv-row">
+                        @if (iconoNivel(2); as u) { <img class="cob-ic" [src]="u" alt=""> } @else { <i class="cob-dot n2"></i> }
+                        <span class="cob-dd-niv-lbl">2do nivel</span>
+                        <span><b>{{ n(resumenNivel().c2) }}</b> cajas</span>
+                        <span class="cob-dd-niv-sep">·</span>
+                        <span><b>{{ n(resumenNivel().k2) }}</b> clientes</span>
+                      </div>
+                    </div>
+                  }
                   <div class="cob-dd-foot">
                     <span><b>{{ n(napsFiltradas().length) }}</b> cajas en el mapa</span>
                     <button type="button" class="cob-dd-ok" (click)="ddOpen.set(false)">Listo</button>
@@ -175,6 +315,7 @@ class HeatOverlay {
             <span class="cob-result-n">{{ n(napsFiltradas().length) }}</span>
             <span class="cob-result-lbl">cajas</span>
             @if (nivelF() === 0) { <span class="cob-result-sub">{{ n(cajasNivel().n1) }} 1er · {{ n(cajasNivel().n2) }} 2do</span> }
+            @if (movTipo() !== '') { <span class="cob-result-sub cob-result-mov">{{ n(movStats().clientes) }} {{ movTipo() === 'venta' ? 'ventas' : 'bajas' }}</span> }
             @if (filtroCajasActivo()) {
               <button type="button" class="cob-result-x" (click)="limpiarFiltro()" title="Quitar filtros" aria-label="Quitar filtros"><i class="pi pi-times"></i></button>
             }
@@ -188,7 +329,10 @@ class HeatOverlay {
             <button type="button" [class.on]="verNombres()" (click)="onToggleNombres()" title="Mostrar los nombres de las cajas"><i class="pi pi-tag"></i><span>Nombres</span></button>
             <button type="button" [class.on]="satOn()" (click)="toggleSat()" title="Cambiar entre calles y satélite"><i class="pi" [class.pi-map]="satOn()" [class.pi-globe]="!satOn()"></i><span>{{ satOn() ? 'Calles' : 'Satélite' }}</span></button>
             <button type="button" [class.on]="zonasOn()" (click)="toggleZonas()" title="Barrios coloreados por cantidad de clientes"><i class="pi pi-th-large"></i><span>Zonas</span></button>
+            <button type="button" [class.on]="calorCajas()" (click)="toggleCalorCajas()" title="Pintar cada caja según lo llena que está"><i class="pi" [class.pi-spinner]="capacidadCargando()" [class.pi-spin]="capacidadCargando()" [class.pi-palette]="!capacidadCargando()"></i><span>Calor</span></button>
+            <button type="button" [class.on]="vistaTabla()" (click)="vistaTabla.set(!vistaTabla())" title="Ver las cajas del filtro en una tabla"><i class="pi" [class.pi-table]="!vistaTabla()" [class.pi-map]="vistaTabla()"></i><span>{{ vistaTabla() ? 'Mapa' : 'Tabla' }}</span></button>
           </div>
+          @if (calorError()) { <div class="cob-ubic-nota cob-ubic-err"><i class="pi pi-exclamation-circle"></i><span>{{ calorError() }}</span></div> }
           </div>
           @if (zonasOn()) {
             <div class="cob-select">
@@ -216,6 +360,55 @@ class HeatOverlay {
 
       <div class="flex-1 relative min-h-0">
         <div #mapEl class="cob-map absolute inset-0 rounded-lg overflow-hidden border border-slate-200"></div>
+
+        @if (vistaTabla()) {
+          <div class="cob-tabla">
+            <div class="cob-tabla-head">
+              <b>{{ n(filasTabla().length) }}</b> <span>cajas{{ filtroCajasActivo() ? ' del filtro' : '' }}</span>
+              <div class="cob-tabla-q">
+                <i class="pi pi-search"></i>
+                <input [value]="tablaQ()" (input)="tablaQ.set($any($event.target).value); tablaPag.set(1)" placeholder="Buscar caja, barrio, OLT…">
+              </div>
+            </div>
+            <div class="cob-tabla-scroll">
+              <table>
+                <thead><tr>
+                  @for (c of colsTabla(); track c.k) {
+                    <th [class.num]="c.num" [style.width.%]="anchoCol(c.k)" [title]="c.lbl" (click)="ordenarTabla(c.k)">{{ c.lbl }}@if (tablaOrd().k === c.k) { <i class="pi" [class.pi-arrow-up]="tablaOrd().dir > 0" [class.pi-arrow-down]="tablaOrd().dir < 0"></i> }</th>
+                  }
+                </tr></thead>
+                <tbody>
+                  @for (f of filasVisibles(); track f.id) {
+                    <tr (click)="irACaja(f.id)" title="Ver en el mapa">
+                      <td class="b">{{ f.caja }}</td>
+                      <td>{{ f.nivel }}</td>
+                      <td [title]="f.provincia">{{ f.provincia }}</td>
+                      <td [title]="f.canton">{{ f.canton }}</td>
+                      <td [title]="f.parroquia">{{ f.parroquia }}</td>
+                      <td [title]="f.barrio">{{ f.barrio }}</td>
+                      <td class="mono" [title]="f.pon">{{ f.pon }}</td>
+                      <td class="num">{{ f.clientes }}</td>
+                      @if (calorCajas()) {
+                        <td class="num" [title]="f.ocupTitle">
+                          <span class="cob-ocup"><span class="cob-ocup-bar"><i [style.width.%]="f.ocup == null ? 0 : (f.ocup > 1 ? 100 : f.ocup * 100)" [style.background]="f.ocupColor"></i></span><b [style.color]="f.ocupColor">{{ f.ocupTxt }}</b></span>
+                        </td>
+                      }
+                      <td class="num">{{ f.clientesPon ?? '—' }}</td>
+                      @if (movTipo() !== '') { <td class="num b">{{ f.mov }}</td> }
+                    </tr>
+                  } @empty {
+                    <tr><td [attr.colspan]="colsTabla().length" class="cob-tabla-vacio">Ninguna caja cumple el filtro.</td></tr>
+                  }
+                </tbody>
+              </table>
+              @if (filasVisibles().length < filasTabla().length) {
+                <button type="button" class="cob-tabla-mas" (click)="tablaPag.set(tablaPag() + 1)">
+                  Mostrar más ({{ n(filasTabla().length - filasVisibles().length) }} restantes)
+                </button>
+              }
+            </div>
+          </div>
+        }
 
         @if (panelOpen()) {
           <aside class="cob-side">
@@ -254,67 +447,36 @@ class HeatOverlay {
                     <span class="cob-seg-btn" [class.active]="d.splitter === '1/16'">1/16</span>
                   </div>
                 </div>
-                <div class="cob-counter">
-                  <div><b>{{ d.ocupados }}</b> / {{ d.total }} <span class="cob-mut">puertos</span></div>
-                  <div class="cob-disp" [class.full]="d.disponibles === 0">{{ d.disponibles }} disponibles</div>
-                </div>
+                @if (puertos(); as pt) {
+                  <div class="cob-counter" [title]="pt.detalle">
+                    <div><b>{{ pt.ocupados }}</b> / {{ pt.total }} <span class="cob-mut">puertos</span></div>
+                    @if (pt.exceso > 0) {
+                      <div class="cob-disp full">+{{ pt.exceso }} sobre la capacidad</div>
+                    } @else {
+                      <div class="cob-disp" [class.full]="pt.disponibles === 0">{{ pt.disponibles }} disponibles</div>
+                    }
+                  </div>
+                }
               </div>
             }
 
             <div class="cob-side-body">
-              <div class="cob-sec">Clientes de la NAP · {{ cliGeo().length }}</div>
-              @if (cliGeo().length) {
-                <div class="cob-cal-counts">
-                  <span class="cob-cal cal-3">{{ calCount(3) }} confirmado</span>
-                  <span class="cob-cal cal-2">{{ calCount(2) }} sin confirmar</span>
-                  @if (calCount(1)) { <span class="cob-cal cal-1">{{ calCount(1) }} otro PON</span> }
-                  @if (calCount(0)) { <span class="cob-cal cal-0">{{ calCount(0) }} sin GPS</span> }
-                </div>
-                <ul class="cob-list">
-                  @for (c of cliGeo(); track c.idRedCoberturaCliente) {
-                    <li class="cob-card" [class.active]="cliSel() === c.idRedCoberturaCliente" (click)="resaltarCliente(c)" title="Clic para resaltar su conexión en el mapa">
-                      <div class="cob-card-top">
-                        <span class="cob-card-name" [title]="c.clienteNombre || ''">{{ c.clienteNombre || c.documento || ('#' + c.idConContratoFk) }}</span>
-                        <span class="cob-badge" [class]="estadoClase(c.estado)">{{ c.estado || 's/estado' }}</span>
-                      </div>
-                      <div class="cob-card-sub">
-                        Doc {{ c.documento || '—' }} ·
-                        <span class="cob-cal cal-{{ c.calidad ?? 2 }}">{{ calMeta(c.calidad).lbl }}</span>
-                        · {{ dist(c.distanciaM) }}
-                      </div>
-                      <div class="cob-card-svc">
-                        <span class="cob-tag cob-tag-olt" [title]="'OLT'"><i class="pi pi-sitemap"></i> {{ c.oltNombre || 'Sin OLT' }}</span>
-                        <span class="cob-tag" [title]="'Puerto PON (tarjeta/puerto)'">PON {{ ponLabel(c) }}</span>
-                        <span class="cob-tag" [title]="'ONU'">ONU {{ c.gponOnu ?? '—' }}</span>
-                      </div>
+              <div class="cob-sec">Historial de clientes en la caja · {{ historialCaja().total }}</div>
+              @if (historialCaja().filas.length) {
+                <ul class="cob-hist">
+                  @for (h of historialCaja().filas; track h.estado) {
+                    <li class="cob-hist-row">
+                      <span class="cob-hist-dot" [class]="'cob-hist-dot ' + estadoClase(h.estado)"></span>
+                      <span class="cob-hist-lbl" [title]="h.estado">{{ h.estado }}</span>
+                      <span class="cob-hist-bar"><i [style.width.%]="h.pct"></i></span>
+                      <span class="cob-hist-n">{{ h.n }}</span>
                     </li>
                   }
                 </ul>
+              } @else if (loadingCli()) {
+                <div class="cob-empty">Cargando…</div>
               } @else {
-                <div class="cob-empty">
-                  @if (sinGeo().length) { Sin clientes georreferenciados en esta NAP. }
-                  @else { Sin clientes en esta NAP. }
-                </div>
-              }
-
-              <!-- Clientes que SI estan en un puerto de la NAP (lo que ve el mapa) pero que cobertura
-                   no tiene georreferenciados. Antes la NAP decia "1/8 ocupado" y la lista salia vacia,
-                   porque la lista solo miraba la tabla de cobertura (clientes con GPS atados a la NAP). -->
-              @if (sinGeo().length) {
-                <div class="cob-sec" title="Estan asignados a un puerto de esta NAP, pero no tienen ubicacion en el modulo de cobertura. No se dibujan en el mapa ni cuentan en las capas.">
-                  En puertos de la NAP, sin georreferenciar · {{ sinGeo().length }}
-                </div>
-                <ul class="cob-list">
-                  @for (c of sinGeo(); track (c.idContrato ?? c.puerto ?? $index)) {
-                    <li class="cob-card" title="Sin ubicacion en cobertura: confirmalo desde la ficha del cliente para que aparezca en el mapa">
-                      <div class="cob-card-top">
-                        <span class="cob-card-name">{{ c.cliente || c.documento || ('#' + c.idContrato) }}</span>
-                        <span class="cob-badge" [class]="estadoClase(c.estado)">{{ c.estado || 's/estado' }}</span>
-                      </div>
-                      <div class="cob-card-sub">Pto {{ c.puerto ?? '—' }} · Doc {{ c.documento || '—' }} · <span class="cob-cal cal-0">sin GPS</span></div>
-                    </li>
-                  }
-                </ul>
+                <div class="cob-empty">Sin clientes en esta caja.</div>
               }
             </div>
           </aside>
@@ -385,6 +547,15 @@ class HeatOverlay {
      .cob-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:.5rem 1rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;
               padding:.5rem .75rem;box-shadow:0 1px 2px rgba(15,23,42,.04);}
      .cob-bar-title{display:flex;flex-direction:column;justify-content:flex-end;min-width:0;height:44px;padding-right:1rem;border-right:1px solid #e2e8f0;}
+     /* Cabecera en dos filas: arriba titulo + mapa/exportar; abajo, todos los filtros en una linea. */
+     .cob-bar{display:grid !important;grid-template-columns:minmax(0,1fr) auto;column-gap:1rem;row-gap:.55rem;align-items:center;}
+     .cob-bar>.cob-bar-title{grid-column:1;grid-row:1;flex-direction:row;align-items:baseline;justify-content:flex-start;gap:.6rem;height:auto;padding:0;border-right:0;}
+     .cob-bar>.cob-bar-title h2{font-size:15px;}
+     .cob-bar>.cob-bar-title span{display:inline !important;}
+     .cob-bar>.cob-bar-end{grid-column:2;grid-row:1;margin-left:0;}
+     .cob-bar>.cob-bar-end .cob-field{flex-direction:row;align-items:center;gap:.45rem;}
+     .cob-bar>.cob-bar-group:not(.cob-bar-end){grid-column:1 / -1;grid-row:2;flex-wrap:wrap;padding-top:.55rem;border-top:1px solid #f1f5f9;}
+     .cob-bar>.cob-bar-group:not(.cob-bar-end)>.cob-result{margin-left:auto;align-self:flex-end;}
      .cob-bar-title h2{margin:0;font-size:14px;font-weight:700;color:#0f172a;line-height:1.25;white-space:nowrap;}
      .cob-bar-title span{font-size:11px;color:#94a3b8;white-space:nowrap;line-height:1.5;}
      .cob-bar-group{display:flex;align-items:flex-end;gap:.6rem;}
@@ -446,6 +617,13 @@ class HeatOverlay {
      .cob-dd-tile:active{transform:scale(.97);}
      .cob-dd-tile-v{font-size:14px;font-weight:700;color:#0f172a;line-height:1;font-variant-numeric:tabular-nums;}
      .cob-dd-tile-c{font-size:9.5px;color:#94a3b8;white-space:nowrap;}
+     .cob-dd-tile:has(.cob-dd-tile-niv){height:58px;}
+     .cob-dd-tile-niv{display:flex;gap:.35rem;font-size:9.5px;font-weight:600;color:#64748b;line-height:1;font-variant-numeric:tabular-nums;}
+     .cob-dd-tile-niv span{display:inline-flex;align-items:center;gap:1px;}
+     .cob-dd-tile-niv img,.cob-dd-zero-niv img{width:9px;height:9px;object-fit:contain;}
+     .cob-dd-tile-niv .cob-dot,.cob-dd-zero-niv .cob-dot{width:6px;height:6px;}
+     .cob-dd-tile.sel .cob-dd-tile-niv{color:#fbe7f5;}
+     .cob-dd-zero-niv{display:inline-flex;align-items:center;gap:.2rem;color:#15803d !important;margin-top:1px;}
      .cob-dd-tile.sel{background:#7b0061;border-color:#7b0061;}
      .cob-dd-tile.sel .cob-dd-tile-v{color:#fff;}
      .cob-dd-tile.sel .cob-dd-tile-c{color:#f5d0ec;}
@@ -454,8 +632,119 @@ class HeatOverlay {
      .cob-dd-foot{display:flex;align-items:center;justify-content:space-between;padding:.5rem .6rem .5rem .8rem;border-top:1px solid #f1f5f9;background:#f8fafc;
                   font-size:11.5px;color:#64748b;}
      .cob-dd-foot b{color:#0f172a;font-variant-numeric:tabular-nums;}
+     .cob-dd-niv{display:flex;flex-direction:column;gap:.3rem;padding:.5rem .8rem;border-top:1px solid #f1f5f9;background:#fff;font-size:11.5px;color:#64748b;}
+     .cob-dd-niv-row{display:flex;align-items:center;gap:.4rem;}
+     .cob-dd-niv-row b{color:#0f172a;font-variant-numeric:tabular-nums;}
+     .cob-dd-niv-lbl{min-width:4.6rem;font-weight:600;color:#334155;}
+     .cob-dd-niv-sep{color:#cbd5e1;}
+     .cob-hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.15rem;}
+     .cob-hist-row{display:flex;align-items:center;gap:.55rem;padding:.45rem .5rem;border-radius:8px;}
+     .cob-hist-row:hover{background:#f8fafc;}
+     .cob-hist-dot{flex:none;width:9px;height:9px;border-radius:50%;background:#94a3b8;}
+     .cob-hist-dot.is-activo{background:#16a34a;}
+     .cob-hist-dot.is-suspendido{background:#f59e0b;}
+     .cob-hist-dot.is-baja{background:#94a3b8;}
+     .cob-hist-lbl{flex:0 1 auto;min-width:0;max-width:55%;font-size:12.5px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+     .cob-hist-bar{flex:1;height:6px;border-radius:999px;background:#f1f5f9;overflow:hidden;}
+     .cob-hist-bar i{display:block;height:100%;border-radius:999px;background:#cbd5e1;}
+     .cob-hist-row:has(.is-activo) .cob-hist-bar i{background:#86efac;}
+     .cob-hist-row:has(.is-suspendido) .cob-hist-bar i{background:#fcd34d;}
+     .cob-hist-n{flex:none;min-width:1.8rem;text-align:right;font-size:13px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;}
      .cob-dd-ok{height:26px;padding:0 .8rem;border:0;border-radius:6px;background:#7b0061;color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;}
      .cob-dd-ok:hover{background:#5f004b;}
+     .cob-dd-ubic{min-width:10.5rem;max-width:14rem;}
+     .cob-dd-pin{font-size:11px !important;color:#7b0061 !important;transform:none !important;}
+     .cob-dd-mov{min-width:9.5rem;max-width:14rem;}
+     .cob-mov-panel{width:21rem;}
+     .cob-mov-body{display:flex;flex-direction:column;gap:.45rem;padding:0 .8rem .7rem;}
+     .cob-mov-tipo{width:100%;}
+     .cob-mov-tipo button{flex:1;}
+     .cob-mov-anios{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+     .cob-mov-anio{display:flex;flex-direction:column;align-items:center;gap:1px;padding:.3rem 0;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;}
+     .cob-mov-anio b{font-size:12.5px;color:#334155;} .cob-mov-anio small{font-size:10.5px;color:#94a3b8;}
+     .cob-mov-anio.on{background:#7b0061;border-color:#7b0061;} .cob-mov-anio.on b,.cob-mov-anio.on small{color:#fff;}
+     .cob-mov-rango{display:flex;align-items:center;gap:.4rem;font-size:12px;color:#64748b;}
+     .cob-mov-rango input{flex:1;min-width:0;height:30px;border:1px solid #e2e8f0;border-radius:7px;padding:0 .4rem;font-size:12px;color:#334155;}
+     .cob-result-mov{color:#7b0061;font-weight:600;}
+     .cob-tabla{position:absolute;inset:0;z-index:1100;display:flex;flex-direction:column;background:#fff;border:1px solid #e2e8f0;border-radius:.5rem;overflow:hidden;}
+     .cob-tabla-head{display:flex;align-items:center;gap:.4rem;padding:.55rem .8rem;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;}
+     .cob-tabla-head b{color:#0f172a;font-size:15px;}
+     .cob-tabla-q{position:relative;margin-left:auto;}
+     .cob-tabla-q i{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;}
+     .cob-tabla-q input{height:30px;width:16rem;border:1px solid #e2e8f0;border-radius:7px;padding:0 .6rem 0 1.7rem;font-size:12.5px;}
+     .cob-tabla-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+     .cob-tabla table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+     .cob-tabla th{position:sticky;top:0;z-index:1;background:#f8fafc;text-align:left;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+       color:#64748b;padding:.5rem .6rem;border-bottom:1px solid #e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;}
+     .cob-tabla th.num{text-align:right;}
+     .cob-tabla th:hover{color:#7b0061;}
+     .cob-tabla th i{font-size:9px;margin-left:4px;}
+     .cob-tabla td{padding:.42rem .6rem;border-bottom:1px solid #f1f5f9;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+     .cob-tabla td.b,.cob-tabla td.num{white-space:nowrap;}
+     .cob-tabla tbody tr{cursor:pointer;} .cob-tabla tbody tr:hover td{background:#fdf2f8;}
+     .cob-tabla .num{text-align:right;font-variant-numeric:tabular-nums;}
+     /* Ocupacion: barrita y numero del MISMO color que el halo de la caja en el mapa. */
+     .cob-ocup{display:inline-flex;align-items:center;justify-content:flex-end;gap:.45rem;width:100%;}
+     .cob-ocup-bar{flex:1;max-width:3.2rem;height:6px;border-radius:999px;background:#eef2f6;overflow:hidden;}
+     .cob-ocup-bar i{display:block;height:100%;border-radius:999px;}
+     .cob-ocup b{font-weight:600;font-size:12px;min-width:2.6rem;text-align:right;}
+     .cob-tabla .b{font-weight:600;color:#0f172a;}
+     .cob-tabla .mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:#475569;}
+     .cob-tabla-vacio{text-align:center;color:#94a3b8;padding:2rem !important;}
+     .cob-tabla-mas{display:block;margin:.6rem auto;border:1px solid #e2e8f0;background:#fff;border-radius:7px;padding:.35rem .9rem;font-size:12.5px;color:#7b0061;cursor:pointer;}
+     /* Ubicacion: los 4 pasos en COLUMNAS (sin scroll del panel). Cada lista se desplaza sola, con barra fina. */
+     .cob-ubic-panel{width:min(62rem, calc(100vw - 2rem));max-height:none;overflow:visible;}
+     .cob-ubic-panel .cob-ubic-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;padding:.1rem .8rem .75rem;}
+     .cob-ubic-panel .cob-ubic-step{gap:.45rem;padding:0;}
+     .cob-ubic-panel .cob-ubic-step::after{display:none;}
+     .cob-ubic-panel .cob-ubic-dot{margin-top:0;width:19px;height:19px;font-size:10px;}
+     .cob-ubic-panel .cob-ubic-lbl{display:flex;align-items:center;min-height:19px;}
+     .cob-ubic-panel .cob-ubic-lista{height:15rem;max-height:none;}
+    .cob-ubic-panel .cob-ubic-op{align-items:flex-start;}
+    .cob-ubic-panel .cob-ubic-nom{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;word-break:normal;overflow-wrap:break-word;hyphens:none;}
+    .cob-ubic-panel .cob-ubic-n{padding-top:1px;}
+     .cob-ubic-panel .cob-ubic-vacio{display:flex;align-items:center;justify-content:center;height:15rem;border:1px dashed #e2e8f0;border-radius:8px;
+       text-align:center;padding:0 .6rem;}
+     .cob-ubic-lista,.cob-tabla-scroll,.cob-dd-panel{scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent;}
+     .cob-ubic-lista::-webkit-scrollbar,.cob-tabla-scroll::-webkit-scrollbar,.cob-dd-panel::-webkit-scrollbar{width:6px;height:6px;}
+     .cob-ubic-lista::-webkit-scrollbar-thumb,.cob-tabla-scroll::-webkit-scrollbar-thumb,.cob-dd-panel::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:6px;}
+     .cob-ubic-lista::-webkit-scrollbar-thumb:hover,.cob-tabla-scroll::-webkit-scrollbar-thumb:hover{background:#cbd5e1;}
+     .cob-ubic-lista::-webkit-scrollbar-track,.cob-tabla-scroll::-webkit-scrollbar-track{background:transparent;}
+     .cob-ubic-panel .cob-ubic-lista .cob-ubic-vacio{height:auto;border:0;padding:.6rem;}
+     @media (max-width: 900px){ .cob-ubic-panel .cob-ubic-steps{grid-template-columns:repeat(2,minmax(0,1fr));} }
+     .cob-ubic-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;margin-left:4px;border-radius:8px;
+       background:#7b0061;color:#fff;font-size:10px;}
+     .cob-ubic-todas{margin-left:6px;border:0;background:none;color:#7b0061;font-size:10.5px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;}
+     .cob-ubic-lista{max-height:9.5rem;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;padding:2px;background:#fff;}
+     .cob-ubic-op{display:flex;align-items:center;gap:.45rem;width:100%;padding:.3rem .45rem;border:0;border-radius:6px;background:none;cursor:pointer;
+       font-size:12.5px;color:#334155;text-align:left;}
+     .cob-ubic-op:hover{background:#f8fafc;}
+     .cob-ubic-op.sel{background:#fdf2f8;color:#7b0061;font-weight:600;}
+     .cob-ubic-op .cob-dd-chk{flex:none;}
+     .cob-ubic-op.sel .cob-dd-chk{background:#7b0061;border-color:#7b0061;color:#fff;}
+     .cob-ubic-nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+     .cob-ubic-n{flex:none;font-size:11px;color:#94a3b8;font-variant-numeric:tabular-nums;}
+     .cob-ubic-vacio{font-size:12px;color:#cbd5e1;padding:.35rem 0;}
+     .cob-ubic-steps{display:flex;flex-direction:column;gap:.15rem;padding:0 .8rem .6rem;}
+     .cob-ubic-step{position:relative;display:flex;gap:.6rem;padding:.25rem 0;}
+     .cob-ubic-step:not(:last-child)::after{content:"";position:absolute;left:10px;top:28px;bottom:-6px;width:1.5px;background:#e2e8f0;}
+     .cob-ubic-step.done:not(:last-child)::after{background:#e9a8d8;}
+     .cob-ubic-dot{flex:none;display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;margin-top:15px;border-radius:50%;
+                   background:#f1f5f9;color:#64748b;font-size:10.5px;font-weight:700;border:1.5px solid #e2e8f0;}
+     .cob-ubic-step.done .cob-ubic-dot{background:#7b0061;border-color:#7b0061;color:#fff;}
+     .cob-ubic-step.off .cob-ubic-dot{color:#cbd5e1;}
+     .cob-ubic-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+     .cob-ubic-lbl{font-size:10.5px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;}
+     .cob-ubic-step.off .cob-ubic-lbl{color:#cbd5e1;}
+     .cob-ubic-sel{display:flex;}
+     .cob-ubic-sel select{width:100%;min-width:0;}
+     .cob-ubic-sel select:disabled{background:#f8fafc;color:#cbd5e1;cursor:not-allowed;}
+     .cob-ubic-step.done .cob-ubic-sel select{border-color:#e9a8d8;font-weight:600;}
+     .cob-ubic-nota{display:flex;gap:.4rem;align-items:flex-start;margin:0 .8rem .6rem;padding:.45rem .55rem;border-radius:7px;background:#f8fafc;
+                    font-size:10.5px;color:#64748b;line-height:1.35;}
+     .cob-ubic-nota i{font-size:11px;margin-top:1px;color:#94a3b8;}
+     .cob-ubic-err{background:#fef2f2;color:#b91c1c;} .cob-ubic-err i{color:#dc2626;}
+     @media (max-width: 1440px){ .cob-result-sub{display:none;} .cob-bar-title span{display:none;} }
      .cob-select{position:relative;display:inline-flex;align-items:center;}
      .cob-select select{appearance:none;-webkit-appearance:none;height:30px;min-width:10.5rem;padding:0 1.8rem 0 .65rem;border:1px solid #e2e8f0;border-radius:7px;
                         background:#fff;font-size:12px;font-weight:500;color:#0f172a;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
@@ -486,7 +775,7 @@ class HeatOverlay {
                   color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,box-shadow .15s;}
      .cob-primary:hover{background:#5f004b;box-shadow:0 2px 6px rgba(123,0,97,.25);}
      .cob-primary i{font-size:12px;}
-     @media (max-width: 1480px){ .cob-tools span{display:none;} .cob-tools button{padding:0 .7rem;} }
+     @media (max-width: 1100px){ .cob-tools span{display:none;} .cob-tools button{padding:0 .7rem;} }
      @media (max-width: 1180px){ .cob-bar-title span{display:none;} .cob-result-sub{display:none;} }
      @media (max-width: 900px){ .cob-bar{flex-wrap:wrap;} .cob-bar-group{flex-wrap:wrap;} .cob-bar-end{margin-left:0;} .cob-bar-title{border-right:0;height:auto;} }
      .cob-cajas{font-size:11px;color:#64748b;border:1px solid #e2e8f0;border-radius:999px;padding:.1rem .55rem;background:#f8fafc;white-space:nowrap;}
@@ -620,6 +909,364 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   readonly cantSel = signal<number[]>([]);
   readonly ddOpen = signal(false);
   @ViewChild('cliDd') private cliDd?: ElementRef<HTMLElement>;
+  // ---- Ubicacion (provincia > canton > parroquia > barrio), en cascada ----
+  // Multiseleccion: vacio = todas. Cada paso se habilita cuando el de arriba tiene algo marcado.
+  readonly provF = signal<number[]>([]);
+  readonly canF = signal<number[]>([]);
+  readonly parF = signal<number[]>([]);
+  readonly barF = signal<number[]>([]);
+  readonly hayUbic = computed(() => this.provF().length > 0);
+  readonly ddUbic = signal(false);
+  @ViewChild('ubicDd') private ubicDd?: ElementRef<HTMLElement>;
+  private ubicPorNap = new Map<number, CoberturaNapUbicacion>();
+  private readonly ubicTick = signal(0);
+  /** null = cargando/ok; texto = por que no hay ubicaciones (para no decir "sin ubicacion" cuando en realidad fallo la carga). */
+  readonly ubicError = signal<string | null>(null);
+  private cargarUbicacion(): void {
+    this.api.napsUbicacion().subscribe({
+      next: (rows) => {
+        const m = new Map<number, CoberturaNapUbicacion>();
+        for (const r of rows ?? []) m.set(r.idGeoElementoFk, r);
+        this.ubicPorNap = m;
+        this.ubicError.set(m.size ? null : 'El servidor no devolvió ninguna ubicación (la vista kxv_red_nap_ubicacion está vacía).');
+        this.ubicTick.set(this.ubicTick() + 1);
+      },
+      error: (e) => {
+        this.ubicPorNap = new Map();
+        const st = e?.status;
+        this.ubicError.set(st === 404 ? 'klaxapi todavía no tiene el servicio de ubicaciones: hay que compilarlo y reiniciarlo.'
+          : st === 500 ? 'Error en el servidor al leer las ubicaciones (¿se creó la vista kxv_red_nap_ubicacion?).'
+          : 'No se pudieron cargar las ubicaciones' + (st ? ' (error ' + st + ').' : '.'));
+        this.ubicTick.set(this.ubicTick() + 1);
+      },
+    });
+  }
+  private pasaNivel(nap: CoberturaNap): boolean {
+    const niv = this.nivelF();
+    return niv === 0 || (nap.nivelNap ?? 0) === niv;
+  }
+  private pasaCli(nap: CoberturaNap): boolean {
+    const sel = this.cantSel();
+    if (!sel.length) return true;
+    const caja = this.modoCaja();
+    return sel.some((v) => this.cumple(nap, v, caja));
+  }
+  private pasaUbic(nap: CoberturaNap): boolean {
+    const p = this.provF();
+    if (!p.length) return true;
+    const u = this.ubicPorNap.get(nap.idGeoElemento);
+    if (!u || u.idCiuProvincia == null || !p.includes(u.idCiuProvincia)) return false;
+    const c = this.canF(), pa = this.parF(), b = this.barF();
+    const en = (sel: number[], id: number | null | undefined) => !sel.length || (id != null && sel.includes(id));
+    return en(c, u.idCiuCanton) && en(pa, u.idCiuParroquia) && en(b, u.idCiuBarrio);
+  }
+  /** Opciones de cada paso con cuantas cajas (respetando nivel y clientes, y el paso de arriba). */
+  readonly opcionesUbic = computed(() => {
+    this.ubicTick(); this.filtroTick();
+    const p = this.provF(), c = this.canF(), pa = this.parF();
+    type Op = { id: number; nombre: string; n: number };
+    const prov = new Map<number, Op>(), can = new Map<number, Op>(), par = new Map<number, Op>(), bar = new Map<number, Op>();
+    const suma = (m: Map<number, Op>, id: number | null | undefined, nombre: string | null | undefined) => {
+      if (id == null) return;
+      const o = m.get(id); if (o) o.n++; else m.set(id, { id, nombre: (nombre || ('#' + id)).trim(), n: 1 });
+    };
+    let sinUbic = 0, total = 0;
+    for (const nap of this.naps()) {
+      if (!this.pasaNivel(nap) || !this.pasaCli(nap)) continue;
+      total++;
+      const u = this.ubicPorNap.get(nap.idGeoElemento);
+      if (!u) { sinUbic++; continue; }
+      suma(prov, u.idCiuProvincia, u.provincia);
+      if (!p.length || u.idCiuProvincia == null || !p.includes(u.idCiuProvincia)) continue;
+      suma(can, u.idCiuCanton, u.canton);
+      if (!c.length || u.idCiuCanton == null || !c.includes(u.idCiuCanton)) continue;
+      suma(par, u.idCiuParroquia, u.parroquia);
+      if (!pa.length || u.idCiuParroquia == null || !pa.includes(u.idCiuParroquia)) continue;
+      suma(bar, u.idCiuBarrio, u.barrio);
+    }
+    const orden = (m: Map<number, Op>) => [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    return { prov: orden(prov), can: orden(can), par: orden(par), bar: orden(bar), sinUbic, total };
+  });
+  readonly ubicPasos = computed(() => {
+    const o = this.opcionesUbic();
+    const tot = (ops: { n: number }[]) => ops.reduce((t, x) => t + x.n, 0);
+    return [
+      { k: 'prov' as const, lbl: 'Provincia', padre: '', sel: this.provF(), ops: o.prov, off: false, total: tot(o.prov) },
+      { k: 'can' as const, lbl: 'Cantón', padre: 'la provincia', sel: this.canF(), ops: o.can, off: !this.provF().length, total: tot(o.can) },
+      { k: 'par' as const, lbl: 'Parroquia', padre: 'el cantón', sel: this.parF(), ops: o.par, off: !this.canF().length, total: tot(o.par) },
+      { k: 'bar' as const, lbl: 'Barrio', padre: 'la parroquia', sel: this.barF(), ops: o.bar, off: !this.parF().length, total: tot(o.bar) },
+    ];
+  });
+  private nombreUbic(campo: 'provincia' | 'canton' | 'parroquia' | 'barrio', idCampo: keyof CoberturaNapUbicacion, id: number): string | null {
+    for (const u of this.ubicPorNap.values()) if (u[idCampo] === id) return (u[campo] || '').trim() || null;
+    return null;
+  }
+  /** "Imbabura" / "3 cantones": un paso con una sola eleccion dice el nombre; con varias, cuantas. */
+  private textoPaso(sel: number[], campo: 'provincia' | 'canton' | 'parroquia' | 'barrio', idCampo: keyof CoberturaNapUbicacion, plural: string): string | null {
+    if (!sel.length) return null;
+    if (sel.length === 1) return this.nombreUbic(campo, idCampo, sel[0]) ?? ('#' + sel[0]);
+    return sel.length + ' ' + plural;
+  }
+  readonly ubicRuta = computed(() => {
+    this.ubicTick();
+    return [this.textoPaso(this.provF(), 'provincia', 'idCiuProvincia', 'provincias'),
+            this.textoPaso(this.canF(), 'canton', 'idCiuCanton', 'cantones'),
+            this.textoPaso(this.parF(), 'parroquia', 'idCiuParroquia', 'parroquias'),
+            this.textoPaso(this.barF(), 'barrio', 'idCiuBarrio', 'barrios')]
+      .filter((x): x is string => !!x).join(' › ');
+  });
+  readonly ubicResumen = computed(() => {
+    const r = this.ubicRuta();
+    if (!r) return 'Todo el mapa';
+    const partes = r.split(' › ');
+    return partes.length > 1 ? partes.slice(-2).join(' › ') : partes[0];
+  });
+  private senalUbic(k: 'prov' | 'can' | 'par' | 'bar') {
+    return k === 'prov' ? this.provF : k === 'can' ? this.canF : k === 'par' ? this.parF : this.barF;
+  }
+  toggleUbic(k: 'prov' | 'can' | 'par' | 'bar', id: number): void {
+    const sg = this.senalUbic(k);
+    const sel = sg();
+    sg.set(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]);
+    this.podarUbic();
+    this.repintarFiltro();
+  }
+  limpiarPaso(k: 'prov' | 'can' | 'par' | 'bar'): void {
+    this.senalUbic(k).set([]);
+    this.podarUbic();
+    this.repintarFiltro();
+  }
+  /** Quita de los pasos de abajo lo que ya no cuelga de lo marcado arriba. */
+  private podarUbic(): void {
+    const quedan = (sel: number[], ops: { id: number }[]) => sel.filter((id) => ops.some((o) => o.id === id));
+    this.canF.set(this.provF().length ? quedan(this.canF(), this.opcionesUbic().can) : []);
+    this.parF.set(this.canF().length ? quedan(this.parF(), this.opcionesUbic().par) : []);
+    this.barF.set(this.parF().length ? quedan(this.barF(), this.opcionesUbic().bar) : []);
+  }
+  limpiarUbic(): void {
+    this.provF.set([]); this.canF.set([]); this.parF.set([]); this.barF.set([]);
+    this.repintarFiltro();
+  }
+
+  // ---- Ventas / desinstalaciones por año o rango de fechas ----
+  readonly movTipo = signal<'' | 'venta' | 'baja'>('');
+  readonly movAnios = signal<number[]>([]);
+  readonly movDesde = signal('');
+  readonly movHasta = signal('');
+  readonly ddMov = signal(false);
+  @ViewChild('movDd') private movDd?: ElementRef<HTMLElement>;
+  private fechasPorContrato = new Map<number, CoberturaContratoFecha>();
+  private readonly fechasTick = signal(0);
+  readonly fechasCargando = signal(false);
+  readonly fechasError = signal<string | null>(null);
+  /** Todos los clientes (con o sin caja), para el mapa de calor y los totales. */
+  private cliFull: CoberturaClienteGeo[] = [];
+  private readonly cliTick = signal(0);
+  private cargarFechas(): void {
+    if (this.fechasPorContrato.size || this.fechasCargando()) return;
+    this.fechasCargando.set(true);
+    this.api.contratosFechas().subscribe({
+      next: (rows) => {
+        const m = new Map<number, CoberturaContratoFecha>();
+        for (const r of rows ?? []) m.set(r.idConContrato, r);
+        this.fechasPorContrato = m;
+        this.fechasError.set(null);
+        this.fechasCargando.set(false);
+        this.fechasTick.set(this.fechasTick() + 1);
+        this.repintarFiltro();
+      },
+      error: (e) => {
+        this.fechasCargando.set(false);
+        this.fechasError.set(e?.status === 404 ? 'klaxapi todavía no tiene el servicio de fechas: hay que compilarlo y reiniciarlo.'
+          : 'No se pudieron cargar las fechas de los contratos.');
+      },
+    });
+  }
+  /** Desinstalado = no esta activo, cortado/suspendido ni para retener. */
+  private esBaja(c: CoberturaClienteGeo): boolean {
+    return (c.estadoGrupo ?? 3) === 3 && !/retener/i.test(c.estado || '');
+  }
+  /** Fecha que cuenta para el tipo elegido ('' = no aplica / sin fecha). */
+  private fechaMov(c: CoberturaClienteGeo): string | null {
+    const f = this.fechasPorContrato.get(c.idConContratoFk);
+    if (this.movTipo() === 'venta') return f?.instalacion ?? null;
+    if (this.movTipo() === 'baja') return this.esBaja(c) ? (f?.cambioEstado ?? '') : null;
+    return null;
+  }
+  private enPeriodo(f: string): boolean {
+    const anios = this.movAnios(), d = this.movDesde(), h = this.movHasta();
+    if (!anios.length && !d && !h) return true;
+    if (!f) return false;
+    if (anios.length && !anios.includes(Number(f.slice(0, 4)))) return false;
+    if (d && f < d) return false;
+    if (h && f > h) return false;
+    return true;
+  }
+  /** El cliente es una venta / desinstalacion del periodo elegido. */
+  private cuentaMov(c: CoberturaClienteGeo): boolean {
+    const f = this.fechaMov(c);
+    return f != null && this.enPeriodo(f);
+  }
+  /** Ventas / bajas del periodo por caja. */
+  readonly movPorNap = computed(() => {
+    this.movTipo(); this.movAnios(); this.movDesde(); this.movHasta(); this.fechasTick(); this.cliTick();
+    const m = new Map<number, number>();
+    if (this.movTipo() === '') return m;
+    for (const [napId, arr] of this.cliPorNap) {
+      let k = 0;
+      for (const c of arr) if (this.cuentaMov(c)) k++;
+      if (k) m.set(napId, k);
+    }
+    return m;
+  });
+  /** Totales del movimiento (todos los clientes, con o sin caja). */
+  readonly movStats = computed(() => {
+    this.movTipo(); this.movAnios(); this.movDesde(); this.movHasta(); this.fechasTick(); this.cliTick();
+    let clientes = 0, sinFecha = 0;
+    if (this.movTipo() === '') return { clientes, sinFecha };
+    for (const c of this.cliFull) {
+      const f = this.fechaMov(c);
+      if (f == null) continue;
+      if (f === '') sinFecha++;
+      if (this.enPeriodo(f)) clientes++;
+    }
+    return { clientes, sinFecha };
+  });
+  /** Años con movimiento y cuantos (para los botones de año). */
+  readonly movAniosOps = computed(() => {
+    this.movTipo(); this.fechasTick(); this.cliTick();
+    const m = new Map<number, number>();
+    if (this.movTipo() === '') return [];
+    for (const c of this.cliFull) {
+      const f = this.fechaMov(c);
+      if (!f) continue;
+      const a = Number(f.slice(0, 4));
+      if (a > 1990) m.set(a, (m.get(a) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[0] - a[0]).map(([anio, n]) => ({ anio, n }));
+  });
+  readonly movResumen = computed(() => {
+    const t = this.movTipo();
+    if (t === '') return 'Sin filtro';
+    const base = t === 'venta' ? 'Ventas' : 'Desinstalaciones';
+    const a = [...this.movAnios()].sort();
+    const d = this.movDesde(), h = this.movHasta();
+    const per = a.length ? (a.length > 2 ? a.length + ' años' : a.join(', ')) : '';
+    const rango = d || h ? (d || '…') + ' a ' + (h || '…') : '';
+    return [base, per, rango].filter(Boolean).join(' · ');
+  });
+  setMovTipo(t: '' | 'venta' | 'baja'): void {
+    this.movTipo.set(t);
+    this.movAnios.set([]);
+    if (t !== '') this.cargarFechas();
+    this.repintarFiltro();
+  }
+  toggleAnio(a: number): void {
+    const sel = this.movAnios();
+    this.movAnios.set(sel.includes(a) ? sel.filter((x) => x !== a) : [...sel, a]);
+    this.repintarFiltro();
+  }
+  setMovFecha(k: 'desde' | 'hasta', ev: Event): void {
+    const v = (ev.target as HTMLInputElement).value || '';
+    (k === 'desde' ? this.movDesde : this.movHasta).set(v);
+    this.repintarFiltro();
+  }
+  limpiarMov(): void {
+    this.movTipo.set(''); this.movAnios.set([]); this.movDesde.set(''); this.movHasta.set('');
+    this.repintarFiltro();
+  }
+  private pasaMov(nap: CoberturaNap): boolean {
+    return this.movTipo() === '' || (this.movPorNap().get(nap.idGeoElemento) ?? 0) > 0;
+  }
+  /** Mapa de calor: con movimiento elegido, solo los clientes de ese movimiento. */
+  private refrescarCalor(): void {
+    const pts: L.LatLngTuple[] = [];
+    const conMov = this.movTipo() !== '';
+    for (const c of this.cliFull) {
+      if (c.lat == null || c.lng == null) continue;
+      if (conMov && !this.cuentaMov(c)) continue;
+      pts.push([c.lat, c.lng]);
+    }
+    this.heatPts = pts;
+    if (this.heat.active) this.heat.setPoints(this.heatPts);
+  }
+
+  // ---- Vista en tabla ----
+  readonly vistaTabla = signal(false);
+  readonly tablaQ = signal('');
+  readonly tablaPag = signal(1);
+  readonly tablaOrd = signal<{ k: string; dir: 1 | -1 }>({ k: 'caja', dir: 1 });
+  readonly colsTabla = computed(() => {
+    const c: { k: string; lbl: string; num?: boolean }[] = [
+      { k: 'caja', lbl: 'Caja' }, { k: 'nivel', lbl: 'Nivel' }, { k: 'provincia', lbl: 'Provincia' }, { k: 'canton', lbl: 'Cantón' },
+      { k: 'parroquia', lbl: 'Parroquia' }, { k: 'barrio', lbl: 'Barrio' }, { k: 'pon', lbl: 'OLT · PON' },
+      { k: 'clientes', lbl: 'Clientes caja', num: true },
+    ];
+    if (this.calorCajas()) c.push({ k: 'ocup', lbl: 'Ocupación', num: true });
+    c.push({ k: 'clientesPon', lbl: 'Clientes PON', num: true });
+    if (this.movTipo() !== '') c.push({ k: 'mov', lbl: this.movTipo() === 'venta' ? 'Ventas' : 'Bajas', num: true });
+    return c;
+  });
+  private textoPon(napId: number): string {
+    const pons = this.ponsPorNap.get(napId);
+    if (!pons?.size) return '—';
+    return [...pons].map((k) => { const [olt, lpu, pon] = k.split('|'); return olt + ' ' + lpu + '/' + pon; }).join(', ');
+  }
+  readonly filasTabla = computed(() => {
+    this.ubicTick(); this.filtroTick(); this.capacidadTick(); this.calorCajas();
+    const mov = this.movPorNap();
+    const q = this.tablaQ().trim().toLowerCase();
+    const filas = this.napsFiltradas().map((nap) => {
+      const u = this.ubicPorNap.get(nap.idGeoElemento);
+      return {
+        id: nap.idGeoElemento,
+        caja: this.nombreCorto(nap),
+        nivel: nap.nivelNap === 1 ? '1er' : nap.nivelNap === 2 ? '2do' : '—',
+        provincia: u?.provincia ?? '', canton: u?.canton ?? '', parroquia: u?.parroquia ?? '', barrio: u?.barrio ?? '',
+        pon: this.textoPon(nap.idGeoElemento),
+        clientes: nap.totalClientes ?? 0,
+        clientesPon: this.ponMin(nap.idGeoElemento),
+        mov: mov.get(nap.idGeoElemento) ?? 0,
+        ocup: this.ocupacion(nap),
+        ocupTxt: this.capacidad.has(nap.idGeoElemento)
+          ? (nap.totalClientes ?? 0) + '/' + this.capacidad.get(nap.idGeoElemento)!.total : '—',
+        ocupColor: this.colorOcupacion(this.ocupacion(nap)),
+        ocupTitle: this.textoOcupacion(nap),
+      };
+    }).filter((f) => !q || (f.caja + ' ' + f.provincia + ' ' + f.canton + ' ' + f.parroquia + ' ' + f.barrio + ' ' + f.pon).toLowerCase().includes(q));
+    const { k, dir } = this.tablaOrd();
+    return filas.sort((a, b) => {
+      const va = (a as any)[k], vb = (b as any)[k];
+      if (typeof va === 'number' || typeof vb === 'number') return ((va ?? -1) - (vb ?? -1)) * dir;
+      return String(va ?? '').localeCompare(String(vb ?? ''), 'es', { numeric: true }) * dir;
+    });
+  });
+  /** Anchos fijos (%) para que la tabla entre completa en una sola vista, sin barra horizontal. */
+  anchoCol(k: string): number {
+    const mov = this.movTipo() !== '';
+    const cal = this.calorCajas();
+    const w: Record<string, number> = { caja: 9, nivel: 5, provincia: 10, canton: cal && mov ? 9 : 11, parroquia: cal && mov ? 11 : 13,
+                                         barrio: mov ? (cal ? 12 : 14) : (cal ? 14 : 18),
+                                         pon: cal ? 14 : 18, clientes: 8, ocup: 8, clientesPon: 8, mov: 6 };
+    return w[k] ?? 8;
+  }
+  readonly filasVisibles = computed(() => this.filasTabla().slice(0, this.tablaPag() * 300));
+  ordenarTabla(k: string): void {
+    const o = this.tablaOrd();
+    this.tablaOrd.set({ k, dir: o.k === k ? (o.dir === 1 ? -1 : 1) : (k === 'clientes' || k === 'clientesPon' || k === 'mov' || k === 'ocup' ? -1 : 1) });
+  }
+  /** Clic en una fila: vuelve al mapa y abre esa caja. */
+  irACaja(id: number): void {
+    const nap = this.naps().find((x) => x.idGeoElemento === id);
+    this.vistaTabla.set(false);
+    if (!nap) return;
+    setTimeout(() => {
+      this.map?.invalidateSize();
+      if (nap.lat != null && nap.lng != null) this.map?.setView([nap.lat, nap.lng], Math.max(this.map?.getZoom() ?? 16, 16));
+      this.seleccionar(nap);
+    }, 0);
+  }
+
   /** En 2do nivel se cuenta por caja, no por PON. */
   readonly modoCaja = computed(() => this.nivelF() === 2);
   private static readonly CAJA_TOPE = 8;
@@ -700,7 +1347,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   }
   /** Contador tonto para que napsFiltradas() se recalcule al cambiar ponCount/ponsPorNap (son Map comunes). */
   private readonly filtroTick = signal(0);
-  readonly filtroCajasActivo = computed(() => this.nivelF() !== 0 || this.cantSel().length > 0);
+  readonly filtroCajasActivo = computed(() => this.nivelF() !== 0 || this.cantSel().length > 0 || this.provF().length > 0 || this.movTipo() !== '');
 
   /** true si la caja cumple la cantidad v (segun el modo). */
   private cumple(nap: CoberturaNap, v: number, caja: boolean): boolean {
@@ -712,22 +1359,29 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   /** Opciones del combo con cuantas cajas (del nivel elegido) tiene cada una. Solo las que existen. */
   readonly opcionesCli = computed(() => {
     const niv = this.nivelF(), caja = this.modoCaja();
-    this.filtroTick();
-    const cuenta = new Map<number, number>();
-    const suma = (v: number) => cuenta.set(v, (cuenta.get(v) ?? 0) + 1);
+    this.filtroTick(); this.ubicTick();
+    // v -> [total, de 1er nivel, de 2do nivel]
+    const cuenta = new Map<number, [number, number, number]>();
+    const suma = (v: number, nivel: number | null | undefined) => {
+      const c = cuenta.get(v) ?? [0, 0, 0];
+      c[0]++;
+      if (nivel === 1) c[1]++; else if (nivel === 2) c[2]++;
+      cuenta.set(v, c);
+    };
     for (const nap of this.naps()) {
       if (niv !== 0 && (nap.nivelNap ?? 0) !== niv) continue;
+      if (!this.pasaUbic(nap)) continue;
       const tot = nap.totalClientes ?? 0;
-      if (caja) { suma(Math.min(tot, CoberturaHomeComponent.CAJA_TOPE)); continue; }
-      if (tot === 0) suma(0);
+      if (caja) { suma(Math.min(tot, CoberturaHomeComponent.CAJA_TOPE), nap.nivelNap); continue; }
+      if (tot === 0) suma(0, nap.nivelNap);
       const pons = this.ponsPorNap.get(nap.idGeoElemento);
       if (!pons?.size) continue;
       const vistos = new Set<number>();
-      for (const k of pons) { const c = this.ponCount.get(k) ?? 0; if (c > 0 && !vistos.has(c)) { vistos.add(c); suma(c); } }
+      for (const k of pons) { const c = this.ponCount.get(k) ?? 0; if (c > 0 && !vistos.has(c)) { vistos.add(c); suma(c, nap.nivelNap); } }
     }
     const tope = CoberturaHomeComponent.CAJA_TOPE;
-    return [...cuenta.entries()].sort((a, b) => a[0] - b[0]).map(([v, cajas]) => ({
-      v, cajas,
+    return [...cuenta.entries()].sort((a, b) => a[0] - b[0]).map(([v, [cajas, c1, c2]]) => ({
+      v, cajas, c1, c2,
       lbl: v === 0 ? 'Sin clientes · para vender'
          : caja && v >= tope ? tope + ' o más clientes'
          : v + (v === 1 ? ' cliente' : ' clientes'),
@@ -771,9 +1425,12 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   }
   /** Cierra el combo al hacer clic fuera o con Escape. */
   private readonly cerrarDd = (e: Event) => {
-    if (!this.ddOpen()) return;
-    if (e instanceof KeyboardEvent) { if (e.key === 'Escape') this.ddOpen.set(false); return; }
-    if (this.cliDd && !this.cliDd.nativeElement.contains(e.target as Node)) this.ddOpen.set(false);
+    if (!this.ddOpen() && !this.ddUbic() && !this.ddMov()) return;
+    if (e instanceof KeyboardEvent) { if (e.key === 'Escape') { this.ddOpen.set(false); this.ddUbic.set(false); this.ddMov.set(false); } return; }
+    const t = e.target as Node;
+    if (this.ddOpen() && this.cliDd && !this.cliDd.nativeElement.contains(t)) this.ddOpen.set(false);
+    if (this.ddUbic() && this.ubicDd && !this.ubicDd.nativeElement.contains(t)) this.ddUbic.set(false);
+    if (this.ddMov() && this.movDd && !this.movDd.nativeElement.contains(t)) this.ddMov.set(false);
   };
   /** El contador es de cajas de 1er nivel (las de 2do cuelgan de una de 1er y no se suman), salvo que se filtre 2do nivel. */
   /** Cajas que cumplen el filtro, separadas por nivel (para "Todos"). */
@@ -785,19 +1442,26 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     }
     return { n1, n2 };
   });
+  /** Con Nivel = Todos: cajas y clientes de 1er y 2do nivel de lo que esta en el mapa (pie de los combos). */
+  readonly resumenNivel = computed(() => {
+    let c1 = 0, c2 = 0, k1 = 0, k2 = 0;
+    for (const nap of this.napsFiltradas()) {
+      const k = nap.totalClientes ?? 0;
+      if (nap.nivelNap === 1) { c1++; k1 += k; }
+      else if (nap.nivelNap === 2) { c2++; k2 += k; }
+    }
+    return { c1, c2, k1, k2 };
+  });
   readonly cajasContador = computed(() => {
     const niv = this.nivelF() === 2 ? 2 : 1;
     return this.napsFiltradas().filter((nap) => (nap.nivelNap ?? 0) === niv).length;
   });
   readonly napsFiltradas = computed(() => {
-    const niv = this.nivelF(), sel = this.cantSel(), caja = this.modoCaja();
-    this.filtroTick();   // se recalcula cuando llegan los clientes (y con ellos los PON)
-    return this.naps().filter((nap) => {
-      if (niv !== 0 && (nap.nivelNap ?? 0) !== niv) return false;
-      if (!sel.length) return true;
-      // La cantidad manda (exacta, no acumulada); con varias elegidas basta cumplir una.
-      return sel.some((v) => this.cumple(nap, v, caja));
-    });
+    this.nivelF(); this.cantSel(); this.modoCaja(); this.provF(); this.canF(); this.parF(); this.barF();
+    this.filtroTick(); this.ubicTick();   // se recalcula cuando llegan los PON y las ubicaciones
+    this.movPorNap();
+    // Nivel + ubicacion + cantidad (exacta, no acumulada; con varias elegidas basta cumplir una) + ventas/bajas.
+    return this.naps().filter((nap) => this.pasaNivel(nap) && this.pasaUbic(nap) && this.pasaCli(nap) && this.pasaMov(nap));
   });
 
   setNivel(n: 0 | 1 | 2): void {
@@ -810,7 +1474,11 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   limpiarFiltro(): void {
     this.nivelF.set(0);
     this.cantSel.set([]);
+    this.provF.set([]); this.canF.set([]); this.parF.set([]); this.barF.set([]);
+    this.movTipo.set(''); this.movAnios.set([]); this.movDesde.set(''); this.movHasta.set('');
     this.ddOpen.set(false);
+    this.ddUbic.set(false);
+    this.ddMov.set(false);
     this.repintarFiltro();
   }
   onNivel(ev: Event): void {
@@ -833,6 +1501,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   repintarFiltro(): void {
     // Si la caja seleccionada quedo fuera del filtro, se cierra su panel.
     if (this.napSel && !this.napsFiltradas().some((x) => x.idGeoElemento === this.napSel!.idGeoElemento)) this.cerrar();
+    this.refrescarCalor();
     this.pintar();
     this.pintarGlobal();
     this.encuadrarFiltro();   // moveend vuelve a pintar con la nueva vista
@@ -858,6 +1527,73 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     return d.clientes.filter((c) => c.idContrato == null || !geo.has(c.idContrato));
   }
   readonly cliGeo = signal<CoberturaClienteGeo[]>([]);
+
+  /**
+   * Puertos OCUPADOS de la caja para ventas. Antes era solo "clientes con puerto marcado por el
+   * tecnico", y una caja llena de gente salia "0 / 8 · 8 disponibles". Ahora ocupa puerto todo
+   * contrato VIGENTE (activo o cortado: los dos tienen su drop puesto) que:
+   *   - esta amarrado a la caja (tecnico en campo o ERP), o
+   *   - esta cerca por GPS y su ONU cuelga del MISMO PON que la caja (calidad "confirmado").
+   * Terminados y bajas no ocupan. Los cercanos con PON sin confirmar no se cuentan: van en el
+   * detalle (tooltip) como "posibles", para que el asesor sepa que puede haber menos cupo.
+   */
+  readonly puertos = computed(() => {
+    const d = this.napCli();
+    if (!d) return null;
+    const total = d.total || 8;
+    const vigente = (e: string | null | undefined) => /activ|cort|suspen/i.test(e || '');
+    const ocup = new Set<number>();
+    let sinId = 0, porAmarre = 0, porPon = 0;
+    for (const c of d.clientes ?? []) {
+      if (!vigente(c.estado)) continue;
+      if (c.idContrato == null) { sinId++; porAmarre++; continue; }
+      if (!ocup.has(c.idContrato)) { ocup.add(c.idContrato); porAmarre++; }
+    }
+    const cercanos = new Set<number>();
+    for (const c of this.cliGeo()) {
+      const g = c.estadoGrupo ?? (vigente(c.estado) ? 1 : 3);
+      if (g !== 1 && g !== 2) continue;
+      const amarre = (c.fuente || '').toUpperCase().startsWith('RED');
+      if (amarre || c.calidad === 3) {
+        if (!ocup.has(c.idConContratoFk)) { ocup.add(c.idConContratoFk); if (amarre) porAmarre++; else porPon++; }
+      } else if (c.calidad === 2) {
+        cercanos.add(c.idConContratoFk);
+      }
+    }
+    for (const id of ocup) cercanos.delete(id);
+    const ocupados = ocup.size + sinId;
+    const posibles = cercanos.size;
+    const detalle = `${porAmarre} amarrados a la caja · ${porPon} cercanos en el mismo PON`
+      + (posibles ? ` · ${posibles} cercanos más sin confirmar (podrían estar en esta caja)` : '')
+      + ' · solo cuentan activos y cortados';
+    return { total, ocupados, disponibles: Math.max(0, total - ocupados), exceso: Math.max(0, ocupados - total), posibles, detalle };
+  });
+
+  /**
+   * Historial de clientes de la caja agrupado por ESTADO del contrato (Activo 5, Cortado 4,
+   * Terminado y saldado 4...). Junta los atados/cercanos (cobertura) y los que estan en un puerto
+   * de la caja sin georreferenciar, sin contar dos veces el mismo contrato.
+   */
+  readonly historialCaja = computed(() => {
+    const cuenta = new Map<string, number>();
+    const vistos = new Set<number>();
+    const suma = (estado: string | null | undefined, idContrato: number | null | undefined) => {
+      if (idContrato != null) {
+        if (vistos.has(idContrato)) return;
+        vistos.add(idContrato);
+      }
+      const e = (estado || '').trim() || 'Sin estado';
+      cuenta.set(e, (cuenta.get(e) ?? 0) + 1);
+    };
+    for (const c of this.cliGeo()) suma(c.estado, c.idConContratoFk);
+    for (const c of this.napCli()?.clientes ?? []) suma(c.estado, c.idContrato);
+    const total = [...cuenta.values()].reduce((t, x) => t + x, 0);
+    const max = Math.max(1, ...cuenta.values());
+    const filas = [...cuenta.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'))
+      .map(([estado, n]) => ({ estado, n, pct: Math.round((n / max) * 100) }));
+    return { total, filas };
+  });
   readonly cliSel = signal<number | null>(null);   // cliente resaltado desde la lista
   readonly loadingCli = signal(false);
   readonly cliError = signal<string | null>(null);
@@ -876,6 +1612,75 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
   readonly satOn = signal(false);   // vista satelite
   // coroplético de zonas (barrios)
   readonly zonasOn = signal(false);
+
+  /**
+   * Mapa de calor de cajas: cada caja se pinta segun lo llena que esta (clientes que le caen /
+   * puertos de su splitter, de kxv_red_caja). Verde casi vacia, amarillo y naranja a media,
+   * rojo casi llena y granate llena o pasada.
+   */
+  readonly calorCajas = signal(false);
+  readonly capacidadCargando = signal(false);
+  readonly calorError = signal<string | null>(null);
+  private readonly capacidadTick = signal(0);
+  private capacidad = new Map<number, { total: number; supuesta: boolean }>();
+
+  /** El calor se pinta recien cuando llego la capacidad: mientras carga quedan los iconos normales. */
+  private get calorListo(): boolean {
+    return this.calorCajas() && this.capacidad.size > 0;
+  }
+
+  toggleCalorCajas(): void {
+    const on = !this.calorCajas();
+    this.calorCajas.set(on);
+    this.calorError.set(null);
+    if (on && !this.capacidad.size) { this.cargarCapacidad(); return; }
+    this.pintar();
+  }
+
+  private cargarCapacidad(): void {
+    if (this.capacidadCargando()) return;
+    this.capacidadCargando.set(true);
+    this.api.cajasCapacidad().subscribe({
+      next: (rows) => {
+        const m = new Map<number, { total: number; supuesta: boolean }>();
+        for (const r of rows ?? []) {
+          if (r.puertosTotal > 0) m.set(r.idGeoElemento, { total: r.puertosTotal, supuesta: r.origenCapacidad === 'SUPUESTO' });
+        }
+        this.capacidad = m;
+        this.capacidadTick.set(this.capacidadTick() + 1);
+        this.capacidadCargando.set(false);
+        this.pintar();
+      },
+      error: (e) => {
+        this.capacidadCargando.set(false);
+        this.calorCajas.set(false);
+        this.calorError.set(e?.status === 404 ? 'klaxapi todavía no tiene el servicio de capacidad de cajas: hay que compilarlo y reiniciarlo.'
+          : 'No se pudo cargar la capacidad de las cajas.');
+        this.pintar();
+      },
+    });
+  }
+
+  /** Ocupacion 0..n (1 = llena). null si la caja no tiene capacidad registrada. */
+  private ocupacion(nap: CoberturaNap): number | null {
+    const cap = this.capacidad.get(nap.idGeoElemento);
+    return cap ? (nap.totalClientes ?? 0) / cap.total : null;
+  }
+
+  private colorOcupacion(p: number | null): string {
+    if (p == null) return '#94a3b8';
+    if (p >= 1) return '#7f1d1d';
+    if (p >= 0.75) return '#dc2626';
+    if (p >= 0.5) return '#f97316';
+    if (p >= 0.25) return '#eab308';
+    return '#16a34a';
+  }
+
+  private textoOcupacion(nap: CoberturaNap): string {
+    const cap = this.capacidad.get(nap.idGeoElemento);
+    if (!cap) return (nap.totalClientes ?? 0) + ' cli. · sin capacidad registrada';
+    return (nap.totalClientes ?? 0) + ' de ' + cap.total + ' puertos' + (cap.supuesta ? ' (capacidad supuesta)' : '');
+  }
   readonly zonaMetric = signal<ZonaMetric>('total');
 
   // ---- confirmador de PON (picker tipo NOC: Elegí la OLT -> Elegí LPU-PON) ----
@@ -953,8 +1758,10 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
       if (!cajas.has(napId)) continue;
       const etiqueta = this.etiquetaNap(napId);
       for (const c of clientes) {
+        if (this.movTipo() !== '' && !this.cuentaMov(c)) continue;
         const q = c.calidad ?? 2;
         const g = c.estadoGrupo ?? 3;
+        const fc = this.fechasPorContrato.get(c.idConContratoFk);
         rows.push({
           'Cliente': (c.clienteNombre && c.clienteNombre.trim()) || '',
           'Documento': c.documento ?? '',
@@ -969,6 +1776,8 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           'Distancia (m)': c.distanciaM != null ? Math.round(c.distanciaM) : '',
           'Latitud': c.lat ?? '',
           'Longitud': c.lng ?? '',
+          'Fecha instalación': fc?.instalacion ?? '',
+          'Fecha baja': this.esBaja(c) ? (fc?.cambioEstado ?? '') : '',
         });
       }
     }
@@ -1351,6 +2160,7 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     });
 
     this.cargarNapPon();
+    this.cargarUbicacion();
     this.setCli(new Map());
     this.heatPts = [];
     this.api.listarClientesGeo(r).subscribe({
@@ -1365,8 +2175,10 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
           m.set(c.idGeoElementoFk, a);
         }
         this.setCli(m);
+        this.cliFull = rows ?? [];
+        this.cliTick.set(this.cliTick() + 1);
         this.heatPts = pts;
-        if (this.heat.active) this.heat.setPoints(this.heatPts);
+        this.refrescarCalor();
         this.pintarGlobal();   // repinta el global con los datos frescos
       },
       error: () => { /* silencioso */ },
@@ -1456,11 +2268,34 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
     // 1) icono real propio; 2) icono real de su nivel (para las que base-elemento no trajo)
     const propio = this.meta.get(nap.idGeoElemento)?.icono;
     const url = (propio && /^https?:\/\//i.test(propio)) ? propio : this.iconByNivel.get(nap.nivelNap ?? 0);
+    // Calor: el MISMO icono de la nomenclatura, con un halo del color de su ocupacion detras.
+    if (this.calorListo) return this.iconoConHalo(nap, url ?? null, t);
     if (url) {
       return L.icon({ iconUrl: url, iconSize: [t, t], iconAnchor: [t / 2, t], tooltipAnchor: [0, -t + 4] });
     }
     // 3) ultimo recurso (si NINGUNA NAP trajo icono): pin de color por nivel
-    const c = nap.nivelNap === 1 ? '#2563eb' : '#0891b2';
+    return this.pinColor(nap.nivelNap === 1 ? '#2563eb' : '#0891b2', t);
+  }
+
+  /** Icono de la nomenclatura con un halo redondo detras, del color de lo llena que esta la caja. */
+  private iconoConHalo(nap: CoberturaNap, url: string | null, t: number): L.DivIcon {
+    const c = this.colorOcupacion(this.ocupacion(nap));
+    const d = Math.round(t * 1.15);
+    const halo = '<span style="position:absolute;left:50%;top:42%;width:' + d + 'px;height:' + d + 'px;margin:-' + (d / 2) + 'px 0 0 -' + (d / 2) +
+      'px;border-radius:50%;background:' + c + '4d;box-shadow:0 0 0 1.5px ' + c + ';"></span>';
+    // Tamano EN LINEA y con !important: Leaflet pone «width:auto» a toda imagen dentro de un
+    // marcador, y sin esto el icono salia a su tamano original (gigante).
+    const tam = 'width:' + t + 'px !important;height:' + t + 'px !important;max-width:none;';
+    const img = url
+      ? '<img src="' + url + '" style="' + tam + 'position:relative;display:block" alt="">'
+      : '<svg viewBox="0 0 22 28" style="' + tam + 'position:relative;display:block"><path d="M11 0C5 0 0 4.9 0 11c0 7.7 11 17 11 17s11-9.3 11-17C22 4.9 17 0 11 0z" fill="' +
+        (nap.nivelNap === 1 ? '#2563eb' : '#0891b2') + '" stroke="#ffffff" stroke-width="1.5"/><circle cx="11" cy="11" r="4.2" fill="#ffffff"/></svg>';
+    return L.divIcon({ html: '<div style="position:relative;width:' + t + 'px;height:' + t + 'px">' + halo + img + '</div>',
+                       className: 'cob-nappin', iconSize: [t, t], iconAnchor: [t / 2, t], tooltipAnchor: [0, -t + 4] });
+  }
+
+  /** Pin SVG de un color (fallback por nivel). */
+  private pinColor(c: string, t: number): L.DivIcon {
     const html =
       '<svg width="22" height="28" viewBox="0 0 22 28" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M11 0C5 0 0 4.9 0 11c0 7.7 11 17 11 17s11-9.3 11-17C22 4.9 17 0 11 0z" fill="' + c + '" stroke="#ffffff" stroke-width="1.5"/>' +
@@ -1470,22 +2305,40 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
                        iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4] });
   }
 
+  /**
+   * Lo que se pinto la ultima vez, para no rehacer las cajas al mover el mapa.
+   *
+   * <p>Antes cada movimiento o zoom borraba y volvia a crear las ~2.800 cajas una por una, y eso
+   * era la lentitud que no se iba. Ahora, sin nombres fijos, se crean TODAS las del filtro una
+   * sola vez y Leaflet las mueve solo. Se rehacen unicamente si cambia el filtro, el tamano del
+   * icono (por zoom), el calor o los iconos. Con nombres fijos (zoom cercano) se sigue pintando
+   * solo lo visible, que de cerca son pocas cajas.
+   */
+  private pintadoClave: string | null = null;
+  private pintadoNaps: CoberturaNap[] | null = null;
+
   private pintar(): void {
     if (!this.map) return;
-    this.capa.clearLayers();
     this.recalcIconByNivel();
-    const view = this.map.getBounds().pad(0.15);
     const zoom = this.map.getZoom();
     const showLabels = this.verNombres() && zoom >= LABEL_ZOOM;
     const t = this.tamIcono(zoom);
+    const naps = this.napsFiltradas();
+    const clave = showLabels ? null : t + '|' + this.calorListo + '|' + this.iconByNivel.size + '|' + this.meta.size;
+    if (clave != null && clave === this.pintadoClave && naps === this.pintadoNaps) return;
+    this.pintadoClave = clave;
+    this.pintadoNaps = naps;
+
+    this.capa.clearLayers();
+    const view = this.map.getBounds().pad(0.15);
     const cap = DOT_CAP;
     let n = 0;
     let labels = 0;
-    for (const nap of this.napsFiltradas()) {
+    for (const nap of naps) {
       if (n >= cap) break;
       if (nap.lat == null || nap.lng == null) continue;
       const ll: L.LatLngTuple = [nap.lat, nap.lng];
-      if (!view.contains(ll)) continue;
+      if (showLabels && !view.contains(ll)) continue;
       n++;
       const nombre = this.nombreCorto(nap);
       // 1er nivel un poco mas grande y encima: es la caja que se vende primero
@@ -1494,12 +2347,20 @@ export class CoberturaHomeComponent implements AfterViewInit, OnDestroy {
         m.bindTooltip(nombre, { permanent: true, direction: 'top', className: 'cob-lbl-perm' });
         labels++;
       } else {
-        const pm = this.ponMin(nap.idGeoElemento);
-        m.bindTooltip(nombre + ' · ' + nap.totalClientes + ' cli.' + (pm == null ? ' · PON sin amarrar' : ' · PON con ' + pm + ' cli. · ' + this.fuenteTexto(nap.idGeoElemento)), { direction: 'top', className: 'cob-lbl' });
+        // El texto se arma al pasar el mouse: asi siempre sale con los datos de ese momento
+        // (PON, calor) aunque la caja se haya creado antes de que llegaran.
+        m.bindTooltip(() => this.textoCaja(nap, nombre), { direction: 'top', className: 'cob-lbl' });
       }
       m.on('click', () => this.seleccionar(nap));
       m.addTo(this.capa);
     }
+  }
+
+  private textoCaja(nap: CoberturaNap, nombre: string): string {
+    if (this.calorListo) return nombre + ' · ' + this.textoOcupacion(nap);
+    const pm = this.ponMin(nap.idGeoElemento);
+    return nombre + ' · ' + nap.totalClientes + ' cli.' +
+      (pm == null ? ' · PON sin amarrar' : ' · PON con ' + pm + ' cli. · ' + this.fuenteTexto(nap.idGeoElemento));
   }
 
   seleccionar(nap: CoberturaNap): void {

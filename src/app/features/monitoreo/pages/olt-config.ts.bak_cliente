@@ -1,0 +1,958 @@
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
+import { NocApi, OnuRow } from '../services/noc-api';
+import { NocNotify } from '../services/noc-notify';
+
+/**
+ * Configurar OLT = BOTONERA para soporte (2026-11-16, rediseño visual).
+ *
+ * Soporte ya no escribe comandos ni abre Telnet: busca al cliente, mira su ficha (todo SNMP)
+ * y aprieta un boton. El NOC arma los comandos con los datos de SU base (shelf/slot/puerto/ONU
+ * salen de kxt_onu, no de la pantalla), elige la variante V1/V2 segun el firmware y valida
+ * cada dato escrito. Cada envio pasa por permiso + interruptor + registro.
+ *
+ * Respaldo de la pantalla anterior (asistente por plantillas): olt-config.ts.bak_botonera.
+ */
+@Component({
+  selector: 'app-olt-config',
+  standalone: true,
+  imports: [FormsModule, NgTemplateOutlet],
+  template: `
+  <div class="oc">
+    <!-- ENCABEZADO -->
+    <header class="oc-head">
+      <div>
+        <h1><i class="pi pi-th-large"></i> Configurar OLT</h1>
+        <p>Diagnóstico por SNMP y acciones sobre la ONU del cliente, sin entrar por consola.</p>
+      </div>
+      <button type="button" class="oc-switch" [class.on]="writeEnabled()" (click)="toggleWrite()"
+              title="Habilita las acciones que cambian algo en la OLT. Se apaga solo tras unos minutos sin uso.">
+        <span class="knob"></span>
+        <span class="lbl">
+          <b>Envío a la OLT</b>
+          <small>{{ writeEnabled() ? 'Encendido · las acciones se pueden enviar' : 'Apagado · solo consulta' }}</small>
+        </span>
+      </button>
+    </header>
+
+    @if (estado() && estado().puedeOperar === false) {
+      <div class="oc-alert"><i class="pi pi-lock"></i>
+        <span><b>Tu usuario no puede operar la OLT.</b> Puedes consultar la ficha, pero no ejecutar acciones. El permiso se asigna en el ERP.</span>
+      </div>
+    }
+
+    <!-- BUSCADOR -->
+    <div class="oc-bar">
+      <div class="oc-field oc-olt">
+        <i class="pi pi-server"></i>
+        <select [(ngModel)]="oltId" (ngModelChange)="onOltChange()">
+          <option [ngValue]="null">Selecciona la OLT</option>
+          @for (o of olts(); track o.id) { <option [ngValue]="o.id">{{ o.name }}</option> }
+        </select>
+      </div>
+      <div class="oc-field oc-search" (click)="$event.stopPropagation()">
+        <i class="pi" [class.pi-search]="!cargandoOnus()" [class.pi-spinner]="cargandoOnus()" [class.oc-spin]="cargandoOnus()"></i>
+        <input [disabled]="!oltId" [(ngModel)]="filtro" (focus)="abierto.set(true)" (ngModelChange)="abierto.set(true)"
+               [placeholder]="oltId ? 'Buscar por cliente, contrato, serie, IP o índice (1/2/1:5)' : 'Primero selecciona una OLT'">
+        @if (filtro) { <button type="button" class="oc-clear" (click)="filtro=''"><i class="pi pi-times"></i></button> }
+        @if (abierto() && filtro) {
+          <div class="oc-drop">
+            @for (o of resultados(); track o.id) {
+              <button type="button" class="oc-opt" (click)="elegir(o)">
+                <span class="dot" [class]="'dot ' + claseEstado(o)"></span>
+                <span class="opt-main">
+                  <b>{{ nombre(o).nombre || 'Sin nombre' }}</b>
+                  <small>{{ nombre(o).contrato ? 'Contrato ' + nombre(o).contrato + ' · ' : '' }}{{ o.rawIndex }} · {{ o.serial || 'sin serie' }}</small>
+                </span>
+                <span class="opt-rx" [class]="'opt-rx ' + claseRx(o.onuRxDbm)">{{ dbm(o.onuRxDbm) }}</span>
+              </button>
+            } @empty {
+              <div class="oc-none">Sin coincidencias en esta OLT.</div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (sel(); as o) {
+      <!-- CLIENTE -->
+      <section class="oc-card oc-client">
+        <div class="avatar" [class]="'avatar ' + claseEstado(o)">{{ iniciales(o) }}</div>
+        <div class="who">
+          <div class="name">{{ nombre(o).nombre || 'ONU sin nombre' }}</div>
+          <div class="meta">
+            @if (nombre(o).contrato) { <span><i class="pi pi-file"></i> Contrato <b>{{ nombre(o).contrato }}</b></span> }
+            <span><i class="pi pi-server"></i> {{ oltName() }}</span>
+            <span class="mono"><i class="pi pi-sitemap"></i> {{ o.rawIndex }}</span>
+            <span class="mono"><i class="pi pi-tag"></i> {{ o.serial || 'sin serie' }}</span>
+            @if (o.clientIp || nombre(o).ip) { <span class="mono"><i class="pi pi-globe"></i> {{ o.clientIp || nombre(o).ip }}</span> }
+          </div>
+        </div>
+        <div class="side">
+          <span class="pill" [class]="'pill ' + claseEstado(o)"><span class="dot"></span>{{ textoEstado(o) }}</span>
+          <button type="button" class="oc-btn ghost" (click)="refrescar()" [disabled]="refrescando()">
+            <i class="pi pi-refresh" [class.oc-spin]="refrescando()"></i> Actualizar
+          </button>
+          <small class="mut" [title]="'El NOC lee toda la OLT por SNMP cada ' + cadaCuanto() + ' y, al abrir esta ficha, pide una lectura solo de esta ONU.'">
+            {{ refrescando() ? 'Leyendo la ONU…' : 'Leído ' + hace(o.updatedAt) }}
+          </small>
+        </div>
+        <button type="button" class="oc-x" (click)="cerrar()" title="Cerrar"><i class="pi pi-times"></i></button>
+        @if (snmpFalla() && !refrescando()) {
+          <div class="oc-stale bad">
+            <i class="pi pi-exclamation-circle"></i>
+            <span><b>La OLT no respondió por SNMP.</b> Lo que ves es la última lectura buena ({{ hace(o.updatedAt) }}).
+              {{ oltSnmpTxt() }} Revisa que la OLT esté en línea y que el NOC le llegue.</span>
+          </div>
+        } @else if (!refrescando() && viejo(o.updatedAt)) {
+          <div class="oc-stale">
+            <i class="pi pi-clock"></i>
+            <span>Estos datos son de {{ hace(o.updatedAt) }}. {{ oltSnmpTxt() }}</span>
+          </div>
+        }
+      </section>
+
+      <!-- MÉTRICAS -->
+      <section class="oc-stats">
+        <div class="oc-stat">
+          <small>Señal en el cliente</small>
+          <b [class]="claseRx(o.onuRxDbm)">{{ num(o.onuRxDbm) }}<em>dBm</em></b>
+          <div class="bar"><span [style.width.%]="nivelRx(o.onuRxDbm)" [class]="claseRx(o.onuRxDbm)"></span></div>
+          <small class="hint">{{ calidadRx(o.onuRxDbm) }}</small>
+        </div>
+        @if (o.oltRxDbm != null) {
+          <div class="oc-stat">
+            <small>Señal en la OLT</small>
+            <b [class]="claseRx(o.oltRxDbm)">{{ num(o.oltRxDbm) }}<em>dBm</em></b>
+            <div class="bar"><span [style.width.%]="nivelRx(o.oltRxDbm)" [class]="claseRx(o.oltRxDbm)"></span></div>
+            <small class="hint">{{ calidadRx(o.oltRxDbm) }}</small>
+          </div>
+        }
+        <div class="oc-stat">
+          <small>TX de la ONU</small>
+          <b>{{ num(o.onuTxDbm) }}<em>dBm</em></b>
+          <small class="hint">Distancia {{ o.distanceM != null ? km(o.distanceM) : '—' }}</small>
+        </div>
+        <div class="oc-stat">
+          <small>Consumo ahora</small>
+          <b class="dual"><span><i class="pi pi-arrow-down"></i>{{ bps(o.onuOutRateBps) }}</span><span><i class="pi pi-arrow-up"></i>{{ bps(o.onuInRateBps) }}</span></b>
+          <small class="hint">Bajada / subida</small>
+        </div>
+        <div class="oc-stat">
+          <small>Contrato</small>
+          <b class="txt">{{ o.contratoEstado || '—' }}</b>
+          <small class="hint">Última caída: {{ o.lastCause || 'sin registro' }}</small>
+        </div>
+      </section>
+
+    } @else {
+      <section class="oc-card oc-empty">
+        <div class="em-ic"><i class="pi" [class.pi-server]="!oltId" [class.pi-search]="oltId"></i></div>
+        <b>{{ oltId ? 'Busca al cliente' : 'Selecciona una OLT' }}</b>
+        <span>{{ oltId ? 'Escribe el nombre, contrato, serie o índice para ver su ficha. Las acciones de puerto y OLT están abajo.'
+                       : 'Elige la OLT donde está el cliente para empezar.' }}</span>
+      </section>
+    }
+
+    <!-- ACCIONES (Cliente / Puerto / OLT) -->
+    @if (oltId) {
+      <section class="oc-card">
+        <header class="oc-ch">
+          <h2>Acciones</h2>
+          <span class="mut">Se envían a {{ oltName() }}{{ familia() ? ' · firmware ' + familia() : '' }}</span>
+        </header>
+        @if (!botones().length) { <div class="oc-none">{{ botoneraError() || 'Cargando acciones…' }}</div> }
+        @for (g of grupos(); track g.scope) {
+          <div class="oc-group">
+            <div class="g-head">
+              <span class="g-ic"><i [class]="'pi ' + g.icono"></i></span>
+              <div class="g-tx"><b>{{ g.titulo }}</b><small>{{ g.sub }}</small></div>
+              @if (g.scope === 'puerto' && !sel()) {
+                <label class="g-port">
+                  <span>Puerto</span>
+                  <select [ngModel]="puertoSel()" (ngModelChange)="puertoSel.set($event); cancelarBoton()">
+                    <option value="">Elige…</option>
+                    @for (pp of puertos(); track pp) { <option [value]="pp">{{ pp }}</option> }
+                  </select>
+                </label>
+              }
+            </div>
+            @if (g.bloqueo) {
+              <div class="g-lock"><i class="pi pi-info-circle"></i> {{ g.bloqueo }}</div>
+            } @else {
+              <div class="oc-acts">
+                @for (b of g.items; track b.accion) {
+                  <button type="button" [class]="'oc-act ' + b.danger + (accion()===b.accion ? ' sel' : '')" (click)="elegirBoton(b)">
+                    <span class="ic"><i [class]="'pi ' + icono(b.accion)"></i></span>
+                    <span class="tx">
+                      <b>{{ b.name }}</b>
+                      <small>{{ descripcion(b.accion) }}</small>
+                    </span>
+                    @if (!b.validado) { <span class="tag">Sin probar</span> }
+                  </button>
+                }
+              </div>
+              @if (boton()?.scope === g.scope) { <ng-container *ngTemplateOutlet="panel"></ng-container> }
+            }
+          </div>
+        }
+
+        @if (resultado(); as r) {
+          <div class="oc-result" [class.ok]="r.status==='ok'">
+            <i class="pi" [class.pi-check-circle]="r.status==='ok'" [class.pi-times-circle]="r.status!=='ok'"></i>
+            <div>
+              <b>{{ r.status==='ok' ? 'Acción completada' : (r.ok===false && !r.status ? 'No se envió' : 'La OLT respondió con error') }}</b>
+              @if (r.datosCliente) { <small>{{ r.datosCliente }}</small> }
+              @if (r.error && !r.output) { <small>{{ r.error }}</small> }
+              @if (r.output) { <details><summary>Respuesta de la OLT</summary><pre>{{ r.output }}</pre></details> }
+            </div>
+            <button type="button" class="oc-x" (click)="resultado.set(null)"><i class="pi pi-times"></i></button>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- Panel de confirmación de la acción elegida -->
+    <ng-template #panel>
+      @if (boton(); as b) {
+        <div [class]="'oc-confirm ' + b.danger">
+          <div class="cf-head">
+            <span class="ic"><i [class]="'pi ' + icono(b.accion)"></i></span>
+            <div>
+              <b>{{ b.name }}</b>
+              <small>{{ sujeto(b) }}</small>
+            </div>
+          </div>
+
+          @if (b.aviso) { <div class="note"><i class="pi pi-info-circle"></i><span>{{ b.aviso }}</span></div> }
+          @if (!b.validado) {
+            <div class="note warn"><i class="pi pi-exclamation-triangle"></i>
+              <span>Esta acción aún no se ha probado en producción. Úsala primero en un caso de prueba.</span></div>
+          }
+
+          @if (campos().length) {
+            <div class="cf-fields">
+              @for (p of campos(); track p.key) {
+                <label [class.full]="p.type === 'confirm'">
+                  <span>{{ p.label }}</span>
+                  @if (p.type === 'libre') {
+                    <select class="mono" [(ngModel)]="valores[p.key]" (ngModelChange)="previa.set(null)">
+                      <option [ngValue]="null">Elige un número libre…</option>
+                      @for (n of libresPuerto(); track n) { <option [ngValue]="n">{{ n }}</option> }
+                    </select>
+                  } @else {
+                    <input class="mono" [class.up]="p.upper" [type]="p.type==='number' ? 'number' : 'text'"
+                           [placeholder]="p.type === 'confirm' ? esperado(p.expect) : (p.placeholder || '')"
+                           [(ngModel)]="valores[p.key]" (ngModelChange)="previa.set(null)">
+                  }
+                </label>
+              }
+            </div>
+          }
+
+          @if (previa(); as pv) {
+            @if (pv.ok === false && pv.error) {
+              <div class="note err"><i class="pi pi-times-circle"></i><span>{{ pv.error }}</span></div>
+            } @else if (pv.missing?.length) {
+              <div class="note err"><i class="pi pi-times-circle"></i><span>Faltan datos: {{ pv.missing.join(', ') }}</span></div>
+            } @else if (pv.commands?.length) {
+              <details class="cmds"><summary>Ver comandos ({{ pv.commands.length }})</summary>
+                <pre>{{ pv.commands.join('\\n') }}</pre></details>
+            }
+          }
+
+          <footer class="cf-foot">
+            @if (motivoBloqueo(); as m) { <span class="blk"><i class="pi pi-lock"></i> {{ m }}</span> } @else { <span></span> }
+            <div class="cf-btns">
+              <button type="button" class="oc-btn ghost" (click)="cancelarBoton()">Cancelar</button>
+              <button type="button" [class]="'oc-btn solid ' + b.danger" (click)="ejecutar()"
+                      [disabled]="corriendo() || !puedeEnviar() || !listoParaEnviar()">
+                <i class="pi" [class.pi-spinner]="corriendo()" [class.oc-spin]="corriendo()" [class.pi-check]="!corriendo()"></i>
+                {{ corriendo() ? 'Enviando…' : 'Confirmar' }}
+              </button>
+            </div>
+          </footer>
+        </div>
+      }
+    </ng-template>
+
+    @if (sel(); as o) {
+      <!-- PUERTO -->
+      <section class="oc-card">
+        <header class="oc-ch">
+          <h2>Puerto {{ puertoTxt() }}</h2>
+          <span class="mut">{{ puerto().length }} ONU · {{ enLinea() }} en línea</span>
+          <span class="libres" [title]="'IDs libres: ' + libres().join(', ')">
+            <i class="pi pi-circle"></i> IDs libres <b class="mono">{{ libres().slice(0, 10).join(' · ') }}{{ libres().length > 10 ? ' …' : '' }}</b>
+            <em>{{ libres().length }}</em>
+          </span>
+        </header>
+        <div class="oc-table">
+          <table>
+            <thead><tr><th style="width:56px">ONU</th><th>Cliente</th><th style="width:150px">Estado</th><th style="width:170px">Señal</th><th style="width:96px">Distancia</th><th style="width:140px">Serie</th></tr></thead>
+            <tbody>
+              @for (x of puerto(); track x.id) {
+                <tr [class.me]="x.id === o.id" (click)="elegir(x)">
+                  <td class="mono">{{ x.onuId }}</td>
+                  <td class="cli">{{ nombre(x).nombre || '—' }}</td>
+                  <td><span class="st"><span [class]="'dot ' + claseEstado(x)"></span>{{ textoEstado(x) }}</span></td>
+                  <td>
+                    <span class="sig">
+                      <span class="bar"><span [style.width.%]="nivelRx(x.onuRxDbm)" [class]="claseRx(x.onuRxDbm)"></span></span>
+                      <span class="mono" [class]="'mono ' + claseRx(x.onuRxDbm)">{{ num(x.onuRxDbm) }}</span>
+                    </span>
+                  </td>
+                  <td class="mono">{{ x.distanceM != null ? km(x.distanceM) : '—' }}</td>
+                  <td class="mono mut">{{ x.serial || '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <!-- HISTORIAL -->
+    <section class="oc-card">
+      <header class="oc-ch oc-tog" (click)="verHist.set(!verHist())">
+        <h2>Historial {{ oltId ? 'de esta OLT' : '' }}</h2>
+        <span class="mut">{{ logs().length }} registros</span>
+        <i class="pi" [class.pi-chevron-down]="!verHist()" [class.pi-chevron-up]="verHist()" style="margin-left:auto"></i>
+      </header>
+      @if (verHist()) {
+        <div class="oc-table">
+          @if (logs().length) {
+            <table>
+              <thead><tr><th style="width:120px">Fecha</th><th>Acción</th><th>OLT</th><th style="width:90px">Estado</th><th style="width:160px">Usuario</th></tr></thead>
+              <tbody>
+                @for (l of logs(); track l.id) {
+                  <tr (click)="logAbierto.set(logAbierto() === l.id ? null : l.id)">
+                    <td class="mono">{{ fmt(l.created_at) }}</td>
+                    <td>{{ l.template_name }}</td>
+                    <td class="mut">{{ l.olt_name }}</td>
+                    <td><span class="badge" [class.ok]="l.status==='ok'">{{ l.status === 'ok' ? 'OK' : 'Error' }}</span></td>
+                    <td class="mut">{{ l.executed_by || '—' }}</td>
+                  </tr>
+                  @if (logAbierto() === l.id) {
+                    <tr class="det"><td colspan="5"><pre>{{ l.output || l.commands_sent }}</pre></td></tr>
+                  }
+                }
+              </tbody>
+            </table>
+          } @else {
+            <div class="oc-none">Aún no hay acciones registradas.</div>
+          }
+        </div>
+      }
+    </section>
+  </div>
+  `,
+  styles: [`
+    :host { display:block; }
+    .oc { --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --soft:#f6f7fb;
+          display:flex; flex-direction:column; gap:14px; color:var(--text,#0f172a); }
+    .mono { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-variant-numeric:tabular-nums; }
+    .mut { color:var(--muted,#6b7280); font-size:12px; }
+    .rx-ok { color:var(--ok); } .rx-warn { color:var(--warn); } .rx-bad { color:var(--bad); }
+    .oc-spin { animation:ocspin 1s linear infinite; }
+    @keyframes ocspin { to { transform:rotate(360deg); } }
+
+    /* encabezado */
+    .oc-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .oc-head h1 { margin:0; font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .oc-head h1 i { color:var(--primary); font-size:16px; }
+    .oc-head p { margin:3px 0 0; font-size:12.5px; color:var(--muted); }
+    .oc-switch { display:flex; align-items:center; gap:10px; padding:8px 14px 8px 10px; border-radius:12px; cursor:pointer;
+                 border:1px solid var(--border,#e3e6ee); background:var(--panel,#fff); text-align:left; color:inherit; }
+    .oc-switch .knob { width:36px; height:20px; border-radius:20px; background:#cbd5e1; position:relative; flex-shrink:0; transition:.15s; }
+    .oc-switch .knob::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:.15s; }
+    .oc-switch.on { border-color:rgba(22,163,74,.35); background:rgba(22,163,74,.06); }
+    .oc-switch.on .knob { background:var(--ok); }
+    .oc-switch.on .knob::after { left:19px; }
+    .oc-switch .lbl { display:flex; flex-direction:column; line-height:1.25; }
+    .oc-switch b { font-size:12.5px; } .oc-switch small { font-size:11px; color:var(--muted); }
+    .oc-alert { display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-radius:12px; font-size:12.5px;
+                background:#fffbeb; border:1px solid #fde68a; color:#78350f; }
+
+    /* buscador */
+    .oc-bar { display:flex; gap:10px; flex-wrap:wrap; }
+    .oc-field { position:relative; display:flex; align-items:center; background:var(--panel,#fff); border:1px solid var(--border,#e3e6ee);
+                border-radius:12px; height:42px; transition:border-color .12s, box-shadow .12s; }
+    .oc-field:focus-within { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft,#f8e9f3); }
+    .oc-field > i.pi { position:absolute; left:13px; color:var(--muted); font-size:13px; pointer-events:none; }
+    .oc-field select, .oc-field input { border:none; outline:none; background:transparent; height:100%; width:100%;
+                padding:0 36px 0 36px; font-size:13.5px; color:inherit; border-radius:12px; }
+    .oc-olt { width:260px; } .oc-search { flex:1; min-width:280px; }
+    .oc-clear { position:absolute; right:8px; border:none; background:transparent; color:var(--muted); cursor:pointer; padding:6px; }
+    .oc-drop { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:30; max-height:360px; overflow:auto; padding:6px;
+               background:var(--panel,#fff); border:1px solid var(--border,#e3e6ee); border-radius:12px; box-shadow:0 12px 32px rgba(15,23,42,.14); }
+    .oc-opt { display:flex; align-items:center; gap:12px; width:100%; padding:9px 10px; border:none; background:transparent;
+              border-radius:8px; cursor:pointer; text-align:left; color:inherit; }
+    .oc-opt:hover { background:var(--primary-soft,#f8e9f3); }
+    .opt-main { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .opt-main b { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .opt-main small { font-size:11.5px; color:var(--muted); }
+    .opt-rx { font-size:12px; font-weight:600; font-family:ui-monospace,Consolas,monospace; }
+    .oc-none { padding:16px; text-align:center; font-size:12.5px; color:var(--muted); }
+
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#94a3b8; flex-shrink:0; }
+    .dot.on { background:var(--ok); box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+    .dot.los { background:var(--bad); box-shadow:0 0 0 3px rgba(220,38,38,.15); }
+
+    /* tarjetas */
+    .oc-card { position:relative; background:var(--panel,#fff); border:1px solid var(--border,#e3e6ee); border-radius:14px;
+               box-shadow:var(--shadow, 0 1px 2px rgba(15,23,42,.04)); }
+    .oc-ch { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border,#e3e6ee); flex-wrap:wrap; }
+    .oc-ch h2 { margin:0; font-size:14px; font-weight:700; }
+    .oc-tog { cursor:pointer; user-select:none; }
+    .oc-x { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:8px; border:none; background:transparent;
+            color:var(--muted); cursor:pointer; }
+    .oc-x:hover { background:var(--soft); }
+
+    /* cliente */
+    .oc-client { display:flex; align-items:center; gap:16px; padding:18px 56px 18px 18px; flex-wrap:wrap; }
+    .oc-stale { flex-basis:100%; display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:10px;
+                font-size:12.5px; line-height:1.5; background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+    .oc-stale.bad { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+    .oc-stale i { margin-top:3px; }
+    .avatar { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+              font-weight:700; font-size:17px; background:#e2e8f0; color:#475569; }
+    .avatar.on { background:rgba(22,163,74,.12); color:var(--ok); }
+    .avatar.los { background:rgba(220,38,38,.10); color:var(--bad); }
+    .who { flex:1; min-width:240px; }
+    .who .name { font-size:17px; font-weight:700; line-height:1.3; }
+    .who .meta { display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:6px; font-size:12.5px; color:var(--muted); }
+    .who .meta i { font-size:11px; margin-right:4px; }
+    .who .meta b { color:var(--text); }
+    .side { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .pill { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600;
+            background:#f1f5f9; color:#475569; }
+    .pill .dot { background:currentColor; box-shadow:none; }
+    .pill.on { background:rgba(22,163,74,.10); color:var(--ok); }
+    .pill.los { background:rgba(220,38,38,.10); color:var(--bad); }
+
+    /* métricas */
+    .oc-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .oc-stat { background:var(--panel,#fff); border:1px solid var(--border,#e3e6ee); border-radius:14px; padding:14px 16px;
+               display:flex; flex-direction:column; gap:6px; }
+    .oc-stat > small:first-child { font-size:11.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+    .oc-stat > b { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.15; }
+    .oc-stat > b em { font-style:normal; font-size:12px; font-weight:600; color:var(--muted); margin-left:4px; }
+    .oc-stat > b.txt { font-size:17px; }
+    .oc-stat > b.dual { display:flex; flex-direction:column; font-size:15px; gap:2px; }
+    .oc-stat > b.dual i { font-size:11px; color:var(--muted); margin-right:6px; }
+    .oc-stat .hint { font-size:11.5px; color:var(--muted); }
+    .bar { height:5px; border-radius:4px; background:#eef0f4; overflow:hidden; }
+    .bar > span { display:block; height:100%; border-radius:4px; background:#94a3b8; }
+    .bar > span.rx-ok { background:var(--ok); } .bar > span.rx-warn { background:var(--warn); } .bar > span.rx-bad { background:var(--bad); }
+
+    /* acciones */
+    .oc-acts { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; padding:16px 18px; }
+    .oc-act { --c:var(--primary); position:relative; display:flex; align-items:center; gap:12px; padding:12px 14px; text-align:left;
+              border:1px solid var(--border,#e3e6ee); background:var(--panel,#fff); border-radius:12px; cursor:pointer; color:inherit;
+              transition:border-color .12s, box-shadow .12s, transform .05s; }
+    .oc-act.media { --c:var(--warn); } .oc-act.alta { --c:var(--bad); } .oc-act.baja { --c:var(--ok); }
+    .oc-act:hover { border-color:var(--c); box-shadow:0 2px 10px rgba(15,23,42,.06); }
+    .oc-act:active { transform:translateY(1px); }
+    .oc-act.sel { border-color:var(--c); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent); }
+    .oc-act .ic, .cf-head .ic { width:38px; height:38px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+              background:color-mix(in srgb, var(--c) 12%, transparent); color:var(--c); font-size:16px; }
+    .oc-act .tx { display:flex; flex-direction:column; min-width:0; }
+    .oc-act .tx b { font-size:13px; font-weight:600; }
+    .oc-act .tx small { font-size:11.5px; color:var(--muted); line-height:1.35; }
+    .oc-act .tag { position:absolute; top:-8px; right:10px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+              padding:2px 7px; border-radius:6px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+
+    .oc-group { padding:14px 18px 2px; border-bottom:1px solid var(--border,#e3e6ee); }
+    .oc-group:last-of-type { border-bottom:none; }
+    .g-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .g-ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+            background:var(--primary-soft,#f8e9f3); color:var(--primary); font-size:12px; flex-shrink:0; }
+    .g-tx { display:flex; flex-direction:column; line-height:1.3; min-width:0; }
+    .g-tx b { font-size:13px; } .g-tx small { font-size:11.5px; color:var(--muted); }
+    .g-port { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+    .g-port select { height:32px; border:1px solid var(--border,#e3e6ee); border-radius:9px; padding:0 10px; background:var(--panel,#fff);
+                     color:var(--text); font-family:ui-monospace,Consolas,monospace; font-size:12.5px; }
+    .g-lock { margin:10px 0 14px; padding:10px 12px; border-radius:10px; background:var(--soft); color:var(--muted); font-size:12.5px; }
+    .oc-group .oc-acts { padding:12px 0 14px; }
+    .oc-group .oc-confirm { margin:0 0 16px; }
+    .cf-fields label.full { grid-column:1/-1; max-width:420px; }
+    .cf-fields select { height:38px; padding:0 10px; border:1px solid var(--border,#e3e6ee); border-radius:10px; font-size:13.5px;
+            background:var(--panel,#fff); color:var(--text); }
+    .cf-fields input.up { text-transform:uppercase; }
+    .oc-confirm { --c:var(--primary); margin:0 18px 18px; border:1px solid color-mix(in srgb, var(--c) 35%, var(--border,#e3e6ee));
+                  border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px;
+                  background:color-mix(in srgb, var(--c) 3%, var(--panel,#fff)); }
+    .oc-confirm.media { --c:var(--warn); } .oc-confirm.alta { --c:var(--bad); } .oc-confirm.baja { --c:var(--ok); }
+    .cf-head { display:flex; align-items:center; gap:12px; }
+    .cf-head b { font-size:14px; display:block; } .cf-head small { font-size:12px; color:var(--muted); }
+    .note { display:flex; gap:8px; align-items:flex-start; font-size:12.5px; line-height:1.5; padding:9px 12px; border-radius:10px;
+            background:rgba(59,130,246,.07); color:#1e3a8a; }
+    .note i { margin-top:3px; font-size:12px; }
+    .note.warn { background:#fff7ed; color:#9a3412; } .note.err { background:#fef2f2; color:#b91c1c; }
+    .cf-fields { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+    .cf-fields label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--muted); }
+    .cf-fields input { height:38px; padding:0 12px; border:1px solid var(--border,#e3e6ee); border-radius:10px; font-size:13.5px;
+            background:var(--panel,#fff); color:var(--text); outline:none; }
+    .cf-fields input:focus { border-color:var(--c); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 15%, transparent); }
+    .cmds summary, .oc-result summary { cursor:pointer; font-size:12px; color:var(--muted); }
+    pre { background:#0f172a; color:#e2e8f0; padding:12px 14px; border-radius:10px; font-size:12px; line-height:1.55; overflow:auto;
+          max-height:260px; margin:8px 0 0; white-space:pre; }
+    .cf-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:12px;
+               border-top:1px dashed var(--border,#e3e6ee); }
+    .cf-btns { display:flex; gap:8px; margin-left:auto; }
+    .blk { font-size:12px; color:#b45309; }
+
+    .oc-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:36px; padding:0 16px; border-radius:10px;
+              font-size:13px; font-weight:600; cursor:pointer; border:1px solid transparent; transition:filter .12s; white-space:nowrap; }
+    .oc-btn i { font-size:12px; }
+    .oc-btn.ghost { background:var(--panel,#fff); border-color:var(--border,#e3e6ee); color:var(--text); }
+    .oc-btn.ghost:hover { background:var(--soft); }
+    .oc-btn.solid { color:#fff; background:var(--primary); }
+    .oc-btn.solid.media { background:var(--warn); } .oc-btn.solid.alta { background:var(--bad); } .oc-btn.solid.baja { background:var(--ok); }
+    .oc-btn.solid:hover { filter:brightness(1.07); }
+    .oc-btn:disabled { opacity:.5; cursor:not-allowed; filter:none; }
+
+    .oc-result { display:flex; gap:12px; align-items:flex-start; margin:0 18px 18px; padding:12px 44px 12px 14px; border-radius:12px;
+                 background:#fef2f2; border:1px solid #fecaca; position:relative; }
+    .oc-result.ok { background:#f0fdf4; border-color:#bbf7d0; }
+    .oc-result > i { font-size:18px; color:var(--bad); margin-top:1px; }
+    .oc-result.ok > i { color:var(--ok); }
+    .oc-result div { display:flex; flex-direction:column; gap:4px; font-size:13px; min-width:0; flex:1; }
+    .oc-result small { color:var(--muted); font-size:12px; }
+
+    /* puerto e historial */
+    .libres { margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+    .libres i { font-size:9px; color:var(--ok); }
+    .libres b { color:var(--text); font-weight:600; }
+    .libres em { font-style:normal; font-size:11px; font-weight:700; background:var(--soft); border-radius:8px; padding:2px 7px; }
+    .oc-table { overflow:auto; max-height:440px; }
+    .oc-table table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    .oc-table th { position:sticky; top:0; z-index:1; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+                   color:var(--muted); font-weight:600; padding:9px 18px; background:#fafbfc; border-bottom:1px solid var(--border,#e3e6ee); }
+    .oc-table td { padding:9px 18px; border-bottom:1px solid #f1f3f7; }
+    .oc-table tbody tr { cursor:pointer; transition:background .1s; }
+    .oc-table tbody tr:hover { background:var(--soft); }
+    .oc-table tr.me { background:var(--primary-soft,#f8e9f3); }
+    .oc-table tr.me td:first-child { box-shadow:inset 3px 0 0 var(--primary); font-weight:700; }
+    .oc-table td.cli { max-width:360px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .oc-table tr.det td { background:transparent; cursor:default; }
+    .st { display:inline-flex; align-items:center; gap:8px; }
+    .sig { display:flex; align-items:center; gap:10px; }
+    .sig .bar { width:70px; }
+    .badge { font-size:11px; font-weight:700; border-radius:8px; padding:3px 8px; background:#fee2e2; color:#b91c1c; }
+    .badge.ok { background:#dcfce7; color:#15803d; }
+
+    .oc-empty { display:flex; flex-direction:column; align-items:center; gap:6px; padding:44px 20px; text-align:center; }
+    .oc-empty .em-ic { width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+                       background:var(--primary-soft,#f8e9f3); color:var(--primary); font-size:20px; margin-bottom:6px; }
+    .oc-empty b { font-size:15px; } .oc-empty span { font-size:12.5px; color:var(--muted); max-width:420px; }
+  `],
+})
+export class OltConfig {
+  private api = inject(NocApi);
+  private notify = inject(NocNotify);
+
+  estado = signal<any>(null);
+  writeEnabled = signal(false);
+
+  olts = signal<any[]>([]);
+  oltId: number | null = null;
+  onus = signal<OnuRow[]>([]);
+  cargandoOnus = signal(false);
+  filtro = '';
+  abierto = signal(false);
+
+  sel = signal<OnuRow | null>(null);
+  refrescando = signal(false);
+  /** La última lectura pedida no trajo nada nuevo: la OLT no contestó por SNMP. */
+  snmpFalla = signal(false);
+
+  botones = signal<any[]>([]);
+  botoneraError = signal<string | null>(null);
+  familia = signal<string | null>(null);
+  accion = signal<string | null>(null);
+  boton = computed(() => this.botones().find((b) => b.accion === this.accion()) || null);
+  campos = computed(() => {
+    const b = this.boton();
+    if (!b?.params) return [];
+    try { return JSON.parse(b.params); } catch { return []; }
+  });
+  valores: Record<string, any> = {};
+  /** Puerto elegido a mano para las acciones de puerto cuando no hay cliente elegido. */
+  puertoSel = signal('');
+  previa = signal<any>(null);
+  corriendo = signal(false);
+  resultado = signal<any>(null);
+
+  logs = signal<any[]>([]);
+  logAbierto = signal<number | null>(null);
+  verHist = signal(false);
+
+  constructor() {
+    this.api.zteOlts().subscribe({ next: (o) => this.olts.set(o || []), error: () => {} });
+    this.api.oltcEstado().subscribe({ next: (e) => this.estado.set(e), error: () => {} });
+    this.loadWriteEnabled();
+    this.loadLogs();
+  }
+
+  /** Cierra la lista de resultados al hacer clic fuera del buscador. */
+  @HostListener('document:click') cerrarLista() { this.abierto.set(false); }
+
+  // ---------------- búsqueda ----------------
+  onOltChange() {
+    this.cerrar();
+    this.filtro = '';
+    this.onus.set([]);
+    this.loadLogs();
+    this.puertoSel.set('');
+    this.botones.set([]);
+    this.familia.set(null);
+    this.botoneraError.set(null);
+    if (!this.oltId) return;
+    this.cargarOnus();
+    this.api.oltcBotoneraOlt(this.oltId).subscribe({
+      next: (r) => { this.botones.set(r?.botones || []); this.familia.set(r?.olt?.familia || null); },
+      error: (e) => this.botoneraError.set(e?.message || 'No se pudieron cargar las acciones.'),
+    });
+  }
+
+  private cargarOnus() {
+    if (!this.oltId) return;
+    this.cargandoOnus.set(true);
+    this.api.zteOnusOfOlt(this.oltId).subscribe({
+      next: (o) => {
+        this.onus.set(o || []);
+        this.cargandoOnus.set(false);
+        const s = this.sel();
+        if (s) this.sel.set((o || []).find((x) => x.id === s.id) || null);
+      },
+      error: () => this.cargandoOnus.set(false),
+    });
+  }
+
+  resultados(): OnuRow[] {
+    const f = (this.filtro || '').toLowerCase().trim();
+    if (!f) return [];
+    return this.onus().filter((o) =>
+      (o.clientName || '').toLowerCase().includes(f) ||
+      (o.serial || '').toLowerCase().includes(f) ||
+      (o.rawIndex || '').toLowerCase().includes(f) ||
+      (o.clientIp || '').includes(f)).slice(0, 60);
+  }
+
+  elegir(o: OnuRow) {
+    this.sel.set(o);
+    this.filtro = '';
+    this.abierto.set(false);
+    this.cancelarBoton();
+    this.resultado.set(null);
+    this.snmpFalla.set(false);
+    this.refrescar();   // al abrir la ficha se lee la ONU al momento (SNMP, sin consola)
+  }
+
+  cerrar() { this.sel.set(null); this.cancelarBoton(); this.resultado.set(null); }
+
+  refrescar() {
+    const o = this.sel();
+    if (!o) return;
+    this.refrescando.set(true);
+    this.snmpFalla.set(false);
+    const antes = o.updatedAt;
+    this.api.zteOnuSnmpRefresh(o.id).subscribe({
+      next: (n) => {
+        this.refrescando.set(false);
+        // Si la fila no cambió de hora, el NOC no logró leerla (la OLT no contestó).
+        if (!n || (n.updatedAt && n.updatedAt === antes)) { this.snmpFalla.set(true); }
+        if (!n) return;
+        const fresca = { ...o, ...n } as OnuRow;
+        if (this.sel()?.id === fresca.id) this.sel.set(fresca);
+        this.onus.set(this.onus().map((x) => (x.id === fresca.id ? fresca : x)));
+      },
+      error: () => { this.refrescando.set(false); this.snmpFalla.set(true); },
+    });
+  }
+
+  // ---------------- puerto ----------------
+  puerto = computed(() => {
+    const o = this.sel();
+    if (!o) return [];
+    return this.onus().filter((x) => x.shelf === o.shelf && x.slot === o.slot && x.port === o.port)
+      .sort((a, b) => a.onuId - b.onuId);
+  });
+  puertoTxt = computed(() => { const o = this.sel(); return o ? `${o.shelf}/${o.slot}/${o.port}` : ''; });
+  enLinea = computed(() => this.puerto().filter((x) => this.claseEstado(x) === 'on').length);
+  /** IDs sin usar en el puerto (C300: 1..128). Reemplaza al 'show run int gpon-olt'. */
+  libres = computed(() => {
+    const usados = new Set(this.puerto().map((x) => x.onuId));
+    const out: number[] = [];
+    for (let i = 1; i <= 128; i++) if (!usados.has(i)) out.push(i);
+    return out;
+  });
+
+  /** Puertos PON de la OLT que tienen ONU (para elegir sin cliente). */
+  puertos = computed(() => {
+    const set = new Set(this.onus().map((x) => `${x.shelf}/${x.slot}/${x.port}`));
+    return [...set].sort((a, b) => {
+      const pa = a.split('/').map(Number), pb = b.split('/').map(Number);
+      return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+    });
+  });
+  /** Puerto sobre el que actúan los botones de puerto: el del cliente, o el elegido a mano. */
+  puertoDestino = computed(() => this.puertoTxt() || this.puertoSel());
+  libresPuerto = computed(() => {
+    const t = this.puertoDestino();
+    if (!t) return [];
+    const usados = new Set(this.onus().filter((x) => `${x.shelf}/${x.slot}/${x.port}` === t).map((x) => x.onuId));
+    const out: number[] = [];
+    for (let i = 1; i <= 128; i++) if (!usados.has(i)) out.push(i);
+    return out;
+  });
+
+  /** Botones agrupados por alcance: Cliente (ONU) · Puerto · OLT. */
+  grupos = computed(() => {
+    const bs = this.botones();
+    const o = this.sel();
+    const de = (sc: string) => bs.filter((b) => (b.scope || 'onu') === sc);
+    const out: any[] = [];
+    const onu = de('onu');
+    if (onu.length) out.push({
+      scope: 'onu', icono: 'pi-user', items: onu,
+      titulo: 'Cliente',
+      sub: o ? `${this.nombre(o).nombre || 'ONU'} · ${o.rawIndex}` : 'Acciones sobre la ONU de un cliente',
+      bloqueo: o ? null : 'Busca al cliente arriba para usar estas acciones.',
+    });
+    const pto = de('puerto');
+    if (pto.length) {
+      const t = this.puertoDestino();
+      out.push({
+        scope: 'puerto', icono: 'pi-sitemap', items: pto,
+        titulo: t ? 'Puerto ' + t : 'Puerto PON',
+        sub: t ? `${this.libresPuerto().length} números de ONU libres` : 'Activar ONU nuevas y reiniciar el puerto',
+        bloqueo: t ? null : 'Elige el puerto para usar estas acciones.',
+      });
+    }
+    const olt = de('olt');
+    if (olt.length) out.push({ scope: 'olt', icono: 'pi-server', items: olt, titulo: 'OLT', sub: this.oltName(), bloqueo: null });
+    return out;
+  });
+
+  // ---------------- acciones ----------------
+  elegirBoton(b: any) {
+    if (this.accion() === b.accion) { this.cancelarBoton(); return; }
+    this.accion.set(b.accion);
+    this.previa.set(null);
+    this.resultado.set(null);
+    // Valores de entrada: los 'default' de la plantilla y, para el nombre, lo que ya tiene la ONU.
+    const v: Record<string, any> = {};
+    for (const p of this.campos()) if (p.default != null) v[p.key] = p.default;
+    const o = this.sel();
+    if (b.accion === 'nombre' && o) {
+      const n = this.nombre(o);
+      v['contrato'] = n.contrato; v['nombre'] = n.nombre; v['ip'] = o.clientIp || n.ip;
+    }
+    this.valores = v;
+    if (!this.campos().length) this.verPrevia();
+  }
+
+  cancelarBoton() { this.accion.set(null); this.valores = {}; this.previa.set(null); }
+
+  /** Lo que la persona tiene que escribir en un campo de confirmación. */
+  esperado(e: string): string {
+    if (e === 'onu') return String(this.sel()?.onuId ?? '');
+    if (e === 'puerto') return this.puertoDestino();
+    if (e === 'slot') return String(this.valores['slot'] ?? '');
+    return '';
+  }
+
+  /** Sobre qué actúa el botón, para el encabezado del panel. */
+  sujeto(b: any): string {
+    const o = this.sel();
+    if (b.scope === 'puerto') return 'Puerto ' + this.puertoDestino() + ' · ' + this.oltName();
+    if (b.scope === 'olt') return this.oltName();
+    return o ? `${this.nombre(o).nombre || 'ONU'} · ${o.rawIndex}` : '';
+  }
+
+  private cuerpo(): any { return { ...this.valores, puerto: this.puertoDestino() }; }
+
+  private verPrevia(cb?: (pv: any) => void) {
+    const a = this.accion();
+    if (!a || !this.oltId) return;
+    this.api.oltcBotonPreview(a, this.sel()?.id ?? null, this.oltId, this.cuerpo()).subscribe({
+      next: (pv) => { this.previa.set(pv); cb?.(pv); },
+      error: (e) => this.previa.set({ ok: false, error: e?.message || 'No se pudo armar la vista previa.' }),
+    });
+  }
+
+  listoParaEnviar(): boolean {
+    return this.campos().every((p: any) => {
+      const v = String(this.valores[p.key] ?? '').trim();
+      if (p.type === 'confirm') return v !== '' && v === this.esperado(p.expect);
+      return !p.required || v !== '';
+    });
+  }
+
+  /** El panel de la acción ES la confirmación: valida en el servidor y envía. */
+  ejecutar() {
+    const b = this.boton();
+    if (!b || !this.oltId) return;
+    this.corriendo.set(true);
+    this.verPrevia((pv) => {
+      if (pv?.ok === false || pv?.missing?.length) { this.corriendo.set(false); return; }
+      this.api.oltcBotonEjecutar(b.accion, this.sel()?.id ?? null, this.oltId, this.cuerpo()).subscribe({
+        next: (r) => {
+          this.corriendo.set(false);
+          this.resultado.set(r);
+          this.loadLogs();
+          if (r?.status === 'ok') {
+            this.notify.ok(`${b.name}: listo.`);
+            this.cancelarBoton();
+            // Lo que cambia el inventario (alta, baja, cambio de equipo) se relee de la base.
+            if (['activar', 'desenganchar', 'cambiar_onu', 'nombre'].includes(b.accion)) setTimeout(() => this.cargarOnus(), 10000);
+            else if (b.scope === 'onu') setTimeout(() => this.refrescar(), b.accion === 'reiniciar' ? 90000 : 8000);
+          }
+        },
+        error: (e) => { this.corriendo.set(false); this.resultado.set({ ok: false, error: e?.message || 'No se pudo enviar.' }); },
+      });
+    });
+  }
+
+  puedeEnviar(): boolean {
+    const st = this.estado();
+    if (st && st.puedeOperar === false) return false;
+    if (st && st.cliEnabled === false) return false;
+    return this.writeEnabled();
+  }
+
+  motivoBloqueo(): string | null {
+    const st = this.estado();
+    if (st && st.puedeOperar === false) return 'Tu usuario no tiene permiso para operar la OLT.';
+    if (st && st.cliEnabled === false) return st.motivo || 'El envío a la OLT está cerrado en el NOC.';
+    if (!this.writeEnabled()) return 'Enciende "Envío a la OLT" (arriba a la derecha) para poder confirmar.';
+    return null;
+  }
+
+  // ---------------- interruptor e historial ----------------
+  loadLogs() { this.api.oltcLogs(this.oltId || undefined).subscribe({ next: (l) => this.logs.set(l || []), error: () => {} }); }
+
+  loadWriteEnabled() {
+    const k = (x: any) => x.settingKey ?? x.setting_key ?? x.key;
+    const v = (x: any) => x.settingValue ?? x.setting_value ?? x.value;
+    this.api.settings().subscribe({
+      next: (list: any[]) => {
+        const r = (list || []).find((x: any) => k(x) === 'olt_write_enabled');
+        const t = String(r != null ? v(r) : '').trim().toLowerCase();
+        this.writeEnabled.set(['1', 'true', 'on', 'si', 'sí'].includes(t));
+      },
+      error: () => {},
+    });
+  }
+
+  toggleWrite() {
+    const on = !this.writeEnabled();
+    this.writeEnabled.set(on);
+    this.api.updateSetting('olt_write_enabled', on ? '1' : '0').subscribe({
+      error: () => { this.writeEnabled.set(!on); this.notify.error('No se pudo cambiar el envío a la OLT.'); },
+    });
+  }
+
+  // ---------------- formato ----------------
+  /** "206379-----NOMBRE APELLIDO-----10.2.65.21" -> contrato, nombre, ip. */
+  nombre(o: OnuRow | null): { contrato: string; nombre: string; ip: string } {
+    const raw = (o?.clientName || '').trim();
+    const m = raw.match(/^-*\s*(\d{3,})\s*[_\-\s]+(.*?)[\s\-]*((?:\d{1,3}\.){3}\d{1,3})?\s*$/);
+    if (m) return { contrato: m[1], nombre: m[2].replace(/[-_\s]{2,}[\d.]*$/, '').replace(/^[-_\s]+|[-_\s]+$/g, ''), ip: m[3] || '' };
+    return { contrato: '', nombre: raw.replace(/^[-_\s]+|[-_\s]+$/g, ''), ip: '' };
+  }
+  iniciales(o: OnuRow): string {
+    const p = this.nombre(o).nombre.split(/\s+/).filter((x) => /[A-Za-zÁÉÍÓÚÑ]/.test(x));
+    return ((p[0]?.[0] || 'O') + (p[2]?.[0] || p[1]?.[0] || 'N')).toUpperCase();
+  }
+  private oltSel(): any { return this.olts().find((x) => x.id === this.oltId) || null; }
+  cadaCuanto(): string {
+    const s = Number(this.oltSel()?.snmpPollSeconds) || 300;
+    return s >= 60 ? Math.round(s / 60) + ' min' : s + ' s';
+  }
+  /** Más viejo que 3 barridos de la OLT (mínimo 15 min). */
+  viejo(t: string | null): boolean {
+    if (!t) return true;
+    const lim = Math.max(900, 3 * (Number(this.oltSel()?.snmpPollSeconds) || 300)) * 1000;
+    return Date.now() - new Date(t).getTime() > lim;
+  }
+  oltSnmpTxt(): string {
+    const o = this.oltSel();
+    if (!o) return '';
+    if (o.snmpPollEnabled === false || o.enabled === false) return 'La lectura SNMP de esta OLT está pausada en Equipos.';
+    return o.lastSnmpAt ? 'Último barrido completo de la OLT: ' + this.hace(o.lastSnmpAt) + '.' : 'El NOC todavía no ha barrido esta OLT.';
+  }
+  oltName(): string { const o = this.olts().find((x) => x.id === this.oltId); return o ? o.name : ''; }
+  icono(a: string): string {
+    return ({ reiniciar: 'pi-power-off', cortar: 'pi-ban', reactivar: 'pi-play', velocidad: 'pi-sliders-h',
+              vlan: 'pi-sitemap', nombre: 'pi-pencil', cambiar_onu: 'pi-sync', rogue: 'pi-eye-slash',
+              desenganchar: 'pi-trash', activar: 'pi-plus-circle', reset_puerto: 'pi-replay',
+              perfil_subida: 'pi-arrow-up', perfil_bajada: 'pi-arrow-down', crear_vlan: 'pi-tag',
+              vlan_uplink: 'pi-link', rogue_detect: 'pi-search', reset_tarjeta: 'pi-refresh' } as any)[a] || 'pi-bolt';
+  }
+  descripcion(a: string): string {
+    return ({ reiniciar: 'Reinicia el equipo del cliente',
+              velocidad: 'Cambia los perfiles de subida y bajada',
+              vlan: 'Mueve el servicio a otra VLAN',
+              cambiar_onu: 'Registra la serie de un equipo nuevo',
+              desenganchar: 'Borra la ONU de la OLT',
+              cortar: 'Quita el internet sin borrar la ONU',
+              reactivar: 'Devuelve el internet a un servicio cortado',
+              nombre: 'Corrige contrato, nombre o IP en la OLT',
+              rogue: 'Apaga una ONU que tumba el puerto',
+              activar: 'Engancha una ONU nueva en el puerto',
+              reset_puerto: 'Reinicia todo el puerto PON',
+              perfil_subida: 'Nuevo perfil tcont para planes',
+              perfil_bajada: 'Nuevo perfil de tráfico (bajada)',
+              crear_vlan: 'Crea una VLAN en la OLT',
+              vlan_uplink: 'Deja pasar una VLAN por el uplink',
+              rogue_detect: 'La OLT vigila ONU intrusas',
+              reset_tarjeta: 'Reinicia una tarjeta completa' } as any)[a] || '';
+  }
+  claseEstado(o: OnuRow): string {
+    const p = (o.phaseState || '').toLowerCase();
+    if (p === 'working') return 'on';
+    if (p.includes('los')) return 'los';
+    return 'off';
+  }
+  textoEstado(o: OnuRow): string {
+    const c = this.claseEstado(o);
+    return c === 'on' ? 'En línea' : c === 'los' ? 'Sin señal (LOS)' : (o.lastCause ? 'Caída · ' + o.lastCause : 'Desconectada');
+  }
+  claseRx(v: number | null): string {
+    if (v == null) return '';
+    return v >= -25 ? 'rx-ok' : v >= -27 ? 'rx-warn' : 'rx-bad';
+  }
+  calidadRx(v: number | null): string {
+    if (v == null) return 'Sin lectura';
+    return v >= -25 ? 'Buena' : v >= -27 ? 'Al límite' : 'Mala';
+  }
+  /** -30 dBm = 0 %, -15 dBm = 100 %. */
+  nivelRx(v: number | null): number { return v == null ? 0 : Math.max(4, Math.min(100, ((v + 30) / 15) * 100)); }
+  num(v: number | null): string { return v == null ? '—' : v.toFixed(2); }
+  dbm(v: number | null): string { return v == null ? '—' : v.toFixed(2) + ' dBm'; }
+  km(m: number): string { return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : m + ' m'; }
+  bps(v: number | null): string {
+    if (v == null) return '—';
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + ' Gbps';
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + ' Mbps';
+    if (v >= 1e3) return (v / 1e3).toFixed(0) + ' kbps';
+    return v + ' bps';
+  }
+  hace(t: string | null): string {
+    if (!t) return 'sin dato';
+    const s = Math.round((Date.now() - new Date(t).getTime()) / 1000);
+    if (isNaN(s)) return 'sin dato';
+    if (s < 60) return 'hace ' + Math.max(s, 0) + ' s';
+    if (s < 3600) return 'hace ' + Math.round(s / 60) + ' min';
+    return 'hace ' + Math.round(s / 3600) + ' h';
+  }
+  fmt(t: string): string {
+    const d = new Date(t);
+    return isNaN(d.getTime()) ? '' : d.toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+}

@@ -129,15 +129,17 @@ import { areaDs, zabbixDs, cpuColor, fmtUptime, fmtBps, fmtCap, fmtG, stats } fr
           <th class="srt" (click)="ifSort.by('rx')">RX{{ ifSort.arrow('rx') }}</th>
           <th class="srt" (click)="ifSort.by('tx')">TX{{ ifSort.arrow('tx') }}</th>
           <th class="srt" (click)="ifSort.by('util')">Utilización{{ ifSort.arrow('util') }}</th>
+          @if (hayLaser()) { <th class="srt" (click)="ifSort.by('laser')" title="Potencia que emite el láser del puerto PON (SNMP, cada 5 min)">Láser TX{{ ifSort.arrow('laser') }}</th> }
           <th class="srt" (click)="ifSort.by('estado')">Estado{{ ifSort.arrow('estado') }}</th>
         </tr></thead><tbody>
           @for (f of ifaceRows(); track f.id) {
             <tr style="cursor:pointer" (click)="openIfaceLog(f)" title="Clic para ver el gráfico de tráfico de esta interfaz (estilo Zabbix)">
-              <td><b>{{ f.real_name }}</b></td><td>{{ cap(f.capacity_bps) }}</td><td>{{ bps(f.rx_bps) }}</td><td>{{ bps(f.tx_bps) }}</td>
+              <td><b>{{ f.real_name }}</b></td><td>{{ cap(f.capacity_bps) }}</td><td>{{ bps(rxDe(f)) }}</td><td>{{ bps(txDe(f)) }}</td>
               <td>@if (f.status==='up') { <span class="ubar"><i [style.width.%]="f.util_percent" [style.background]="utilColor(f.util_percent)"></i></span>{{ f.util_percent }}% } @else { — }</td>
+              @if (hayLaser()) { <td class="mono">{{ f.laser_dbm == null ? '—' : ((f.laser_dbm > 0 ? '+' : '') + f.laser_dbm.toFixed(2) + ' dBm') }}</td> }
               <td [innerHTML]="ifBadge(f.status)"></td></tr>
           } @empty {
-            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin interfaces aún. Si el equipo tiene SNMP habilitado aparecerán en el próximo sondeo.</td></tr>
+            <tr><td [attr.colspan]="hayLaser() ? 7 : 6" style="text-align:center;color:var(--muted);padding:24px">Sin interfaces aún. Si el equipo tiene SNMP habilitado aparecerán en el próximo sondeo.</td></tr>
           }
         </tbody></table>
       </div>
@@ -394,11 +396,20 @@ export class EquipoDetalle implements OnDestroy {
   ifSort = new TableSort<Iface>({
     interfaz: (f) => f.real_name,
     capacidad: (f) => f.capacity_bps,
-    rx: (f) => f.rx_bps,
-    tx: (f) => f.tx_bps,
+    rx: (f) => f.rx_bps || f.pon_rx_bps || 0,
+    tx: (f) => f.tx_bps || f.pon_tx_bps || 0,
     util: (f) => f.util_percent,
+    laser: (f) => f.laser_dbm ?? -999,
     estado: (f) => f.status,
   }, 'interfaz');
+
+  /** ¿Este equipo tiene puertos PON con potencia de láser? (solo OLT): muestra la columna. */
+  hayLaser(): boolean {
+    return this.myIfaces().some((f) => f.laser_dbm != null);
+  }
+  /** RX/TX de la interfaz; en un PON sin dato del sondeo genérico, el del colector de puertos PON. */
+  rxDe(f: Iface): number { return f.rx_bps || f.pon_rx_bps || 0; }
+  txDe(f: Iface): number { return f.tx_bps || f.pon_tx_bps || 0; }
 
   /**
    * Interfaces del equipo, sin las que no tienen nombre.

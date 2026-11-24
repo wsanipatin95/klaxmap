@@ -4,7 +4,7 @@ import { map } from 'rxjs/operators';
 import { ENVIRONMENT } from 'src/app/core/config/environment.token';
 import { unwrapOrThrow } from 'src/app/core/api/api-envelope';
 import type { ApiEnvelope } from 'src/app/core/api/api-envelope';
-import type { CoberturaNap, CoberturaNapClientes, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaNapPonCarga, CoberturaLpuPon, CoberturaZona } from './cobertura.models';
+import type { CoberturaNap, CoberturaNapClientes, CoberturaClienteGeo, CoberturaElementoMeta, CoberturaOlt, CoberturaNapPon, CoberturaNapPonCarga, CoberturaNapUbicacion, CoberturaContratoFecha, CoberturaLpuPon, CoberturaZona, CoberturaCajaCapacidad } from './cobertura.models';
 
 /**
  * Cliente HTTP de la vista de Cobertura. Reusa endpoints existentes:
@@ -54,6 +54,27 @@ export class CoberturaApi {
   }
 
   /** PON de cada caja con la carga real del PON (filtro de ventas "Clientes por PON"). */
+  /** Provincia / canton / parroquia / barrio de cada caja (filtro en cascada). */
+  napsUbicacion() {
+    return this.http
+      .get<ApiEnvelope<CoberturaNapUbicacion[]>>(`${this.base}/red/cobertura/naps-ubicacion`)
+      .pipe(map((r) => unwrapOrThrow<CoberturaNapUbicacion[]>(r)));
+  }
+
+  /** Capacidad de cada caja NAP (puertos del splitter), para el mapa de calor. */
+  cajasCapacidad() {
+    return this.http
+      .get<ApiEnvelope<CoberturaCajaCapacidad[]>>(`${this.base}/red/cobertura/cajas-capacidad`)
+      .pipe(map((r) => unwrapOrThrow<CoberturaCajaCapacidad[]>(r)));
+  }
+
+  /** Fecha de instalacion (venta) y de baja de cada contrato. */
+  contratosFechas() {
+    return this.http
+      .get<ApiEnvelope<CoberturaContratoFecha[]>>(`${this.base}/red/cobertura/contratos-fechas`)
+      .pipe(map((r) => unwrapOrThrow<CoberturaContratoFecha[]>(r)));
+  }
+
   napsPon() {
     return this.http
       .get<ApiEnvelope<CoberturaNapPonCarga[]>>(`${this.base}/red/cobertura/naps-pon`)

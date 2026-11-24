@@ -95,6 +95,20 @@ export interface CoberturaNapPonCarga {
   cortadosPon?: number | null;
 }
 
+/** Ubicacion de cada caja (kxv_red_nap_ubicacion): barrio de sus clientes o de la caja vecina. */
+export interface CoberturaNapUbicacion {
+  idGeoElementoFk: number;
+  fuente?: 'CLIENTES' | 'VECINA' | string | null;
+  idCiuBarrio: number;
+  barrio?: string | null;
+  idCiuParroquia?: number | null;
+  parroquia?: string | null;
+  idCiuCanton?: number | null;
+  canton?: string | null;
+  idCiuProvincia?: number | null;
+  provincia?: string | null;
+}
+
 /** Amarre confirmado NAP <-> (OLT, tarjeta, PON) — kxt_red_nap_pon. */
 export interface CoberturaNapPon {
   idRedNapPon?: number | null;
@@ -128,4 +142,19 @@ export interface CoberturaNapClientes {
   ocupados: number;
   disponibles: number;
   clientes: CoberturaNapCliente[];
+}
+
+/** Fechas de un contrato (klaxapi /red/cobertura/contratos-fechas) para Ventas y Desinstalaciones. */
+/** Capacidad de una caja NAP (kxv_red_caja): puertos del splitter y amarres vigentes. */
+export interface CoberturaCajaCapacidad {
+  idGeoElemento: number;
+  puertosTotal: number;
+  origenCapacidad?: string | null;   // CAMPO | ERP | SUPUESTO
+  clientesAmarrados?: number | null;
+}
+
+export interface CoberturaContratoFecha {
+  idConContrato: number;
+  instalacion?: string | null;   // YYYY-MM-DD: instalacion_fec = fecha de la venta
+  cambioEstado?: string | null;  // YYYY-MM-DD: ultimo paso a su estado actual (solo si no esta activo ni cortado)
 }

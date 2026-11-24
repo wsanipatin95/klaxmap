@@ -52,6 +52,9 @@ type Grupo = 'red' | 'clientes' | 'todo';
           <th class="srt" (click)="sort.by('severidad')">Severidad{{ sort.arrow('severidad') }}</th>
           <th class="srt" (click)="sort.by('equipo')">Equipo{{ sort.arrow('equipo') }}</th>
           <th class="srt" (click)="sort.by('iface')">Interfaz{{ sort.arrow('iface') }}</th>
+          @if (grupo() !== 'red') {
+            <th class="srt" (click)="sort.by('potencia')" title="Promedio de los 3 días anteriores → potencia de ahora">Potencia{{ sort.arrow('potencia') }}</th>
+          }
           <th class="srt" (click)="sort.by('descripcion')">Descripción{{ sort.arrow('descripcion') }}</th>
           <th class="srt" (click)="sort.by('inicio')">Inicio{{ sort.arrow('inicio') }}</th>
           <th>Fin</th>
@@ -64,6 +67,19 @@ type Grupo = 'red' | 'clientes' | 'todo';
               <td><span class="badge" [class.b-crit]="a.severity==='crit'" [class.b-warn]="a.severity!=='crit'">{{ a.severity==='crit' ? 'CRÍTICO' : 'WARNING' }}</span></td>
               <td><b>{{ a.device_name }}</b></td>
               <td>{{ a.iface === 'EQUIPO' ? 'Equipo caído' : a.iface }}</td>
+              @if (grupo() !== 'red') {
+                <td class="pw">
+                  @if (a.category === 'signal') {
+                    <span [class]="'pw-v ' + tono(a.rx_antes)">{{ dbm(a.rx_antes) }}</span>
+                    <i class="pi pi-arrow-right pw-f"></i>
+                    @if (caida(a)) {
+                      <span class="pw-v pw-sin">sin señal</span>
+                    } @else {
+                      <span [class]="'pw-v ' + tono(ahora(a))">{{ dbm(ahora(a)) }}</span>
+                    }
+                  } @else { — }
+                </td>
+              }
               <td>{{ a.description }}</td>
               <td style="white-space:nowrap">{{ a.started }}</td>
               <td style="white-space:nowrap">{{ a.ended || '—' }}</td>
@@ -74,7 +90,7 @@ type Grupo = 'red' | 'clientes' | 'todo';
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">
+            <tr><td [attr.colspan]="grupo() !== 'red' ? 9 : 8" style="text-align:center;color:var(--muted);padding:30px">
               {{ cargando() ? 'Cargando…' : (soloActivas() ? 'Nada caído ahora mismo.' : 'Sin alertas en este rango.') }}
             </td></tr>
           }
@@ -93,6 +109,9 @@ type Grupo = 'red' | 'clientes' | 'todo';
     .c-crit{color:#c0262d}.c-warn{color:#b45309}
     tr.al-open td{background:#fff8f0}
     tr.al-down td{background:#fdecec}
+    td.pw{white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+    .pw-v{font-weight:600}.pw-f{font-size:10px;color:var(--muted,#94a3b8);margin:0 6px}
+    .pw-ok{color:#15803d}.pw-warn{color:#b45309}.pw-crit{color:#c0262d}.pw-sin{color:#c0262d;font-family:inherit}
   `],
 })
 export class Alertas implements OnDestroy {
@@ -114,6 +133,7 @@ export class Alertas implements OnDestroy {
     equipo: (a) => a.device_name,
     iface: (a) => a.iface,
     descripcion: (a) => a.description,
+    potencia: (a) => { const n = this.ahora(a); return n != null && a.rx_antes != null ? n - a.rx_antes : -999; },
     inicio: (a) => a.started_at ?? '',      // fecha completa, no 'HH:MI'
     duracion: (a) => a.segundos ?? 0,
     estado: (a) => (a.status === 'open' ? 0 : 1),
@@ -155,6 +175,18 @@ export class Alertas implements OnDestroy {
   }
 
   ngOnDestroy() { if (this.timer) clearInterval(this.timer); }
+
+  /** RX de ahora: la que lee el NOC en este momento (o la de la alerta si la ONU ya no esta en la base). */
+  ahora(a: Alert): number | null {
+    return a.rx_ahora ?? a.rx_alerta ?? null;
+  }
+  /** La ONU esta caida AHORA (el NOC lo dice). Sin ese dato no se afirma nada: se muestra '—'. */
+  caida(a: Alert): boolean { return !!a.fase_ahora && a.fase_ahora.toLowerCase() !== 'working'; }
+  dbm(v: number | null | undefined): string { return v == null ? '—' : Number(v).toFixed(2); }
+  tono(v: number | null | undefined): string {
+    if (v == null) return '';
+    return v > -25 ? 'pw-ok' : v > -28 ? 'pw-warn' : 'pw-crit';
+  }
 
   setGrupo(g: Grupo) { this.grupo.set(g); this.cargar(); }
   verHistorial(h: number) { this.soloActivas.set(false); this.horas.set(h); this.cargar(); }
