@@ -1,0 +1,102 @@
+
+    /* Dos cuadros por fila (estilo compacto del NOC) */
+    /* Un canal a la vez (submenus): una columna con ancho de lectura comodo. */
+    .cards { display:grid; grid-template-columns:minmax(0, 920px); gap:12px; align-items:start; }
+    .barra { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 12px; }
+    .barra .btn { margin-left:auto; }
+    .subtabs { display:flex; flex-wrap:wrap; gap:4px; width:fit-content; max-width:100%; margin:0;
+               padding:4px; background:#f1f5f9; border-radius:10px; }
+    .subtabs button { display:inline-flex; align-items:center; gap:7px; border:0; background:transparent;
+                      padding:7px 14px; border-radius:8px; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; }
+    .subtabs button:hover:not(.on) { color:#1f2937; }
+    .subtabs button.on { background:#fff; color:#7b0061; box-shadow:0 1px 2px rgba(16,24,40,.12); }
+    .subtabs .dot { width:7px; height:7px; border-radius:50%; background:#cbd5e1; }
+    .subtabs .dot.on { background:#16a34a; }
+    .ph { padding:10px 14px; font-size:13.5px; border-radius:12px 12px 0 0; font-weight:700; }
+    .ph.gen  { background:#fff1e6; color:#c2410c; }
+    .ph.tg   { background:#e9f5fc; color:#1c7bbf; }
+    .ph.mail { background:#fdf6e0; color:#8a6d00; }
+    .ph.wa   { background:#e8f8ef; color:#128c4b; }
+    .ph.msg  { background:#f1f0f8; color:#5b4b8a; }
+    .pb { padding:12px 14px; }
+    .grid { display:grid; grid-template-columns:1fr; gap:8px; }
+    .fld.wide, .chk, .help { grid-column:1 / -1; }
+    .fld { display:flex; flex-direction:column; gap:2px; }
+    .fld label { font-size:11px; color:var(--muted); font-weight:600; }
+    .fld .inp { padding:8px 12px; font-size:13px; width:100%; }
+    .fld select.inp, .fld input.inp { height:38px; }
+    .fld textarea.inp { height:auto; }
+    /* card General compacto: 2 columnas, mismo look, misma altura que Telegram */
+    .compact { grid-template-columns:1fr 1fr; gap:6px 10px; padding:10px 14px 12px; }
+    .compact .chk { grid-column:1 / -1; font-size:11.5px; padding-bottom:0; gap:6px; }
+    .compact .chk input { width:15px; height:15px; }
+    /* Interruptores (en vez de casillas): el estado se lee de un vistazo. */
+    .chk input[type=checkbox], input.sw { appearance:none; -webkit-appearance:none; position:relative; flex:none; margin:0;
+      width:36px !important; height:20px !important; border-radius:999px; background:#cbd5e1; cursor:pointer; transition:background .15s; }
+    .chk input[type=checkbox]::after, input.sw::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px;
+      border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.25); transition:transform .15s; }
+    .chk input[type=checkbox]:checked, input.sw:checked { background:#7b0061; }
+    .chk input[type=checkbox]:checked::after, input.sw:checked::after { transform:translateX(16px); }
+    input.sw:indeterminate { background:#c98bb8; }
+    input.sw:indeterminate::after { transform:translateX(8px); }
+    input.sw.sm { width:30px !important; height:17px !important; }
+    input.sw.sm::after { width:13px; height:13px; }
+    input.sw.sm:checked::after { transform:translateX(13px); }
+    .chk input[type=checkbox]:focus-visible, input.sw:focus-visible { outline:2px solid #e7b9da; outline-offset:2px; }
+    .chk { display:flex; align-items:center; gap:10px; }
+
+    /* Canal: conexion a la izquierda, «Que avisa» a la derecha. */
+    .cards.canal { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); max-width:1240px; align-items:start; }
+    @media (max-width:1100px) { .cards.canal { grid-template-columns:1fr; } }
+    .ph.av { display:flex; align-items:center; background:#f6f2f8; color:#6b2160; }
+    .ph.av .cuenta { margin-left:auto; font-size:11.5px; font-weight:600; color:#7b0061; background:#fff;
+                     border:1px solid #ecd6e6; border-radius:999px; padding:2px 10px; }
+    .avisa .pb { display:flex; flex-direction:column; gap:10px; padding:10px 14px 12px; }
+    .avg-h { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:6px;
+             border-bottom:1px solid var(--border); }
+    .avg-t b { display:block; font-size:13px; color:#1f2937; }
+    .avg-t small { display:block; font-size:11.5px; color:var(--muted); margin-top:1px; }
+    .avg-list { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; padding-top:4px; }
+    .avg-list .row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 8px;
+                     border-radius:8px; font-size:12.5px; color:#334155; cursor:pointer; }
+    .avg-list .row:hover { background:#f8fafc; }
+    .avg-list .row.off span { color:#94a3b8; }
+    /* General como lista de ajustes: nombre y explicacion a la izquierda, control a la derecha. */
+    .ajustes { display:flex; flex-direction:column; padding:2px 14px 6px; }
+    .aj { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px solid var(--border); }
+    .aj:last-child { border-bottom:0; }
+    .aj-t b { display:block; font-size:12.5px; color:#1f2937; }
+    .aj-t small { display:block; font-size:11px; color:var(--muted); margin-top:1px; }
+    .aj select.inp { width:170px; height:32px; padding:4px 8px; font-size:12.5px; }
+    .aj .num { display:inline-flex; align-items:center; gap:6px; }
+    .aj .num input.inp { width:84px; height:32px; padding:4px 8px; font-size:12.5px; text-align:right; }
+    .aj .num em { font-style:normal; font-size:11.5px; color:var(--muted); width:24px; }
+    /* Mensaje: la prueba va en la cabecera; texto y vista previa del mismo alto. */
+    .msg-h { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:7px 14px; }
+    .prueba { margin-left:auto; display:flex; align-items:center; gap:6px; }
+    .prueba select.inp.sm { height:30px; padding:2px 8px; font-size:12px; width:auto; max-width:190px; }
+    textarea.inp.cuerpo { width:100%; height:170px; resize:none; font-family:inherit; font-size:13px; line-height:1.55; }
+    .msg2col .bubble { height:170px; overflow:auto; box-sizing:border-box; }
+    /* General: los ajustes y el mensaje lado a lado, para que entre en una pantalla sin scroll. */
+    .cards.dos { grid-template-columns:minmax(300px, 380px) minmax(0, 1fr); max-width:none; }
+    @media (max-width:1100px) { .cards.dos { grid-template-columns:1fr; } }
+    .compact .chk .mut { display:none; }
+    .compact .fld { gap:1px; }
+    .compact .fld.wide { grid-column:auto; }
+    .compact .fld label { font-size:11px; }
+    .compact .fld select.inp, .compact .fld input.inp { height:30px; padding:3px 9px; font-size:12.5px; }
+    .chk { display:flex; align-items:center; gap:8px; font-size:13px; padding-bottom:2px; }
+    .chk input { width:16px; height:16px; }
+    .mut { color:var(--muted); font-weight:400; }
+    .help { font-size:11px; color:#555; background:#f8fafc; border:1px solid var(--border);
+            border-radius:8px; padding:7px 10px; line-height:1.45; }
+    .help code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:11px; }
+    .msg2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:800px){ .msg2col{ grid-template-columns:1fr; } }
+    .lbl { font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px; }
+    .vars { font-size:11px; color:var(--muted); margin-top:6px; }
+    .bubble { white-space:pre-line; font-size:13px; line-height:1.55; padding:12px 14px; border:1px solid var(--border);
+              border-radius:10px; background:#fff; min-height:130px; }
+    .bubble.crit { border-left:3px solid var(--red); }
+    .bubble.warn { border-left:3px solid var(--amber); }
+  

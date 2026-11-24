@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NocApi } from '../services/noc-api';
 import { NocNotify } from '../services/noc-notify';
+import { AlertasPorEquipo } from './alertas-por-equipo';
 
 /**
  * Umbrales de MONITOREO Y ALERTAS, con 3 niveles por métrica en la MISMA fila.
@@ -11,7 +12,7 @@ import { NocNotify } from '../services/noc-notify';
 @Component({
   selector: 'app-salud-gpon-config',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, AlertasPorEquipo],
   template: `
     <div class="panel">
       <div class="pb">
@@ -107,6 +108,9 @@ import { NocNotify } from '../services/noc-notify';
         @if (msg()) { <div style="color:var(--green);margin-top:12px;font-weight:600">{{ msg() }}</div> }
       </div>
     </div>
+
+    <!-- Que genera alerta cada equipo (antes en Notificaciones > Que avisar). -->
+    <app-alertas-por-equipo />
   `,
   styles: [`
     .sec { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:8px;
