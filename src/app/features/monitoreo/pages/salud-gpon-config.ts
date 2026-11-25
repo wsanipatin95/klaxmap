@@ -145,7 +145,10 @@ export class SaludGponConfig {
   notifyRules = [
     { key: 'alert_confirm_polls', label: 'Confirmar alerta tras N barridos (anti-flap)', unit: 'barridos' },
     { key: 'alert_pon_mass_down', label: 'Caída masiva: ONUs caídas por puerto para agrupar', unit: 'ONUs' },
+    { key: 'alert_pon_mass_ventana_min', label: 'Caída masiva: solo cuentan las ONU caídas en los últimos', unit: 'minutos' },
+    { key: 'onu_abandonada_horas', label: 'ONU abandonada (no desenganchada): caída más de', unit: 'horas' },
     { key: 'alert_require_client', label: 'No alertar ONUs sin cliente (1=sí, 0=no)', unit: '' },
+    { key: 'alert_iface_sin_velocidad', label: 'Alertar carga de interfaces sin velocidad conocida, como L2TP o túneles (1=sí, 0=no)', unit: '' },
     { key: 'notify_quiet_from', label: 'Horario silencio: desde (hora 0-23, vacío=off)', unit: 'h' },
     { key: 'notify_quiet_to', label: 'Horario silencio: hasta (hora 0-23)', unit: 'h' },
     { key: 'notify_quiet_only_crit', label: 'En silencio solo enviar críticas (1=sí)', unit: '' },
